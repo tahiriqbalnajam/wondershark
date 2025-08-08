@@ -19,10 +19,17 @@ class Brand extends Model
         'description',
         'monthly_posts',
         'status',
+        'is_completed',
+        'current_step',
+        'session_id',
+        'completed_at',
     ];
 
     protected $casts = [
         'monthly_posts' => 'integer',
+        'is_completed' => 'boolean',
+        'current_step' => 'integer',
+        'completed_at' => 'datetime',
     ];
 
     public function agency(): BelongsTo

@@ -19,13 +19,13 @@ class RolePermissionMiddleware
             return redirect()->route('login');
         }
 
-        // Check for specific permission
-        if ($permission && !$request->user()->can($permission)) {
+        // Check for specific permission (skip if permission is 'null' string)
+        if ($permission && $permission !== 'null' && !$request->user()->can($permission)) {
             abort(403, 'Access denied. You do not have the required permission.');
         }
 
-        // Check for specific role
-        if ($role && !$request->user()->hasRole($role)) {
+        // Check for specific role (skip if role is 'null' string)
+        if ($role && $role !== 'null' && !$request->user()->hasRole($role)) {
             abort(403, 'Access denied. You do not have the required role.');
         }
 

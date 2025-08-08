@@ -39,7 +39,9 @@ class BrandController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('brands/create');
+        return Inertia::render('brands/create', [
+            'sessionId' => session()->getId(),
+        ]);
     }
 
     /**
@@ -47,7 +49,7 @@ class BrandController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
+        $validationRules = [
             'name' => 'required|string|max:255',
             'website' => 'nullable|url|max:255',
             'description' => 'required|string|max:1000',
@@ -56,27 +58,39 @@ class BrandController extends Controller
             'subreddits' => 'required|array|min:1|max:20',
             'subreddits.*' => 'required|string|max:100',
             'monthly_posts' => 'required|integer|min:1|max:1000',
-            'brand_email' => 'required|email|unique:users,email',
-            'brand_password' => 'required|string|min:8',
-        ]);
+            'create_account' => 'boolean',
+        ];
+
+        // Add account validation rules only if creating an account
+        if ($request->boolean('create_account')) {
+            $validationRules['brand_email'] = 'required|email|unique:users,email';
+            $validationRules['brand_password'] = 'required|string|min:8';
+        }
+
+        $request->validate($validationRules);
 
         DB::transaction(function () use ($request) {
             /** @var User $agency */
             $agency = Auth::user();
 
-            // Create brand user account
-            $brandUser = User::create([
-                'name' => $request->name . ' User',
-                'email' => $request->brand_email,
-                'password' => Hash::make($request->brand_password),
-                'email_verified_at' => now(),
-            ]);
-            $brandUser->assignRole('brand');
+            $brandUserId = null;
+
+            // Create brand user account only if requested
+            if ($request->boolean('create_account')) {
+                $brandUser = User::create([
+                    'name' => $request->name . ' User',
+                    'email' => $request->brand_email,
+                    'password' => Hash::make($request->brand_password),
+                    'email_verified_at' => now(),
+                ]);
+                $brandUser->assignRole('brand');
+                $brandUserId = $brandUser->id;
+            }
 
             // Create brand
             $brand = Brand::create([
                 'agency_id' => $agency->id,
-                'user_id' => $brandUser->id,
+                'user_id' => $brandUserId,
                 'name' => $request->name,
                 'website' => $request->website,
                 'description' => $request->description,
@@ -250,5 +264,110 @@ class BrandController extends Controller
         $brand->delete();
 
         return redirect()->route('brands.index')->with('success', 'Brand deleted successfully!');
+    }
+
+    /**
+     * Generate AI prompts for a brand based on website.
+     */
+    public function generatePrompts(Request $request)
+    {
+        $request->validate([
+            'website' => 'required|url',
+            'description' => 'required|string|max:1000',
+            'ai_provider' => 'required|string|in:openai,claude,gemini,groq,deepseek',
+        ]);
+
+        try {
+            $sessionId = session()->getId();
+            $aiService = app(\App\Services\AIPromptService::class);
+            
+            // Check if we already have prompts for this website
+            $existingPrompts = $aiService->getPromptsForWebsite($request->website);
+            
+            if (count($existingPrompts) > 0) {
+                // Return existing prompts but mark them as for current session
+                foreach ($existingPrompts as $prompt) {
+                    $prompt->update(['session_id' => $sessionId]);
+                }
+                
+                return response()->json([
+                    'success' => true,
+                    'prompts' => array_map(function ($prompt) {
+                        return [
+                            'id' => $prompt->id,
+                            'prompt' => $prompt->prompt,
+                            'source' => 'ai_generated_cached',
+                            'ai_provider' => $prompt->ai_provider,
+                            'is_selected' => true,
+                            'order' => $prompt->order,
+                        ];
+                    }, $existingPrompts),
+                    'cached' => true,
+                ]);
+            }
+            
+            // Generate new prompts
+            $generatedPrompts = $aiService->generatePromptsForWebsite(
+                $request->website,
+                $sessionId,
+                $request->ai_provider,
+                $request->description
+            );
+
+            return response()->json([
+                'success' => true,
+                'prompts' => array_map(function ($prompt) {
+                    return [
+                        'id' => $prompt->id,
+                        'prompt' => $prompt->prompt,
+                        'source' => $prompt->source,
+                        'ai_provider' => $prompt->ai_provider,
+                        'is_selected' => $prompt->is_selected,
+                        'order' => $prompt->order,
+                    ];
+                }, $generatedPrompts),
+                'cached' => false,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to generate prompts: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get existing prompts for a website.
+     */
+    public function getExistingPrompts(Request $request)
+    {
+        $request->validate([
+            'website' => 'required|url',
+        ]);
+
+        try {
+            $aiService = app(\App\Services\AIPromptService::class);
+            $existingPrompts = $aiService->getPromptsForWebsite($request->website);
+            
+            return response()->json([
+                'success' => true,
+                'prompts' => array_map(function ($prompt) {
+                    return [
+                        'id' => $prompt->id,
+                        'prompt' => $prompt->prompt,
+                        'source' => 'ai_generated_cached',
+                        'ai_provider' => $prompt->ai_provider,
+                        'is_selected' => true,
+                        'order' => $prompt->order,
+                    ];
+                }, $existingPrompts),
+                'has_existing' => count($existingPrompts) > 0,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to get existing prompts: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }

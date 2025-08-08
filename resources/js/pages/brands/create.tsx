@@ -1,6 +1,6 @@
 import { type BreadcrumbItem } from '@/types';
-import { Head, useForm } from '@inertiajs/react';
-import { useState, FormEventHandler } from 'react';
+import { Head, useForm, router } from '@inertiajs/react';
+import { useState, FormEventHandler, useEffect } from 'react';
 
 import HeadingSmall from '@/components/heading-small';
 import InputError from '@/components/input-error';
@@ -11,6 +11,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { 
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import AppLayout from '@/layouts/app-layout';
 import { 
     Plus, 
@@ -23,7 +31,10 @@ import {
     CheckCircle,
     Edit,
     Trash2,
-    Calendar
+    Calendar,
+    Sparkles,
+    Loader2,
+    RefreshCw
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -46,6 +57,24 @@ type BrandForm = {
     monthly_posts: number;
     brand_email: string;
     brand_password: string;
+    create_account: boolean;
+    ai_provider: string;
+};
+
+type GeneratedPrompt = {
+    id: number;
+    prompt: string;
+    source: string;
+    ai_provider: string;
+    is_selected: boolean;
+    order: number;
+};
+
+type Props = {
+    sessionId?: string;
+    existingBrand?: any;
+    generatedPrompts?: GeneratedPrompt[];
+    availableProviders?: Record<string, string>;
 };
 
 const steps = [
@@ -57,27 +86,39 @@ const steps = [
     { id: 6, title: 'Account Setup', icon: FileText },
 ];
 
-export default function CreateBrand() {
+export default function CreateBrand({ sessionId, existingBrand, generatedPrompts = [], availableProviders = {} }: Props) {
     const [currentStep, setCurrentStep] = useState(1);
     const [newPrompt, setNewPrompt] = useState('');
     const [newSubreddit, setNewSubreddit] = useState('');
+    const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
+    const [aiGeneratedPrompts, setAiGeneratedPrompts] = useState<GeneratedPrompt[]>(generatedPrompts);
+    const [hasGeneratedForCurrentWebsite, setHasGeneratedForCurrentWebsite] = useState(false);
 
     const { data, setData, post, processing, errors } = useForm<BrandForm>({
-        name: '',
-        website: '',
-        description: '',
+        name: existingBrand?.name || '',
+        website: existingBrand?.website || '',
+        description: existingBrand?.description || '',
         prompts: [],
         subreddits: [],
-        monthly_posts: 10,
+        monthly_posts: existingBrand?.monthly_posts || 10,
         brand_email: '',
         brand_password: '',
+        create_account: true,
+        ai_provider: 'openai',
     });
 
     const progress = (currentStep / steps.length) * 100;
 
     const nextStep = () => {
         if (currentStep < steps.length) {
-            setCurrentStep(currentStep + 1);
+            const newStep = currentStep + 1;
+            setCurrentStep(newStep);
+            
+            // Auto-generate prompts when entering step 2
+            if (newStep === 2 && !hasGeneratedForCurrentWebsite && data.website.trim() && data.description.trim()) {
+                generateAIPrompts();
+                setHasGeneratedForCurrentWebsite(true);
+            }
         }
     };
 
@@ -114,6 +155,85 @@ export default function CreateBrand() {
 
     const removeSubreddit = (index: number) => {
         setData('subreddits', data.subreddits.filter((_, i) => i !== index));
+    };
+
+    const generateAIPrompts = async () => {
+        if (!data.website.trim() || !data.description.trim()) {
+            alert('Please enter website and description first in step 1.');
+            return;
+        }
+
+        setIsGeneratingPrompts(true);
+        
+        try {
+            const response = await fetch(route('brands.generatePrompts'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    website: data.website,
+                    description: data.description,
+                    ai_provider: data.ai_provider,
+                }),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                setAiGeneratedPrompts(result.prompts);
+            } else {
+                alert(result.error || 'Failed to generate prompts');
+            }
+        } catch (error) {
+            console.error('Error generating prompts:', error);
+            alert('Failed to generate prompts. Please try again.');
+        } finally {
+            setIsGeneratingPrompts(false);
+        }
+    };
+
+    const acceptPrompt = (prompt: GeneratedPrompt) => {
+        if (data.prompts.length < 25 && !data.prompts.includes(prompt.prompt)) {
+            setData('prompts', [...data.prompts, prompt.prompt]);
+            setAiGeneratedPrompts(prev => 
+                prev.map(p => 
+                    p.id === prompt.id 
+                        ? { ...p, is_selected: true }
+                        : p
+                )
+            );
+        }
+    };
+
+    const rejectPrompt = (prompt: GeneratedPrompt) => {
+        setAiGeneratedPrompts(prev => 
+            prev.map(p => 
+                p.id === prompt.id 
+                    ? { ...p, is_selected: false }
+                    : p
+            )
+        );
+    };
+
+    const removeAcceptedPrompt = (promptText: string, promptId: number) => {
+        setData('prompts', data.prompts.filter(p => p !== promptText));
+        setAiGeneratedPrompts(prev => 
+            prev.map(p => 
+                p.id === promptId 
+                    ? { ...p, is_selected: false }
+                    : p
+            )
+        );
+    };
+
+    const isPromptAccepted = (prompt: GeneratedPrompt) => {
+        return data.prompts.includes(prompt.prompt);
+    };
+
+    const isPromptRejected = (prompt: GeneratedPrompt) => {
+        return !prompt.is_selected && !isPromptAccepted(prompt);
     };
 
     const handleSubmit: FormEventHandler = (e) => {
@@ -179,75 +299,168 @@ export default function CreateBrand() {
                     <div className="space-y-6">
                         <div className="flex items-center justify-between">
                             <h3 className="text-lg font-semibold">Content Prompts ({data.prompts.length}/25)</h3>
-                            <Button
-                                type="button"
-                                onClick={addPrompt}
-                                disabled={!newPrompt.trim() || data.prompts.length >= 25}
-                                size="sm"
-                            >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Prompt
-                            </Button>
+                            {isGeneratingPrompts && (
+                                <div className="flex items-center gap-2 text-primary">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span className="text-sm">Generating AI prompts...</span>
+                                </div>
+                            )}
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="new-prompt">Add New Prompt</Label>
-                                <div className="flex gap-2">
-                                    <Textarea
-                                        id="new-prompt"
-                                        value={newPrompt}
-                                        onChange={(e) => setNewPrompt(e.target.value)}
-                                        placeholder="Enter a content prompt for AI generation..."
-                                        rows={2}
-                                        className="resize-none"
-                                    />
-                                </div>
-                            </div>
+                        {/* AI Provider Selection */}
+                        <div className="grid gap-2">
+                            <Label htmlFor="ai_provider">AI Provider</Label>
+                            <Select value={data.ai_provider} onValueChange={(value) => setData('ai_provider', value)}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select AI Provider" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="openai">OpenAI (GPT-4)</SelectItem>
+                                    <SelectItem value="claude">Claude (Anthropic)</SelectItem>
+                                    <SelectItem value="gemini">Google Gemini</SelectItem>
+                                    <SelectItem value="groq">Groq</SelectItem>
+                                    <SelectItem value="deepseek">DeepSeek</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
 
-                            {data.prompts.length > 0 && (
-                                <div className="space-y-3">
-                                    <h4 className="font-medium">Current Prompts</h4>
+                        {/* AI Generated Prompts */}
+                        {aiGeneratedPrompts.length > 0 ? (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Sparkles className="h-5 w-5" />
+                                        AI Generated Prompts (Review and Select)
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                                        {aiGeneratedPrompts.map((prompt) => {
+                                            const accepted = isPromptAccepted(prompt);
+                                            const rejected = isPromptRejected(prompt);
+                                            
+                                            return (
+                                                <div 
+                                                    key={prompt.id} 
+                                                    className={`p-4 border rounded-lg transition-all ${
+                                                        accepted ? 'border-green-200 bg-green-50' :
+                                                        rejected ? 'border-gray-200 bg-gray-50 opacity-60' :
+                                                        'border-gray-200 bg-white'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="flex-1">
+                                                            <p className={`text-sm ${rejected ? 'text-gray-500' : 'text-gray-900'}`}>
+                                                                {prompt.prompt}
+                                                            </p>
+                                                            <Badge variant="outline" className="mt-2">
+                                                                {prompt.ai_provider}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            {accepted ? (
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant="default"
+                                                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                                                    disabled
+                                                                >
+                                                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                                                    Accepted
+                                                                </Button>
+                                                            ) : (
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    className="border-green-500 text-green-600 hover:bg-green-50"
+                                                                    onClick={() => acceptPrompt(prompt)}
+                                                                    disabled={data.prompts.length >= 25}
+                                                                >
+                                                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                                                    Accept
+                                                                </Button>
+                                                            )}
+                                                            
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className={rejected ? "border-gray-400 text-gray-600" : "border-red-500 text-red-600 hover:bg-red-50"}
+                                                                onClick={() => rejected ? acceptPrompt(prompt) : rejectPrompt(prompt)}
+                                                            >
+                                                                {rejected ? (
+                                                                    <>
+                                                                        <RefreshCw className="h-4 w-4 mr-1" />
+                                                                        Restore
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Trash2 className="h-4 w-4 mr-1" />
+                                                                        Reject
+                                                                    </>
+                                                                )}
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <Card>
+                                <CardContent className="pt-6">
+                                    <div className="text-center py-8 text-muted-foreground">
+                                        <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                        <p>AI prompts will be generated automatically when you complete step 1.</p>
+                                        <p className="text-sm mt-2">Make sure to fill in your website and description first.</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {/* Current Selected Prompts */}
+                        {data.prompts.length > 0 && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <MessageSquare className="h-5 w-5" />
+                                        Selected Prompts ({data.prompts.length})
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
                                     <div className="space-y-2 max-h-64 overflow-y-auto">
-                                        {data.prompts.map((prompt, index) => (
-                                            <Card key={index} className="p-3">
-                                                <div className="flex items-start justify-between gap-3">
+                                        {data.prompts.map((prompt, index) => {
+                                            const aiPrompt = aiGeneratedPrompts.find(p => p.prompt === prompt);
+                                            return (
+                                                <div key={index} className="flex items-start justify-between gap-3 p-3 border rounded-lg bg-green-50 border-green-200">
                                                     <div className="flex-1">
-                                                        <Badge variant="outline" className="mb-2">
-                                                            Prompt {index + 1}
+                                                        <Badge variant="outline" className="mb-2 border-green-600 text-green-700">
+                                                            Selected #{index + 1}
                                                         </Badge>
                                                         <p className="text-sm">{prompt}</p>
                                                     </div>
-                                                    <div className="flex gap-1">
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                const newValue = window.prompt('Edit prompt:', prompt);
-                                                                if (newValue) editPrompt(index, newValue);
-                                                            }}
-                                                        >
-                                                            <Edit className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => removePrompt(index)}
-                                                            className="text-destructive hover:text-destructive"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => aiPrompt ? removeAcceptedPrompt(prompt, aiPrompt.id) : removePrompt(index)}
+                                                        className="text-red-600 hover:text-red-700"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
                                                 </div>
-                                            </Card>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
-                                </div>
-                            )}
-                            <InputError message={errors.prompts} />
-                        </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        <InputError message={errors.prompts} />
                     </div>
                 );
 
@@ -436,38 +649,65 @@ export default function CreateBrand() {
             case 6:
                 return (
                     <div className="space-y-6">
-                        <h3 className="text-lg font-semibold">Create Brand Account</h3>
+                        <h3 className="text-lg font-semibold">Brand Account Setup</h3>
                         <p className="text-muted-foreground">
-                            Create a login account for this brand so they can access their dashboard.
+                            Optionally create a login account for this brand to access their dashboard.
                         </p>
                         
-                        <div className="space-y-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="brand_email">Brand Email *</Label>
-                                <Input
-                                    id="brand_email"
-                                    type="email"
-                                    value={data.brand_email}
-                                    onChange={(e) => setData('brand_email', e.target.value)}
-                                    placeholder="brand@example.com"
-                                    required
-                                />
-                                <InputError message={errors.brand_email} />
-                            </div>
+                        <Card>
+                            <CardContent className="pt-6">
+                                <div className="space-y-4">
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox 
+                                            id="create_account"
+                                            checked={data.create_account}
+                                            onCheckedChange={(checked) => setData('create_account', checked as boolean)}
+                                        />
+                                        <Label htmlFor="create_account" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                            Create a brand account (recommended)
+                                        </Label>
+                                    </div>
+                                    
+                                    {data.create_account && (
+                                        <div className="space-y-4 pl-6 border-l-2 border-primary/20">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="brand_email">Brand Email *</Label>
+                                                <Input
+                                                    id="brand_email"
+                                                    type="email"
+                                                    value={data.brand_email}
+                                                    onChange={(e) => setData('brand_email', e.target.value)}
+                                                    placeholder="brand@example.com"
+                                                    required={data.create_account}
+                                                />
+                                                <InputError message={errors.brand_email} />
+                                            </div>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="brand_password">Password *</Label>
-                                <Input
-                                    id="brand_password"
-                                    type="password"
-                                    value={data.brand_password}
-                                    onChange={(e) => setData('brand_password', e.target.value)}
-                                    placeholder="Enter a secure password"
-                                    required
-                                />
-                                <InputError message={errors.brand_password} />
-                            </div>
-                        </div>
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="brand_password">Password *</Label>
+                                                <Input
+                                                    id="brand_password"
+                                                    type="password"
+                                                    value={data.brand_password}
+                                                    onChange={(e) => setData('brand_password', e.target.value)}
+                                                    placeholder="Enter a secure password"
+                                                    required={data.create_account}
+                                                />
+                                                <InputError message={errors.brand_password} />
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {!data.create_account && (
+                                        <div className="p-4 bg-muted/50 rounded-lg">
+                                            <p className="text-sm text-muted-foreground">
+                                                No account will be created. You can add brand users later from the brand management panel.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 );
 
@@ -489,7 +729,8 @@ export default function CreateBrand() {
             case 5:
                 return true; // Review step - just needs to be viewed
             case 6:
-                return data.brand_email.trim() && data.brand_password.trim();
+                // Account creation is optional, but if enabled, require email and password
+                return !data.create_account || (data.brand_email.trim() && data.brand_password.trim());
             default:
                 return false;
         }
