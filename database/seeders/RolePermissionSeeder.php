@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Models\User;
@@ -40,25 +41,22 @@ class RolePermissionSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
         // Create roles and assign permissions
-        $adminRole = Role::create(['name' => 'admin']);
-        $adminRole->givePermissionTo(Permission::all());
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $adminRole->syncPermissions(Permission::all());
 
-        $managerRole = Role::create(['name' => 'manager']);
-        $managerRole->givePermissionTo([
+        $agencyRole = Role::firstOrCreate(['name' => 'agency']);
+        $agencyRole->syncPermissions([
             'view-dashboard',
             'manage-dashboard',
-            'view-users',
-            'create-users',
-            'edit-users',
             'view-settings',
         ]);
 
-        $userRole = Role::create(['name' => 'user']);
-        $userRole->givePermissionTo([
+        $brandRole = Role::firstOrCreate(['name' => 'brand']);
+        $brandRole->syncPermissions([
             'view-dashboard',
             'view-settings',
         ]);
@@ -68,5 +66,27 @@ class RolePermissionSeeder extends Seeder
         if ($testUser) {
             $testUser->assignRole('admin');
         }
+
+        // Create test agency user
+        $agencyUser = User::firstOrCreate(
+            ['email' => 'agency@example.com'],
+            [
+                'name' => 'Test Agency User',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+            ]
+        );
+        $agencyUser->assignRole('agency');
+
+        // Create test brand user
+        $brandUser = User::firstOrCreate(
+            ['email' => 'brand@example.com'],
+            [
+                'name' => 'Test Brand User',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+            ]
+        );
+        $brandUser->assignRole('brand');
     }
 }

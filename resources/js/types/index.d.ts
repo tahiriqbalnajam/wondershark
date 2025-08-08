@@ -36,6 +36,7 @@ export interface NavItem {
     isActive?: boolean;
     permission?: string; // Required permission to view this nav item
     role?: string; // Required role to view this nav item
+    items?: NavItem[]; // Sub-items for expandable menus
 }
 
 export interface SharedData {

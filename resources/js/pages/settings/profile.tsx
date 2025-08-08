@@ -121,7 +121,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                     </form>
                 </div>
 
-                <RoleDisplayCard />
+                {/* <RoleDisplayCard /> */}
 
                 <DeleteUser />
             </SettingsLayout>

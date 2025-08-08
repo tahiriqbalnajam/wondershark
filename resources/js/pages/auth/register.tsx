@@ -7,6 +7,7 @@ import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import AuthLayout from '@/layouts/auth-layout';
 
 type RegisterForm = {
@@ -14,6 +15,7 @@ type RegisterForm = {
     email: string;
     password: string;
     password_confirmation: string;
+    role: string;
 };
 
 export default function Register() {
@@ -22,6 +24,7 @@ export default function Register() {
         email: '',
         password: '',
         password_confirmation: '',
+        role: 'brand', // Default to brand role
     });
 
     const submit: FormEventHandler = (e) => {
@@ -99,6 +102,31 @@ export default function Register() {
                             placeholder="Confirm password"
                         />
                         <InputError message={errors.password_confirmation} />
+                    </div>
+
+                    <div className="grid gap-3">
+                        <Label>Account Type</Label>
+                        <RadioGroup 
+                            value={data.role} 
+                            onValueChange={(value: string) => setData('role', value)}
+                            className="grid grid-cols-1 gap-3"
+                        >
+                            <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
+                                <RadioGroupItem value="brand" id="brand" />
+                                <Label htmlFor="brand" className="flex-1 cursor-pointer">
+                                    <div className="font-medium">Brand</div>
+                                    <div className="text-sm text-muted-foreground">For businesses looking to promote their products</div>
+                                </Label>
+                            </div>
+                            <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
+                                <RadioGroupItem value="agency" id="agency" />
+                                <Label htmlFor="agency" className="flex-1 cursor-pointer">
+                                    <div className="font-medium">Agency</div>
+                                    <div className="text-sm text-muted-foreground">For marketing agencies and service providers</div>
+                                </Label>
+                            </div>
+                        </RadioGroup>
+                        <InputError message={errors.role} />
                     </div>
 
                     <Button type="submit" className="mt-2 w-full" tabIndex={5} disabled={processing}>

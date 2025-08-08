@@ -18,7 +18,7 @@ export function RoleDisplayCard() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div>
+                <div className='columns-3xs gap-8'>
                     <h4 className="text-sm font-medium mb-2">Roles</h4>
                     <div className="flex flex-wrap gap-2">
                         {roles.length > 0 ? (
@@ -33,7 +33,7 @@ export function RoleDisplayCard() {
                     </div>
                 </div>
                 
-                <div>
+                <div className='columns-3xs gap-8'>
                     <h4 className="text-sm font-medium mb-2">Permissions</h4>
                     <div className="flex flex-wrap gap-2">
                         {permissions.length > 0 ? (

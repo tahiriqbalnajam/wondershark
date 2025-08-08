@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Users, Shield } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Users, Shield, Building2, Plus } from 'lucide-react';
 import AppLogo from './app-logo';
 import { usePermissions } from '@/hooks/use-permissions';
 
@@ -28,8 +28,25 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
         icon: LayoutGrid,
     });
 
-    // User Management - only for users with proper permissions
-    if (permissions.can('viewUsers')) {
+    // Brands menu - only for agency users
+    if (permissions.hasRole('agency')) {
+        items.push({
+            title: 'Brands',
+            href: '/brands',
+            icon: Building2,
+            items: [
+                {
+                    title: 'Add Brand',
+                    href: '/brands/create',
+                    icon: Plus,
+                },
+                // We'll add dynamic brand list here later
+            ]
+        });
+    }
+
+    // User Management - only for admin users (skip for agency and brand)
+    if (permissions.can('viewUsers') && permissions.hasRole('admin')) {
         items.push({
             title: 'User Management',
             href: '/users',
@@ -38,8 +55,8 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
         });
     }
 
-    // Admin Panel - only for admin users
-    if (permissions.can('viewAdminPanel')) {
+    // Admin Panel - only for admin users (skip for agency and brand)
+    if (permissions.can('viewAdminPanel') && permissions.hasRole('admin')) {
         items.push({
             title: 'Admin Panel',
             href: '/admin',
@@ -70,7 +87,7 @@ export function AppSidebar() {
 
     return (
         <Sidebar collapsible="icon" variant="inset">
-            <SidebarHeader>
+            {/* <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
@@ -80,16 +97,16 @@ export function AppSidebar() {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
-            </SidebarHeader>
+            </SidebarHeader> */}
+
+            <SidebarFooter>
+                <NavUser />
+                <NavFooter items={footerNavItems} className="mt-auto" />
+            </SidebarFooter>
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
             </SidebarContent>
-
-            <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
-                <NavUser />
-            </SidebarFooter>
         </Sidebar>
     );
 }

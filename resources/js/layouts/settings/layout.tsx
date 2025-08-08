@@ -5,26 +5,59 @@ import { cn } from '@/lib/utils';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
+import { usePermissions } from '@/hooks/use-permissions';
 
-const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: '/settings/profile',
-        icon: null,
-    },
-    {
-        title: 'Password',
-        href: '/settings/password',
-        icon: null,
-    },
-    {
-        title: 'Appearance',
-        href: '/settings/appearance',
-        icon: null,
-    },
-];
+const getSettingsNavItems = (userRole: string): NavItem[] => {
+    if (userRole === 'agency') {
+        return [
+            {
+                title: 'General',
+                href: '/settings/general',
+                icon: null,
+            },
+            {
+                title: 'Brands',
+                href: '/settings/brands',
+                icon: null,
+            },
+            {
+                title: 'Integration',
+                href: '/settings/integration',
+                icon: null,
+            },
+            {
+                title: 'Account',
+                href: '/settings/account',
+                icon: null,
+            },
+        ];
+    }
+
+    // Default settings for admin and brand users
+    return [
+        {
+            title: 'Profile',
+            href: '/settings/profile',
+            icon: null,
+        },
+        {
+            title: 'Password',
+            href: '/settings/password',
+            icon: null,
+        },
+        {
+            title: 'Appearance',
+            href: '/settings/appearance',
+            icon: null,
+        },
+    ];
+};
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
+    const { roles } = usePermissions();
+    const userRole = roles[0] || 'brand'; // Get the first role or default to brand
+    const sidebarNavItems = getSettingsNavItems(userRole);
+
     // When server-side rendering, we only render the layout on the client...
     if (typeof window === 'undefined') {
         return null;

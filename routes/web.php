@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\BrandController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -26,6 +27,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Admin Panel Routes - Protected by admin role or permission
     Route::middleware('role.permission:view-admin-panel')->group(function () {
         Route::get('admin', [AdminController::class, 'index'])->name('admin.index');
+    });
+
+    // Brand Management Routes - Only for agency users
+    Route::middleware('role.permission:,agency')->group(function () {
+        Route::resource('brands', BrandController::class);
+        Route::put('brands/{brand}/status', [BrandController::class, 'updateStatus'])->name('brands.status');
     });
 });
 
