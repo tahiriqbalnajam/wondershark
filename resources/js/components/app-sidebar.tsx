@@ -1,11 +1,13 @@
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
+import { Button } from '@/components/ui/button';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Users, Shield, Building2, Plus } from 'lucide-react';
+import { type NavItem, type SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
+import { LayoutGrid, Users, Shield, Building2, Plus, Settings } from 'lucide-react';
 import AppLogo from './app-logo';
+import AgencyLogo from './agency-logo';
 import { usePermissions } from '@/hooks/use-permissions';
 
 const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavItem[] => {
@@ -21,12 +23,13 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
         });
     }
 
-    // My Page - available to all authenticated users
+    // Settings - available to all authenticated users
     items.push({
-        title: 'My Page',
-        href: '/mypage',
-        icon: LayoutGrid,
+        title: 'Settings',
+        href: '/settings',
+        icon: Settings,
     });
+
 
     // Brands menu - only for agency users
     if (permissions.hasRole('agency')) {
@@ -68,45 +71,61 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
     return items;
 };
 
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
-    },
-];
+// Remove footer nav items (repository and documentation)
+const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
     const permissions = usePermissions();
     const mainNavItems = getMainNavItems(permissions);
+    const { auth } = usePage<SharedData>().props;
 
     return (
         <Sidebar collapsible="icon" variant="inset">
-            {/* <SidebarHeader>
+            <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
                             <Link href="/dashboard" prefetch>
-                                <AppLogo />
+                                {permissions.hasRole('agency') ? (
+                                    <>
+                                        <AgencyLogo agencyName={auth.user.name} />
+                                        <div className="ml-1 grid flex-1 text-left text-sm">
+                                            <span className="mb-0.5 truncate leading-tight font-semibold">{auth.user.name}</span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <AppLogo />
+                                )}
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
-            </SidebarHeader> */}
-
-            <SidebarFooter>
-                <NavUser />
-                <NavFooter items={footerNavItems} className="mt-auto" />
-            </SidebarFooter>
+                
+                {/* New Brand Button for Agency Users */}
+                {permissions.hasRole('agency') && (
+                    <div className="px-2 mt-2">
+                        <Button 
+                            asChild 
+                            className="w-full justify-start gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+                            size="sm"
+                        >
+                            <Link href="/brands/create" prefetch>
+                                <Plus className="h-4 w-4" />
+                                New Brand
+                            </Link>
+                        </Button>
+                    </div>
+                )}
+            </SidebarHeader>
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
             </SidebarContent>
+
+            <SidebarFooter>
+                <NavUser />
+                {footerNavItems.length > 0 && <NavFooter items={footerNavItems} className="mt-auto" />}
+            </SidebarFooter>
         </Sidebar>
     );
 }
