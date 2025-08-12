@@ -61,6 +61,12 @@ class RolePermissionSeeder extends Seeder
             'view-settings',
         ]);
 
+        $agencyMemberRole = Role::firstOrCreate(['name' => 'agency_member']);
+        $agencyMemberRole->syncPermissions([
+            'view-dashboard',
+            'view-settings',
+        ]);
+
         // Assign roles to existing users
         $testUser = User::where('email', 'test@example.com')->first();
         if ($testUser) {

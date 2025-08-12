@@ -18,6 +18,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
+import { AddPromptDialog } from '@/components/brand/add-prompt-dialog';
 import { 
     Plus, 
     ArrowLeft, 
@@ -233,9 +234,12 @@ export default function BrandEdit({ brand }: Props) {
                     {/* Content Prompts */}
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <MessageSquare className="h-5 w-5" />
-                                Content Prompts ({data.prompts.length}/25)
+                            <CardTitle className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <MessageSquare className="h-5 w-5" />
+                                    Content Prompts ({data.prompts.length}/25)
+                                </div>
+                                <AddPromptDialog brandId={brand.id} className="shadow-sm" />
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">

@@ -13,13 +13,18 @@ class BrandPrompt extends Model
     protected $fillable = [
         'brand_id',
         'prompt',
+        'country_code',
         'order',
+        'position',
+        'sentiment',
+        'visibility',
         'is_active',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'order' => 'integer',
+        'position' => 'integer',
     ];
 
     public function brand(): BelongsTo

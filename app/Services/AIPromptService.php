@@ -144,13 +144,12 @@ Generate exactly 25 questions:";
         return $generatedPrompts;
     }
 
-    public function getPromptsForWebsite(string $website): array
+    public function getPromptsForWebsite(string $website): \Illuminate\Database\Eloquent\Collection
     {
         return GeneratedPrompt::forWebsite($website)
             ->where('source', '!=', 'fallback')
             ->orderBy('order')
-            ->get()
-            ->toArray();
+            ->get();
     }
 
     public function getAvailableProviders(): array

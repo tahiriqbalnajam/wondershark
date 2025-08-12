@@ -292,7 +292,7 @@ class BrandController extends Controller
                 
                 return response()->json([
                     'success' => true,
-                    'prompts' => array_map(function ($prompt) {
+                    'prompts' => $existingPrompts->map(function ($prompt) {
                         return [
                             'id' => $prompt->id,
                             'prompt' => $prompt->prompt,
@@ -301,7 +301,7 @@ class BrandController extends Controller
                             'is_selected' => true,
                             'order' => $prompt->order,
                         ];
-                    }, $existingPrompts),
+                    })->toArray(),
                     'cached' => true,
                 ]);
             }
@@ -351,7 +351,7 @@ class BrandController extends Controller
             
             return response()->json([
                 'success' => true,
-                'prompts' => array_map(function ($prompt) {
+                'prompts' => $existingPrompts->map(function ($prompt) {
                     return [
                         'id' => $prompt->id,
                         'prompt' => $prompt->prompt,
@@ -360,7 +360,7 @@ class BrandController extends Controller
                         'is_selected' => true,
                         'order' => $prompt->order,
                     ];
-                }, $existingPrompts),
+                })->toArray(),
                 'has_existing' => count($existingPrompts) > 0,
             ]);
         } catch (\Exception $e) {

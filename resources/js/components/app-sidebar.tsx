@@ -1,13 +1,10 @@
-import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { Button } from '@/components/ui/button';
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { type NavItem, type SharedData } from '@/types';
-import { Link, usePage } from '@inertiajs/react';
+import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import { type NavItem } from '@/types';
+import { Link } from '@inertiajs/react';
 import { LayoutGrid, Users, Shield, Building2, Plus, Settings } from 'lucide-react';
-import AppLogo from './app-logo';
-import AgencyLogo from './agency-logo';
 import { usePermissions } from '@/hooks/use-permissions';
 
 const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavItem[] => {
@@ -46,6 +43,11 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
                 // We'll add dynamic brand list here later
             ]
         });
+        items.push({
+            title: 'People',
+            href: '/agency/people',
+            icon: Users,
+        });
     }
 
     // User Management - only for admin users (skip for agency and brand)
@@ -71,13 +73,9 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
     return items;
 };
 
-// Remove footer nav items (repository and documentation)
-const footerNavItems: NavItem[] = [];
-
 export function AppSidebar() {
     const permissions = usePermissions();
     const mainNavItems = getMainNavItems(permissions);
-    const { auth } = usePage<SharedData>().props;
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -85,18 +83,7 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href="/dashboard" prefetch>
-                                {permissions.hasRole('agency') ? (
-                                    <>
-                                        <AgencyLogo agencyName={auth.user.name} />
-                                        <div className="ml-1 grid flex-1 text-left text-sm">
-                                            <span className="mb-0.5 truncate leading-tight font-semibold">{auth.user.name}</span>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <AppLogo />
-                                )}
-                            </Link>
+                            <NavUser />
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
@@ -121,11 +108,6 @@ export function AppSidebar() {
             <SidebarContent>
                 <NavMain items={mainNavItems} />
             </SidebarContent>
-
-            <SidebarFooter>
-                <NavUser />
-                {footerNavItems.length > 0 && <NavFooter items={footerNavItems} className="mt-auto" />}
-            </SidebarFooter>
         </Sidebar>
     );
 }

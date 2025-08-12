@@ -206,15 +206,20 @@ export default function BrandsIndex({ brands }: Props) {
                                         </span>
                                     </div>
 
-                                    <div className="flex gap-2 pt-2">
-                                        <Button variant="outline" size="sm" asChild className="flex-1">
+                                    <div className="grid grid-cols-3 gap-2 pt-2">
+                                        <Button variant="outline" size="sm" asChild>
                                             <Link href={`/brands/${brand.id}`}>
                                                 View Details
                                             </Link>
                                         </Button>
-                                        <Button variant="outline" size="sm" asChild className="flex-1">
+                                        <Button variant="outline" size="sm" asChild>
                                             <Link href={`/brands/${brand.id}/edit`}>
                                                 Edit
+                                            </Link>
+                                        </Button>
+                                        <Button variant="outline" size="sm" asChild>
+                                            <Link href={`/brands/${brand.id}/prompts`}>
+                                                Prompts
                                             </Link>
                                         </Button>
                                     </div>

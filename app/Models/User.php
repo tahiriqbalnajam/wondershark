@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
@@ -46,5 +47,21 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Get agency members for this agency user.
+     */
+    public function agencyMembers(): HasMany
+    {
+        return $this->hasMany(AgencyMember::class, 'agency_id');
+    }
+
+    /**
+     * Get agency memberships for this user.
+     */
+    public function agencyMemberships(): HasMany
+    {
+        return $this->hasMany(AgencyMember::class, 'user_id');
     }
 }

@@ -11,15 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { 
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import AppLayout from '@/layouts/app-layout';
+import { AddPromptDialog } from '@/components/brand/add-prompt-dialog';
 import { 
     Plus, 
     ArrowLeft, 
@@ -29,7 +23,6 @@ import {
     MessageSquare, 
     Users, 
     CheckCircle,
-    Edit,
     Trash2,
     Calendar,
     Sparkles,
@@ -58,7 +51,7 @@ type BrandForm = {
     brand_email: string;
     brand_password: string;
     create_account: boolean;
-    ai_provider: string;
+    ai_providers: string[];
 };
 
 type GeneratedPrompt = {
@@ -71,10 +64,8 @@ type GeneratedPrompt = {
 };
 
 type Props = {
-    sessionId?: string;
     existingBrand?: any;
     generatedPrompts?: GeneratedPrompt[];
-    availableProviders?: Record<string, string>;
 };
 
 const steps = [
@@ -86,9 +77,8 @@ const steps = [
     { id: 6, title: 'Account Setup', icon: FileText },
 ];
 
-export default function CreateBrand({ sessionId, existingBrand, generatedPrompts = [], availableProviders = {} }: Props) {
+export default function CreateBrand({ existingBrand, generatedPrompts = [] }: Props) {
     const [currentStep, setCurrentStep] = useState(1);
-    const [newPrompt, setNewPrompt] = useState('');
     const [newSubreddit, setNewSubreddit] = useState('');
     const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
     const [aiGeneratedPrompts, setAiGeneratedPrompts] = useState<GeneratedPrompt[]>(generatedPrompts);
@@ -104,7 +94,7 @@ export default function CreateBrand({ sessionId, existingBrand, generatedPrompts
         brand_email: '',
         brand_password: '',
         create_account: true,
-        ai_provider: 'openai',
+        ai_providers: ['openai'],
     });
 
     const progress = (currentStep / steps.length) * 100;
@@ -128,21 +118,14 @@ export default function CreateBrand({ sessionId, existingBrand, generatedPrompts
         }
     };
 
-    const addPrompt = () => {
-        if (newPrompt.trim() && data.prompts.length < 25) {
-            setData('prompts', [...data.prompts, newPrompt.trim()]);
-            setNewPrompt('');
-        }
-    };
-
     const removePrompt = (index: number) => {
         setData('prompts', data.prompts.filter((_, i) => i !== index));
     };
 
-    const editPrompt = (index: number, newValue: string) => {
-        const updatedPrompts = [...data.prompts];
-        updatedPrompts[index] = newValue;
-        setData('prompts', updatedPrompts);
+    const handleManualPromptAdd = (prompt: string, countryCode: string) => {
+        if (data.prompts.length < 25 && !data.prompts.includes(prompt)) {
+            setData('prompts', [...data.prompts, prompt]);
+        }
     };
 
     const addSubreddit = () => {
@@ -163,28 +146,42 @@ export default function CreateBrand({ sessionId, existingBrand, generatedPrompts
             return;
         }
 
+        if (data.ai_providers.length === 0) {
+            alert('Please select at least one AI provider.');
+            return;
+        }
+
         setIsGeneratingPrompts(true);
         
         try {
-            const response = await fetch(route('brands.generatePrompts'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-                body: JSON.stringify({
-                    website: data.website,
-                    description: data.description,
-                    ai_provider: data.ai_provider,
-                }),
-            });
+            // Generate prompts from multiple providers sequentially
+            const allPrompts: GeneratedPrompt[] = [];
+            
+            for (const provider of data.ai_providers) {
+                const response = await fetch(route('brands.generatePrompts'), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    },
+                    body: JSON.stringify({
+                        website: data.website,
+                        description: data.description,
+                        ai_provider: provider,
+                    }),
+                });
 
-            const result = await response.json();
+                const result = await response.json();
 
-            if (result.success) {
-                setAiGeneratedPrompts(result.prompts);
+                if (result.success) {
+                    allPrompts.push(...result.prompts);
+                }
+            }
+            
+            if (allPrompts.length > 0) {
+                setAiGeneratedPrompts(allPrompts);
             } else {
-                alert(result.error || 'Failed to generate prompts');
+                alert('Failed to generate prompts from any provider');
             }
         } catch (error) {
             console.error('Error generating prompts:', error);
@@ -296,32 +293,87 @@ export default function CreateBrand({ sessionId, existingBrand, generatedPrompts
 
             case 2:
                 return (
-                    <div className="space-y-6">
+                    <div className="space-y-6 relative">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-semibold">Content Prompts ({data.prompts.length}/25)</h3>
-                            {isGeneratingPrompts && (
-                                <div className="flex items-center gap-2 text-primary">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span className="text-sm">Generating AI prompts...</span>
-                                </div>
-                            )}
+                            <div className="flex items-center gap-3">
+                                {/* Add Manual Prompt Button - positioned before Content Prompts */}
+                                <AddPromptDialog 
+                                    brandId={existingBrand?.id} 
+                                    className="shadow-sm"
+                                    onPromptAdd={handleManualPromptAdd}
+                                />
+                                <h3 className="text-lg font-semibold">Content Prompts ({data.prompts.length}/25)</h3>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {isGeneratingPrompts && (
+                                    <div className="flex items-center gap-2 text-primary">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        <span className="text-sm">Generating AI prompts...</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {/* AI Provider Selection */}
-                        <div className="grid gap-2">
-                            <Label htmlFor="ai_provider">AI Provider</Label>
-                            <Select value={data.ai_provider} onValueChange={(value) => setData('ai_provider', value)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select AI Provider" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="openai">OpenAI (GPT-4)</SelectItem>
-                                    <SelectItem value="claude">Claude (Anthropic)</SelectItem>
-                                    <SelectItem value="gemini">Google Gemini</SelectItem>
-                                    <SelectItem value="groq">Groq</SelectItem>
-                                    <SelectItem value="deepseek">DeepSeek</SelectItem>
-                                </SelectContent>
-                            </Select>
+                        <div className="grid gap-4">
+                            <div>
+                                <Label>AI Providers (Select one or more)</Label>
+                                <p className="text-sm text-muted-foreground mb-3">
+                                    Choose multiple AI providers to generate more diverse prompts
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                {[
+                                    { value: 'openai', label: 'OpenAI (GPT-4)' },
+                                    { value: 'claude', label: 'Claude (Anthropic)' },
+                                    { value: 'gemini', label: 'Google Gemini' },
+                                    { value: 'groq', label: 'Groq' },
+                                    { value: 'deepseek', label: 'DeepSeek' }
+                                ].map((provider) => (
+                                    <div key={provider.value} className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id={provider.value}
+                                            checked={data.ai_providers.includes(provider.value)}
+                                            onCheckedChange={(checked) => {
+                                                if (checked) {
+                                                    setData('ai_providers', [...data.ai_providers, provider.value]);
+                                                } else {
+                                                    setData('ai_providers', data.ai_providers.filter(p => p !== provider.value));
+                                                }
+                                            }}
+                                        />
+                                        <Label 
+                                            htmlFor={provider.value} 
+                                            className="text-sm font-normal cursor-pointer"
+                                        >
+                                            {provider.label}
+                                        </Label>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Generate AI Prompts Button */}
+                        <div className="flex justify-center">
+                            <Button
+                                type="button"
+                                onClick={generateAIPrompts}
+                                disabled={isGeneratingPrompts || data.ai_providers.length === 0}
+                                size="lg"
+                                className="w-full max-w-md"
+                            >
+                                {isGeneratingPrompts ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Generating prompts from {data.ai_providers.length} provider(s)...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="h-4 w-4 mr-2" />
+                                        Generate AI Prompts ({data.ai_providers.length} provider{data.ai_providers.length !== 1 ? 's' : ''})
+                                    </>
+                                )}
+                            </Button>
                         </div>
 
                         {/* AI Generated Prompts */}
