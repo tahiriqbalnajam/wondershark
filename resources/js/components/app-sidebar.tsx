@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { LayoutGrid, Users, Shield, Building2, Plus, Settings } from 'lucide-react';
+import { LayoutGrid, Users, Shield, Building2, Plus, Settings, FileText } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 
 const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavItem[] => {
@@ -43,6 +43,13 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
                 // We'll add dynamic brand list here later
             ]
         });
+        
+        items.push({
+            title: 'Posts',
+            href: '/posts',
+            icon: FileText,
+        });
+
         items.push({
             title: 'People',
             href: '/agency/people',

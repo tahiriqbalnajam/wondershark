@@ -5,6 +5,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BrandController;
+use App\Http\Controllers\PostController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -41,6 +42,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('brands/{brand}/prompts/{prompt}', [\App\Http\Controllers\Brand\BrandPromptController::class, 'update'])->name('brands.prompts.update');
         Route::delete('brands/{brand}/prompts/{prompt}', [\App\Http\Controllers\Brand\BrandPromptController::class, 'destroy'])->name('brands.prompts.destroy');
         Route::post('brands/{brand}/prompts/bulk-update', [\App\Http\Controllers\Brand\BrandPromptController::class, 'bulkUpdate'])->name('brands.prompts.bulkUpdate');
+        
+        // Post Management Routes
+        Route::resource('posts', PostController::class);
+    Route::post('posts/{post}/citations', [PostController::class, 'storeCitation'])->name('posts.citations.store');
         
         // Brand Prompts API Routes
         Route::prefix('api')->group(function () {
