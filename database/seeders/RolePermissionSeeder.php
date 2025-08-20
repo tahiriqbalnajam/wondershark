@@ -38,6 +38,7 @@ class RolePermissionSeeder extends Seeder
             // Admin permissions
             'view-admin-panel',
             'manage-system',
+            'manage-ai-models',
         ];
 
         foreach ($permissions as $permission) {

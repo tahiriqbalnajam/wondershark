@@ -6,11 +6,13 @@ use App\Models\Brand;
 use App\Models\BrandPrompt;
 use App\Models\BrandSubreddit;
 use App\Models\User;
+use App\Models\AiModel;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -39,8 +41,12 @@ class BrandController extends Controller
      */
     public function create(): Response
     {
+        // Get enabled AI models for automatic prompt generation
+        $aiModels = AiModel::enabled()->ordered()->get();
+        
         return Inertia::render('brands/create', [
             'sessionId' => session()->getId(),
+            'aiModels' => $aiModels,
         ]);
     }
 
@@ -267,19 +273,252 @@ class BrandController extends Controller
     }
 
     /**
-     * Generate AI prompts for a brand based on website.
+     * Get prompts with ratio-based selection for display
      */
-    public function generatePrompts(Request $request)
+    public function getPromptsWithRatio(Request $request)
+    {
+        $request->validate([
+            'website' => 'required|url',
+            'limit' => 'integer|min:1|max:100',
+            'offset' => 'integer|min:0',
+        ]);
+
+        try {
+            $aiService = app(\App\Services\AIPromptService::class);
+            $limit = $request->get('limit', 25);
+            $offset = $request->get('offset', 0);
+            
+            // Get all prompts for the website
+            $allPrompts = $aiService->getPromptsForWebsite($request->website)->toArray();
+            
+            if (empty($allPrompts)) {
+                return response()->json([
+                    'success' => true,
+                    'prompts' => [],
+                    'has_more' => false,
+                    'total_count' => 0,
+                ]);
+            }
+
+            // Remove duplicates and get unique prompts
+            $uniquePrompts = $this->removeDuplicatesFromArray($allPrompts);
+            
+            // Apply ratio-based selection with offset
+            $selectedPrompts = $this->selectPromptsWithRatio($uniquePrompts, $limit, $offset);
+            
+            $formattedPrompts = array_map(function ($prompt) {
+                return [
+                    'id' => $prompt['id'],
+                    'prompt' => $prompt['prompt'],
+                    'source' => $prompt['source'],
+                    'ai_provider' => $prompt['ai_provider'],
+                    'is_selected' => false,
+                    'order' => $prompt['order'],
+                ];
+            }, $selectedPrompts);
+
+            $hasMore = (count($uniquePrompts) > ($offset + $limit));
+
+            return response()->json([
+                'success' => true,
+                'prompts' => $formattedPrompts,
+                'has_more' => $hasMore,
+                'total_count' => count($uniquePrompts),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get prompts with ratio', [
+                'error' => $e->getMessage(),
+                'website' => $request->website,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get prompts. Please try again.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Remove duplicates from prompts array
+     */
+    private function removeDuplicatesFromArray(array $prompts): array
+    {
+        $uniquePrompts = [];
+        $seenPrompts = [];
+        $seenWords = [];
+
+        foreach ($prompts as $prompt) {
+            $promptText = strtolower(trim($prompt['prompt']));
+            $words = array_unique(str_word_count($promptText, 1));
+            
+            // Check for exact duplicates
+            if (in_array($promptText, $seenPrompts)) {
+                continue;
+            }
+
+            // Check for similar prompts (sharing 80% of words)
+            $isSimilar = false;
+            foreach ($seenWords as $existingWords) {
+                $intersection = array_intersect($words, $existingWords);
+                $similarity = count($intersection) / max(count($words), count($existingWords));
+                
+                if ($similarity >= 0.8) {
+                    $isSimilar = true;
+                    break;
+                }
+            }
+
+            if (!$isSimilar) {
+                $uniquePrompts[] = $prompt;
+                $seenPrompts[] = $promptText;
+                $seenWords[] = $words;
+            }
+        }
+
+        return $uniquePrompts;
+    }
+
+    /**
+     * Select prompts using ratio-based distribution with offset
+     */
+    private function selectPromptsWithRatio(array $prompts, int $limit, int $offset = 0): array
+    {
+        // Group prompts by AI provider
+        $groupedPrompts = [];
+        foreach ($prompts as $prompt) {
+            $provider = $prompt['ai_provider'] ?? 'unknown';
+            $groupedPrompts[$provider][] = $prompt;
+        }
+
+        $providers = array_keys($groupedPrompts);
+        $providerCount = count($providers);
+        
+        if ($providerCount === 0) {
+            return [];
+        }
+
+        // Calculate how many prompts we need to get (including offset)
+        $totalNeeded = $offset + $limit;
+        $selectedPrompts = [];
+        
+        // Create a balanced selection across all providers
+        $maxRounds = ceil($totalNeeded / $providerCount);
+        
+        for ($round = 0; $round < $maxRounds && count($selectedPrompts) < $totalNeeded; $round++) {
+            foreach ($providers as $provider) {
+                if (isset($groupedPrompts[$provider][$round])) {
+                    $selectedPrompts[] = $groupedPrompts[$provider][$round];
+                    if (count($selectedPrompts) >= $totalNeeded) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Apply offset and limit
+        return array_slice($selectedPrompts, $offset, $limit);
+    }
+
+    /**
+     * Generate AI prompts for a brand from all enabled AI models.
+     */
+    public function generateMultiModelPrompts(Request $request)
     {
         $request->validate([
             'website' => 'required|url',
             'description' => 'required|string|max:1000',
-            'ai_provider' => 'required|string|in:openai,claude,gemini,groq,deepseek',
         ]);
 
         try {
             $sessionId = session()->getId();
             $aiService = app(\App\Services\AIPromptService::class);
+            
+            // Check if we already have prompts for this website
+            $existingPrompts = $aiService->getPromptsForWebsite($request->website);
+            
+            if (count($existingPrompts) > 0) {
+                // Return existing prompts but mark them as for current session
+                foreach ($existingPrompts as $prompt) {
+                    $prompt->update(['session_id' => $sessionId]);
+                }
+                
+                return response()->json([
+                    'success' => true,
+                    'prompts' => $existingPrompts->map(function ($prompt) {
+                        return [
+                            'id' => $prompt->id,
+                            'prompt' => $prompt->prompt,
+                            'source' => 'ai_generated_cached',
+                            'ai_provider' => $prompt->ai_provider,
+                            'is_selected' => true,
+                            'order' => $prompt->order,
+                        ];
+                    })->toArray(),
+                    'cached' => true,
+                ]);
+            }
+            
+            // Generate new prompts from all enabled AI models
+            $generatedPrompts = $aiService->generatePromptsFromMultipleModels(
+                $request->website,
+                $sessionId,
+                $request->description
+            );
+
+            if (empty($generatedPrompts)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No prompts were generated. Please check AI model configurations.',
+                ]);
+            }
+
+            $formattedPrompts = [];
+            foreach ($generatedPrompts as $prompt) {
+                $formattedPrompts[] = [
+                    'id' => $prompt->id,
+                    'prompt' => $prompt->prompt,
+                    'source' => 'ai_generated',
+                    'ai_provider' => $prompt->ai_provider,
+                    'is_selected' => true,
+                    'order' => $prompt->order,
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'prompts' => $formattedPrompts,
+                'cached' => false,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to generate multi-model prompts', [
+                'error' => $e->getMessage(),
+                'website' => $request->website,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate prompts. Please try again.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate AI prompts for a brand based on website.
+     */
+    public function generatePrompts(Request $request)
+    {
+        $aiService = app(\App\Services\AIPromptService::class);
+        $availableProviders = array_keys($aiService->getAvailableProviders());
+        
+        $request->validate([
+            'website' => 'required|url',
+            'description' => 'required|string|max:1000',
+            'ai_provider' => 'required|string|in:' . implode(',', $availableProviders),
+        ]);
+
+        try {
+            $sessionId = session()->getId();
             
             // Check if we already have prompts for this website
             $existingPrompts = $aiService->getPromptsForWebsite($request->website);

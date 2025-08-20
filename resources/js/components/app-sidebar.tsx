@@ -74,6 +74,13 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
             href: '/admin',
             icon: Shield,
             permission: 'view-admin-panel',
+            items: [
+                {
+                    title: 'AI Models',
+                    href: '/admin/ai-models',
+                    icon: Settings,
+                },
+            ]
         });
     }
 

@@ -28,6 +28,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Admin Panel Routes - Protected by admin role or permission
     Route::middleware('role.permission:view-admin-panel')->group(function () {
         Route::get('admin', [AdminController::class, 'index'])->name('admin.index');
+        
+        // AI Models Management - Admin only
+        Route::resource('admin/ai-models', \App\Http\Controllers\Admin\AiModelController::class)->names([
+            'index' => 'admin.ai-models.index',
+            'create' => 'admin.ai-models.create',
+            'store' => 'admin.ai-models.store',
+            'show' => 'admin.ai-models.show',
+            'edit' => 'admin.ai-models.edit',
+            'update' => 'admin.ai-models.update',
+            'destroy' => 'admin.ai-models.destroy',
+        ]);
+        Route::post('admin/ai-models/{aiModel}/toggle', [\App\Http\Controllers\Admin\AiModelController::class, 'toggle'])
+            ->name('admin.ai-models.toggle');
+        Route::post('admin/ai-models/{aiModel}/test', [\App\Http\Controllers\Admin\AiModelController::class, 'test'])
+            ->name('admin.ai-models.test');
     });
 
     // Brand Management Routes - Only for agency users
@@ -35,6 +50,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('brands', BrandController::class);
         Route::put('brands/{brand}/status', [BrandController::class, 'updateStatus'])->name('brands.status');
         Route::post('brands/generate-prompts', [BrandController::class, 'generatePrompts'])->name('brands.generatePrompts');
+        Route::post('brands/generate-multi-model-prompts', [BrandController::class, 'generateMultiModelPrompts'])->name('brands.generateMultiModelPrompts');
+        Route::post('brands/get-prompts-with-ratio', [BrandController::class, 'getPromptsWithRatio'])->name('brands.getPromptsWithRatio');
         Route::post('brands/get-existing-prompts', [BrandController::class, 'getExistingPrompts'])->name('brands.getExistingPrompts');
         
         // Brand Prompts Management Routes
