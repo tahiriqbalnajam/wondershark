@@ -27,29 +27,49 @@ type Brand = {
     created_at: string;
     prompts: Array<{ id: number; prompt: string; order: number; is_active: boolean }>;
     subreddits: Array<{ id: number; subreddit_name: string; description?: string; status: string }>;
-    user: {
+    user?: {
         id: number;
         name: string;
         email: string;
-    };
+    } | null;
 };
 
 type Props = {
-    brand: Brand;
+    brand: Brand | null;
 };
 
-const breadcrumbs = (brand: Brand): BreadcrumbItem[] => [
+const breadcrumbs = (brand: Brand | null): BreadcrumbItem[] => [
     {
         title: 'Brands',
         href: '/brands',
     },
     {
-        title: brand.name,
-        href: `/brands/${brand.id}`,
+        title: brand?.name || 'Brand Details',
+        href: `/brands/${brand?.id || ''}`,
     },
 ];
 
 export default function BrandShow({ brand }: Props) {
+    if (!brand) {
+        return (
+            <AppLayout>
+                <Head title="Brand Not Found" />
+                <div className="flex items-center justify-center min-h-[400px]">
+                    <div className="text-center">
+                        <h1 className="text-2xl font-semibold text-gray-900">Brand Not Found</h1>
+                        <p className="mt-2 text-gray-600">The brand you're looking for doesn't exist.</p>
+                        <Button className="mt-4" asChild>
+                            <Link href="/brands">
+                                <ArrowLeft className="h-4 w-4 mr-2" />
+                                Back to Brands
+                            </Link>
+                        </Button>
+                    </div>
+                </div>
+            </AppLayout>
+        );
+    }
+
     return (
         <AppLayout breadcrumbs={breadcrumbs(brand)}>
             <Head title={`${brand.name} - Brand Details`} />
@@ -160,16 +180,16 @@ export default function BrandShow({ brand }: Props) {
                         <CardContent className="space-y-4">
                             <div>
                                 <label className="text-sm font-medium">Account Holder</label>
-                                <p className="font-semibold">{brand.user.name}</p>
+                                <p className="font-semibold">{brand.user?.name || 'No account assigned'}</p>
                             </div>
                             <div>
                                 <label className="text-sm font-medium">Email</label>
-                                <p className="text-sm text-muted-foreground">{brand.user.email}</p>
+                                <p className="text-sm text-muted-foreground">{brand.user?.email || 'N/A'}</p>
                             </div>
                             <div>
                                 <label className="text-sm font-medium">Account Status</label>
                                 <Badge variant="outline" className="mt-1">
-                                    Active
+                                    {brand.user ? 'Active' : 'Unassigned'}
                                 </Badge>
                             </div>
                         </CardContent>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use App\Models\Brand;
+use App\Jobs\GeneratePostPrompts;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -98,7 +99,16 @@ class PostController extends Controller
             'posted_at' => $request->posted_at ?: now(),
         ]);
 
-        return redirect()->route('posts.index')->with('success', 'Post created successfully.');
+        // Automatically generate prompts for the post in background
+        $sessionId = session()->getId() ?: 'auto-' . uniqid();
+        
+        GeneratePostPrompts::dispatch(
+            $post, 
+            $sessionId, 
+            $request->description ?? ''
+        );
+
+        return redirect()->route('posts.index')->with('success', 'Post created successfully. Prompts are being generated in the background.');
     }
 
     /**
@@ -189,6 +199,9 @@ class PostController extends Controller
             'posted_at' => 'nullable|date',
         ]);
 
+        $originalUrl = $post->url;
+        $originalDescription = $post->description;
+        
         $post->update([
             'brand_id' => $request->brand_id,
             'title' => $request->title,
@@ -198,7 +211,29 @@ class PostController extends Controller
             'posted_at' => $request->posted_at,
         ]);
 
-        return redirect()->route('posts.index')->with('success', 'Post updated successfully.');
+        // Check if URL or description changed significantly
+        $urlChanged = $originalUrl !== $request->url;
+        $descriptionChanged = $originalDescription !== $request->description;
+        
+        if ($urlChanged || $descriptionChanged) {
+            $sessionId = session()->getId() ?: 'auto-' . uniqid();
+            
+            // Generate new prompts in background, replacing existing if URL changed
+            GeneratePostPrompts::dispatch(
+                $post, 
+                $sessionId, 
+                $request->description ?? '',
+                $urlChanged // Replace existing prompts if URL changed
+            );
+            
+            $message = $urlChanged 
+                ? 'Post updated successfully. New prompts are being generated due to URL change.'
+                : 'Post updated successfully. Prompts are being regenerated due to description change.';
+        } else {
+            $message = 'Post updated successfully.';
+        }
+
+        return redirect()->route('posts.index')->with('success', $message);
     }
 
     /**
@@ -248,5 +283,33 @@ class PostController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Citation added successfully.');
+    }
+
+    /**
+     * Display the prompts management page for a post.
+     */
+    public function showPrompts(Post $post)
+    {
+        $post->load(['brand', 'user', 'prompts']);
+        
+        return Inertia::render('posts/prompts', [
+            'post' => [
+                'id' => $post->id,
+                'title' => $post->title,
+                'url' => $post->url,
+                'description' => $post->description,
+                'status' => $post->status,
+                'posted_at' => $post->posted_at,
+                'brand' => [
+                    'id' => $post->brand->id,
+                    'name' => $post->brand->name,
+                ],
+                'user' => [
+                    'id' => $post->user->id,
+                    'name' => $post->user->name,
+                ],
+                'prompts_count' => $post->prompts->count(),
+            ],
+        ]);
     }
 }

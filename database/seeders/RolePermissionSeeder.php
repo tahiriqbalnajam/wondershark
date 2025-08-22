@@ -39,6 +39,7 @@ class RolePermissionSeeder extends Seeder
             'view-admin-panel',
             'manage-system',
             'manage-ai-models',
+            'manage-citation-check',
         ];
 
         foreach ($permissions as $permission) {

@@ -234,10 +234,19 @@ class AIPromptService
     /**
      * Get prompts with ratio-based selection for frontend display
      */
-    public function getPromptsWithRatio(string $website, int $limit = 25): array
+    public function getPromptsWithRatio(string $website, int $limit = 25, int $offset = 0): array
     {
+        // Get active AI model names
+        $activeAiModels = $this->getEnabledAiModels()->pluck('name')->toArray();
+        
+        if (empty($activeAiModels)) {
+            return [];
+        }
+
+        // Only get prompts from active AI models
         $allPrompts = GeneratedPrompt::forWebsite($website)
             ->where('source', '!=', 'fallback')
+            ->whereIn('ai_provider', $activeAiModels)
             ->orderBy('order')
             ->get()
             ->toArray();
@@ -246,7 +255,37 @@ class AIPromptService
             return [];
         }
 
-        return $this->selectPromptsWithRatio($allPrompts, $limit);
+        // Remove duplicates and similar prompts
+        $uniquePrompts = $this->removeDuplicatePrompts($allPrompts);
+
+        return $this->selectPromptsWithRatio($uniquePrompts, $limit, $offset);
+    }
+
+    /**
+     * Get total count of available prompts for a website from active AI models
+     */
+    public function getTotalPromptsCount(string $website): int
+    {
+        // Get active AI model names
+        $activeAiModels = $this->getEnabledAiModels()->pluck('name')->toArray();
+        
+        if (empty($activeAiModels)) {
+            return 0;
+        }
+
+        // Remove duplicates and similar prompts to get accurate count
+        $allPrompts = GeneratedPrompt::forWebsite($website)
+            ->where('source', '!=', 'fallback')
+            ->whereIn('ai_provider', $activeAiModels)
+            ->orderBy('order')
+            ->get();
+
+        if ($allPrompts->isEmpty()) {
+            return 0;
+        }
+
+        $uniquePrompts = $this->removeDuplicatePrompts($allPrompts->toArray());
+        return count($uniquePrompts);
     }
 
     /**
@@ -292,7 +331,7 @@ class AIPromptService
     /**
      * Select prompts using ratio-based distribution
      */
-    protected function selectPromptsWithRatio(array $prompts, int $limit): array
+    protected function selectPromptsWithRatio(array $prompts, int $limit, int $offset = 0): array
     {
         // Group prompts by AI provider
         $groupedPrompts = [];
@@ -308,23 +347,26 @@ class AIPromptService
             return [];
         }
 
-        // Calculate ratio for each provider
+        // Calculate how many prompts we need to get (including offset)
+        $totalNeeded = $offset + $limit;
         $selectedPrompts = [];
-        $promptsPerProvider = floor($limit / $providerCount);
-        $remainder = $limit % $providerCount;
-
-        foreach ($providers as $index => $provider) {
-            $count = $promptsPerProvider;
-            // Distribute remainder to first few providers
-            if ($index < $remainder) {
-                $count++;
+        
+        // Create a balanced selection across all providers
+        $maxRounds = ceil($totalNeeded / $providerCount);
+        
+        for ($round = 0; $round < $maxRounds && count($selectedPrompts) < $totalNeeded; $round++) {
+            foreach ($providers as $provider) {
+                if (isset($groupedPrompts[$provider][$round])) {
+                    $selectedPrompts[] = $groupedPrompts[$provider][$round];
+                    if (count($selectedPrompts) >= $totalNeeded) {
+                        break;
+                    }
+                }
             }
-
-            $providerPrompts = array_slice($groupedPrompts[$provider], 0, $count);
-            $selectedPrompts = array_merge($selectedPrompts, $providerPrompts);
         }
 
-        return array_slice($selectedPrompts, 0, $limit);
+        // Apply offset and limit
+        return array_slice($selectedPrompts, $offset, $limit);
     }
 
     public function getPromptsForSession(string $sessionId): array

@@ -30,7 +30,8 @@ import {
     Trash2,
     ExternalLink,
     Calendar,
-    Building2
+    Building2,
+    MessageSquare
 } from 'lucide-react';
 
 type Post = {
@@ -224,6 +225,12 @@ export default function PostsIndex({ posts }: Props) {
                                                             <Link href={`/posts/${post.id}/edit`}>
                                                                 <Edit className="h-4 w-4 mr-2" />
                                                                 Edit
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/posts/${post.id}/manage-prompts`}>
+                                                                <MessageSquare className="h-4 w-4 mr-2" />
+                                                                Manage Prompts
                                                             </Link>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />

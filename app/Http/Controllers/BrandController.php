@@ -288,23 +288,11 @@ class BrandController extends Controller
             $limit = $request->get('limit', 25);
             $offset = $request->get('offset', 0);
             
-            // Get all prompts for the website
-            $allPrompts = $aiService->getPromptsForWebsite($request->website)->toArray();
+            // Get prompts with ratio-based selection from active AI models only
+            $selectedPrompts = $aiService->getPromptsWithRatio($request->website, $limit, $offset);
             
-            if (empty($allPrompts)) {
-                return response()->json([
-                    'success' => true,
-                    'prompts' => [],
-                    'has_more' => false,
-                    'total_count' => 0,
-                ]);
-            }
-
-            // Remove duplicates and get unique prompts
-            $uniquePrompts = $this->removeDuplicatesFromArray($allPrompts);
-            
-            // Apply ratio-based selection with offset
-            $selectedPrompts = $this->selectPromptsWithRatio($uniquePrompts, $limit, $offset);
+            // Get total count for pagination
+            $totalCount = $aiService->getTotalPromptsCount($request->website);
             
             $formattedPrompts = array_map(function ($prompt) {
                 return [
@@ -317,13 +305,13 @@ class BrandController extends Controller
                 ];
             }, $selectedPrompts);
 
-            $hasMore = (count($uniquePrompts) > ($offset + $limit));
+            $hasMore = ($totalCount > ($offset + $limit));
 
             return response()->json([
                 'success' => true,
                 'prompts' => $formattedPrompts,
                 'has_more' => $hasMore,
-                'total_count' => count($uniquePrompts),
+                'total_count' => $totalCount,
             ]);
 
         } catch (\Exception $e) {
@@ -337,87 +325,6 @@ class BrandController extends Controller
                 'message' => 'Failed to get prompts. Please try again.',
             ], 500);
         }
-    }
-
-    /**
-     * Remove duplicates from prompts array
-     */
-    private function removeDuplicatesFromArray(array $prompts): array
-    {
-        $uniquePrompts = [];
-        $seenPrompts = [];
-        $seenWords = [];
-
-        foreach ($prompts as $prompt) {
-            $promptText = strtolower(trim($prompt['prompt']));
-            $words = array_unique(str_word_count($promptText, 1));
-            
-            // Check for exact duplicates
-            if (in_array($promptText, $seenPrompts)) {
-                continue;
-            }
-
-            // Check for similar prompts (sharing 80% of words)
-            $isSimilar = false;
-            foreach ($seenWords as $existingWords) {
-                $intersection = array_intersect($words, $existingWords);
-                $similarity = count($intersection) / max(count($words), count($existingWords));
-                
-                if ($similarity >= 0.8) {
-                    $isSimilar = true;
-                    break;
-                }
-            }
-
-            if (!$isSimilar) {
-                $uniquePrompts[] = $prompt;
-                $seenPrompts[] = $promptText;
-                $seenWords[] = $words;
-            }
-        }
-
-        return $uniquePrompts;
-    }
-
-    /**
-     * Select prompts using ratio-based distribution with offset
-     */
-    private function selectPromptsWithRatio(array $prompts, int $limit, int $offset = 0): array
-    {
-        // Group prompts by AI provider
-        $groupedPrompts = [];
-        foreach ($prompts as $prompt) {
-            $provider = $prompt['ai_provider'] ?? 'unknown';
-            $groupedPrompts[$provider][] = $prompt;
-        }
-
-        $providers = array_keys($groupedPrompts);
-        $providerCount = count($providers);
-        
-        if ($providerCount === 0) {
-            return [];
-        }
-
-        // Calculate how many prompts we need to get (including offset)
-        $totalNeeded = $offset + $limit;
-        $selectedPrompts = [];
-        
-        // Create a balanced selection across all providers
-        $maxRounds = ceil($totalNeeded / $providerCount);
-        
-        for ($round = 0; $round < $maxRounds && count($selectedPrompts) < $totalNeeded; $round++) {
-            foreach ($providers as $provider) {
-                if (isset($groupedPrompts[$provider][$round])) {
-                    $selectedPrompts[] = $groupedPrompts[$provider][$round];
-                    if (count($selectedPrompts) >= $totalNeeded) {
-                        break;
-                    }
-                }
-            }
-        }
-
-        // Apply offset and limit
-        return array_slice($selectedPrompts, $offset, $limit);
     }
 
     /**

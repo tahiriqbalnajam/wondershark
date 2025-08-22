@@ -35,4 +35,23 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | AI Services Configuration
+    |--------------------------------------------------------------------------
+    */
+    
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'organization' => env('OPENAI_ORGANIZATION'),
+    ],
+
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+    ],
+
+    'perplexity' => [
+        'api_key' => env('PERPLEXITY_API_KEY'),
+    ],
+
 ];

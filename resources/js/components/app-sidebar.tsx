@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { LayoutGrid, Users, Shield, Building2, Plus, Settings, FileText } from 'lucide-react';
+import { LayoutGrid, Users, Shield, Building2, Plus, Settings, FileText, Clock } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 
 const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavItem[] => {
@@ -79,6 +79,18 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
                     title: 'AI Models',
                     href: '/admin/ai-models',
                     icon: Settings,
+                },
+                {
+                    title: 'Citation Check',
+                    href: '/admin/citation-check',
+                    icon: FileText,
+                    permission: 'manage-citation-check',
+                },
+                {
+                    title: 'Job Monitor',
+                    href: '/admin/jobs',
+                    icon: Clock,
+                    permission: 'view-admin-panel',
                 },
             ]
         });

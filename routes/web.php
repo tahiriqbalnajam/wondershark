@@ -6,6 +6,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\PostController;
+use App\Http\Controllers\PostPromptController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -43,6 +44,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('admin.ai-models.toggle');
         Route::post('admin/ai-models/{aiModel}/test', [\App\Http\Controllers\Admin\AiModelController::class, 'test'])
             ->name('admin.ai-models.test');
+
+        // Citation Check Management - Admin only
+        Route::prefix('admin/citation-check')->name('admin.citation-check.')->middleware('role.permission:manage-citation-check')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\CitationCheckController::class, 'index'])->name('index');
+            Route::get('/{post}', [\App\Http\Controllers\Admin\CitationCheckController::class, 'show'])->name('show');
+            Route::post('/run-check', [\App\Http\Controllers\Admin\CitationCheckController::class, 'runCheck'])->name('run-check');
+            Route::post('/{post}/recheck', [\App\Http\Controllers\Admin\CitationCheckController::class, 'recheck'])->name('recheck');
+            Route::post('/bulk-check', [\App\Http\Controllers\Admin\CitationCheckController::class, 'bulkCheck'])->name('bulk-check');
+        });
+
+        // Job Monitoring - Admin only
+        Route::prefix('admin/jobs')->name('admin.jobs.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\JobMonitorController::class, 'index'])->name('index');
+            Route::post('/{jobId}/retry', [\App\Http\Controllers\Admin\JobMonitorController::class, 'retry'])->name('retry');
+            Route::delete('/{jobId}', [\App\Http\Controllers\Admin\JobMonitorController::class, 'delete'])->name('delete');
+            Route::post('/clear', [\App\Http\Controllers\Admin\JobMonitorController::class, 'clear'])->name('clear');
+        });
     });
 
     // Brand Management Routes - Only for agency users
@@ -62,7 +80,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         
         // Post Management Routes
         Route::resource('posts', PostController::class);
-    Route::post('posts/{post}/citations', [PostController::class, 'storeCitation'])->name('posts.citations.store');
+        Route::post('posts/{post}/citations', [PostController::class, 'storeCitation'])->name('posts.citations.store');
+        Route::get('posts/{post}/prompts', [PostController::class, 'showPrompts'])->name('posts.prompts');
+        
+        // Post Prompts Management Routes
+        Route::get('posts/{post}/manage-prompts', [PostPromptController::class, 'index'])->name('posts.prompts.index');
+        Route::post('posts/{post}/generate-prompts', [PostPromptController::class, 'generatePrompts'])->name('posts.generatePrompts');
+        Route::post('posts/{post}/get-prompts-with-ratio', [PostPromptController::class, 'getPromptsWithRatio'])->name('posts.getPromptsWithRatio');
+        Route::post('posts/{post}/add-custom-prompt', [PostPromptController::class, 'addCustomPrompt'])->name('posts.addCustomPrompt');
+        Route::put('post-prompts/{postPrompt}/selection', [PostPromptController::class, 'updateSelection'])->name('post-prompts.updateSelection');
+        Route::delete('post-prompts/{postPrompt}', [PostPromptController::class, 'destroy'])->name('post-prompts.destroy');
         
         // Brand Prompts API Routes
         Route::prefix('api')->group(function () {

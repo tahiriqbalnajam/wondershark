@@ -40,6 +40,11 @@ class Post extends Model
         return $this->hasMany(PostCitation::class);
     }
 
+    public function prompts(): HasMany
+    {
+        return $this->hasMany(PostPrompt::class);
+    }
+
     public function getCitationByAiModel(string $aiModel): ?PostCitation
     {
         return $this->citations()->where('ai_model', $aiModel)->first();
