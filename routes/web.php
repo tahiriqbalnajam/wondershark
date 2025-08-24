@@ -82,6 +82,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/brands/bulk-update', [\App\Http\Controllers\Admin\PostPermissionController::class, 'bulkUpdateBrands'])->name('brands.bulk-update');
         });
 
+        // Post Management - Admin only
+        Route::prefix('admin/posts')->name('admin.posts.')->middleware('role.permission:manage-system')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\PostController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Admin\PostController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Admin\PostController::class, 'store'])->name('store');
+            Route::get('/{post}', [\App\Http\Controllers\Admin\PostController::class, 'show'])->name('show');
+            Route::get('/{post}/edit', [\App\Http\Controllers\Admin\PostController::class, 'edit'])->name('edit');
+            Route::patch('/{post}', [\App\Http\Controllers\Admin\PostController::class, 'update'])->name('update');
+            Route::delete('/{post}', [\App\Http\Controllers\Admin\PostController::class, 'destroy'])->name('destroy');
+        });
+
         // User Management - Admin only
         Route::prefix('admin/users')->name('admin.users.')->middleware('role.permission:manage-system')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('index');

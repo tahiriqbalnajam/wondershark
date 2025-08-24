@@ -81,6 +81,12 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
                     icon: Settings,
                 },
                 {
+                    title: 'Posts',
+                    href: '/admin/posts',
+                    icon: FileText,
+                    permission: 'manage-system',
+                },
+                {
                     title: 'Post Permissions',
                     href: '/admin/post-permissions',
                     icon: Shield,
