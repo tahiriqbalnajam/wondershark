@@ -81,6 +81,12 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
                     icon: Settings,
                 },
                 {
+                    title: 'Post Permissions',
+                    href: '/admin/post-permissions',
+                    icon: Shield,
+                    permission: 'manage-system',
+                },
+                {
                     title: 'Citation Check',
                     href: '/admin/citation-check',
                     icon: FileText,
@@ -91,6 +97,12 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
                     href: '/admin/jobs',
                     icon: Clock,
                     permission: 'view-admin-panel',
+                },
+                {
+                    title: 'System Settings',
+                    href: '/admin/settings',
+                    icon: Settings,
+                    permission: 'manage-system',
                 },
             ]
         });

@@ -23,14 +23,25 @@ class Brand extends Model
         'current_step',
         'session_id',
         'completed_at',
+        'can_create_posts',
+        'post_creation_note',
     ];
 
     protected $casts = [
-        'monthly_posts' => 'integer',
-        'is_completed' => 'boolean',
-        'current_step' => 'integer',
-        'completed_at' => 'datetime',
+        'email_verified_at' => 'datetime',
+        'can_create_posts' => 'boolean',
     ];
+
+    /**
+     * Get the current month's posts count for this brand.
+     */
+    public function getCurrentMonthPostsCount(): int
+    {
+        return $this->posts()
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+    }
 
     public function agency(): BelongsTo
     {
@@ -50,5 +61,10 @@ class Brand extends Model
     public function subreddits(): HasMany
     {
         return $this->hasMany(BrandSubreddit::class);
+    }
+
+    public function posts(): HasMany
+    {
+        return $this->hasMany(Post::class);
     }
 }

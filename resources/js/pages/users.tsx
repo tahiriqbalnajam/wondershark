@@ -1,9 +1,10 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Users as UsersIcon } from 'lucide-react';
+import { Plus, Users as UsersIcon, Edit, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 
 interface User {
     id: number;
@@ -19,6 +20,21 @@ interface UsersPageProps {
 
 export default function Users({ users }: UsersPageProps) {
     const { can } = usePermissions();
+    const [deletingUser, setDeletingUser] = useState<number | null>(null);
+
+    const handleDeleteUser = async (userId: number) => {
+        if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+            setDeletingUser(userId);
+            router.delete(route('users.destroy', userId), {
+                onSuccess: () => {
+                    setDeletingUser(null);
+                },
+                onError: () => {
+                    setDeletingUser(null);
+                }
+            });
+        }
+    };
 
     return (
         <AppLayout>
@@ -33,10 +49,12 @@ export default function Users({ users }: UsersPageProps) {
                         </p>
                     </div>
                     {can('createUsers') && (
-                        <Button>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add User
-                        </Button>
+                        <Link href={route('users.create')}>
+                            <Button>
+                                <Plus className="mr-2 h-4 w-4" />
+                                Add User
+                            </Button>
+                        </Link>
                     )}
                 </div>
 
@@ -69,13 +87,22 @@ export default function Users({ users }: UsersPageProps) {
                                     </p>
                                     <div className="space-x-2">
                                         {can('editUsers') && (
-                                            <Button variant="outline" size="sm">
-                                                Edit
-                                            </Button>
+                                            <Link href={route('users.edit', user.id)}>
+                                                <Button variant="outline" size="sm">
+                                                    <Edit className="mr-2 h-4 w-4" />
+                                                    Edit
+                                                </Button>
+                                            </Link>
                                         )}
                                         {can('deleteUsers') && (
-                                            <Button variant="destructive" size="sm">
-                                                Delete
+                                            <Button 
+                                                variant="destructive" 
+                                                size="sm"
+                                                onClick={() => handleDeleteUser(user.id)}
+                                                disabled={deletingUser === user.id}
+                                            >
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                {deletingUser === user.id ? 'Deleting...' : 'Delete'}
                                             </Button>
                                         )}
                                     </div>

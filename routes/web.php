@@ -24,6 +24,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // User Management Routes - Protected by permissions
     Route::middleware('role.permission:view-users')->group(function () {
         Route::get('users', [UserController::class, 'index'])->name('users.index');
+        Route::get('users/create', [UserController::class, 'create'])->name('users.create')->middleware('role.permission:create-users');
+        Route::post('users', [UserController::class, 'store'])->name('users.store')->middleware('role.permission:create-users');
+        Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit')->middleware('role.permission:edit-users');
+        Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update')->middleware('role.permission:edit-users');
+        Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy')->middleware('role.permission:delete-users');
     });
 
     // Admin Panel Routes - Protected by admin role or permission
@@ -60,6 +65,34 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/{jobId}/retry', [\App\Http\Controllers\Admin\JobMonitorController::class, 'retry'])->name('retry');
             Route::delete('/{jobId}', [\App\Http\Controllers\Admin\JobMonitorController::class, 'delete'])->name('delete');
             Route::post('/clear', [\App\Http\Controllers\Admin\JobMonitorController::class, 'clear'])->name('clear');
+        });
+
+        // System Settings - Admin only
+        Route::prefix('admin/settings')->name('admin.settings.')->middleware('role.permission:manage-system')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'index'])->name('index');
+            Route::post('/update', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'update'])->name('update');
+        });
+
+        // Post Permissions Management - Admin only
+        Route::prefix('admin/post-permissions')->name('admin.post-permissions.')->middleware('role.permission:manage-system')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\PostPermissionController::class, 'index'])->name('index');
+            Route::patch('/users/{user}', [\App\Http\Controllers\Admin\PostPermissionController::class, 'updateUser'])->name('users.update');
+            Route::patch('/brands/{brand}', [\App\Http\Controllers\Admin\PostPermissionController::class, 'updateBrand'])->name('brands.update');
+            Route::post('/users/bulk-update', [\App\Http\Controllers\Admin\PostPermissionController::class, 'bulkUpdateUsers'])->name('users.bulk-update');
+            Route::post('/brands/bulk-update', [\App\Http\Controllers\Admin\PostPermissionController::class, 'bulkUpdateBrands'])->name('brands.bulk-update');
+        });
+
+        // User Management - Admin only
+        Route::prefix('admin/users')->name('admin.users.')->middleware('role.permission:manage-system')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Admin\UserController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Admin\UserController::class, 'store'])->name('store');
+            Route::get('/{user}', [\App\Http\Controllers\Admin\UserController::class, 'show'])->name('show');
+            Route::get('/{user}/edit', [\App\Http\Controllers\Admin\UserController::class, 'edit'])->name('edit');
+            Route::patch('/{user}', [\App\Http\Controllers\Admin\UserController::class, 'update'])->name('update');
+            Route::delete('/{user}', [\App\Http\Controllers\Admin\UserController::class, 'destroy'])->name('destroy');
+            Route::patch('/{user}/toggle-post-permission', [\App\Http\Controllers\Admin\UserController::class, 'togglePostPermission'])->name('toggle-post-permission');
+            Route::post('/bulk-update-post-permissions', [\App\Http\Controllers\Admin\UserController::class, 'bulkUpdatePostPermissions'])->name('bulk-update-post-permissions');
         });
     });
 

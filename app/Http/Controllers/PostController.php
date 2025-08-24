@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use App\Models\Brand;
+use App\Models\SystemSetting;
 use App\Jobs\GeneratePostPrompts;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 use Inertia\Inertia;
 
 class PostController extends Controller
@@ -59,12 +61,21 @@ class PostController extends Controller
     {
         $user = Auth::user();
         
+        // Get brands the user has access to
         $brands = Brand::where('agency_id', $user->id)
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'can_create_posts', 'post_creation_note', 'monthly_posts']);
+
+        // Check if user or any of their brands can create posts
+        $canCreatePosts = $user->can_create_posts && $brands->where('can_create_posts', true)->count() > 0;
+        $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
 
         return Inertia::render('posts/create', [
             'brands' => $brands,
+            'canCreatePosts' => $canCreatePosts,
+            'adminEmail' => $adminEmail,
+            'userCanCreatePosts' => $user->can_create_posts,
+            'userPostCreationNote' => $user->post_creation_note,
         ]);
     }
 
@@ -88,6 +99,36 @@ class PostController extends Controller
         $brand = Brand::where('id', $request->brand_id)
             ->where('agency_id', $user->id)
             ->firstOrFail();
+
+        // Check if user can create posts
+        if (!$user->can_create_posts) {
+            $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
+            return back()->withErrors([
+                'permission' => "You don't have permission to create posts. Please contact the administrator at {$adminEmail}. " . 
+                               ($user->post_creation_note ? "Note: {$user->post_creation_note}" : '')
+            ]);
+        }
+
+        // Check if brand can create posts
+        if (!$brand->can_create_posts) {
+            $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
+            return back()->withErrors([
+                'permission' => "The brand '{$brand->name}' doesn't have permission to create posts. Please contact the administrator at {$adminEmail}. " . 
+                               ($brand->post_creation_note ? "Note: {$brand->post_creation_note}" : '')
+            ]);
+        }
+
+        // Check brand post limit
+        $currentMonth = Carbon::now()->startOfMonth();
+        $postsThisMonth = Post::where('brand_id', $brand->id)
+            ->where('created_at', '>=', $currentMonth)
+            ->count();
+
+        if ($brand->monthly_posts && $postsThisMonth >= $brand->monthly_posts) {
+            return back()->withErrors([
+                'limit' => "Brand '{$brand->name}' has reached its monthly post limit of {$brand->monthly_posts} posts. Current count: {$postsThisMonth}."
+            ]);
+        }
 
         $post = Post::create([
             'brand_id' => $request->brand_id,

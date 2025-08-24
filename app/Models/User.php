@@ -24,6 +24,8 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'can_create_posts',
+        'post_creation_note',
     ];
 
     /**
@@ -46,6 +48,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'can_create_posts' => 'boolean',
         ];
     }
 
@@ -63,5 +66,29 @@ class User extends Authenticatable
     public function agencyMemberships(): HasMany
     {
         return $this->hasMany(AgencyMember::class, 'user_id');
+    }
+
+    /**
+     * Get brands where this user is the agency.
+     */
+    public function brands(): HasMany
+    {
+        return $this->hasMany(Brand::class, 'agency_id');
+    }
+
+    /**
+     * Get brands where this user is assigned as the brand user.
+     */
+    public function assignedBrands(): HasMany
+    {
+        return $this->hasMany(Brand::class, 'user_id');
+    }
+
+    /**
+     * Get posts created by this user.
+     */
+    public function posts(): HasMany
+    {
+        return $this->hasMany(Post::class);
     }
 }

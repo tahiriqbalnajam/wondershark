@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
     Select,
     SelectContent,
@@ -22,10 +21,17 @@ import { ArrowLeft, FileText, ExternalLink, Filter, X } from 'lucide-react';
 type Brand = {
     id: number;
     name: string;
+    can_create_posts: boolean;
+    post_creation_note?: string;
+    monthly_posts: number;
 };
 
 type Props = {
     brands: Brand[];
+    canCreatePosts: boolean;
+    adminEmail: string;
+    userCanCreatePosts: boolean;
+    userPostCreationNote?: string;
 };
 
 type FormData = {
@@ -56,7 +62,13 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function PostsCreate({ brands }: Props) {
+export default function PostsCreate({ 
+    brands, 
+    canCreatePosts, 
+    adminEmail, 
+    userCanCreatePosts, 
+    userPostCreationNote 
+}: Props) {
     const { data, setData, post, processing, errors } = useForm<FormData>({
         title: '',
         url: '',
@@ -91,7 +103,7 @@ export default function PostsCreate({ brands }: Props) {
     const handleDateRangeChange = (range: string) => {
         const today = new Date();
         let from = '';
-        let to = today.toISOString().split('T')[0];
+        const to = today.toISOString().split('T')[0];
 
         if (range === '7days') {
             from = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -155,6 +167,78 @@ export default function PostsCreate({ brands }: Props) {
             return false;
         }
     };
+
+    // Check if user or brand can create posts
+    if (!userCanCreatePosts || !canCreatePosts) {
+        return (
+            <AppLayout breadcrumbs={breadcrumbs}>
+                <Head title="Create Post" />
+                
+                <div className="space-y-6">
+                    <div className="flex items-center gap-4">
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href="/posts">
+                                <ArrowLeft className="h-4 w-4 mr-2" />
+                                Back to Posts
+                            </Link>
+                        </Button>
+                        
+                        <HeadingSmall 
+                            title="Post Creation Not Available" 
+                            description="Contact administrator for permissions"
+                        />
+                    </div>
+
+                    <Card>
+                        <CardContent className="pt-6 space-y-4">
+                            {!userCanCreatePosts && (
+                                <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+                                    <h3 className="font-semibold text-red-800 mb-2">User Permission Required</h3>
+                                    <p className="text-red-700 mb-2">
+                                        You don't have permission to create posts.
+                                    </p>
+                                    {userPostCreationNote && (
+                                        <p className="text-red-600 text-sm mb-2">
+                                            Note: {userPostCreationNote}
+                                        </p>
+                                    )}
+                                    <p className="text-red-700">
+                                        Please contact the administrator at{' '}
+                                        <a 
+                                            href={`mailto:${adminEmail}`} 
+                                            className="text-blue-600 hover:underline"
+                                        >
+                                            {adminEmail}
+                                        </a>
+                                        {' '}to request post creation permissions.
+                                    </p>
+                                </div>
+                            )}
+
+                            {!canCreatePosts && (
+                                <div className="p-4 bg-orange-50 border border-orange-200 rounded-md">
+                                    <h3 className="font-semibold text-orange-800 mb-2">Brand Permission Required</h3>
+                                    <p className="text-orange-700 mb-2">
+                                        Your brand doesn't have permission to create posts.
+                                    </p>
+                                    <p className="text-orange-700">
+                                        Please contact the administrator at{' '}
+                                        <a 
+                                            href={`mailto:${adminEmail}`} 
+                                            className="text-blue-600 hover:underline"
+                                        >
+                                            {adminEmail}
+                                        </a>
+                                        {' '}to request post creation permissions for your brand.
+                                    </p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            </AppLayout>
+        );
+    }
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
