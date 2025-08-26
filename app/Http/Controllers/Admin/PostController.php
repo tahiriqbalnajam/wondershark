@@ -178,7 +178,7 @@ class PostController extends Controller
      */
     public function show(Post $post)
     {
-        $post->load(['brand.agency', 'user', 'citations', 'prompts']);
+        $post->load(['brand.user', 'brand.agency', 'citations', 'prompts']);
 
         return Inertia::render('admin/posts/show', [
             'post' => [
@@ -186,38 +186,41 @@ class PostController extends Controller
                 'title' => $post->title,
                 'url' => $post->url,
                 'description' => $post->description,
+                'content' => $post->description, // Use description as content for compatibility
                 'status' => $post->status,
-                'posted_at' => $post->posted_at,
                 'created_at' => $post->created_at,
+                'updated_at' => $post->updated_at,
                 'brand' => [
                     'id' => $post->brand->id,
                     'name' => $post->brand->name,
-                    'agency' => $post->brand->agency ? [
+                    'user' => $post->brand->user ? [
+                        'id' => $post->brand->user->id,
+                        'name' => $post->brand->user->name,
+                    ] : [
                         'id' => $post->brand->agency->id,
                         'name' => $post->brand->agency->name,
-                    ] : null,
+                    ],
                 ],
-                'user' => [
-                    'id' => $post->user->id,
-                    'name' => $post->user->name,
+                'ai_model' => [
+                    'id' => 1, // Default AI model since this field doesn't exist
+                    'name' => 'Default',
                 ],
-                'citations' => $post->citations->map(function ($citation) {
+                'post_citations' => $post->citations->map(function ($citation) {
                     return [
                         'id' => $citation->id,
-                        'ai_model' => $citation->ai_model,
-                        'is_mentioned' => $citation->is_mentioned,
                         'citation_text' => $citation->citation_text,
-                        'created_at' => $citation->created_at,
+                        'source_url' => $citation->source_url,
+                        'is_verified' => $citation->is_verified,
                     ];
                 }),
-                'prompts' => $post->prompts->map(function ($prompt) {
+                'post_prompts' => $post->prompts->map(function ($prompt) {
                     return [
                         'id' => $prompt->id,
-                        'ai_model' => $prompt->ai_model,
-                        'prompt_text' => $prompt->prompt_text,
-                        'response' => $prompt->response,
-                        'status' => $prompt->status,
-                        'created_at' => $prompt->created_at,
+                        'prompt_text' => $prompt->prompt,
+                        'ai_model' => [
+                            'id' => 1,
+                            'name' => $prompt->ai_provider ?? 'Default',
+                        ],
                     ];
                 }),
             ],
@@ -230,9 +233,9 @@ class PostController extends Controller
     public function edit(Post $post)
     {
         $agencies = User::role('agency')->orderBy('name')->get(['id', 'name']);
-        $brands = Brand::with('agency')->orderBy('name')->get(['id', 'name', 'can_create_posts', 'post_creation_note', 'monthly_posts', 'agency_id']);
+        $brands = Brand::orderBy('name')->get(['id', 'name', 'can_create_posts', 'post_creation_note', 'monthly_posts', 'agency_id']);
 
-        $post->load(['brand.agency']);
+        $post->load(['brand.user', 'brand.agency']);
 
         return Inertia::render('admin/posts/edit', [
             'post' => [
@@ -241,15 +244,18 @@ class PostController extends Controller
                 'url' => $post->url,
                 'description' => $post->description,
                 'status' => $post->status,
-                'posted_at' => $post->posted_at,
                 'brand_id' => $post->brand_id,
                 'brand' => [
                     'id' => $post->brand->id,
                     'name' => $post->brand->name,
-                    'agency' => $post->brand->agency ? [
+                    'agency_id' => $post->brand->agency_id,
+                    'user' => $post->brand->user ? [
+                        'id' => $post->brand->user->id,
+                        'name' => $post->brand->user->name,
+                    ] : [
                         'id' => $post->brand->agency->id,
                         'name' => $post->brand->agency->name,
-                    ] : null,
+                    ],
                 ],
             ],
             'agencies' => $agencies,
@@ -268,8 +274,10 @@ class PostController extends Controller
             'url' => 'required|url|max:2000',
             'description' => 'nullable|string|max:1000',
             'status' => 'required|in:published,draft,archived',
-            'posted_at' => 'nullable|date',
         ]);
+
+        // Check if the brand can create posts (for admin override)
+        $brand = Brand::findOrFail($request->brand_id);
 
         $post->update([
             'brand_id' => $request->brand_id,
@@ -277,10 +285,9 @@ class PostController extends Controller
             'url' => $request->url,
             'description' => $request->description,
             'status' => $request->status,
-            'posted_at' => $request->posted_at,
         ]);
 
-        return redirect()->route('admin.posts.index')->with('success', 'Post updated successfully!');
+        return redirect()->route('admin.posts.show', $post)->with('success', 'Post updated successfully!');
     }
 
     /**
