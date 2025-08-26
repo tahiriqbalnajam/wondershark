@@ -36,7 +36,8 @@ import {
     Building2,
     MessageSquare,
     Filter,
-    Users
+    Users,
+    Upload
 } from 'lucide-react';
 
 type Post = {
@@ -191,12 +192,20 @@ export default function AdminPostsIndex({ posts, filters, agencies, brands, aiMo
                         title="Post Management"
                         description="Manage posts for all agencies and brands"
                     />
-                    <Link href="/admin/posts/create">
-                        <Button>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Create Post
+                    <div className="flex gap-3">
+                        <Button variant="outline" asChild>
+                            <Link href="/posts/admin-import">
+                                <Upload className="h-4 w-4 mr-2" />
+                                Import CSV
+                            </Link>
                         </Button>
-                    </Link>
+                        <Button asChild>
+                            <Link href="/admin/posts/create">
+                                <Plus className="mr-2 h-4 w-4" />
+                                Create Post
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Filters */}

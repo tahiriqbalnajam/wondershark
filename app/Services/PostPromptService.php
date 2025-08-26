@@ -19,7 +19,7 @@ class PostPromptService extends AIPromptService
         
         if (!$aiModel) {
             Log::warning('AI Model not found or disabled', ['provider' => $provider]);
-            return $this->getFallbackPromptsForPost($post, $sessionId);
+            return []; // Don't create fallback prompts
         }
 
         $prompt = $this->buildPostPrompt($post, $description, $promptCount ?? $aiModel->prompts_per_brand);
@@ -56,8 +56,8 @@ class PostPromptService extends AIPromptService
                 'error' => $e->getMessage()
             ]);
             
-            // Return fallback prompts if AI fails
-            return $this->getFallbackPromptsForPost($post, $sessionId);
+            // Don't return fallback prompts, just return empty array
+            return [];
         }
     }
 
@@ -89,6 +89,60 @@ class PostPromptService extends AIPromptService
         $uniquePrompts = $this->removeDuplicatePostPrompts($allGeneratedPrompts);
         
         return $uniquePrompts;
+    }
+
+    /**
+     * Test all enabled AI models for connection and functionality
+     */
+    public function testAllAiModelConnections(): array
+    {
+        $results = [];
+        $aiModels = $this->getEnabledAiModels();
+        
+        foreach ($aiModels as $aiModel) {
+            $results[$aiModel->name] = $this->testAiModelConnection($aiModel);
+        }
+        
+        return $results;
+    }
+
+    /**
+     * Test a specific AI model for post prompt generation
+     */
+    public function testPostPromptGeneration(string $provider = 'openai'): array
+    {
+        $aiModel = $this->getAiModelConfig($provider);
+        
+        if (!$aiModel) {
+            return [
+                'success' => false,
+                'message' => 'AI Model not found or disabled',
+                'provider' => $provider
+            ];
+        }
+
+        try {
+            $testPrompt = "Generate 3 sample questions that someone might ask about a website that provides online courses. Return only the questions, one per line, no formatting.";
+            
+            $response = $this->callAiProvider($aiModel, $testPrompt);
+            $questions = $this->parseQuestions($response->text);
+            
+            return [
+                'success' => true,
+                'provider' => $provider,
+                'model' => $aiModel->display_name,
+                'questions_generated' => count($questions),
+                'sample_questions' => array_slice($questions, 0, 3),
+                'raw_response' => $response->text
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'provider' => $provider,
+                'model' => $aiModel->display_name,
+                'message' => $e->getMessage()
+            ];
+        }
     }
 
     /**

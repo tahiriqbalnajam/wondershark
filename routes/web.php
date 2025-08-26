@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AdminController;
@@ -13,6 +14,27 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    // Working import routes - using controllers to get proper data
+    Route::get('posts/agency-import', [\App\Http\Controllers\PostImportController::class, 'index'])
+        ->name('posts.agency-import')
+        ->middleware('role.permission:null,agency');
+    Route::post('posts/agency-import', [\App\Http\Controllers\PostImportController::class, 'import'])
+        ->name('posts.agency-import.store')
+        ->middleware('role.permission:null,agency');
+    Route::get('posts/agency-import/template', [\App\Http\Controllers\PostImportController::class, 'downloadTemplate'])
+        ->name('posts.agency-import.template')
+        ->middleware('role.permission:null,agency');
+    
+    Route::get('posts/admin-import', [\App\Http\Controllers\Admin\PostImportController::class, 'index'])
+        ->name('posts.admin-import')
+        ->middleware('role.permission:view-admin-panel,manage-system');
+    Route::post('posts/admin-import', [\App\Http\Controllers\Admin\PostImportController::class, 'import'])
+        ->name('posts.admin-import.store')
+        ->middleware('role.permission:view-admin-panel,manage-system');
+    Route::get('posts/admin-import/template', [\App\Http\Controllers\Admin\PostImportController::class, 'downloadTemplate'])
+        ->name('posts.admin-import.template')
+        ->middleware('role.permission:view-admin-panel,manage-system');
+    
     Route::get('dashboard', function () {
         return Inertia::render('dashboard');
     })->name('dashboard')->middleware('role.permission:view-dashboard');
@@ -91,6 +113,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/{post}/edit', [\App\Http\Controllers\Admin\PostController::class, 'edit'])->name('edit');
             Route::patch('/{post}', [\App\Http\Controllers\Admin\PostController::class, 'update'])->name('update');
             Route::delete('/{post}', [\App\Http\Controllers\Admin\PostController::class, 'destroy'])->name('destroy');
+            
+            // CSV Import routes for admin
+            Route::get('/import', [\App\Http\Controllers\Admin\PostImportController::class, 'index'])->name('import.index');
+            Route::post('/import', [\App\Http\Controllers\Admin\PostImportController::class, 'import'])->name('import.store');
+            Route::get('/import/template', [\App\Http\Controllers\Admin\PostImportController::class, 'downloadTemplate'])->name('import.template');
         });
 
         // User Management - Admin only
@@ -126,6 +153,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('posts', PostController::class);
         Route::post('posts/{post}/citations', [PostController::class, 'storeCitation'])->name('posts.citations.store');
         Route::get('posts/{post}/prompts', [PostController::class, 'showPrompts'])->name('posts.prompts');
+        
+        // CSV Import routes for agency users
+        Route::prefix('posts')->name('posts.')->group(function () {
+            Route::get('import', [\App\Http\Controllers\PostImportController::class, 'index'])->name('import.index');
+            Route::post('import', [\App\Http\Controllers\PostImportController::class, 'import'])->name('import.store');
+            Route::get('import/template', [\App\Http\Controllers\PostImportController::class, 'downloadTemplate'])->name('import.template');
+        });
         
         // Post Prompts Management Routes
         Route::get('posts/{post}/manage-prompts', [PostPromptController::class, 'index'])->name('posts.prompts.index');

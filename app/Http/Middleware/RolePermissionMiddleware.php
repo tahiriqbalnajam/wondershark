@@ -20,14 +20,14 @@ class RolePermissionMiddleware
         }
 
         // Check for specific permission (skip if permission is 'null' string)
-        if ($permission && $permission !== 'null' && !$request->user()->can($permission)) {
+        if ($permission && $permission !== 'null' && !$request->user()->permissions->contains('name', $permission)) {
             abort(403, 'Access denied. You do not have the required permission.');
         }
 
         // Check for specific role (skip if role is 'null' string)
         if ($role && $role !== 'null') {
             // Admin users have access to all roles
-            if (!$request->user()->hasRole('admin') && !$request->user()->hasRole($role)) {
+            if (!$request->user()->roles->contains('name', 'admin') && !$request->user()->roles->contains('name', $role)) {
                 abort(403, 'Access denied. You do not have the required role.');
             }
         }

@@ -31,7 +31,8 @@ import {
     ExternalLink,
     Calendar,
     Building2,
-    MessageSquare
+    MessageSquare,
+    Upload
 } from 'lucide-react';
 
 type Post = {
@@ -112,12 +113,20 @@ export default function PostsIndex({ posts }: Props) {
                         description="Manage posts and track their AI citations"
                     />
                     
-                    <Button asChild>
-                        <Link href="/posts/create">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Post
-                        </Link>
-                    </Button>
+                    <div className="flex gap-3">
+                        <Button variant="outline" asChild>
+                            <Link href="/posts/agency-import">
+                                <Upload className="h-4 w-4 mr-2" />
+                                Import CSV
+                            </Link>
+                        </Button>
+                        <Button asChild>
+                            <Link href="/posts/create">
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Post
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
 
                 <Card>

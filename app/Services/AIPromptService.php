@@ -84,18 +84,59 @@ class AIPromptService
             'gemini' => 'gemini',
             'anthropic' => 'anthropic',
             'claude' => 'anthropic', // Legacy support
-            'perplexity' => 'openai', // Perplexity uses OpenAI-compatible API
+            'perplexity' => 'custom', // Handle Perplexity separately
             'groq' => 'groq',
             'deepseek' => 'openai', // DeepSeek uses OpenAI-compatible API
         ];
 
         $prismProvider = $providerMapping[$aiModel->name] ?? 'openai';
+        
+        // Handle Perplexity with custom implementation
+        if ($aiModel->name === 'perplexity') {
+            return $this->callPerplexityApi($config, $prompt);
+        }
+
         $model = $config['model'] ?? 'gpt-4';
 
         return Prism::text()
             ->using($prismProvider, $model)
             ->withPrompt($prompt)
             ->generate();
+    }
+
+    /**
+     * Call Perplexity API directly since it has custom endpoint requirements
+     */
+    protected function callPerplexityApi(array $config, string $prompt)
+    {
+        $client = new \GuzzleHttp\Client();
+        
+        $response = $client->post($config['endpoint'], [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $config['api_key'],
+                'Content-Type' => 'application/json',
+            ],
+            'json' => [
+                'model' => $config['model'],
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => $prompt
+                    ]
+                ],
+                'max_tokens' => 2000,
+                'temperature' => 0.7,
+            ],
+            'timeout' => 60,
+        ]);
+
+        $data = json_decode($response->getBody()->getContents(), true);
+        
+        // Create a response object compatible with Prism
+        return (object) [
+            'text' => $data['choices'][0]['message']['content'] ?? '',
+            'finishReason' => $data['choices'][0]['finish_reason'] ?? 'stop',
+        ];
     }
 
     protected function buildPrompt(string $website, string $description = '', int $promptCount = 25): string
