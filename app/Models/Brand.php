@@ -17,6 +17,7 @@ class Brand extends Model
         'name',
         'website',
         'description',
+        'country',
         'monthly_posts',
         'status',
         'is_completed',

@@ -36,6 +36,11 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
             icon: Building2,
             items: [
                 {
+                    title: 'Brand List',
+                    href: '/brands',
+                    icon: Building2,
+                },
+                {
                     title: 'Add Brand',
                     href: '/brands/create',
                     icon: Plus,

@@ -27,9 +27,23 @@ class BrandController extends Controller
         $user = Auth::user();
         
         $brands = Brand::where('agency_id', $user->id)
-            ->with(['prompts', 'subreddits'])
+            ->with(['posts'])
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->get()
+            ->map(function ($brand) {
+                return [
+                    'id' => $brand->id,
+                    'name' => $brand->name,
+                    'website' => $brand->website,
+                    'description' => $brand->description,
+                    'country' => $brand->country,
+                    'monthly_posts' => $brand->monthly_posts,
+                    'status' => $brand->status,
+                    'created_at' => $brand->created_at,
+                    'current_month_posts' => $brand->getCurrentMonthPostsCount(),
+                    'total_posts' => $brand->posts->count(),
+                ];
+            });
 
         return Inertia::render('brands/index', [
             'brands' => $brands,
@@ -58,10 +72,11 @@ class BrandController extends Controller
         $validationRules = [
             'name' => 'required|string|max:255',
             'website' => 'nullable|url|max:255',
-            'description' => 'required|string|max:1000',
-            'prompts' => 'required|array|min:1|max:25',
+            'description' => 'nullable|string|max:1000',
+            'country' => 'nullable|string|max:100',
+            'prompts' => 'array|max:25',
             'prompts.*' => 'required|string|max:500',
-            'subreddits' => 'required|array|min:1|max:20',
+            'subreddits' => 'array|max:20',
             'subreddits.*' => 'required|string|max:100',
             'monthly_posts' => 'required|integer|min:1|max:1000',
             'create_account' => 'boolean',
@@ -100,27 +115,32 @@ class BrandController extends Controller
                 'name' => $request->name,
                 'website' => $request->website,
                 'description' => $request->description,
+                'country' => $request->country,
                 'monthly_posts' => $request->monthly_posts,
                 'status' => 'active',
             ]);
 
-            // Create prompts
-            foreach ($request->prompts as $index => $prompt) {
-                BrandPrompt::create([
-                    'brand_id' => $brand->id,
-                    'prompt' => $prompt,
-                    'order' => $index + 1,
-                    'is_active' => true,
-                ]);
+            // Create prompts if provided
+            if ($request->has('prompts') && !empty($request->prompts)) {
+                foreach ($request->prompts as $index => $prompt) {
+                    BrandPrompt::create([
+                        'brand_id' => $brand->id,
+                        'prompt' => $prompt,
+                        'order' => $index + 1,
+                        'is_active' => true,
+                    ]);
+                }
             }
 
-            // Create subreddits
-            foreach ($request->subreddits as $subreddit) {
-                BrandSubreddit::create([
-                    'brand_id' => $brand->id,
-                    'subreddit_name' => $subreddit,
-                    'status' => 'approved',
-                ]);
+            // Create subreddits if provided
+            if ($request->has('subreddits') && !empty($request->subreddits)) {
+                foreach ($request->subreddits as $subreddit) {
+                    BrandSubreddit::create([
+                        'brand_id' => $brand->id,
+                        'subreddit_name' => $subreddit,
+                        'status' => 'approved',
+                    ]);
+                }
             }
         });
 
@@ -183,11 +203,12 @@ class BrandController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'website' => 'nullable|url|max:255',
-            'description' => 'required|string|max:1000',
+            'description' => 'nullable|string|max:1000',
+            'country' => 'nullable|string|max:100',
             'monthly_posts' => 'required|integer|min:1|max:1000',
-            'prompts' => 'required|array|min:1|max:25',
+            'prompts' => 'array|max:25',
             'prompts.*' => 'required|string|max:500',
-            'subreddits' => 'required|array|min:1|max:20',
+            'subreddits' => 'array|max:20',
             'subreddits.*' => 'required|string|max:100',
         ]);
 
@@ -197,6 +218,7 @@ class BrandController extends Controller
                 'name' => $request->name,
                 'website' => $request->website,
                 'description' => $request->description,
+                'country' => $request->country,
                 'monthly_posts' => $request->monthly_posts,
             ]);
 

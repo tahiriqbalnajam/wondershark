@@ -1,5 +1,5 @@
 import { Head, Link, router } from "@inertiajs/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/card";
 import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, TestTube } from "lucide-react";
 import AppLayout from "@/layouts/app-layout";
+import { toast } from "sonner";
 
 interface AiModel {
   id: number;
@@ -38,10 +39,24 @@ interface AiModel {
 
 interface Props {
   aiModels: AiModel[];
+  flash?: {
+    success?: string;
+    error?: string;
+  };
 }
 
-export default function Index({ aiModels }: Props) {
+export default function Index({ aiModels, flash }: Props) {
   const [testingModel, setTestingModel] = useState<number | null>(null);
+  
+  // Show flash messages as toasts
+  useEffect(() => {
+    if (flash?.success) {
+      toast.success(flash.success);
+    }
+    if (flash?.error) {
+      toast.error(flash.error);
+    }
+  }, [flash]);
 
   const handleToggle = (aiModel: AiModel) => {
     router.post(route('admin.ai-models.toggle', aiModel.id), {}, {

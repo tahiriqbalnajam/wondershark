@@ -1,5 +1,5 @@
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 
 import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
@@ -73,6 +73,13 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function PostsIndex({ posts }: Props) {
+    const { url } = usePage();
+    const urlParams = new URLSearchParams(url.split('?')[1] || '');
+    const brandId = urlParams.get('brand_id');
+    
+    // Construct the create post URL with brand_id if it exists
+    const createPostUrl = brandId ? `/posts/create?brand_id=${brandId}` : '/posts/create';
+    
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'published':
@@ -121,7 +128,7 @@ export default function PostsIndex({ posts }: Props) {
                             </Link>
                         </Button>
                         <Button asChild>
-                            <Link href="/posts/create">
+                            <Link href={createPostUrl}>
                                 <Plus className="h-4 w-4 mr-2" />
                                 Add Post
                             </Link>
@@ -145,7 +152,7 @@ export default function PostsIndex({ posts }: Props) {
                                     Get started by creating your first post.
                                 </p>
                                 <Button asChild>
-                                    <Link href="/posts/create">
+                                    <Link href={createPostUrl}>
                                         <Plus className="h-4 w-4 mr-2" />
                                         Add Post
                                     </Link>

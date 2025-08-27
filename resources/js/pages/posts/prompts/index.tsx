@@ -71,13 +71,28 @@ export default function PostPromptsIndex({ post, prompts, stats, availableProvid
     const handleGeneratePrompts = async () => {
         setLoading('generate');
         try {
-            await router.post(`/posts/${post.id}/generate-prompts`, {
-                description: post.description || ''
+            const response = await fetch(`/posts/${post.id}/generate-prompts`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({ 
+                    description: post.description || '' 
+                })
             });
-            toast.success('Prompts are being generated in the background');
-            router.reload();
-        } catch {
+
+            const result = await response.json();
+
+            if (result.success) {
+                toast.success(result.cached ? 'Loaded existing prompts' : 'Prompts generated successfully');
+                router.reload();
+            } else {
+                toast.error(result.message || result.error || 'Failed to generate prompts');
+            }
+        } catch (error) {
             toast.error('Failed to generate prompts');
+            console.error('Generate prompts error:', error);
         } finally {
             setLoading(null);
         }

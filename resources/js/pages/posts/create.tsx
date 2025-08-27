@@ -1,5 +1,5 @@
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 import HeadingSmall from '@/components/heading-small';
@@ -69,11 +69,15 @@ export default function PostsCreate({
     userCanCreatePosts, 
     userPostCreationNote 
 }: Props) {
+    const { url } = usePage();
+    const urlParams = new URLSearchParams(url.split('?')[1] || '');
+    const brandIdFromUrl = urlParams.get('brand_id') || '';
+
     const { data, setData, post, processing, errors } = useForm<FormData>({
         title: '',
         url: '',
         description: '',
-        brand_id: '',
+        brand_id: brandIdFromUrl,
         status: 'draft',
         posted_at: new Date().toISOString().split('T')[0],
     });

@@ -16,7 +16,7 @@ class PostController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
         
@@ -25,6 +25,9 @@ class PostController extends Controller
                 return $query->whereHas('brand', function ($brandQuery) use ($user) {
                     $brandQuery->where('agency_id', $user->id);
                 });
+            })
+            ->when($request->has('brand_id'), function ($query) use ($request) {
+                return $query->where('brand_id', $request->brand_id);
             })
             ->orderBy('created_at', 'desc')
             ->paginate(20);

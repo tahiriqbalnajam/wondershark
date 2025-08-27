@@ -26,11 +26,12 @@ type Brand = {
     name: string;
     website?: string;
     description: string;
+    country?: string;
     monthly_posts: number;
     status: 'active' | 'inactive' | 'pending';
     created_at: string;
-    prompts?: Array<{ id: number; prompt: string }>;
-    subreddits?: Array<{ id: number; subreddit_name: string }>;
+    current_month_posts: number;
+    total_posts: number;
 };
 
 type Props = {
@@ -120,19 +121,27 @@ export default function BrandsIndex({ brands }: Props) {
                                             </div>
                                             <div>
                                                 <CardTitle className="text-lg">{brand.name}</CardTitle>
-                                                {brand.website && (
-                                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                        <Globe className="h-3 w-3" />
-                                                        <a 
-                                                            href={brand.website} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer"
-                                                            className="hover:underline"
-                                                        >
-                                                            {new URL(brand.website).hostname}
-                                                        </a>
-                                                    </div>
-                                                )}
+                                                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                                                    {brand.website && (
+                                                        <div className="flex items-center gap-1">
+                                                            <Globe className="h-3 w-3" />
+                                                            <a 
+                                                                href={brand.website} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer"
+                                                                className="hover:underline"
+                                                            >
+                                                                {new URL(brand.website).hostname}
+                                                            </a>
+                                                        </div>
+                                                    )}
+                                                    {brand.country && (
+                                                        <div className="flex items-center gap-1">
+                                                            <span>📍</span>
+                                                            <span>{brand.country}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                         <DropdownMenu>
@@ -178,24 +187,18 @@ export default function BrandsIndex({ brands }: Props) {
                                         {brand.description}
                                     </p>
                                     
-                                    <div className="grid grid-cols-3 gap-4 text-center">
+                                    <div className="grid grid-cols-2 gap-4 text-center">
                                         <div className="space-y-1">
                                             <div className="text-lg font-semibold text-primary">
-                                                {brand.prompts?.length || 0}
+                                                {brand.current_month_posts}/{brand.total_posts}
                                             </div>
-                                            <div className="text-xs text-muted-foreground">Prompts</div>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <div className="text-lg font-semibold text-primary">
-                                                {brand.subreddits?.length || 0}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">Subreddits</div>
+                                            <div className="text-xs text-muted-foreground">This Month/Total Posts</div>
                                         </div>
                                         <div className="space-y-1">
                                             <div className="text-lg font-semibold text-primary">
                                                 {brand.monthly_posts}
                                             </div>
-                                            <div className="text-xs text-muted-foreground">Posts/Month</div>
+                                            <div className="text-xs text-muted-foreground">Target/Month</div>
                                         </div>
                                     </div>
 
@@ -218,8 +221,8 @@ export default function BrandsIndex({ brands }: Props) {
                                             </Link>
                                         </Button>
                                         <Button variant="outline" size="sm" asChild>
-                                            <Link href={`/brands/${brand.id}/prompts`}>
-                                                Prompts
+                                            <Link href={`/posts?brand_id=${brand.id}`}>
+                                                Posts
                                             </Link>
                                         </Button>
                                     </div>

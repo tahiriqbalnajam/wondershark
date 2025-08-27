@@ -1,7 +1,6 @@
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Building2, MessageSquare, Users, Calendar } from 'lucide-react';
+import { Building2, Calendar } from 'lucide-react';
 import { StepProps } from './types';
 
 export default function Step5Review({ data }: StepProps) {
@@ -28,51 +27,18 @@ export default function Step5Review({ data }: StepProps) {
                                 <p className="font-medium">{data.website}</p>
                             </div>
                         )}
-                        <div>
-                            <Label>Description</Label>
-                            <p className="text-sm text-muted-foreground">{data.description}</p>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <MessageSquare className="h-5 w-5" />
-                            Content Prompts ({data.prompts.length})
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-2">
-                            {data.prompts.slice(0, 3).map((prompt, index) => (
-                                <p key={index} className="text-sm p-2 bg-muted rounded">
-                                    {prompt.substring(0, 100)}{prompt.length > 100 ? '...' : ''}
-                                </p>
-                            ))}
-                            {data.prompts.length > 3 && (
-                                <p className="text-sm text-muted-foreground">
-                                    ... and {data.prompts.length - 3} more prompts
-                                </p>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Users className="h-5 w-5" />
-                            Target Subreddits ({data.subreddits.length})
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-wrap gap-2">
-                            {data.subreddits.map((subreddit, index) => (
-                                <Badge key={index} variant="secondary">
-                                    r/{subreddit}
-                                </Badge>
-                            ))}
-                        </div>
+                        {data.country && (
+                            <div>
+                                <Label>Country</Label>
+                                <p className="font-medium">{data.country}</p>
+                            </div>
+                        )}
+                        {data.description && (
+                            <div>
+                                <Label>Description</Label>
+                                <p className="text-sm text-muted-foreground">{data.description}</p>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 

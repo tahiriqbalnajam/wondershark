@@ -2,6 +2,7 @@ export type BrandForm = {
     name: string;
     website: string;
     description: string;
+    country: string;
     prompts: string[];
     subreddits: string[];
     monthly_posts: number;
