@@ -1,5 +1,5 @@
 import { type BreadcrumbItem } from '@/types';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 import HeadingSmall from '@/components/heading-small';
@@ -126,7 +126,8 @@ export default function PostImport({ brands = [], success, error, import_errors,
                             </CardHeader>
                             <CardContent>
                                 <form onSubmit={handleSubmit} className="space-y-6">
-                                    <div className="space-y-2">
+                                    <fieldset disabled={!!upgrade_message || brands.length === 0} className="space-y-6">
+                                        <div className="space-y-2">
                                         <Label htmlFor="csv_file">CSV File *</Label>
                                         <Input
                                             id="csv_file"
@@ -187,6 +188,7 @@ export default function PostImport({ brands = [], success, error, import_errors,
                                             This will be used for rows that don't specify a status
                                         </div>
                                     </div>
+                                    </fieldset>
 
                                     <Button
                                         type="submit"

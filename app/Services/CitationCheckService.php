@@ -19,12 +19,14 @@ class CitationCheckService
     {
         $results = [];
         $combinedPrompts = $this->getCombinedPrompts($post);
+        $promptSelectionInfo = $this->getPromptSelectionInfo($post);
         
         if (empty($combinedPrompts)) {
             return [
                 'success' => false,
                 'message' => 'No prompts found for the brand associated with this post',
-                'results' => []
+                'results' => [],
+                'prompt_selection_info' => $promptSelectionInfo
             ];
         }
 
@@ -56,18 +58,160 @@ class CitationCheckService
             'post_id' => $post->id,
             'post_url' => $post->url,
             'combined_prompts' => $combinedPrompts,
+            'prompt_selection_info' => $promptSelectionInfo,
             'results' => $results
         ];
     }
 
     protected function getCombinedPrompts(Post $post): string
     {
-        $prompts = $post->prompts()
+        // Get all selected prompts grouped by AI provider
+        $promptsByProvider = $post->prompts()
             ->where('is_selected', true)
-            ->pluck('prompt')
-            ->toArray();
+            ->get()
+            ->groupBy('ai_provider');
 
-        return implode(', ', $prompts);
+        if ($promptsByProvider->isEmpty()) {
+            return '';
+        }
+
+        $selectedPrompts = [];
+        $totalPrompts = $promptsByProvider->sum(fn($prompts) => $prompts->count());
+        $maxPrompts = 25;
+
+        // If total prompts is less than or equal to 25, take all
+        if ($totalPrompts <= $maxPrompts) {
+            foreach ($promptsByProvider as $provider => $prompts) {
+                foreach ($prompts as $prompt) {
+                    $selectedPrompts[] = $prompt->prompt;
+                }
+            }
+        } else {
+            // Calculate proportional distribution
+            $selectedPerProvider = [];
+            
+            foreach ($promptsByProvider as $provider => $prompts) {
+                $providerCount = $prompts->count();
+                $proportion = $providerCount / $totalPrompts;
+                $allocatedCount = floor($proportion * $maxPrompts);
+                $selectedPerProvider[$provider] = $allocatedCount;
+            }
+            
+            // Handle remainder to reach exactly 25 prompts
+            $totalAllocated = array_sum($selectedPerProvider);
+            $remainder = $maxPrompts - $totalAllocated;
+            
+            // Distribute remainder to providers with the highest fractional part
+            if ($remainder > 0) {
+                $fractionalParts = [];
+                foreach ($promptsByProvider as $provider => $prompts) {
+                    $providerCount = $prompts->count();
+                    $proportion = $providerCount / $totalPrompts;
+                    $exactAllocation = $proportion * $maxPrompts;
+                    $fractionalParts[$provider] = $exactAllocation - floor($exactAllocation);
+                }
+                
+                // Sort by fractional part (descending) to give remainder to those who "deserve" it most
+                arsort($fractionalParts);
+                
+                $remainderCount = 0;
+                foreach ($fractionalParts as $provider => $fractional) {
+                    if ($remainderCount >= $remainder) break;
+                    $selectedPerProvider[$provider]++;
+                    $remainderCount++;
+                }
+            }
+            
+            // Select prompts from each provider
+            foreach ($promptsByProvider as $provider => $prompts) {
+                $countToTake = $selectedPerProvider[$provider];
+                if ($countToTake > 0) {
+                    $selectedPromptsFromProvider = $prompts->take($countToTake);
+                    foreach ($selectedPromptsFromProvider as $prompt) {
+                        $selectedPrompts[] = $prompt->prompt;
+                    }
+                }
+            }
+        }
+
+        return implode(', ', $selectedPrompts);
+    }
+
+    /**
+     * Get detailed information about prompt selection for debugging
+     */
+    protected function getPromptSelectionInfo(Post $post): array
+    {
+        // Get all selected prompts grouped by AI provider
+        $promptsByProvider = $post->prompts()
+            ->where('is_selected', true)
+            ->get()
+            ->groupBy('ai_provider');
+
+        $totalPrompts = $promptsByProvider->sum(fn($prompts) => $prompts->count());
+        $maxPrompts = 25;
+        $selectionInfo = [];
+
+        if ($totalPrompts <= $maxPrompts) {
+            // Take all prompts if within limit
+            foreach ($promptsByProvider as $provider => $prompts) {
+                $selectionInfo[$provider] = [
+                    'total_prompts' => $prompts->count(),
+                    'proportion' => round(($prompts->count() / $totalPrompts) * 100, 2) . '%',
+                    'selected_count' => $prompts->count(),
+                ];
+            }
+        } else {
+            // Calculate proportional distribution
+            $selectedPerProvider = [];
+            
+            foreach ($promptsByProvider as $provider => $prompts) {
+                $providerCount = $prompts->count();
+                $proportion = $providerCount / $totalPrompts;
+                $allocatedCount = floor($proportion * $maxPrompts);
+                $selectedPerProvider[$provider] = $allocatedCount;
+            }
+            
+            // Handle remainder distribution
+            $totalAllocated = array_sum($selectedPerProvider);
+            $remainder = $maxPrompts - $totalAllocated;
+            
+            if ($remainder > 0) {
+                $fractionalParts = [];
+                foreach ($promptsByProvider as $provider => $prompts) {
+                    $providerCount = $prompts->count();
+                    $proportion = $providerCount / $totalPrompts;
+                    $exactAllocation = $proportion * $maxPrompts;
+                    $fractionalParts[$provider] = $exactAllocation - floor($exactAllocation);
+                }
+                
+                arsort($fractionalParts);
+                
+                $remainderCount = 0;
+                foreach ($fractionalParts as $provider => $fractional) {
+                    if ($remainderCount >= $remainder) break;
+                    $selectedPerProvider[$provider]++;
+                    $remainderCount++;
+                }
+            }
+            
+            foreach ($promptsByProvider as $provider => $prompts) {
+                $providerCount = $prompts->count();
+                $proportion = $providerCount / $totalPrompts;
+                
+                $selectionInfo[$provider] = [
+                    'total_prompts' => $providerCount,
+                    'proportion' => round($proportion * 100, 2) . '%',
+                    'selected_count' => $selectedPerProvider[$provider],
+                ];
+            }
+        }
+
+        return [
+            'total_prompts_available' => $totalPrompts,
+            'max_prompts_limit' => $maxPrompts,
+            'providers_breakdown' => $selectionInfo,
+        ];
     }
 
     protected function checkCitationWithProvider(Post $post, string $combinedPrompts, string $provider): array
@@ -89,6 +233,8 @@ class CitationCheckService
     protected function buildCitationCheckPrompt(string $url, string $prompts): string
     {
         return "Please check if the URL '{$url}' is cited or mentioned as a source in response to these prompts: {$prompts}. 
+        
+        Note: These prompts have been selected from a larger set using proportional distribution across AI models (maximum 25 prompts).
         
         Please respond with a JSON object containing:
         - 'is_mentioned': boolean (true if the URL is mentioned/cited)

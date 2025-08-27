@@ -1,4 +1,5 @@
 import { Head, Link, router } from "@inertiajs/react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,7 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Plus, Edit, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, TestTube } from "lucide-react";
 import AppLayout from "@/layouts/app-layout";
 
 interface AiModel {
@@ -40,9 +41,19 @@ interface Props {
 }
 
 export default function Index({ aiModels }: Props) {
+  const [testingModel, setTestingModel] = useState<number | null>(null);
+
   const handleToggle = (aiModel: AiModel) => {
     router.post(route('admin.ai-models.toggle', aiModel.id), {}, {
       preserveScroll: true,
+    });
+  };
+
+  const handleTest = (aiModel: AiModel) => {
+    setTestingModel(aiModel.id);
+    router.post(route('admin.ai-models.test', aiModel.id), {}, {
+      preserveScroll: true,
+      onFinish: () => setTestingModel(null),
     });
   };
 
@@ -125,6 +136,31 @@ export default function Index({ aiModels }: Props) {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleTest(aiModel)}
+                            disabled={testingModel === aiModel.id || !aiModel.is_enabled || !aiModel.api_config?.api_key}
+                            title={
+                              !aiModel.is_enabled 
+                                ? "Enable model to test" 
+                                : !aiModel.api_config?.api_key 
+                                ? "Configure API key to test" 
+                                : "Test AI Model Connection"
+                            }
+                          >
+                            {testingModel === aiModel.id ? (
+                              <>
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-900 mr-2"></div>
+                                Testing...
+                              </>
+                            ) : (
+                              <>
+                                <TestTube className="w-4 h-4 mr-1" />
+                                Test
+                              </>
+                            )}
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
