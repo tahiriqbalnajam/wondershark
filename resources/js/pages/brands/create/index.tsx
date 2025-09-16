@@ -1,6 +1,7 @@
 import { type BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/react';
-import { useState, FormEventHandler } from 'react';
+import { useState, FormEventHandler, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 
 import HeadingSmall from '@/components/heading-small';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,18 +10,21 @@ import {
     Building2, 
     FileText, 
     CheckCircle,
-    Calendar
+    Calendar,
+    Shield
 } from 'lucide-react';
 
 // Import step components
 import Step1BasicInfo from './step1-basic-info';
+import Step2Prompts from './step2-prompts';
+import Step3Competitors from './step3-competitors';
 import Step4MonthlyPosts from './step4-monthly-posts';
 import Step5Review from './step5-review';
 import Step6AccountSetup from './step6-account-setup';
 import StepNavigation from './step-navigation';
 
 // Import types
-import { BrandForm, GeneratedPrompt, AiModel } from './types';
+import { BrandForm, GeneratedPrompt, AiModel, Competitor } from './types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -35,9 +39,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const steps = [
     { id: 1, title: 'Basic Info', icon: Building2 },
-    { id: 2, title: 'Monthly Posts', icon: Calendar },
-    { id: 3, title: 'Review', icon: CheckCircle },
-    { id: 4, title: 'Account Setup', icon: FileText },
+    { id: 2, title: 'Prompts', icon: FileText },
+    { id: 3, title: 'Competitors', icon: Shield },
+    { id: 4, title: 'Monthly Posts', icon: Calendar },
+    { id: 5, title: 'Review', icon: CheckCircle },
+    { id: 6, title: 'Account Setup', icon: FileText },
 ];
 
 type Props = {
@@ -50,10 +56,15 @@ type Props = {
     };
     generatedPrompts?: GeneratedPrompt[];
     aiModels?: AiModel[];
+    sessionId?: string;
 };
 
-export default function CreateBrand({ existingBrand, aiModels = [] }: Omit<Props, 'generatedPrompts'>) {
+export default function CreateBrand({ existingBrand, aiModels = [], sessionId }: Props) {
     const [currentStep, setCurrentStep] = useState(1);
+    const [competitors, setCompetitors] = useState<Competitor[]>([]);
+    const [aiGeneratedPrompts, setAiGeneratedPrompts] = useState<GeneratedPrompt[]>([]);
+    const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
+    const generationAttemptedRef = useRef<string | null>(null);
 
     const { data, setData, post, processing, errors } = useForm<BrandForm>({
         name: existingBrand?.name || '',
@@ -62,12 +73,59 @@ export default function CreateBrand({ existingBrand, aiModels = [] }: Omit<Props
         country: '',
         prompts: [],
         subreddits: [],
+        competitors: [],
         monthly_posts: existingBrand?.monthly_posts || 10,
         brand_email: '',
         brand_password: '',
         create_account: true,
         ai_providers: aiModels.filter(model => model.is_enabled).map(model => model.name),
     });
+
+    // Reset prompt generation when website changes
+    useEffect(() => {
+        if (generationAttemptedRef.current && generationAttemptedRef.current !== data.website) {
+            generationAttemptedRef.current = null;
+            setAiGeneratedPrompts([]);
+        }
+    }, [data.website]);
+
+    // Show toast messages for validation errors
+    useEffect(() => {
+        const errorMessages = Object.entries(errors);
+        if (errorMessages.length > 0) {
+            const stepErrors: Record<number, string[]> = {
+                1: [], // Basic info
+                2: [], // Prompts
+                3: [], // Competitors 
+                4: [], // Monthly posts  
+                5: [], // Review (no specific errors)
+                6: []  // Account setup
+            };
+
+            // Map errors to steps
+            errorMessages.forEach(([field, message]) => {
+                if (['name', 'website', 'description', 'country'].includes(field)) {
+                    stepErrors[1].push(message);
+                } else if (field === 'prompts') {
+                    stepErrors[2].push(message);
+                } else if (field === 'competitors') {
+                    stepErrors[3].push(message);
+                } else if (field === 'monthly_posts') {
+                    stepErrors[4].push(message);
+                } else if (['brand_email', 'brand_password', 'create_account'].includes(field)) {
+                    stepErrors[6].push(message);
+                }
+            });
+
+            // Show toast for errors not on current step
+            Object.entries(stepErrors).forEach(([step, messages]) => {
+                const stepNum = parseInt(step);
+                if (stepNum !== currentStep && messages.length > 0) {
+                    toast.error(`Error in Step ${stepNum}: ${messages.join(', ')}`);
+                }
+            });
+        }
+    }, [errors, currentStep]);
 
     const nextStep = () => {
         if (currentStep < steps.length) {
@@ -83,19 +141,135 @@ export default function CreateBrand({ existingBrand, aiModels = [] }: Omit<Props
 
     const handleSubmit: FormEventHandler = (e) => {
         e.preventDefault();
+        
+        // Update form data with accepted competitors before submitting
+        setData('competitors', competitors.filter(c => c.status === 'accepted'));
+        
         post(route('brands.store'));
+    };
+
+    // AI Prompt generation functions
+    const generateAIPrompts = useCallback(async (): Promise<void> => {
+        if (!data.website) {
+            toast.error('Please enter a website first');
+            return;
+        }
+
+        // Prevent duplicate generation for the same website
+        if (generationAttemptedRef.current === data.website) {
+            return;
+        }
+
+        generationAttemptedRef.current = data.website;
+        setIsGeneratingPrompts(true);
+        
+        try {
+            const response = await fetch(route('brands.generateMultiModelPrompts'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    website: data.website,
+                    description: data.description,
+                })
+            });
+
+            const responseData = await response.json();
+            
+            if (responseData.success && responseData.prompts) {
+                setAiGeneratedPrompts(responseData.prompts);
+                toast.success('AI prompts generated successfully!');
+            } else {
+                throw new Error(responseData.error || 'Failed to generate prompts');
+            }
+        } catch (error) {
+            console.error('Error generating prompts:', error);
+            toast.error('Failed to generate AI prompts. You can add prompts manually.');
+            // Reset the ref on error so user can retry
+            generationAttemptedRef.current = null;
+        } finally {
+            setIsGeneratingPrompts(false);
+        }
+    }, [data.website, data.description]);
+
+    // Function to regenerate prompts (resets state and triggers new generation)
+    const regenerateAIPrompts = useCallback(async (): Promise<void> => {
+        // Reset state
+        generationAttemptedRef.current = null;
+        setAiGeneratedPrompts([]);
+        // Trigger new generation
+        await generateAIPrompts();
+    }, [generateAIPrompts]);
+
+    // Auto-generate prompts when moving to step 2
+    useEffect(() => {
+        if (
+            currentStep === 2 && 
+            data.website && 
+            data.website.trim() !== '' &&
+            !isGeneratingPrompts && 
+            aiGeneratedPrompts.length === 0 &&
+            generationAttemptedRef.current !== data.website
+        ) {
+            generateAIPrompts();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentStep, data.website]);
+
+    const acceptPrompt = (prompt: GeneratedPrompt) => {
+        if (data.prompts.length >= 25) {
+            toast.error('Maximum 25 prompts allowed');
+            return;
+        }
+        setData('prompts', [...data.prompts, prompt.prompt]);
+    };
+
+    const rejectPrompt = (prompt: GeneratedPrompt) => {
+        setAiGeneratedPrompts(prev => prev.filter(p => p.id !== prompt.id));
+    };
+
+    const removeAcceptedPrompt = (promptText: string) => {
+        setData('prompts', data.prompts.filter(p => p !== promptText));
+    };
+
+    const isPromptAccepted = (prompt: GeneratedPrompt): boolean => {
+        return data.prompts.includes(prompt.prompt);
+    };
+
+    const isPromptRejected = (prompt: GeneratedPrompt): boolean => {
+        return !aiGeneratedPrompts.find(p => p.id === prompt.id);
+    };
+
+    const handleManualPromptAdd = (prompt: string) => {
+        if (data.prompts.length >= 25) {
+            toast.error('Maximum 25 prompts allowed');
+            return;
+        }
+        setData('prompts', [...data.prompts, prompt]);
+    };
+
+    const removePrompt = (index: number) => {
+        const newPrompts = [...data.prompts];
+        newPrompts.splice(index, 1);
+        setData('prompts', newPrompts);
     };
 
     const canProceed = (): boolean => {
         switch (currentStep) {
-            case 1:
-                return !!(data.name.trim());
-            case 2:
-                return data.monthly_posts > 0;
-            case 3:
-                return true; // Review step
-            case 4:
-                return !data.create_account || !!(data.brand_email.trim() && data.brand_password.trim());
+            case 1: // Basic Info
+                return !!(data.name.trim()) && !errors.name && !errors.website && !errors.description && !errors.country;
+            case 2: // Prompts - optional, always allow proceeding
+                return true;
+            case 3: // Competitors - optional, always allow proceeding  
+                return true;
+            case 4: // Monthly Posts
+                return data.monthly_posts > 0 && !errors.monthly_posts;
+            case 5: // Review
+                return true;
+            case 6: // Account Setup
+                return !data.create_account || (!!(data.brand_email.trim() && data.brand_password.trim()) && !errors.brand_email && !errors.brand_password);
             default:
                 return true;
         }
@@ -116,10 +290,32 @@ export default function CreateBrand({ existingBrand, aiModels = [] }: Omit<Props
             case 1:
                 return <Step1BasicInfo {...stepProps} />;
             case 2:
-                return <Step4MonthlyPosts {...stepProps} />;
+                return <Step2Prompts 
+                    {...stepProps} 
+                    isGeneratingPrompts={isGeneratingPrompts}
+                    aiGeneratedPrompts={aiGeneratedPrompts}
+                    generateAIPrompts={regenerateAIPrompts}
+                    acceptPrompt={acceptPrompt}
+                    rejectPrompt={rejectPrompt}
+                    removeAcceptedPrompt={removeAcceptedPrompt}
+                    isPromptAccepted={isPromptAccepted}
+                    isPromptRejected={isPromptRejected}
+                    handleManualPromptAdd={handleManualPromptAdd}
+                    removePrompt={removePrompt}
+                    aiModels={aiModels}
+                />;
             case 3:
-                return <Step5Review {...stepProps} />;
+                return <Step3Competitors 
+                    {...stepProps}
+                    competitors={competitors}
+                    setCompetitors={setCompetitors}
+                    sessionId={sessionId}
+                />;
             case 4:
+                return <Step4MonthlyPosts {...stepProps} />;
+            case 5:
+                return <Step5Review {...stepProps} />;
+            case 6:
                 return <Step6AccountSetup {...stepProps} />;
             default:
                 return null;

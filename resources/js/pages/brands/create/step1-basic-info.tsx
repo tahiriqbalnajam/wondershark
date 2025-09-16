@@ -39,6 +39,24 @@ const countries = [
 ];
 
 export default function Step1BasicInfo({ data, setData, errors }: StepProps) {
+    const handleWebsiteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let url = e.target.value.trim();
+        
+        // Auto-add https:// if no protocol is provided and it's not empty
+        if (url && !url.match(/^https?:\/\//)) {
+            // Remove www. if present to avoid duplication
+            url = url.replace(/^www\./, '');
+            // Remove any leading slashes
+            url = url.replace(/^\/+/, '');
+            // Add https:// only if there's actual content
+            if (url.length > 0) {
+                url = 'https://' + url;
+            }
+        }
+        
+        setData('website', url);
+    };
+
     return (
         <div className="space-y-6">
             <div>
@@ -62,9 +80,12 @@ export default function Step1BasicInfo({ data, setData, errors }: StepProps) {
                             id="website"
                             type="url"
                             value={data.website}
-                            onChange={(e) => setData('website', e.target.value)}
-                            placeholder="https://example.com"
+                            onChange={handleWebsiteChange}
+                            placeholder="example.com (https:// will be added automatically)"
                         />
+                        <p className="text-sm text-muted-foreground">
+                            You can enter just the domain (e.g., example.com) - we'll add https:// automatically
+                        </p>
                         <InputError message={errors.website} />
                     </div>
 

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { LayoutGrid, Users, Shield, Building2, Plus, Settings, FileText, Clock } from 'lucide-react';
+import { LayoutGrid, Users, Shield, Building2, Plus, Settings, FileText, Clock, BarChart3 } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 
 const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavItem[] => {
@@ -53,6 +53,18 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
             title: 'Posts',
             href: '/posts',
             icon: FileText,
+        });
+
+        items.push({
+            title: 'Search Analytics',
+            href: '/search-analytics',
+            icon: BarChart3,
+        });
+
+        items.push({
+            title: 'Competitors',
+            href: '/competitors',
+            icon: Shield,
         });
 
         items.push({

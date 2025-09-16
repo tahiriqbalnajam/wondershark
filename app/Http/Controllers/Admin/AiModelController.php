@@ -125,11 +125,17 @@ class AiModelController extends Controller
     /**
      * Test the AI model connection and configuration.
      */
-    public function test(AiModel $aiModel)
+    public function test(Request $request, AiModel $aiModel)
     {
         $aiPromptService = new AIPromptService();
         $result = $aiPromptService->testAiModelConnection($aiModel);
         
+        // If it's an AJAX request, return JSON
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json($result);
+        }
+        
+        // Otherwise, return redirect with flash message (for non-AJAX requests)
         if ($result['success']) {
             return back()->with('success', "Connection test successful for {$aiModel->display_name}");
         } else {

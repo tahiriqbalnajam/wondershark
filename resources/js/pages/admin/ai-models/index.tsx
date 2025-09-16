@@ -64,12 +64,50 @@ export default function Index({ aiModels, flash }: Props) {
     });
   };
 
-  const handleTest = (aiModel: AiModel) => {
+  const handleTest = async (aiModel: AiModel) => {
     setTestingModel(aiModel.id);
-    router.post(route('admin.ai-models.test', aiModel.id), {}, {
-      preserveScroll: true,
-      onFinish: () => setTestingModel(null),
-    });
+    try {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+      console.log('CSRF Token:', csrfToken); // Debug log
+      
+      const response = await fetch(route('admin.ai-models.test', aiModel.id), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': csrfToken || '',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({})
+      });
+
+      console.log('Response status:', response.status); // Debug log
+      console.log('Response headers:', response.headers); // Debug log
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('HTTP Error:', response.status, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('Response data:', result); // Debug log
+
+      if (result.success) {
+        toast.success(`Test successful: ${result.message}`);
+      } else {
+        toast.error(`Test failed: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('AI model test error:', error);
+      if (error instanceof Error) {
+        toast.error(`Failed to test AI model: ${error.message}`);
+      } else {
+        toast.error('Failed to test AI model connection');
+      }
+    } finally {
+      setTestingModel(null);
+    }
   };
 
   const handleDelete = (aiModel: AiModel) => {

@@ -126,6 +126,7 @@ class AIPromptService
                 ],
                 'max_tokens' => 2000,
                 'temperature' => 0.7,
+                'num_search_results' => 10, // Required for sonar models
             ],
             'timeout' => 60,
         ]);
@@ -141,20 +142,25 @@ class AIPromptService
 
     protected function buildPrompt(string $website, string $description = '', int $promptCount = 25): string
     {
-        $contextInfo = $description ? "\n\nAdditional context about {$website}: {$description}" : '';
+        $contextInfo = $description ? "\n\nAdditional context about the website: {$description}" : '';
         
-        return "Analyze the website {$website} and generate {$promptCount} questions that potential customers or users would most likely ask where this brand/website would be a valuable and relevant solution.{$contextInfo}
+        return "Given a website {$website} and a desired number of prompts {$promptCount}, generate {$promptCount} unique, generic generic statements (mix of questions and declarative phrases)  that a user might ask to analyze the website and its competitors, inspired by themes of cost recovery, deduction management, chargeback disputes, and revenue recovery.{$contextInfo}
+
+                Ensure each question:
+
+                1. Does NOT include {$website} or any brand name in the question text, making the questions fully generic.
+                2. Focuses on gathering insights about the website and its competitors, such as market position, effectiveness of tools or services, dispute resolution capabilities, or financial recovery strategies.
+                3. Varies in intent (e.g., identifying top solutions, comparing tools or services, evaluating performance, or analyzing market trends).
+                4. Is concise, actionable, and relevant for researching website and competitor performance metrics not exceeding 20 words.
+                5. Remains generic and does not assume the website's industry, purpose, or specific functionality (e.g., does not assume it's related to Amazon Vendor Central).
+                6. Reflects natural user intent, as if a potential customer or analyst is seeking to understand the website's competitive landscape.
 
                 Requirements:
-                - Focus on questions where {$website} would be the perfect answer or solution
-                - Make questions specific to the industry, services, or products this website offers
-                - Questions should be natural and reflect real user intent
-                - Consider problems, needs, or interests that this brand addresses
-                - Think about what people would search for that leads them to this website
                 - Return ONLY the questions, one per line
                 - No numbering, bullets, or other formatting
                 - No explanations or additional text
                 - Output should be spreadsheet compatible (each question on a new line)
+                - Questions should be completely generic and not reference any specific brand names or website URLs
 
                 Generate exactly {$promptCount} questions:";
     }
@@ -184,16 +190,16 @@ class AIPromptService
     protected function getFallbackPrompts(string $website, string $sessionId): array
     {
         $fallbackQuestions = [
-            "What services does {$website} offer?",
-            "How can {$website} help with my business needs?",
-            "What makes {$website} different from competitors?",
-            "Is {$website} suitable for small businesses?",
-            "How much does {$website} cost?",
-            "What are the benefits of using {$website}?",
-            "How do I get started with {$website}?",
-            "What customer support does {$website} provide?",
-            "Can {$website} integrate with other tools?",
-            "What are users saying about {$website}?",
+            "What are the key features of this platform?",
+            "How can this service help with business needs?",
+            "What makes this solution different from competitors?",
+            "Is this platform suitable for small businesses?",
+            "What are the pricing options available?",
+            "What are the main benefits of using this service?",
+            "How do I get started with this platform?",
+            "What customer support options are available?",
+            "Can this service integrate with other tools?",
+            "What are users saying about this platform?",
         ];
         
         $generatedPrompts = [];
@@ -251,20 +257,67 @@ class AIPromptService
     {
         $aiModels = $this->getEnabledAiModels();
         $allGeneratedPrompts = [];
+        $successfulModels = [];
+        $failedModels = [];
+        
+        if ($aiModels->isEmpty()) {
+            Log::warning('No enabled AI models found for prompt generation');
+            return [];
+        }
         
         foreach ($aiModels as $aiModel) {
             try {
+                // Check if model has required configuration
+                $config = $aiModel->api_config;
+                if (empty($config['api_key'])) {
+                    Log::warning("Skipping {$aiModel->display_name} - no API key configured");
+                    $failedModels[] = [
+                        'model' => $aiModel->display_name,
+                        'error' => 'API key not configured'
+                    ];
+                    continue;
+                }
+                
                 // Always generate 25 prompts from each model
                 $prompts = $this->generatePromptsForWebsite($website, $sessionId, $aiModel->name, $description, 25);
-                $allGeneratedPrompts = array_merge($allGeneratedPrompts, $prompts);
+                
+                if (!empty($prompts)) {
+                    $allGeneratedPrompts = array_merge($allGeneratedPrompts, $prompts);
+                    $successfulModels[] = $aiModel->display_name;
+                    
+                    Log::info("Successfully generated prompts from {$aiModel->display_name}", [
+                        'count' => count($prompts),
+                        'website' => $website
+                    ]);
+                } else {
+                    $failedModels[] = [
+                        'model' => $aiModel->display_name,
+                        'error' => 'No prompts generated'
+                    ];
+                }
+                
             } catch (\Exception $e) {
                 Log::warning("Failed to generate prompts from {$aiModel->display_name}", [
                     'error' => $e->getMessage(),
                     'website' => $website,
                     'model' => $aiModel->name
                 ]);
+                
+                $failedModels[] = [
+                    'model' => $aiModel->display_name,
+                    'error' => $e->getMessage()
+                ];
             }
         }
+        
+        // Log summary
+        Log::info('AI prompt generation summary', [
+            'website' => $website,
+            'total_prompts' => count($allGeneratedPrompts),
+            'successful_models' => $successfulModels,
+            'failed_models' => array_column($failedModels, 'model'),
+            'total_models_attempted' => count($aiModels)
+        ]);
         
         // Remove duplicates and similar prompts
         $uniquePrompts = $this->removeDuplicatePrompts($allGeneratedPrompts);
@@ -449,6 +502,27 @@ class AIPromptService
     public function testAiModelConnection(AiModel $aiModel): array
     {
         try {
+            // Validate API configuration first
+            $config = $aiModel->api_config;
+            
+            if (empty($config['api_key'])) {
+                return [
+                    'success' => false,
+                    'message' => "API key not configured for {$aiModel->display_name}. Please configure the API key in the AI Model settings.",
+                    'model' => $aiModel->display_name,
+                    'error_type' => 'configuration'
+                ];
+            }
+            
+            if (empty($config['model'])) {
+                return [
+                    'success' => false,
+                    'message' => "Model name not configured for {$aiModel->display_name}. Please configure the model name in the AI Model settings.",
+                    'model' => $aiModel->display_name,
+                    'error_type' => 'configuration'
+                ];
+            }
+            
             $testPrompt = "Generate a simple test response to verify the API connection. Just respond with 'Connection successful'.";
             
             $response = $this->callAiProvider($aiModel, $testPrompt);
@@ -460,10 +534,19 @@ class AIPromptService
                 'model_used' => $aiModel->api_config['model'] ?? 'Unknown'
             ];
         } catch (\Exception $e) {
+            // Log the error for debugging
+            Log::error('AI Model Test Failed', [
+                'model_id' => $aiModel->id,
+                'model_name' => $aiModel->name,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return [
                 'success' => false,
                 'message' => $e->getMessage(),
-                'model' => $aiModel->display_name
+                'model' => $aiModel->display_name,
+                'error_type' => 'api_error'
             ];
         }
     }

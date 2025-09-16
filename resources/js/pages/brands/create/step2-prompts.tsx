@@ -20,13 +20,15 @@ export default function Step2Prompts({
     errors,
     isGeneratingPrompts,
     aiGeneratedPrompts,
+    generateAIPrompts,
     acceptPrompt,
     rejectPrompt,
     removeAcceptedPrompt,
     isPromptAccepted,
     isPromptRejected,
     handleManualPromptAdd,
-    removePrompt
+    removePrompt,
+    aiModels
 }: Step2Props) {
     const [displayedPrompts, setDisplayedPrompts] = useState<GeneratedPrompt[]>([]);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -101,6 +103,18 @@ export default function Step2Prompts({
                     <h3 className="text-lg font-semibold">Content Prompts ({data.prompts.length}/25)</h3>
                 </div>
                 <div className="flex items-center gap-2">
+                    {!isGeneratingPrompts && promptsToShow.length > 0 && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={generateAIPrompts}
+                            className="flex items-center gap-2"
+                        >
+                            <RefreshCw className="h-4 w-4" />
+                            Regenerate
+                        </Button>
+                    )}
                     {isGeneratingPrompts && (
                         <div className="flex items-center gap-2 text-primary">
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -292,8 +306,18 @@ export default function Step2Prompts({
                     <CardContent className="pt-6">
                         <div className="text-center py-8 text-muted-foreground">
                             <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <p>AI prompts will be generated automatically when you complete step 1.</p>
-                            <p className="text-sm mt-2">Make sure to fill in your website and description first.</p>
+                            {isGeneratingPrompts ? (
+                                <>
+                                    <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin" />
+                                    <p>Generating AI prompts for your website...</p>
+                                    <p className="text-sm mt-2">This may take a few moments.</p>
+                                </>
+                            ) : (
+                                <>
+                                    <p>AI prompts will be generated automatically based on your website.</p>
+                                    <p className="text-sm mt-2">Make sure to fill in your website in step 1 first.</p>
+                                </>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
@@ -324,7 +348,7 @@ export default function Step2Prompts({
                                             type="button"
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => aiPrompt ? removeAcceptedPrompt(prompt, aiPrompt.id) : removePrompt(index)}
+                                            onClick={() => aiPrompt ? removeAcceptedPrompt(prompt) : removePrompt(index)}
                                             className="text-red-600 hover:text-red-700"
                                         >
                                             <Trash2 className="h-4 w-4" />

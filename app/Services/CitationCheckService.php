@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Post;
 use App\Models\PostCitation;
+use App\Models\AiModel;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 
@@ -14,6 +15,32 @@ class CitationCheckService
         'gemini' => 'Gemini',
         'perplexity' => 'Perplexity'
     ];
+
+    /**
+     * Get API key for a provider from the AI models database
+     */
+    protected function getProviderApiKey(string $provider): ?string
+    {
+        $aiModel = AiModel::where('name', $provider)
+            ->where('is_enabled', true)
+            ->first();
+            
+        if (!$aiModel || empty($aiModel->api_config['api_key'])) {
+            return null;
+        }
+        
+        return $aiModel->api_config['api_key'];
+    }
+
+    /**
+     * Get AI model configuration from database
+     */
+    protected function getProviderConfig(string $provider): ?AiModel
+    {
+        return AiModel::where('name', $provider)
+            ->where('is_enabled', true)
+            ->first();
+    }
 
     public function runCitationCheck(Post $post): array
     {
@@ -251,17 +278,19 @@ class CitationCheckService
 
     protected function checkWithOpenAI(string $prompt): array
     {
-        $apiKey = config('services.openai.api_key');
+        $aiModel = $this->getProviderConfig('openai');
         
-        if (!$apiKey) {
+        if (!$aiModel || empty($aiModel->api_config['api_key'])) {
             throw new \Exception('OpenAI API key not configured');
         }
 
+        $model = $aiModel->api_config['model'] ?? 'gpt-4o-search-preview';
+
         $response = Http::withHeaders([
-            'Authorization' => "Bearer {$apiKey}",
+            'Authorization' => "Bearer {$aiModel->api_config['api_key']}",
             'Content-Type' => 'application/json',
         ])->timeout(30)->post('https://api.openai.com/v1/chat/completions', [
-            'model' => 'gpt-4',
+            'model' => $model,
             'messages' => [
                 [
                     'role' => 'system',
@@ -288,13 +317,16 @@ class CitationCheckService
 
     protected function checkWithGemini(string $prompt): array
     {
-        $apiKey = config('services.gemini.api_key');
+        $aiModel = $this->getProviderConfig('gemini');
         
-        if (!$apiKey) {
+        if (!$aiModel || empty($aiModel->api_config['api_key'])) {
             throw new \Exception('Gemini API key not configured');
         }
 
-        $response = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={$apiKey}", [
+        $model = $aiModel->api_config['model'] ?? 'gemini-pro';
+        $apiKey = $aiModel->api_config['api_key'];
+
+        $response = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
             'contents' => [
                 [
                     'parts' => [
@@ -322,17 +354,20 @@ class CitationCheckService
 
     protected function checkWithPerplexity(string $prompt): array
     {
-        $apiKey = config('services.perplexity.api_key');
+        $aiModel = $this->getProviderConfig('perplexity');
         
-        if (!$apiKey) {
+        if (!$aiModel || empty($aiModel->api_config['api_key'])) {
             throw new \Exception('Perplexity API key not configured');
         }
+
+        $model = $aiModel->api_config['model'] ?? 'sonar-pro';
+        $apiKey = $aiModel->api_config['api_key'];
 
         $response = Http::withHeaders([
             'Authorization' => "Bearer {$apiKey}",
             'Content-Type' => 'application/json',
         ])->timeout(30)->post('https://api.perplexity.ai/chat/completions', [
-            'model' => 'llama-3.1-sonar-small-128k-online',
+            'model' => $model,
             'messages' => [
                 [
                     'role' => 'system',

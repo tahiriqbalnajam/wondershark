@@ -8,6 +8,8 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PostPromptController;
+use App\Http\Controllers\IndustryAnalysisController;
+use App\Http\Controllers\CompetitorController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -42,6 +44,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('mypage', function () {
         return Inertia::render('mypage');
     })->name('mypage');
+
+    Route::get('/competitors', [CompetitorController::class, 'generalIndex'])->name('competitors.general-index');
+    Route::get('/brands/{brand}/competitors', [CompetitorController::class, 'index'])->name('competitors.index');
+    Route::post('/brands/{brand}/competitors/fetch-sync', [CompetitorController::class, 'fetchCompetitorsSync'])->name('competitors.fetch-sync');
+    Route::post('/brands/{brand}/competitors/refresh', [CompetitorController::class, 'refreshCompetitors'])->name('competitors.refresh');
+    Route::post('/brands/{brand}/competitors', [CompetitorController::class, 'store'])->name('competitors.store');
+    Route::post('/brands/{brand}/competitors/fetch', [CompetitorController::class, 'fetchFromAI'])->name('competitors.fetch');
+    Route::put('/competitors/{competitor}', [CompetitorController::class, 'update'])->name('competitors.update');
+    Route::delete('/competitors/{competitor}', [CompetitorController::class, 'destroy'])->name('competitors.destroy');
+    
+    // Stats analysis routes
+    Route::post('/competitors/{competitor}/fetch-stats', [CompetitorController::class, 'fetchCompetitorStats'])->name('competitors.fetch-stats');
+    Route::post('/competitors/analyze-json', [CompetitorController::class, 'analyzeCompetitorFromJson'])->name('competitors.analyze-json');
 
     // User Management Routes - Protected by permissions
     Route::middleware('role.permission:view-users')->group(function () {
@@ -134,12 +149,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
     });
 
+    // Brand Creation Routes - For authenticated users during brand creation
+    Route::middleware('auth')->group(function () {
+        Route::post('brands/generate-multi-model-prompts', [BrandController::class, 'generateMultiModelPrompts'])->name('brands.generateMultiModelPrompts');
+        
+        // Test CSRF route
+        Route::post('test-csrf', function() {
+            return response()->json(['success' => true, 'message' => 'CSRF test successful']);
+        })->name('test.csrf');
+        
+        // Test AI page
+        Route::get('test-ai', function() {
+            return view('test-ai');
+        })->name('test.ai');
+        
+        // Competitor fetch for brand creation (doesn't require existing brand)
+        Route::post('api/competitors/fetch-for-brand-creation', [App\Http\Controllers\CompetitorController::class, 'fetchForBrandCreation'])->name('competitors.fetch-for-brand-creation');
+    });
+
     // Brand Management Routes - Only for agency users
     Route::middleware('role.permission:null,agency')->group(function () {
         Route::resource('brands', BrandController::class);
         Route::put('brands/{brand}/status', [BrandController::class, 'updateStatus'])->name('brands.status');
         Route::post('brands/generate-prompts', [BrandController::class, 'generatePrompts'])->name('brands.generatePrompts');
-        Route::post('brands/generate-multi-model-prompts', [BrandController::class, 'generateMultiModelPrompts'])->name('brands.generateMultiModelPrompts');
         Route::post('brands/get-prompts-with-ratio', [BrandController::class, 'getPromptsWithRatio'])->name('brands.getPromptsWithRatio');
         Route::post('brands/get-existing-prompts', [BrandController::class, 'getExistingPrompts'])->name('brands.getExistingPrompts');
         
@@ -181,6 +213,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::resource('people', \App\Http\Controllers\Agency\PeopleController::class)->only(['index', 'store', 'destroy']);
             Route::put('people/{member}/rights', [\App\Http\Controllers\Agency\PeopleController::class, 'updateRights'])->name('people.updateRights');
         });
+    });
+
+    // Search Analytics / Industry Analysis Routes
+    Route::prefix('search-analytics')->name('search-analytics.')->group(function () {
+        Route::get('/', [IndustryAnalysisController::class, 'index'])->name('index');
+        Route::post('/', [IndustryAnalysisController::class, 'store'])->name('store');
+        Route::get('/{analysis}', [IndustryAnalysisController::class, 'show'])->name('show');
     });
 });
 

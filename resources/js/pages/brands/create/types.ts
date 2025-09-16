@@ -5,11 +5,21 @@ export type BrandForm = {
     country: string;
     prompts: string[];
     subreddits: string[];
+    competitors: Competitor[];
     monthly_posts: number;
     brand_email: string;
     brand_password: string;
     create_account: boolean;
     ai_providers: string[];
+};
+
+export type Competitor = {
+    id: number;
+    name: string;
+    domain: string;
+    mentions: number;
+    status: 'suggested' | 'accepted';
+    source: 'ai' | 'manual';
 };
 
 export type GeneratedPrompt = {
@@ -45,7 +55,7 @@ export type Step2Props = StepProps & {
     generateAIPrompts: () => Promise<void>;
     acceptPrompt: (prompt: GeneratedPrompt) => void;
     rejectPrompt: (prompt: GeneratedPrompt) => void;
-    removeAcceptedPrompt: (promptText: string, promptId: number) => void;
+    removeAcceptedPrompt: (promptText: string) => void;
     isPromptAccepted: (prompt: GeneratedPrompt) => boolean;
     isPromptRejected: (prompt: GeneratedPrompt) => boolean;
     handleManualPromptAdd: (prompt: string) => void;

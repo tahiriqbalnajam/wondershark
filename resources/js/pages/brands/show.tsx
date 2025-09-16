@@ -11,10 +11,11 @@ import {
     Globe, 
     MessageSquare, 
     Users, 
-    Settings,
     Edit,
     ArrowLeft,
-    ExternalLink
+    ExternalLink,
+    Shield,
+    Trophy
 } from 'lucide-react';
 
 type Brand = {
@@ -27,6 +28,14 @@ type Brand = {
     created_at: string;
     prompts: Array<{ id: number; prompt: string; order: number; is_active: boolean }>;
     subreddits: Array<{ id: number; subreddit_name: string; description?: string; status: string }>;
+    competitors?: Array<{
+        id: number;
+        name: string;
+        domain: string;
+        rank: number;
+        sentiment: number;
+        visibility: number;
+    }>;
     user?: {
         id: number;
         name: string;
@@ -94,6 +103,12 @@ export default function BrandShow({ brand }: Props) {
                     
                     <div className="flex gap-2">
                         <Button variant="outline" asChild>
+                            <Link href={route('competitors.index', { brand: brand.id })}>
+                                <Shield className="h-4 w-4 mr-2" />
+                                Competitors
+                            </Link>
+                        </Button>
+                        <Button variant="outline" asChild>
                             <Link href={`/brands/${brand.id}/edit`}>
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit Brand
@@ -106,8 +121,8 @@ export default function BrandShow({ brand }: Props) {
                 </div>
 
                 {/* Brand Overview */}
-                <div className="grid gap-6 md:grid-cols-3">
-                    <Card>
+                <div className="grid gap-6 lg:grid-cols-4">
+                    <Card className="lg:col-span-1">
                         <CardHeader className="pb-3">
                             <CardTitle className="flex items-center gap-2">
                                 <Building2 className="h-5 w-5" />
@@ -145,53 +160,92 @@ export default function BrandShow({ brand }: Props) {
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="lg:col-span-3">
                         <CardHeader className="pb-3">
                             <CardTitle className="flex items-center gap-2">
-                                <Settings className="h-5 w-5" />
-                                Content Strategy
+                                <Trophy className="h-5 w-5" />
+                                Industry Ranking
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="text-center p-4 bg-muted/30 rounded-lg">
-                                    <div className="text-2xl font-bold text-primary">{brand.prompts?.length || 0}</div>
-                                    <div className="text-sm text-muted-foreground">Content Prompts</div>
+                        <CardContent>
+                            {brand.competitors && brand.competitors.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead>
+                                            <tr className="border-b text-left">
+                                                <th className="pb-3 text-sm font-medium text-muted-foreground w-12">#</th>
+                                                <th className="pb-3 text-sm font-medium text-muted-foreground">Brand</th>
+                                                <th className="pb-3 text-sm font-medium text-muted-foreground text-center w-24">Position</th>
+                                                <th className="pb-3 text-sm font-medium text-muted-foreground text-center w-24">Sentiment</th>
+                                                <th className="pb-3 text-sm font-medium text-muted-foreground text-center w-24">Visibility</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {brand.competitors.map((competitor, index) => {
+                                                // Clean domain for display - remove protocol and www
+                                                const cleanDomain = competitor.domain
+                                                    .replace(/^https?:\/\//, '') // Remove http:// or https://
+                                                    .replace(/^www\./, ''); // Remove www.
+                                                
+                                                const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
+                                                const fallbackLogo = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
+                                                
+                                                return (
+                                                    <tr key={competitor.id} className="border-b last:border-b-0 hover:bg-muted/50 transition-colors">
+                                                        <td className="py-4 text-sm font-medium">{index + 1}</td>
+                                                        <td className="py-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-10 h-10 rounded-lg border bg-white flex items-center justify-center p-1">
+                                                                    <img 
+                                                                        src={logoUrl}
+                                                                        alt={`${competitor.name} logo`}
+                                                                        className="w-full h-full object-contain"
+                                                                        onError={(e) => {
+                                                                            e.currentTarget.src = fallbackLogo;
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <span className="font-medium text-sm">{competitor.name}</span>
+                                                                    <p className="text-xs text-muted-foreground">{cleanDomain}</p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-4 text-center">
+                                                            <Badge variant="secondary" className="font-mono">
+                                                                #{competitor.rank}
+                                                            </Badge>
+                                                        </td>
+                                                        <td className="py-4 text-center">
+                                                            <Badge 
+                                                                variant={
+                                                                    competitor.sentiment >= 0.7 ? 'default' : 
+                                                                    competitor.sentiment >= 0.4 ? 'secondary' : 
+                                                                    'destructive'
+                                                                }
+                                                                className="font-mono"
+                                                            >
+                                                                {(competitor.sentiment * 100).toFixed(0)}%
+                                                            </Badge>
+                                                        </td>
+                                                        <td className="py-4 text-center">
+                                                            <Badge variant="outline" className="font-mono">
+                                                                {(competitor.visibility * 100).toFixed(0)}%
+                                                            </Badge>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
                                 </div>
-                                <div className="text-center p-4 bg-muted/30 rounded-lg">
-                                    <div className="text-2xl font-bold text-primary">{brand.subreddits?.length || 0}</div>
-                                    <div className="text-sm text-muted-foreground">Target Subreddits</div>
+                            ) : (
+                                <div className="text-center py-12 text-muted-foreground">
+                                    <Trophy className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                                    <h3 className="font-medium mb-1">No competitor data available</h3>
+                                    <p className="text-sm">Add competitors to track industry rankings and performance.</p>
                                 </div>
-                            </div>
-                            <div className="text-center p-4 bg-primary/10 rounded-lg">
-                                <div className="text-2xl font-bold text-primary">{brand.monthly_posts}</div>
-                                <div className="text-sm text-muted-foreground">Posts per Month</div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center gap-2">
-                                <Users className="h-5 w-5" />
-                                Brand Account
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <label className="text-sm font-medium">Account Holder</label>
-                                <p className="font-semibold">{brand.user?.name || 'No account assigned'}</p>
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium">Email</label>
-                                <p className="text-sm text-muted-foreground">{brand.user?.email || 'N/A'}</p>
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium">Account Status</label>
-                                <Badge variant="outline" className="mt-1">
-                                    {brand.user ? 'Active' : 'Unassigned'}
-                                </Badge>
-                            </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>

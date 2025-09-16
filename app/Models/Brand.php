@@ -68,4 +68,9 @@ class Brand extends Model
     {
         return $this->hasMany(Post::class);
     }
+
+    public function competitors(): HasMany
+    {
+        return $this->hasMany(Competitor::class);
+    }
 }

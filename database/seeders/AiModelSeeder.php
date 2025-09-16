@@ -65,10 +65,19 @@ class AiModelSeeder extends Seeder
         ];
 
         foreach ($aiModels as $aiModel) {
-            AiModel::updateOrCreate(
-                ['name' => $aiModel['name']],
-                $aiModel
-            );
+            $existing = AiModel::where('name', $aiModel['name'])->first();
+            
+            if ($existing) {
+                // Only update structure, preserve existing API keys if they exist
+                $updateData = $aiModel;
+                if (!empty($existing->api_config['api_key'])) {
+                    $updateData['api_config']['api_key'] = $existing->api_config['api_key'];
+                }
+                $existing->update($updateData);
+            } else {
+                // Create new record
+                AiModel::create($aiModel);
+            }
         }
     }
 }

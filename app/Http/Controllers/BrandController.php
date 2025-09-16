@@ -69,6 +69,16 @@ class BrandController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Normalize website URL if provided
+        if ($request->filled('website')) {
+            $website = trim($request->website);
+            // Add https:// if no protocol is present
+            if (!preg_match('/^https?:\/\//', $website)) {
+                $website = 'https://' . $website;
+            }
+            $request->merge(['website' => $website]);
+        }
+
         $validationRules = [
             'name' => 'required|string|max:255',
             'website' => 'nullable|url|max:255',
@@ -78,6 +88,10 @@ class BrandController extends Controller
             'prompts.*' => 'required|string|max:500',
             'subreddits' => 'array|max:20',
             'subreddits.*' => 'required|string|max:100',
+            'competitors' => 'array|max:50',
+            'competitors.*.name' => 'required|string|max:255',
+            'competitors.*.domain' => 'required|url|max:255',
+            'competitors.*.source' => 'nullable|string|in:ai,manual',
             'monthly_posts' => 'required|integer|min:1|max:1000',
             'create_account' => 'boolean',
         ];
@@ -142,6 +156,23 @@ class BrandController extends Controller
                     ]);
                 }
             }
+
+            // Create competitors if provided
+            if ($request->has('competitors') && !empty($request->competitors)) {
+                foreach ($request->competitors as $index => $competitorData) {
+                    \App\Models\Competitor::create([
+                        'brand_id' => $brand->id,
+                        'name' => $competitorData['name'],
+                        'domain' => $competitorData['domain'],
+                        'source' => $competitorData['source'] ?? 'manual',
+                        'status' => 'accepted',
+                        'mentions' => 0,
+                        'rank' => $index + 1, // Assign rank based on position (1, 2, 3, etc.)
+                        'sentiment' => 0.6, // Default sentiment score for new competitors
+                        'visibility' => 0.7, // Default visibility score for new competitors
+                    ]);
+                }
+            }
         });
 
         return redirect()->route('brands.index')->with('success', 'Brand created successfully!');
@@ -160,7 +191,14 @@ class BrandController extends Controller
             abort(403);
         }
 
-        $brand->load(['prompts', 'subreddits', 'user']);
+        $brand->load(['prompts', 'subreddits', 'user', 'competitors' => function($query) {
+            // Only show accepted competitors
+            $query->where('status', 'accepted')
+                  // Prioritize competitors added during brand creation (ai/manual) over seeded ones
+                  ->orderByRaw("CASE WHEN source IN ('ai', 'manual') THEN 0 ELSE 1 END")
+                  ->orderBy('rank')
+                  ->take(10);
+        }]);
 
         return Inertia::render('brands/show', [
             'brand' => $brand,
@@ -198,6 +236,16 @@ class BrandController extends Controller
         // Ensure the brand belongs to the authenticated agency
         if ($brand->agency_id !== $user->id) {
             abort(403);
+        }
+
+        // Normalize website URL if provided
+        if ($request->filled('website')) {
+            $website = trim($request->website);
+            // Add https:// if no protocol is present
+            if (!preg_match('/^https?:\/\//', $website)) {
+                $website = 'https://' . $website;
+            }
+            $request->merge(['website' => $website]);
         }
 
         $request->validate([
@@ -299,6 +347,16 @@ class BrandController extends Controller
      */
     public function getPromptsWithRatio(Request $request)
     {
+        // Normalize website URL if provided
+        if ($request->filled('website')) {
+            $website = trim($request->website);
+            // Add https:// if no protocol is present
+            if (!preg_match('/^https?:\/\//', $website)) {
+                $website = 'https://' . $website;
+            }
+            $request->merge(['website' => $website]);
+        }
+
         $request->validate([
             'website' => 'required|url',
             'limit' => 'integer|min:1|max:100',
@@ -354,9 +412,27 @@ class BrandController extends Controller
      */
     public function generateMultiModelPrompts(Request $request)
     {
+        Log::info('generateMultiModelPrompts called', [
+            'method' => $request->method(),
+            'url' => $request->url(),
+            'user_id' => Auth::id(),
+            'session_id' => session()->getId(),
+            'data' => $request->all()
+        ]);
+
+        // Normalize website URL if provided
+        if ($request->filled('website')) {
+            $website = trim($request->website);
+            // Add https:// if no protocol is present
+            if (!preg_match('/^https?:\/\//', $website)) {
+                $website = 'https://' . $website;
+            }
+            $request->merge(['website' => $website]);
+        }
+
         $request->validate([
             'website' => 'required|url',
-            'description' => 'required|string|max:1000',
+            'description' => 'nullable|string|max:1000',
         ]);
 
         try {
@@ -392,7 +468,7 @@ class BrandController extends Controller
             $generatedPrompts = $aiService->generatePromptsFromMultipleModels(
                 $request->website,
                 $sessionId,
-                $request->description
+                $request->description ?? ''
             );
 
             if (empty($generatedPrompts)) {
@@ -440,6 +516,16 @@ class BrandController extends Controller
         $aiService = app(\App\Services\AIPromptService::class);
         $availableProviders = array_keys($aiService->getAvailableProviders());
         
+        // Normalize website URL if provided
+        if ($request->filled('website')) {
+            $website = trim($request->website);
+            // Add https:// if no protocol is present
+            if (!preg_match('/^https?:\/\//', $website)) {
+                $website = 'https://' . $website;
+            }
+            $request->merge(['website' => $website]);
+        }
+        
         $request->validate([
             'website' => 'required|url',
             'description' => 'required|string|max:1000',
@@ -479,7 +565,7 @@ class BrandController extends Controller
                 $request->website,
                 $sessionId,
                 $request->ai_provider,
-                $request->description
+                $request->description ?? ''
             );
 
             return response()->json([
@@ -509,6 +595,16 @@ class BrandController extends Controller
      */
     public function getExistingPrompts(Request $request)
     {
+        // Normalize website URL if provided
+        if ($request->filled('website')) {
+            $website = trim($request->website);
+            // Add https:// if no protocol is present
+            if (!preg_match('/^https?:\/\//', $website)) {
+                $website = 'https://' . $website;
+            }
+            $request->merge(['website' => $website]);
+        }
+        
         $request->validate([
             'website' => 'required|url',
         ]);

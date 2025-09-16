@@ -32,7 +32,8 @@ import {
     Calendar,
     Building2,
     MessageSquare,
-    Upload
+    Upload,
+    BarChart3
 } from 'lucide-react';
 
 type Post = {
@@ -98,6 +99,35 @@ export default function PostsIndex({ posts }: Props) {
             router.delete(`/posts/${postId}`, {
                 preserveScroll: true,
             });
+        }
+    };
+
+    const handleStartAnalysis = async (postId: number) => {
+        try {
+            const response = await fetch('/search-analytics', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    post_id: postId,
+                    country: 'US'
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                alert('Industry analysis started successfully! You can view progress in Search Analytics.');
+                // Optionally redirect to search analytics
+                router.visit('/search-analytics');
+            } else {
+                const error = await response.json();
+                alert('Error starting analysis: ' + (error.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error starting analysis:', error);
+            alert('Error starting analysis. Please try again.');
         }
     };
 
@@ -248,6 +278,10 @@ export default function PostsIndex({ posts }: Props) {
                                                                 <MessageSquare className="h-4 w-4 mr-2" />
                                                                 Manage Prompts
                                                             </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => handleStartAnalysis(post.id)}>
+                                                            <BarChart3 className="h-4 w-4 mr-2" />
+                                                            Industry Analysis
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
                                                         <DropdownMenuItem 
