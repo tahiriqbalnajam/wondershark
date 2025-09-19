@@ -174,6 +174,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('brands/generate-prompts', [BrandController::class, 'generatePrompts'])->name('brands.generatePrompts');
         Route::post('brands/get-prompts-with-ratio', [BrandController::class, 'getPromptsWithRatio'])->name('brands.getPromptsWithRatio');
         Route::post('brands/get-existing-prompts', [BrandController::class, 'getExistingPrompts'])->name('brands.getExistingPrompts');
+        Route::get('brands/{brand}/prompts-with-competitor-urls', [BrandController::class, 'getPromptsWithCompetitorUrls'])->name('brands.prompts-with-competitor-urls');
+        Route::post('brands/{brand}/trigger-prompt-analysis', [BrandController::class, 'triggerPromptAnalysis'])->name('brands.trigger-prompt-analysis');
         
         // Brand Prompts Management Routes
         Route::get('brands/{brand}/prompts', [\App\Http\Controllers\Brand\BrandPromptController::class, 'index'])->name('brands.prompts.index');

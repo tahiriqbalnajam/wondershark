@@ -191,14 +191,19 @@ class BrandController extends Controller
             abort(403);
         }
 
-        $brand->load(['prompts', 'subreddits', 'user', 'competitors' => function($query) {
-            // Only show accepted competitors
-            $query->where('status', 'accepted')
-                  // Prioritize competitors added during brand creation (ai/manual) over seeded ones
-                  ->orderByRaw("CASE WHEN source IN ('ai', 'manual') THEN 0 ELSE 1 END")
-                  ->orderBy('rank')
-                  ->take(10);
-        }]);
+        $brand->load([
+            'prompts.promptResources', 
+            'subreddits', 
+            'user', 
+            'competitors' => function($query) {
+                // Only show accepted competitors
+                $query->where('status', 'accepted')
+                      // Prioritize competitors added during brand creation (ai/manual) over seeded ones
+                      ->orderByRaw("CASE WHEN source IN ('ai', 'manual') THEN 0 ELSE 1 END")
+                      ->orderBy('rank')
+                      ->take(10);
+            }
+        ]);
 
         return Inertia::render('brands/show', [
             'brand' => $brand,
@@ -633,5 +638,122 @@ class BrandController extends Controller
                 'error' => 'Failed to get existing prompts: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Get prompts that contain competitor URLs in their resources
+     */
+    public function getPromptsWithCompetitorUrls(Brand $brand, Request $request)
+    {
+        $request->validate([
+            'competitor_domain' => 'required|string'
+        ]);
+
+        /** @var User $user */
+        $user = Auth::user();
+        
+        // Ensure the brand belongs to the authenticated agency
+        if ($brand->agency_id !== $user->id) {
+            abort(403);
+        }
+
+        $competitorDomain = $request->competitor_domain;
+        
+        // Get prompts that have resources containing the competitor domain using the new resources table
+        $prompts = BrandPrompt::where('brand_id', $brand->id)
+            ->whereNotNull('analysis_completed_at')
+            ->whereHas('promptResources', function ($query) use ($competitorDomain) {
+                $query->where('domain', 'like', "%{$competitorDomain}%")
+                      ->orWhere('url', 'like', "%{$competitorDomain}%");
+            })
+            ->with(['promptResources' => function ($query) use ($competitorDomain) {
+                $query->where('domain', 'like', "%{$competitorDomain}%")
+                      ->orWhere('url', 'like', "%{$competitorDomain}%");
+            }])
+            ->orderBy('analysis_completed_at', 'desc')
+            ->get()
+            ->map(function ($prompt) use ($competitorDomain) {
+                // Get all competitor resources for this prompt
+                $competitorResources = $prompt->promptResources->map(function ($resource) {
+                    return [
+                        'url' => $resource->url,
+                        'type' => $resource->type,
+                        'title' => $resource->title,
+                        'description' => $resource->description,
+                        'domain' => $resource->domain,
+                        'is_competitor_url' => $resource->is_competitor_url
+                    ];
+                })->toArray();
+                
+                return [
+                    'id' => $prompt->id,
+                    'prompt' => $prompt->prompt,
+                    'ai_response' => $prompt->ai_response,
+                    'sentiment' => $prompt->sentiment,
+                    'position' => $prompt->position,
+                    'visibility' => $prompt->visibility,
+                    'competitor_mentions' => $prompt->competitor_mentions,
+                    'competitor_resources' => $competitorResources,
+                    'analysis_completed_at' => $prompt->analysis_completed_at,
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'prompts' => $prompts,
+            'competitor_domain' => $competitorDomain,
+            'total_count' => $prompts->count()
+        ]);
+    }
+
+    /**
+     * Trigger analysis for all prompts of a brand
+     */
+    public function triggerPromptAnalysis(Brand $brand, Request $request)
+    {
+        /** @var User $user */
+        $user = Auth::user();
+        
+        // Ensure the brand belongs to the authenticated agency
+        if ($brand->agency_id !== $user->id) {
+            abort(403);
+        }
+
+        $forceRegenerate = $request->boolean('force', false);
+        $sessionId = $request->get('session_id', \Illuminate\Support\Str::uuid()->toString());
+
+        // Get all prompts for this brand
+        $prompts = BrandPrompt::where('brand_id', $brand->id)->get();
+
+        if ($prompts->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No prompts found for this brand'
+            ], 404);
+        }
+
+        $jobsQueued = 0;
+        foreach ($prompts as $prompt) {
+            // Skip if already analyzed and not forcing regeneration
+            if (!$forceRegenerate && 
+                $prompt->analysis_completed_at && 
+                $prompt->ai_response) {
+                continue;
+            }
+
+            \App\Jobs\ProcessBrandPromptAnalysis::dispatch($prompt, $sessionId, $forceRegenerate)
+                ->onQueue('default');
+            
+            $jobsQueued++;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Queued {$jobsQueued} analysis jobs",
+            'session_id' => $sessionId,
+            'total_prompts' => $prompts->count(),
+            'jobs_queued' => $jobsQueued
+        ]);
     }
 }

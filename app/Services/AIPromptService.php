@@ -90,7 +90,6 @@ class AIPromptService
         ];
 
         $prismProvider = $providerMapping[$aiModel->name] ?? 'openai';
-        
         // Handle Perplexity with custom implementation
         if ($aiModel->name === 'perplexity') {
             return $this->callPerplexityApi($config, $prompt);
