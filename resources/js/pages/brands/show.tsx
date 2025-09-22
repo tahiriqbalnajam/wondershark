@@ -92,7 +92,7 @@ export default function BrandShow({ brand }: Props) {
     const handleTriggerAnalysis = async (force: boolean = false) => {
         setTriggeringAnalysis(true);
         try {
-            const response = await fetch(`/brands/${brand.id}/trigger-analysis`, {
+            const response = await fetch(`/brands/${brand.id}/trigger-prompt-analysis`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
