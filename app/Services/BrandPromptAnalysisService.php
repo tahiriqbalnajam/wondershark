@@ -154,9 +154,12 @@ class BrandPromptAnalysisService
         $maxTokens = $apiConfig['max_tokens'] ?? 2000;
         
         $apiKey = $apiConfig['api_key'] ?? null;
-        if (!$apiKey) {
-            throw new \Exception("API key not configured for AI model: {$aiModel->name}");
+        if (!$apiKey || trim($apiKey) === '') {
+            throw new \Exception("API key not configured or is empty for AI model: {$aiModel->name}. Please check the API configuration.");
         }
+
+        // Trim any whitespace from the API key
+        $apiKey = trim($apiKey);
 
         // Use direct HTTP calls to avoid .env dependency
         switch ($aiModel->name) {
@@ -210,6 +213,11 @@ class BrandPromptAnalysisService
      */
     protected function callOpenAIDirect($apiKey, $model, $prompt, $temperature, $maxTokens)
     {
+        // Validate API key format for OpenAI (should start with 'sk-')
+        if (!str_starts_with($apiKey, 'sk-')) {
+            throw new \Exception("Invalid OpenAI API key format. OpenAI API keys should start with 'sk-'");
+        }
+
         $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
             ->timeout(60)
             ->post('https://api.openai.com/v1/chat/completions', [
@@ -222,7 +230,11 @@ class BrandPromptAnalysisService
             ]);
 
         if (!$response->successful()) {
-            throw new \Exception("OpenAI API error: " . $response->status() . " - " . $response->body());
+            $errorBody = $response->body();
+            $errorData = json_decode($errorBody, true);
+            $errorMessage = $errorData['error']['message'] ?? $errorBody;
+            
+            throw new \Exception("OpenAI API error (Status: {$response->status()}): {$errorMessage}");
         }
 
         $data = $response->json();
@@ -603,6 +615,15 @@ class BrandPromptAnalysisService
     public function testAiModel(AiModel $aiModel): array
     {
         try {
+            // Log the test attempt for debugging
+            Log::info("Testing AI model", [
+                'model_id' => $aiModel->id,
+                'model_name' => $aiModel->name,
+                'display_name' => $aiModel->display_name,
+                'has_api_config' => !empty($aiModel->api_config),
+                'api_config_keys' => $aiModel->api_config ? array_keys($aiModel->api_config) : []
+            ]);
+
             $testPrompt = "Test prompt: What is artificial intelligence? Please respond briefly.";
             $response = $this->callAiProvider($aiModel, $testPrompt);
             
@@ -613,11 +634,19 @@ class BrandPromptAnalysisService
                 'message' => 'AI model is working correctly'
             ];
         } catch (\Exception $e) {
+            // Log the error for debugging
+            Log::error("AI model test failed", [
+                'model_id' => $aiModel->id,
+                'model_name' => $aiModel->name,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
                 'model' => $aiModel->name,
-                'message' => 'AI model test failed'
+                'message' => 'AI model test failed: ' . $e->getMessage()
             ];
         }
     }
