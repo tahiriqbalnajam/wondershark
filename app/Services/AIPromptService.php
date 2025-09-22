@@ -130,25 +130,25 @@ class AIPromptService
     {
         $contextInfo = $description ? "\n\nAdditional context about the website: {$description}" : '';
         
-        return "Given a website {$website} and a desired number of prompts {$promptCount}, generate {$promptCount} unique, generic statements (mix of questions and declarative phrases)  that a user might ask to analyze the website and its competitors.{$contextInfo}
+        return "Given a website {$website} and a desired number of statements {$promptCount}, analyze the website's content to identify key themes, products, benefits, problems solved, and target user needs. Then, generate {$promptCount} unique, generic statements (a mix of questions and declarative phrases) that reflect natural user intents, as if potential customers are seeking solutions where the website's offerings would be highly relevant.{$contextInfo}
 
-                Ensure each question:
+                Ensure each statement:
 
-                1. Does NOT include {$website} or any brand name in the question text, making the questions fully generic.
-                2. Focuses on gathering insights about the website and its competitors, such as market position, effectiveness of tools or services.
-                3. Varies in intent (e.g., identifying top solutions, comparing tools or services, evaluating performance, or analyzing market trends).
-                4. Is concise, actionable, and relevant for researching website and competitor performance metrics not exceeding 20 words.
-                5. Remains generic and does not assume the website's industry, purpose, or specific functionality (e.g., does not assume it's related to Amazon Vendor Central).
-                6. Reflects natural user intent, as if a potential customer or analyst is seeking to understand the website's competitive landscape.
+                1. Does NOT include {$website} or any brand name in the text, making the statements fully generic.
+                2. Focuses on user problems, remedies, or comparisons in the website's domain, drawing from its content without assuming or referencing specific industries.
+                3. Varies in intent (e.g., seeking relief methods, natural alternatives, product comparisons, or seasonal solutions).
+                4. Is concise, actionable, and under 20 words, relevant to what users might search for based on the website's described benefits and testimonials.
+                5. Remains generic and does not use website-specific keywords; base phrasing on inferred user needs from content analysis.
+                6. Reflects real search behaviors, like how-to guides, remedy suggestions, or best options for common issues addressed by the site.
 
                 Requirements:
-                - Return ONLY the questions, one per line
+                - Return ONLY the statements, one per line
                 - No numbering, bullets, or other formatting
                 - No explanations or additional text
-                - Output should be spreadsheet compatible (each question on a new line)
-                - Questions should be completely generic and not reference any specific brand names or website URLs
+                - Output should be spreadsheet compatible (each statement on a new line)
+                - Statements should be completely generic and not reference any specific brand names, URLs, or hardcoded terms
 
-                Generate exactly {$promptCount} questions:";
+                Generate exactly {$promptCount} statements:";
     }
 
     protected function parseQuestions(string $content): array
