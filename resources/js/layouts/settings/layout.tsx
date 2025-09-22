@@ -30,6 +30,11 @@ const getSettingsNavItems = (userRole: string): NavItem[] => {
                 href: '/settings/account',
                 icon: null,
             },
+            {
+                title: 'Appearance',
+                href: '/settings/appearance',
+                icon: null,
+            },
         ];
     }
 
