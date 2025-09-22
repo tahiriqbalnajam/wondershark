@@ -16,7 +16,8 @@ class AIPromptService
         
         if (!$aiModel) {
             Log::warning('AI Model not found or disabled', ['provider' => $provider]);
-            return $this->getFallbackPrompts($website, $sessionId);
+            // Return empty array instead of fallback prompts
+            return [];
         }
 
         $prompt = $this->buildPrompt($website, $description, $promptCount ?? $aiModel->prompts_per_brand);
@@ -52,8 +53,8 @@ class AIPromptService
                 'error' => $e->getMessage()
             ]);
             
-            // Return fallback prompts if AI fails
-            return $this->getFallbackPrompts($website, $sessionId);
+            // Return empty array instead of fallback prompts when AI generation fails
+            return [];
         }
     }
 
@@ -68,7 +69,7 @@ class AIPromptService
     }
 
     /**
-     * Call AI provider using configured settings
+     * Call AI provider using configured settings from database
      */
     protected function callAiProvider(AiModel $aiModel, string $prompt)
     {
@@ -78,77 +79,63 @@ class AIPromptService
             throw new \Exception("API key not configured for {$aiModel->display_name}");
         }
 
-        // Map database provider names to Prism provider names
-        $providerMapping = [
-            'openai' => 'openai',
-            'gemini' => 'gemini',
-            'anthropic' => 'anthropic',
-            'claude' => 'anthropic', // Legacy support
-            'perplexity' => 'custom', // Handle Perplexity separately
-            'groq' => 'groq',
-            'deepseek' => 'openai', // DeepSeek uses OpenAI-compatible API
-        ];
+        $apiKey = trim($config['api_key']);
+        $model = $config['model'] ?? $this->getDefaultModel($aiModel->name);
+        $temperature = $config['temperature'] ?? 0.7;
+        $maxTokens = $config['max_tokens'] ?? 2000;
 
-        $prismProvider = $providerMapping[$aiModel->name] ?? 'openai';
-        // Handle Perplexity with custom implementation
-        if ($aiModel->name === 'perplexity') {
-            return $this->callPerplexityApi($config, $prompt);
+        // Use direct HTTP calls to ensure we use database configuration, not .env
+        switch ($aiModel->name) {
+            case 'openai':
+                return $this->callOpenAIDirect($apiKey, $model, $prompt, $temperature, $maxTokens);
+
+            case 'gemini':
+            case 'google':
+                return $this->callGeminiDirect($apiKey, $model, $prompt, $temperature, $maxTokens);
+
+            case 'anthropic':
+            case 'claude':
+                return $this->callAnthropicDirect($apiKey, $model, $prompt, $temperature, $maxTokens);
+
+            case 'groq':
+                return $this->callGroqDirect($apiKey, $model, $prompt, $temperature, $maxTokens);
+
+            case 'perplexity':
+                return $this->callPerplexityDirect($apiKey, $model, $prompt, $temperature, $maxTokens);
+
+            case 'mistral':
+                return $this->callMistralDirect($apiKey, $model, $prompt, $temperature, $maxTokens);
+
+            case 'deepseek':
+                return $this->callDeepSeekDirect($apiKey, $model, $prompt, $temperature, $maxTokens);
+
+            case 'xai':
+            case 'x-ai':
+            case 'grok':
+                return $this->callXAIDirect($apiKey, $model, $prompt, $temperature, $maxTokens);
+
+            case 'openrouter':
+                return $this->callOpenRouterDirect($apiKey, $model, $prompt, $temperature, $maxTokens);
+
+            case 'ollama':
+                return $this->callOllamaDirect($apiKey, $model, $prompt, $temperature, $maxTokens, $config);
+
+            default:
+                // Generic fallback - try OpenAI-compatible API
+                return $this->callOpenAIDirect($apiKey, $model, $prompt, $temperature, $maxTokens);
         }
-
-        $model = $config['model'] ?? 'gpt-4';
-
-        return Prism::text()
-            ->using($prismProvider, $model)
-            ->withPrompt($prompt)
-            ->generate();
-    }
-
-    /**
-     * Call Perplexity API directly since it has custom endpoint requirements
-     */
-    protected function callPerplexityApi(array $config, string $prompt)
-    {
-        $client = new \GuzzleHttp\Client();
-        
-        $response = $client->post($config['endpoint'], [
-            'headers' => [
-                'Authorization' => 'Bearer ' . $config['api_key'],
-                'Content-Type' => 'application/json',
-            ],
-            'json' => [
-                'model' => $config['model'],
-                'messages' => [
-                    [
-                        'role' => 'user',
-                        'content' => $prompt
-                    ]
-                ],
-                'max_tokens' => 2000,
-                'temperature' => 0.7,
-                'num_search_results' => 10, // Required for sonar models
-            ],
-            'timeout' => 60,
-        ]);
-
-        $data = json_decode($response->getBody()->getContents(), true);
-        
-        // Create a response object compatible with Prism
-        return (object) [
-            'text' => $data['choices'][0]['message']['content'] ?? '',
-            'finishReason' => $data['choices'][0]['finish_reason'] ?? 'stop',
-        ];
     }
 
     protected function buildPrompt(string $website, string $description = '', int $promptCount = 25): string
     {
         $contextInfo = $description ? "\n\nAdditional context about the website: {$description}" : '';
         
-        return "Given a website {$website} and a desired number of prompts {$promptCount}, generate {$promptCount} unique, generic generic statements (mix of questions and declarative phrases)  that a user might ask to analyze the website and its competitors, inspired by themes of cost recovery, deduction management, chargeback disputes, and revenue recovery.{$contextInfo}
+        return "Given a website {$website} and a desired number of prompts {$promptCount}, generate {$promptCount} unique, generic statements (mix of questions and declarative phrases)  that a user might ask to analyze the website and its competitors.{$contextInfo}
 
                 Ensure each question:
 
                 1. Does NOT include {$website} or any brand name in the question text, making the questions fully generic.
-                2. Focuses on gathering insights about the website and its competitors, such as market position, effectiveness of tools or services, dispute resolution capabilities, or financial recovery strategies.
+                2. Focuses on gathering insights about the website and its competitors, such as market position, effectiveness of tools or services.
                 3. Varies in intent (e.g., identifying top solutions, comparing tools or services, evaluating performance, or analyzing market trends).
                 4. Is concise, actionable, and relevant for researching website and competitor performance metrics not exceeding 20 words.
                 5. Remains generic and does not assume the website's industry, purpose, or specific functionality (e.g., does not assume it's related to Amazon Vendor Central).
@@ -336,9 +323,10 @@ class AIPromptService
             return [];
         }
 
-        // Only get prompts from active AI models
+        // Only get prompts from active AI models (exclude fallback prompts completely)
         $allPrompts = GeneratedPrompt::forWebsite($website)
-            ->where('source', '!=', 'fallback')
+            ->where('source', 'ai_generated') // Only AI generated prompts
+            ->where('ai_provider', '!=', 'fallback') // Explicitly exclude fallback
             ->whereIn('ai_provider', $activeAiModels)
             ->orderBy('order')
             ->get()
@@ -366,9 +354,10 @@ class AIPromptService
             return 0;
         }
 
-        // Remove duplicates and similar prompts to get accurate count
+        // Remove duplicates and similar prompts to get accurate count (exclude fallback prompts completely)
         $allPrompts = GeneratedPrompt::forWebsite($website)
-            ->where('source', '!=', 'fallback')
+            ->where('source', 'ai_generated') // Only AI generated prompts
+            ->where('ai_provider', '!=', 'fallback') // Explicitly exclude fallback
             ->whereIn('ai_provider', $activeAiModels)
             ->orderBy('order')
             ->get();
@@ -548,5 +537,280 @@ class AIPromptService
                 'error_type' => 'api_error'
             ];
         }
+    }
+
+    /**
+     * Get default model name for each provider
+     */
+    protected function getDefaultModel(string $provider): string
+    {
+        return match($provider) {
+            'openai' => 'gpt-3.5-turbo',
+            'gemini', 'google' => 'gemini-pro',
+            'anthropic', 'claude' => 'claude-3-haiku-20240307',
+            'groq' => 'llama-3.1-70b-versatile',
+            'perplexity' => 'llama-3.1-sonar-small-128k-online',
+            'mistral' => 'mistral-small-latest',
+            'deepseek' => 'deepseek-chat',
+            'xai', 'x-ai', 'grok' => 'grok-beta',
+            'openrouter' => 'meta-llama/llama-3.1-8b-instruct:free',
+            'ollama' => 'llama3.1',
+            default => 'gpt-3.5-turbo'
+        };
+    }
+
+    /**
+     * Call OpenAI API directly
+     */
+    protected function callOpenAIDirect($apiKey, $model, $prompt, $temperature, $maxTokens)
+    {
+        // Validate API key format for OpenAI (should start with 'sk-')
+        if (!str_starts_with($apiKey, 'sk-')) {
+            throw new \Exception("Invalid OpenAI API key format. OpenAI API keys should start with 'sk-'");
+        }
+
+        $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
+            ->timeout(60)
+            ->post('https://api.openai.com/v1/chat/completions', [
+                'model' => $model,
+                'messages' => [
+                    ['role' => 'user', 'content' => $prompt]
+                ],
+                'temperature' => $temperature,
+                'max_tokens' => $maxTokens,
+            ]);
+
+        if (!$response->successful()) {
+            $errorBody = $response->body();
+            $errorData = json_decode($errorBody, true);
+            $errorMessage = $errorData['error']['message'] ?? $errorBody;
+            
+            throw new \Exception("OpenAI API error (Status: {$response->status()}): {$errorMessage}");
+        }
+
+        $data = $response->json();
+        return (object) ['text' => $data['choices'][0]['message']['content'] ?? ''];
+    }
+
+    /**
+     * Call Gemini API directly
+     */
+    protected function callGeminiDirect($apiKey, $model, $prompt, $temperature, $maxTokens)
+    {
+        $response = \Illuminate\Support\Facades\Http::timeout(60)
+            ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
+                'contents' => [
+                    ['parts' => [['text' => $prompt]]]
+                ],
+                'generationConfig' => [
+                    'temperature' => $temperature,
+                    'maxOutputTokens' => $maxTokens,
+                ]
+            ]);
+
+        if (!$response->successful()) {
+            throw new \Exception("Gemini API error: " . $response->status() . " - " . $response->body());
+        }
+
+        $data = $response->json();
+        return (object) ['text' => $data['candidates'][0]['content']['parts'][0]['text'] ?? ''];
+    }
+
+    /**
+     * Call Anthropic API directly
+     */
+    protected function callAnthropicDirect($apiKey, $model, $prompt, $temperature, $maxTokens)
+    {
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'x-api-key' => $apiKey,
+                'anthropic-version' => '2023-06-01',
+                'Content-Type' => 'application/json',
+            ])
+            ->timeout(60)
+            ->post('https://api.anthropic.com/v1/messages', [
+                'model' => $model,
+                'max_tokens' => $maxTokens,
+                'temperature' => $temperature,
+                'messages' => [
+                    ['role' => 'user', 'content' => $prompt]
+                ]
+            ]);
+
+        if (!$response->successful()) {
+            throw new \Exception("Anthropic API error: " . $response->status() . " - " . $response->body());
+        }
+
+        $data = $response->json();
+        return (object) ['text' => $data['content'][0]['text'] ?? ''];
+    }
+
+    /**
+     * Call Groq API directly
+     */
+    protected function callGroqDirect($apiKey, $model, $prompt, $temperature, $maxTokens)
+    {
+        $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
+            ->timeout(60)
+            ->post('https://api.groq.com/openai/v1/chat/completions', [
+                'model' => $model,
+                'messages' => [
+                    ['role' => 'user', 'content' => $prompt]
+                ],
+                'temperature' => $temperature,
+                'max_tokens' => $maxTokens,
+            ]);
+
+        if (!$response->successful()) {
+            throw new \Exception("Groq API error: " . $response->status() . " - " . $response->body());
+        }
+
+        $data = $response->json();
+        return (object) ['text' => $data['choices'][0]['message']['content'] ?? ''];
+    }
+
+    /**
+     * Call Perplexity API directly
+     */
+    protected function callPerplexityDirect($apiKey, $model, $prompt, $temperature, $maxTokens)
+    {
+        $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
+            ->timeout(60)
+            ->post('https://api.perplexity.ai/chat/completions', [
+                'model' => $model,
+                'messages' => [
+                    ['role' => 'user', 'content' => $prompt]
+                ],
+                'temperature' => $temperature,
+                'max_tokens' => $maxTokens,
+            ]);
+
+        if (!$response->successful()) {
+            throw new \Exception("Perplexity API error: " . $response->status() . " - " . $response->body());
+        }
+
+        $data = $response->json();
+        return (object) ['text' => $data['choices'][0]['message']['content'] ?? ''];
+    }
+
+    /**
+     * Call Mistral API directly
+     */
+    protected function callMistralDirect($apiKey, $model, $prompt, $temperature, $maxTokens)
+    {
+        $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
+            ->timeout(60)
+            ->post('https://api.mistral.ai/v1/chat/completions', [
+                'model' => $model,
+                'messages' => [
+                    ['role' => 'user', 'content' => $prompt]
+                ],
+                'temperature' => $temperature,
+                'max_tokens' => $maxTokens,
+            ]);
+
+        if (!$response->successful()) {
+            throw new \Exception("Mistral API error: " . $response->status() . " - " . $response->body());
+        }
+
+        $data = $response->json();
+        return (object) ['text' => $data['choices'][0]['message']['content'] ?? ''];
+    }
+
+    /**
+     * Call DeepSeek API directly
+     */
+    protected function callDeepSeekDirect($apiKey, $model, $prompt, $temperature, $maxTokens)
+    {
+        $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
+            ->timeout(60)
+            ->post('https://api.deepseek.com/v1/chat/completions', [
+                'model' => $model,
+                'messages' => [
+                    ['role' => 'user', 'content' => $prompt]
+                ],
+                'temperature' => $temperature,
+                'max_tokens' => $maxTokens,
+            ]);
+
+        if (!$response->successful()) {
+            throw new \Exception("DeepSeek API error: " . $response->status() . " - " . $response->body());
+        }
+
+        $data = $response->json();
+        return (object) ['text' => $data['choices'][0]['message']['content'] ?? ''];
+    }
+
+    /**
+     * Call XAI API directly
+     */
+    protected function callXAIDirect($apiKey, $model, $prompt, $temperature, $maxTokens)
+    {
+        $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
+            ->timeout(60)
+            ->post('https://api.x.ai/v1/chat/completions', [
+                'model' => $model,
+                'messages' => [
+                    ['role' => 'user', 'content' => $prompt]
+                ],
+                'temperature' => $temperature,
+                'max_tokens' => $maxTokens,
+            ]);
+
+        if (!$response->successful()) {
+            throw new \Exception("XAI API error: " . $response->status() . " - " . $response->body());
+        }
+
+        $data = $response->json();
+        return (object) ['text' => $data['choices'][0]['message']['content'] ?? ''];
+    }
+
+    /**
+     * Call OpenRouter API directly
+     */
+    protected function callOpenRouterDirect($apiKey, $model, $prompt, $temperature, $maxTokens)
+    {
+        $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
+            ->timeout(60)
+            ->post('https://openrouter.ai/api/v1/chat/completions', [
+                'model' => $model,
+                'messages' => [
+                    ['role' => 'user', 'content' => $prompt]
+                ],
+                'temperature' => $temperature,
+                'max_tokens' => $maxTokens,
+            ]);
+
+        if (!$response->successful()) {
+            throw new \Exception("OpenRouter API error: " . $response->status() . " - " . $response->body());
+        }
+
+        $data = $response->json();
+        return (object) ['text' => $data['choices'][0]['message']['content'] ?? ''];
+    }
+
+    /**
+     * Call Ollama API directly
+     */
+    protected function callOllamaDirect($apiKey, $model, $prompt, $temperature, $maxTokens, $config)
+    {
+        $baseUrl = $config['base_url'] ?? 'http://localhost:11434';
+        
+        $response = \Illuminate\Support\Facades\Http::timeout(60)
+            ->post("{$baseUrl}/api/generate", [
+                'model' => $model,
+                'prompt' => $prompt,
+                'stream' => false,
+                'options' => [
+                    'temperature' => $temperature,
+                    'num_predict' => $maxTokens,
+                ]
+            ]);
+
+        if (!$response->successful()) {
+            throw new \Exception("Ollama API error: " . $response->status() . " - " . $response->body());
+        }
+
+        $data = $response->json();
+        return (object) ['text' => $data['response'] ?? ''];
     }
 }

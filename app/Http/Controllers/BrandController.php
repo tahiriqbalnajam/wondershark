@@ -477,9 +477,30 @@ class BrandController extends Controller
             );
 
             if (empty($generatedPrompts)) {
+                // Get more specific error information
+                $enabledModels = $aiService->getEnabledAiModels();
+                $modelInfo = $enabledModels->map(function($model) {
+                    return [
+                        'name' => $model->name,
+                        'display_name' => $model->display_name,
+                        'has_api_key' => !empty($model->api_config['api_key'] ?? null),
+                        'is_enabled' => $model->is_enabled
+                    ];
+                });
+
+                Log::warning('No AI prompts generated during brand creation', [
+                    'website' => $request->website,
+                    'session_id' => $sessionId,
+                    'enabled_models_count' => $enabledModels->count(),
+                    'models' => $modelInfo
+                ]);
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'No prompts were generated. Please check AI model configurations.',
+                    'message' => 'No prompts were generated from AI models. Please ensure at least one AI model is properly configured with a valid API key.',
+                    'debug_info' => [
+                        'enabled_models' => $modelInfo->toArray()
+                    ]
                 ]);
             }
 
