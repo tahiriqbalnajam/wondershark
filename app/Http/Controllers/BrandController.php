@@ -205,8 +205,13 @@ class BrandController extends Controller
             }
         ]);
 
+        // Get competitive stats with trends
+        $competitiveAnalysisService = app(\App\Services\CompetitiveAnalysisService::class);
+        $competitiveStats = $competitiveAnalysisService->getLatestStatsWithTrends($brand);
+
         return Inertia::render('brands/show', [
             'brand' => $brand,
+            'competitiveStats' => $competitiveStats,
         ]);
     }
 
