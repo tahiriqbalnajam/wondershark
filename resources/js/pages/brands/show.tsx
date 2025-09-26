@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
 import HeadingSmall from '@/components/heading-small';
-import { ArrowLeft, ExternalLink, Users, Eye, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Trophy, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Users, Eye, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Trophy, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface CompetitiveStat {
     id: number;
@@ -92,24 +92,16 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
     const [selectedPrompt, setSelectedPrompt] = useState<Brand['prompts'][0] | null>(null);
     const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
 
-    // Helper function to render trend indicators
+    // Helper function to render trend indicators (only for up/down changes)
     const renderTrendIndicator = (trend: 'up' | 'down' | 'stable' | 'new', change: number) => {
-        if (trend === 'new') {
-            return <span className="text-xs text-muted-foreground">New</span>;
-        }
-        
-        if (trend === 'stable') {
-            return (
-                <div className="flex items-center gap-1 text-gray-500">
-                    <Minus className="h-3 w-3" />
-                    <span className="text-xs">0%</span>
-                </div>
-            );
+        // Only show trends for actual up/down changes
+        if (trend !== 'up' && trend !== 'down') {
+            return null;
         }
         
         // Handle null/undefined change values
         if (change == null || isNaN(change)) {
-            return <span className="text-xs text-muted-foreground">-</span>;
+            return null;
         }
         
         const isUp = trend === 'up';
@@ -357,15 +349,16 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
                                                             </div>
                                                         </td>
                                                         <td className="py-4 text-center">
-                                                            <div className="flex flex-col items-center gap-1">
-                                                                <Badge variant={isBrand ? 'default' : 'secondary'} className="font-mono">
-                                                                    #{stat.position_formatted || 'N/A'}
-                                                                </Badge>
+                                                            <div className="flex items-center justify-center gap-2">
                                                                 {renderTrendIndicator(stat.trends.position_trend, stat.trends.position_change)}
+                                                                <Badge variant={isBrand ? 'default' : 'secondary'} className="font-mono">
+                                                                    {stat.position_formatted || 'N/A'}
+                                                                </Badge>
                                                             </div>
                                                         </td>
                                                         <td className="py-4 text-center">
-                                                            <div className="flex flex-col items-center gap-1">
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                {renderTrendIndicator(stat.trends.sentiment_trend, stat.trends.sentiment_change)}
                                                                 <Badge 
                                                                     variant={
                                                                         stat.sentiment != null && stat.sentiment >= 75 ? 'default' :
@@ -374,20 +367,16 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
                                                                     }
                                                                     className="font-mono"
                                                                 >
-                                                                    {stat.sentiment != null ? stat.sentiment : 'N/A'}/100
+                                                                    {stat.sentiment != null ? stat.sentiment : 'N/A'}
                                                                 </Badge>
-                                                                {renderTrendIndicator(stat.trends.sentiment_trend, stat.trends.sentiment_change)}
                                                             </div>
                                                         </td>
                                                         <td className="py-4 text-center">
-                                                            <div className="flex flex-col items-center gap-1">
-                                                                <div className="flex items-center justify-center gap-2">
-                                                                    <Badge variant="outline" className="font-mono">
-                                                                        {stat.visibility_percentage || 'N/A'}
-                                                                    </Badge>
-                                                                    <Eye className="h-4 w-4 text-muted-foreground" />
-                                                                </div>
+                                                            <div className="flex items-center justify-center gap-2">
                                                                 {renderTrendIndicator(stat.trends.visibility_trend, stat.trends.visibility_change)}
+                                                                <Badge variant="outline" className="font-mono">
+                                                                    {stat.visibility_percentage || 'N/A'}
+                                                                </Badge>
                                                             </div>
                                                         </td>
                                                     </tr>
