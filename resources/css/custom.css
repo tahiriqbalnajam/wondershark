@@ -1,0 +1,92 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
+:root{
+    --inter-font:"Inter", sans-serif;
+}
+
+/** Some Custome Style **/
+.pageheading{
+    font-size:20px;
+    font-weight:600;
+    color: var(--primary);
+    font-family: var(--inter-font);
+}
+.heading-icon img{
+    filter:var(--filter-img-white);
+}
+
+/** Steps **/
+.step-wrapp{
+    max-width:1300px;
+    width:100%;
+    margin:0 auto;
+}
+.brand-heading {
+	display: flex;
+	align-items: center;
+	gap: 15px;
+}
+.brand-heading span {
+    width:45px;
+	height: 45px;
+	width: 45px;
+	border-radius:5px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+    background: var(--orange-1);
+}
+.brand-step-item {
+	text-align: center;
+    cursor: pointer;
+}
+.brand-icon-item {
+	width: 50px;
+	height: 50px;
+	border-radius: 5px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin:0 auto 5px auto;
+	border:2px solid var(--border);
+}
+.brand-step-item .brand-progress{
+    background: var(--border);
+}
+.brand-step-item .brand-completed{
+    background: var(--orange-1);
+    border-color: var(--orange-1);
+    color: var(--secondary);
+}
+.setup-wizard-buttons .button-single {
+	border: 1px solid var(--border);
+	padding: 9px 15px;
+	cursor: pointer;
+	min-width: 150px;
+	justify-content: center;
+	align-items: center;
+    background: var(--secondary);
+}
+.setup-wizard-buttons [disabled=""].button-single {
+	background: rgba(255,91,73,0.10);
+    border-color:rgba(255,91,73,0.10);
+	cursor: not-allowed;
+    color:var(--primary);
+}
+.setup-wizard-buttons .button-completed {
+	background: var(--orange-1);
+}
+.setup-wizard-buttons .button-completed {
+    color: var(--color-white);
+    border-color: var(--orange-1);
+}
+
+
+/** Form Control **/
+.form-control {
+	height: 50px;
+    margin-bottom:30px;
+}
+textarea.form-control{
+    height:165px;
+}

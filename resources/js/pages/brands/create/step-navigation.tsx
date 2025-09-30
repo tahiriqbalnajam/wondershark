@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { MoveLeft, MoveRight, } from 'lucide-react';
 
 type StepNavigationProps = {
     currentStep: number;
@@ -41,24 +41,23 @@ export default function StepNavigation({
             </div>
 
             {/* Step Indicators */}
-            <div className="flex justify-between">
+            <div className="flex justify-between brand-step-boxes">
                 {steps.map((step) => {
                     const Icon = step.icon;
                     const isActive = currentStep === step.id;
                     const isCompleted = currentStep > step.id;
 
                     return (
-                        <div key={step.id} className="flex flex-col items-center gap-2 flex-1">
-                            <div
-                                className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
+                        <div key={step.id} className="brand-step-item">
+                            <div className={`brand-icon-item ${
                                     isActive
-                                        ? 'border-primary bg-primary text-primary-foreground'
+                                        ? 'brand-progress'
                                         : isCompleted
-                                        ? 'border-green-500 bg-green-500 text-white'
-                                        : 'border-muted-foreground/30 text-muted-foreground'
+                                        ? 'brand-completed'
+                                        : 'brand-icon-item'
                                 }`}
-                            >
-                                <Icon className="h-4 w-4" />
+                                >
+                                <Icon/>
                             </div>
                             <span className={`text-xs text-center ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
                                 {step.title}
@@ -69,15 +68,47 @@ export default function StepNavigation({
             </div>
 
             {/* Navigation Buttons */}
-            <div className="flex justify-between pt-4">
+            {/* <div className="flex justify-between pt-4 setup-wizard-buttons">
+                <button
+                    type="button"
+                    onClick={onPrev}
+                    disabled={currentStep === 1}
+                    className="flex items-center gap-5 button-single"
+                >
+                    <span className="heading-icon"><MoveLeft/></span>
+                    Previous
+                </button>
+
+                {currentStep === totalSteps ? (
+                    <button
+                        type="submit"
+                        onClick={onSubmit}
+                        disabled={!canProceed || processing}
+                        className="flex items-center gap-5 button-single button-disabled"
+                    >
+                        {processing ? 'Creating Brand...' : 'Create Brand'}
+                    </button>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={onNext}
+                        disabled={!canProceed}
+                        className="flex items-center gap-5 button-single button-completed"
+                    >
+                        Next
+                        <span className="heading-icon"><MoveRight/></span>
+                    </button>
+                )}
+            </div> */}
+            <div className="flex justify-between pt-4 setup-wizard-buttons">
                 <Button
                     type="button"
                     variant="outline"
                     onClick={onPrev}
                     disabled={currentStep === 1}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 button-single"
                 >
-                    <ArrowLeft className="h-4 w-4" />
+                    <span className="heading-icon"><MoveLeft/></span>
                     Previous
                 </Button>
 
@@ -86,7 +117,7 @@ export default function StepNavigation({
                         type="submit"
                         onClick={onSubmit}
                         disabled={!canProceed || processing}
-                        className="flex items-center gap-2"
+                        className="flex items-center gap-2 button-single"
                     >
                         {processing ? 'Creating Brand...' : 'Create Brand'}
                     </Button>
@@ -95,10 +126,10 @@ export default function StepNavigation({
                         type="button"
                         onClick={onNext}
                         disabled={!canProceed}
-                        className="flex items-center gap-2"
+                        className="flex items-center gap-2 button-single button-completed"
                     >
                         Next
-                        <ArrowRight className="h-4 w-4" />
+                        <span className="heading-icon"><MoveRight/></span>
                     </Button>
                 )}
             </div>
