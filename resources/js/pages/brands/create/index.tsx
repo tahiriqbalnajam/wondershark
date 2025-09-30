@@ -23,7 +23,6 @@ import Step5Review from './step5-review';
 import Step6AccountSetup from './step6-account-setup';
 import StepNavigation from './step-navigation';
 
-
 // Import types
 import { BrandForm, GeneratedPrompt, AiModel, Competitor } from './types';
 
@@ -334,7 +333,7 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <Card>
                             <CardHeader>
-                                <CardTitle> <span><img src="../images/brand-wizard.png" alt="icon" /></span> Brand Setup Wizard</CardTitle>
+                                <CardTitle className="brand-heading"> <span><img src="../images/brand-wizard.png" alt="icon" /></span> Brand Setup Wizard</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 <StepNavigation
