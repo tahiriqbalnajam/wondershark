@@ -37,4 +37,12 @@ class Competitor extends Model
     {
         return $this->belongsTo(Brand::class);
     }
+
+    /**
+     * Scope to get only accepted (active) competitors
+     */
+    public function scopeAccepted($query)
+    {
+        return $query->where('status', 'accepted');
+    }
 }

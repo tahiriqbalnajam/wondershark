@@ -6,7 +6,29 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
 import HeadingSmall from '@/components/heading-small';
-import { ArrowLeft, ExternalLink, Users, Eye, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Trophy } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Users, Eye, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Trophy, TrendingUp, TrendingDown } from 'lucide-react';
+
+interface CompetitiveStat {
+    id: number;
+    entity_type: 'brand' | 'competitor';
+    entity_name: string;
+    entity_url: string;
+    visibility: number;
+    sentiment: number;
+    position: number;
+    analyzed_at: string;
+    trends: {
+        visibility_trend: 'up' | 'down' | 'stable' | 'new';
+        sentiment_trend: 'up' | 'down' | 'stable' | 'new';
+        position_trend: 'up' | 'down' | 'stable' | 'new';
+        visibility_change: number;
+        sentiment_change: number;
+        position_change: number;
+    };
+    visibility_percentage: string;
+    position_formatted: string;
+    sentiment_level: string;
+}
 
 interface Brand {
     id: number;
@@ -55,6 +77,7 @@ interface Brand {
 
 interface Props {
     brand: Brand;
+    competitiveStats: CompetitiveStat[];
 }
 
 const breadcrumbs = (brand: Brand) => [
@@ -63,11 +86,36 @@ const breadcrumbs = (brand: Brand) => [
     { name: brand.name, href: '', title: brand.name },
 ];
 
-export default function BrandShow({ brand }: Props) {
+export default function BrandShow({ brand, competitiveStats }: Props) {
     const [selectedCompetitorDomain, setSelectedCompetitorDomain] = useState<string | null>(null);
     const [triggeringAnalysis, setTriggeringAnalysis] = useState(false);
     const [selectedPrompt, setSelectedPrompt] = useState<Brand['prompts'][0] | null>(null);
     const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
+
+    // Helper function to render trend indicators (only for up/down changes)
+    const renderTrendIndicator = (trend: 'up' | 'down' | 'stable' | 'new', change: number) => {
+        // Only show trends for actual up/down changes
+        if (trend !== 'up' && trend !== 'down') {
+            return null;
+        }
+        
+        // Handle null/undefined change values
+        if (change == null || isNaN(change)) {
+            return null;
+        }
+        
+        const isUp = trend === 'up';
+        const colorClass = isUp ? 'text-green-600' : 'text-red-600';
+        const Icon = isUp ? TrendingUp : TrendingDown;
+        const prefix = isUp ? '+' : '';
+        
+        return (
+            <div className={`flex items-center gap-1 ${colorClass}`}>
+                <Icon className="h-3 w-3" />
+                <span className="text-xs font-medium">{prefix}{Math.abs(change)}%</span>
+            </div>
+        );
+    };
 
     const filteredPrompts = useMemo(() => {
         if (!selectedCompetitorDomain) {
@@ -240,38 +288,45 @@ export default function BrandShow({ brand }: Props) {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {brand.competitors && brand.competitors.length > 0 ? (
+                            {competitiveStats && competitiveStats.length > 0 ? (
                                 <div className="overflow-x-auto">
                                     <table className="w-full">
                                         <thead>
                                             <tr className="border-b text-left">
                                                 <th className="pb-3 text-sm font-medium text-muted-foreground w-12">#</th>
-                                                <th className="pb-3 text-sm font-medium text-muted-foreground">Brand</th>
-                                                <th className="pb-3 text-sm font-medium text-muted-foreground text-center w-24">Position</th>
-                                                <th className="pb-3 text-sm font-medium text-muted-foreground text-center w-24">Sentiment</th>
-                                                <th className="pb-3 text-sm font-medium text-muted-foreground text-center w-24">Visibility</th>
+                                                <th className="pb-3 text-sm font-medium text-muted-foreground">Entity</th>
+                                                <th className="pb-3 text-sm font-medium text-muted-foreground text-center w-32">Position</th>
+                                                <th className="pb-3 text-sm font-medium text-muted-foreground text-center w-32">Sentiment</th>
+                                                <th className="pb-3 text-sm font-medium text-muted-foreground text-center w-32">Visibility</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {brand.competitors.map((competitor, index) => {
+                                            {competitiveStats
+                                                .sort((a, b) => a.position - b.position) // Sort by position (lower is better)
+                                                .map((stat, index) => {
                                                 // Clean domain for display - remove protocol and www
-                                                const cleanDomain = competitor.domain
+                                                const cleanDomain = stat.entity_url
                                                     .replace(/^https?:\/\//, '')
                                                     .replace(/^www\./, '');
                                                 const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
                                                 const fallbackLogo = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
+                                                
+                                                const isBrand = stat.entity_type === 'brand';
+                                                
                                                 return (
-                                                    <tr key={competitor.id}
-                                                        className={`border-b last:border-b-0 hover:bg-muted/50 transition-colors cursor-pointer ${selectedCompetitorDomain === cleanDomain ? 'bg-blue-50' : ''}`}
-                                                        onClick={() => setSelectedCompetitorDomain(cleanDomain)}
+                                                    <tr key={stat.id}
+                                                        className={`border-b last:border-b-0 hover:bg-muted/50 transition-colors ${isBrand ? 'bg-blue-50/50' : ''}`}
                                                     >
-                                                        <td className="py-4 text-sm font-medium">{index + 1}</td>
+                                                        <td className="py-4 text-sm font-medium">
+                                                            {index + 1}
+                                                            {isBrand && <span className="ml-1 text-blue-600">👑</span>}
+                                                        </td>
                                                         <td className="py-4">
                                                             <div className="flex items-center gap-3">
                                                                 <div className="w-10 h-10 rounded-lg border bg-white flex items-center justify-center p-1">
                                                                     <img 
                                                                         src={logoUrl}
-                                                                        alt={`${competitor.name} logo`}
+                                                                        alt={`${stat.entity_name} logo`}
                                                                         className="w-full h-full object-contain"
                                                                         onError={(e) => {
                                                                             e.currentTarget.src = fallbackLogo;
@@ -279,34 +334,49 @@ export default function BrandShow({ brand }: Props) {
                                                                     />
                                                                 </div>
                                                                 <div>
-                                                                    <span className="font-medium text-sm hover:text-primary">{competitor.name}</span>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className={`font-medium text-sm ${isBrand ? 'text-blue-700' : 'hover:text-primary'}`}>
+                                                                            {stat.entity_name}
+                                                                        </span>
+                                                                        {isBrand && (
+                                                                            <Badge variant="default" className="text-xs px-2 py-0">
+                                                                                Your Brand
+                                                                            </Badge>
+                                                                        )}
+                                                                    </div>
                                                                     <p className="text-xs text-muted-foreground">{cleanDomain}</p>
                                                                 </div>
                                                             </div>
                                                         </td>
                                                         <td className="py-4 text-center">
-                                                            <Badge variant="secondary" className="font-mono">
-                                                                #{competitor.rank}
-                                                            </Badge>
-                                                        </td>
-                                                        <td className="py-4 text-center">
-                                                            <Badge 
-                                                                variant={
-                                                                    (competitor.sentiment ?? 0) >= 0.7 ? 'default' :
-                                                                    (competitor.sentiment ?? 0) >= 0.4 ? 'secondary' :
-                                                                    'destructive'
-                                                                }
-                                                                className="font-mono"
-                                                            >
-                                                                {((competitor.sentiment ?? 0) * 100).toFixed(0)}%
-                                                            </Badge>
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                {renderTrendIndicator(stat.trends.position_trend, stat.trends.position_change)}
+                                                                <Badge variant={isBrand ? 'default' : 'secondary'} className="font-mono">
+                                                                    {stat.position_formatted || 'N/A'}
+                                                                </Badge>
+                                                            </div>
                                                         </td>
                                                         <td className="py-4 text-center">
                                                             <div className="flex items-center justify-center gap-2">
-                                                                <Badge variant="outline" className="font-mono">
-                                                                    {((competitor.visibility ?? 0) * 100).toFixed(0)}%
+                                                                {renderTrendIndicator(stat.trends.sentiment_trend, stat.trends.sentiment_change)}
+                                                                <Badge 
+                                                                    variant={
+                                                                        stat.sentiment != null && stat.sentiment >= 75 ? 'default' :
+                                                                        stat.sentiment != null && stat.sentiment >= 60 ? 'secondary' :
+                                                                        'destructive'
+                                                                    }
+                                                                    className="font-mono"
+                                                                >
+                                                                    {stat.sentiment != null ? stat.sentiment : 'N/A'}
                                                                 </Badge>
-                                                                <Eye className="h-4 w-4 text-muted-foreground" />
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-4 text-center">
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                {renderTrendIndicator(stat.trends.visibility_trend, stat.trends.visibility_change)}
+                                                                <Badge variant="outline" className="font-mono">
+                                                                    {stat.visibility_percentage || 'N/A'}
+                                                                </Badge>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -314,12 +384,20 @@ export default function BrandShow({ brand }: Props) {
                                             })}
                                         </tbody>
                                     </table>
+                                    <div className="mt-4 text-xs text-muted-foreground text-center">
+                                        Last updated: {competitiveStats[0]?.analyzed_at ? new Date(competitiveStats[0].analyzed_at).toLocaleDateString() : 'Never'}
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="text-center py-12 text-muted-foreground">
                                     <Trophy className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                                    <h3 className="font-medium mb-1">No competitor data available</h3>
-                                    <p className="text-sm">Add competitors to track industry rankings and performance.</p>
+                                    <h3 className="font-medium mb-1">No competitive analysis data available</h3>
+                                    <p className="text-sm">Run competitive analysis to track industry rankings and performance.</p>
+                                    <Button className="mt-4" size="sm" asChild>
+                                        <Link href={`/brands/${brand.id}/competitive-stats`}>
+                                            View Competitive Analysis
+                                        </Link>
+                                    </Button>
                                 </div>
                             )}
                         </CardContent>

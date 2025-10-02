@@ -177,6 +177,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('brands/{brand}/prompts-with-competitor-urls', [BrandController::class, 'getPromptsWithCompetitorUrls'])->name('brands.prompts-with-competitor-urls');
         Route::post('brands/{brand}/trigger-prompt-analysis', [BrandController::class, 'triggerPromptAnalysis'])->name('brands.trigger-prompt-analysis');
         
+        // Competitive Analysis Routes
+        Route::get('brands/{brand}/competitive-stats', [\App\Http\Controllers\Brand\CompetitiveStatsController::class, 'index'])->name('brands.competitive-stats.index');
+        Route::post('brands/{brand}/competitive-stats/analyze', [\App\Http\Controllers\Brand\CompetitiveStatsController::class, 'runAnalysis'])->name('brands.competitive-stats.analyze');
+        Route::get('brands/{brand}/competitive-stats/history', [\App\Http\Controllers\Brand\CompetitiveStatsController::class, 'history'])->name('brands.competitive-stats.history');
+        Route::delete('brands/{brand}/competitive-stats/{sessionId}', [\App\Http\Controllers\Brand\CompetitiveStatsController::class, 'deleteSession'])->name('brands.competitive-stats.delete-session');
+        
         // Brand Prompts Management Routes
         Route::get('brands/{brand}/prompts', [\App\Http\Controllers\Brand\BrandPromptController::class, 'index'])->name('brands.prompts.index');
         Route::put('brands/{brand}/prompts/{prompt}', [\App\Http\Controllers\Brand\BrandPromptController::class, 'update'])->name('brands.prompts.update');
