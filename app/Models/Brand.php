@@ -73,4 +73,20 @@ class Brand extends Model
     {
         return $this->hasMany(Competitor::class);
     }
+
+    public function competitiveStats(): HasMany
+    {
+        return $this->hasMany(BrandCompetitiveStat::class);
+    }
+
+    public function latestCompetitiveStats(): HasMany
+    {
+        return $this->competitiveStats()
+            ->whereIn('id', function($query) {
+                $query->selectRaw('MAX(id)')
+                    ->from('brand_competitive_stats')
+                    ->where('brand_id', $this->id)
+                    ->groupBy(['entity_type', 'competitor_id']);
+            });
+    }
 }
