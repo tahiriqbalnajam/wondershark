@@ -42,8 +42,8 @@ const steps = [
     { id: 2, title: 'Prompts', icon: FileText },
     { id: 3, title: 'Competitors', icon: Shield },
     { id: 4, title: 'Monthly Posts', icon: Calendar },
-    { id: 5, title: 'Review', icon: CheckCircle },
-    { id: 6, title: 'Account Setup', icon: FileText },
+    // { id: 5, title: 'Review', icon: CheckCircle },
+    // { id: 6, title: 'Account Setup', icon: FileText },
 ];
 
 type Props = {
@@ -327,13 +327,13 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
             <Head title="Create Brand" />
 
             <div className="p-6">
-                <div className="max-w-4xl mx-auto space-y-6">
-                    <HeadingSmall title="Create New Brand" />
+                <div className="step-wrapp">
+                    {/* <HeadingSmall title="Create New Brand" /> */}
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-6 step-wrapp-card">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Brand Setup Wizard</CardTitle>
+                                <CardTitle className="brand-heading"> <span><img src="../images/brand-wizard.png" alt="icon" /></span> Brand Setup Wizard</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 <StepNavigation

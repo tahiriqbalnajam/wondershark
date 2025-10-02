@@ -13,7 +13,6 @@ export default function AgencyLogo({ agencyName, logoUrl, className = "size-8" }
             .toUpperCase()
             .slice(0, 2);
     };
-
     return (
         <div className={`flex aspect-square items-center justify-center rounded-md bg-primary text-primary-foreground ${className}`}>
             {logoUrl ? (

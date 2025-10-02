@@ -1,0 +1,290 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
+:root{
+    --inter-font:"Inter", sans-serif;
+}
+
+/** Some Custome Style **/
+body,html{
+    font-family: var(--inter-font);
+}
+button{
+    cursor: pointer;
+    transition: ease all 0.5s;
+}
+.pageheading{
+    font-size:20px;
+    font-weight:600;
+    color: var(--primary);
+    font-family: var(--inter-font);
+}
+.heading-icon img{
+    filter:var(--filter-img-white);
+}
+
+/** Steps **/
+.step-wrapp-card .bg-card{
+    box-shadow:0 2px 25px 0 rgba(0,0,0,0.10);
+    border-radius:15px;
+    border:none;
+}
+.step-wrapp{
+    max-width:1300px;
+    width:100%;
+    margin:0 auto;
+}
+.brand-heading {
+	display: flex;
+	align-items: center;
+	gap: 15px;
+}
+.brand-heading span {
+    width:45px;
+	height: 45px;
+	width: 45px;
+	border-radius:5px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+    background: var(--orange-1);
+}
+.brand-step-item {
+	text-align: center;
+    cursor: pointer;
+}
+.brand-icon-item {
+	width: 50px;
+	height: 50px;
+	border-radius: 5px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin:0 auto 5px auto;
+	border:2px solid var(--border);
+}
+.brand-step-item .brand-progress{
+    background: var(--border);
+}
+.brand-step-item .brand-completed{
+    background: var(--orange-1);
+    border-color: var(--orange-1);
+    color: var(--color-white);
+}
+.setup-wizard-buttons .button-single {
+	border: 1px solid var(--border);
+	padding:20px 15px;
+	cursor: pointer;
+	min-width: 150px;
+	justify-content: center;
+	align-items: center;
+    background: var(--secondary);
+    font-size:16px;
+}
+.setup-wizard-buttons [disabled=""].button-single {
+	background:var(--color-sidebar-accent);
+    border-color:rgba(255,91,73,0.10);
+	cursor: not-allowed;
+    color:var(--primary);
+}
+.setup-wizard-buttons .button-completed {
+	background: var(--orange-1);
+    color: var(--color-white);
+    border-color: var(--orange-1);
+}
+span.img-avatar {
+    align-items: center;
+    gap: 5px;
+    height: auto;
+    cursor: pointer;
+    width:auto;
+}
+span.img-avatar img{
+    width:15px;
+    border-radius:50%;
+}
+
+/** Form Control **/
+.default-table thead th{
+    color:var(--gray-text-color);
+}
+.default-table th,
+.default-table td{
+    border:1px solid var(--border);
+}
+.default-table th button[aria-checked="true"],
+.default-table td button[aria-checked="true"]{
+    background: var(--orange-1);
+    border-color: var(--orange-1);
+}
+.sentiment-td {
+	background: rgba(109,195,35,0.20);
+	border-radius:5px;
+	padding: 7px 9px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+    color: var(--primary);
+}
+.sentiment-td span{
+	flex:10px;
+    width:10px;
+    height:10px;
+    border-radius:3px;
+    background:#6DC323;
+}
+.position-td{
+    background:transparent;
+	border-radius:5px;
+	padding: 7px 9px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+    color: var(--primary);
+    border: 1px solid var(--border);
+}
+.position-td span{
+    color: var(--color-sidebar-ring);
+}
+
+/** Form Control **/
+.form-control {
+	height: 50px;
+    margin-bottom:30px;
+}
+textarea.form-control{
+    height:165px;
+}
+
+/** Add Prompts **/
+.add-prompt-lists {
+	padding:10px;
+	box-shadow: 0 5px 15px 0 rgba(0,0,0,0.15);
+	background:var(--color-white);
+    gap:5px;
+    height:auto;
+    border-radius:5px;
+}
+.add-prompt-lists button{
+    padding:11px 35px;
+    background:#F4F4F4;
+    color:#747272;
+    border-radius:5px;
+    font-size:14px;
+    font-weight:600;
+    cursor: pointer;
+}
+.add-prompt-lists button[aria-selected="true"]{
+    background:var(--orange-1);
+    color:var(--color-white);
+}
+.add-prompt-btn {
+	height: 50px;
+	padding: 0 20px;
+	border: none;
+	box-shadow: 0 0 15px 0 rgba(0,0,0,0.15);
+	font-size: 14px;
+	font-weight: 600;
+    background: var(--color-white);
+    transition: ease all 0.5s;
+}
+.add-prompt-btn:hover {
+	background: var(--orange-1);
+    color: var(--color-white);
+}
+.add-new-prompt button {
+	padding: 8px 15px;
+	height: 50px;
+	width: auto;
+	min-width: 150px;
+    cursor: pointer;
+}
+.add-new-prompt button[disabled=""] {
+	cursor: not-allowed;
+}
+.add-new-prompt button.cancle-btn{
+    background: rgba(255, 0, 63, 0.15);
+    color: #FF003F;
+}
+.add-new-prompt button.cancle-btn:hover{
+    background:#FF003F;
+    color: #fff;
+}
+.add-new-prompt button.add-prompt-btn{
+    background:var(--color-sidebar-accent);
+    color: var(--primary);
+    opacity:1;
+    border:1px solid var(--border);
+}
+.add-new-prompt button.add-prompt-btn:hover{
+    background: var(--orange-1);
+    color: var(--color-white);
+}
+
+/* Check Action */
+.prompts-action {
+	display: flex;
+	max-width: 500px;
+    width:100%;
+	align-items: center;
+    justify-content: space-between;
+	gap: 15px;
+    padding:10px 10px 10px 20px;
+    border-radius:10px;
+    box-shadow:0 0 15px 0 rgba(0,0,0,0.15);
+    position: fixed;
+    bottom:-100%;
+    transform: translateX(-50%);
+    left: 50%;
+    background: #fff;
+    z-index: 999;
+    transition: ease all 0.3s;
+}
+.prompts-action.active {
+    bottom:10px;
+}
+.prompts-action p{
+    font-size:14px;
+    font-weight:600;
+    margin:0;
+}
+.prompts-action-btns {
+    display: flex;
+    gap:10px;
+}
+.prompts-action-btns button{
+    font-size:14px;
+    font-weight:600;
+    padding:10px 15px;
+    display:flex;
+    gap:10px;
+    align-items: center;
+    cursor: pointer;
+    border-radius:5px;
+}
+.prompts-action-btns button svg{
+    width:14px;
+}
+.prompts-action-btns button.active-ch{
+    background: rgba(109,195,35,0.20);
+    color:#0CAD43;
+}
+.prompts-action-btns button.active-ch:hover{
+    background:#0CAD43;
+    color:#fff;
+}
+.prompts-action-btns button.deactive-ch{
+    background: rgba(254,153,1,0.15);
+    color:#FE9901;
+}
+.prompts-action-btns button.deactive-ch:hover{
+    background:#FE9901;
+    color:#fff;
+}
+.prompts-action-btns button.delete-ch{
+    background:rgba(255, 0, 63, 0.15);
+    color:#FF003F;
+}
+.prompts-action-btns button.delete-ch:hover{
+    background:#FF003F;
+    color:#FFF;
+}
