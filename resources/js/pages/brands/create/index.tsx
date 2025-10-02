@@ -330,7 +330,7 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
                 <div className="step-wrapp">
                     {/* <HeadingSmall title="Create New Brand" /> */}
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-6 step-wrapp-card">
                         <Card>
                             <CardHeader>
                                 <CardTitle className="brand-heading"> <span><img src="../images/brand-wizard.png" alt="icon" /></span> Brand Setup Wizard</CardTitle>
