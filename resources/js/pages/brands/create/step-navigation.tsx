@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { MoveLeft, MoveRight, } from 'lucide-react';
+import { MoveLeft, MoveRight,CircleCheckBig } from 'lucide-react';
 
 type StepNavigationProps = {
     currentStep: number;
@@ -119,7 +119,7 @@ export default function StepNavigation({
                         disabled={!canProceed || processing}
                         className="flex items-center gap-2 button-single"
                     >
-                        {processing ? 'Creating Brand...' : 'Create Brand'}
+                        {processing ? 'Creating Brand...' : 'Create Brand'} <CircleCheckBig/>
                     </Button>
                 ) : (
                     <Button

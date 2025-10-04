@@ -70,5 +70,23 @@
         "@rollup/rollup-linux-x64-gnu": "4.9.5",
         "@tailwindcss/oxide-linux-x64-gnu": "^4.0.1",
         "lightningcss-linux-x64-gnu": "^1.29.1"
-    }
+    },
+    "name": "wondershark",
+    "version": "1.0.0",
+    "description": "",
+    "main": "eslint.config.js",
+    "directories": {
+        "test": "tests"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Alifarhan-coder/wondershark.git"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/Alifarhan-coder/wondershark/issues"
+    },
+    "homepage": "https://github.com/Alifarhan-coder/wondershark#readme"
 }

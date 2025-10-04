@@ -106,7 +106,7 @@ export default function Step1BasicInfo({ data, setData, errors }: StepProps) {
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="description">Keywords <small className='text-sm text-muted-foreground'>( Optional )</small></Label>
+                        <Label htmlFor="description">Keywords <small className='text-xs font-normal text-muted-foreground'>( Optional )</small></Label>
                         <Textarea
                             id="description"
                             value={data.description}

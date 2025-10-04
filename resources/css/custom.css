@@ -21,12 +21,21 @@ button{
 .heading-icon img{
     filter:var(--filter-img-white);
 }
+.fetch-ai-btn{
+    background: var(--color-white);
+    color: var(--color-black);
+}
+.fetch-ai-btn:hover{
+    background: var(--orange-1);
+    color: var(--color-white);
+}
 
 /** Steps **/
-.step-wrapp-card .bg-card{
-    box-shadow:0 2px 25px 0 rgba(0,0,0,0.10);
-    border-radius:15px;
-    border:none;
+.step-wrapp-card .bg-card {
+	box-shadow: 0 2px 25px 0 rgba(0,0,0,0.10);
+	border-radius: 15px;
+	border: none;
+	padding: 40px 15px;
 }
 .step-wrapp{
     max-width:1300px;
@@ -79,6 +88,7 @@ button{
 	align-items: center;
     background: var(--secondary);
     font-size:16px;
+    height:50px;
 }
 .setup-wizard-buttons [disabled=""].button-single {
 	background:var(--color-sidebar-accent);
@@ -86,6 +96,7 @@ button{
 	cursor: not-allowed;
     color:var(--primary);
 }
+.setup-wizard-buttons [type="submit"].button-single,
 .setup-wizard-buttons .button-completed {
 	background: var(--orange-1);
     color: var(--color-white);
@@ -150,6 +161,12 @@ span.img-avatar img{
 .form-control {
 	height: 50px;
     margin-bottom:30px;
+    background:var(--color-gray-100);
+    border-color:var(--color-gray-300);
+    color: var(--color-gray-600);
+}
+.form-control::placeholder{
+    color: var(--color-gray-400);
 }
 textarea.form-control{
     height:165px;
@@ -159,7 +176,7 @@ textarea.form-control{
 .add-prompt-lists {
 	padding:10px;
 	box-shadow: 0 5px 15px 0 rgba(0,0,0,0.15);
-	background:var(--color-white);
+	background:var(--color-sidebar);
     gap:5px;
     height:auto;
     border-radius:5px;
@@ -186,6 +203,7 @@ textarea.form-control{
 	font-weight: 600;
     background: var(--color-white);
     transition: ease all 0.5s;
+    color: var(--color-black);
 }
 .add-prompt-btn:hover {
 	background: var(--orange-1);
@@ -211,7 +229,7 @@ textarea.form-control{
 }
 .add-new-prompt button.add-prompt-btn{
     background:var(--color-sidebar-accent);
-    color: var(--primary);
+    color: var(--color-black);
     opacity:1;
     border:1px solid var(--border);
 }
@@ -246,6 +264,7 @@ textarea.form-control{
     font-size:14px;
     font-weight:600;
     margin:0;
+    color: var(--color-black);
 }
 .prompts-action-btns {
     display: flex;
@@ -287,4 +306,56 @@ textarea.form-control{
 .prompts-action-btns button.delete-ch:hover{
     background:#FF003F;
     color:#FFF;
+}
+
+/** **/
+.competitor-box{
+    box-shadow:0 4px 15px 0 rgba(0,0,0,0.15);
+    border-radius: 10px;
+    padding:15px;
+}
+.competitor-box .edit-btn{
+    height:30px;
+    width:30px;
+    border-radius:5px;
+    background: var(--color-white);
+    box-shadow:0 4px 15px 0 rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: black;
+}
+.competitor-box .edit-btn:hover{
+    background: var(--orange-1);
+    color: var(--color-white);
+}
+.competitor-btn-action{
+    display: flex; 
+    margin-top:10px;
+    gap:15px;
+}
+.competitor-btn-action button{
+    width:50px;
+    height:30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius:3px;
+    box-shadow:0 4px 15px 0 rgba(0,0,0,0.15);
+}
+.competitor-btn-action button.btn-action-close {
+    background:#FFCCD9;
+    color:#FF003F;
+}
+.competitor-btn-action button.btn-action-close:hover{
+    background:#FF003F;
+    color:var(--color-white);
+}
+.competitor-btn-action button.btn-action-check {
+    background:#E2F3D3;
+    color:#6DC323;
+}
+.competitor-btn-action button.btn-action-check:hover {
+    background:#6DC323;
+    color:var(--color-white);
 }
