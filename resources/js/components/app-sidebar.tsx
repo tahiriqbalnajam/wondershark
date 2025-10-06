@@ -139,7 +139,7 @@ export function AppSidebar() {
     const mainNavItems = getMainNavItems(permissions);
 
     return (
-        <Sidebar collapsible="icon" variant="inset">
+        <Sidebar collapsible="icon" variant="inset" className='left-side-wrapp p-0 rounded-xl'>
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
@@ -150,7 +150,7 @@ export function AppSidebar() {
                 </SidebarMenu>
                 
                 {/* New Brand Button for Agency Users */}
-                {permissions.hasRole('agency') && (
+                {/* {permissions.hasRole('agency') && (
                     <div className="px-2 mt-2">
                         <Button 
                             asChild 
@@ -163,7 +163,7 @@ export function AppSidebar() {
                             </Link>
                         </Button>
                     </div>
-                )}
+                )} */}
             </SidebarHeader>
 
             <SidebarContent>

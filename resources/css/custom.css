@@ -30,6 +30,83 @@ button{
     color: var(--color-white);
 }
 
+/** Left Side Bar **/
+.left-side-wrapp{
+    background:var(--gray-text-bg);
+	border-right: 2px solid var(--border);
+}
+.left-side-wrapp .bg-sidebar{
+    background:transparent !important;
+    border:none;
+}
+.site-logo-box {
+	background: #fff;
+	height: 90px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.site-logo-box button{
+    background:transparent !important;
+    cursor: pointer;
+}
+
+/* Left Menu Dropdown */
+.menu-dropdoen-wrapp {
+	border-radius: 0;
+	border: none;
+	min-width: 300px;
+	background: #fff;
+	box-shadow: 0 10px 15px 0 rgba(0,0,0,0.15);
+	padding: 0;
+}
+.menu-dropdoen-wrapp .user-name,
+.menu-dropdoen-wrapp .user-img{
+    display:none;
+}
+.truncate.text-xs.text-muted-foreground {
+	font-size: 14px;
+}
+.dropdown-menu-mail,
+.dropdown-menu-link {
+	padding: 15px;
+}
+.dropdown-menu-mail a{
+
+}
+.dropdown-menu-link .btn-default,
+.dropdown-menu-link .btn-logout{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 35px;
+    background:var(--gray-text-bg);
+    margin:10px 0;
+    cursor: pointer;
+    color: var(--color-black);
+}.dropdown-menu-link .btn-default svg,
+.dropdown-menu-link .btn-logout svg{
+    color: var(--orange-1);
+}
+.dropdown-menu-link .btn-default:hover{
+    background: var(--orange-1);
+    color: var(--color-white);
+}
+.dropdown-menu-link .btn-default:hover svg,
+.dropdown-menu-link .btn-logout:hover svg{
+    color: var(--color-white);
+}
+.dropdown-menu-link .btn-logout{
+    background:#FFE6EC;
+    color:#FF003F;
+}
+.dropdown-menu-link .btn-logout:hover{
+    background:#FF003F;
+    color:#fff;
+}
+
+
+
 /** Steps **/
 .step-wrapp-card .bg-card {
 	box-shadow: 0 2px 25px 0 rgba(0,0,0,0.10);
