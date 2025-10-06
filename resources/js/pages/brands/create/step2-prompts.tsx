@@ -123,16 +123,16 @@ export default function Step2Prompts({
     }
 
     return (
-        <div className="space-y-6 relative">
+        <div className="space-y-6 relative mt-15">
             <div className="flex items-center justify-between">
                 <div className="">
-                    <h3 className="text-lg font-semibold">Add Prompt <small className="text-gray-400 text-sm"> - {data.prompts.length}/10 Prompts</small></h3>
+                    <h3 className="text-xl font-semibold">Add Prompt <small className="text-gray-400 text-sm"> - {data.prompts.length}/10 Prompts</small></h3>
                     <p className="text-gray-400 text-sm">Create a competitive prompt without mentioning your own brand. Every line will be a separate prompt.</p>
                 </div>
             </div>
             <Tabs defaultValue="active" className="add-prompts-wrapp">
                 <div className="flex justify-between items-center mb-10">
-                    <TabsList className="add-prompt-lists">
+                    <TabsList className="add-prompt-lists border">
                         <TabsTrigger value="active">Active</TabsTrigger>
                         <TabsTrigger value="suggested">Suggested</TabsTrigger>
                         <TabsTrigger value="inactive">Inactive</TabsTrigger>
@@ -285,8 +285,8 @@ export default function Step2Prompts({
                     </Table>
                 </TabsContent>
                 <TabsContent value="suggested" className="active-table-prompt">
-                    <div className="suggested-prompts-box flex justify-between items-center p-4 bg-gray-100 rounded-sm mb-5">
-                        <p className='flex items-center gap-3 text-sm'><Sparkles className='text-orange-600'/><b>Suggested prompts.</b> Expand your brand's presence with suggested prompts.</p><button className='py-2 px-4 bg-gray-200 rounded-sm text-sm hover:bg-orange-600 hover:text-white'>Suggest More</button>
+                    <div className="suggested-prompts-box flex justify-between items-center p-4 border rounded-sm mb-5">
+                        <p className='flex items-center gap-3 text-sm'><Sparkles className='text-orange-600'/><b>Suggested prompts.</b> Expand your brand's presence with suggested prompts.</p><button className='py-2 px-4 bg-gray-200 text-gray-950 rounded-sm text-sm hover:bg-orange-600 hover:text-white'>Suggest More</button>
                     </div>
                     <Table className="default-table">
                         <TableHeader>
@@ -303,7 +303,7 @@ export default function Step2Prompts({
                                 <TableCell>
                                     <div className="flex gap-3 justify-center">
                                         <button className="border px-4 py-1 rounded-sm bg-red-100 text-red-600 hover:text-white hover:bg-red-600 hover:border-red-600">Reject</button>
-                                        <button className="border px-4 py-1 rounded-sm bg-gray-200 text-dark hover:bg-orange-600 hover:text-white">Track</button>
+                                        <button className="border px-4 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-orange-600 hover:text-white">Track</button>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -313,7 +313,7 @@ export default function Step2Prompts({
                                 <TableCell>
                                     <div className="flex gap-3 justify-center">
                                         <button className="border px-4 py-1 rounded-sm bg-red-100 text-red-600 hover:text-white hover:bg-red-600 hover:border-red-600">Reject</button>
-                                        <button className="border px-4 py-1 rounded-sm bg-gray-200 text-dark hover:bg-orange-600 hover:text-white">Track</button>
+                                        <button className="border px-4 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-orange-600 hover:text-white">Track</button>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -323,7 +323,7 @@ export default function Step2Prompts({
                                 <TableCell>
                                     <div className="flex gap-3 justify-center">
                                         <button className="border px-4 py-1 rounded-sm bg-red-100 text-red-600 hover:text-white hover:bg-red-600 hover:border-red-600">Reject</button>
-                                        <button className="border px-4 py-1 rounded-sm bg-gray-200 text-dark hover:bg-orange-600 hover:text-white">Track</button>
+                                        <button className="border px-4 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-orange-600 hover:text-white">Track</button>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -333,7 +333,7 @@ export default function Step2Prompts({
                                 <TableCell>
                                     <div className="flex gap-3 justify-center">
                                         <button className="border px-4 py-1 rounded-sm bg-red-100 text-red-600 hover:text-white hover:bg-red-600 hover:border-red-600">Reject</button>
-                                        <button className="border px-4 py-1 rounded-sm bg-gray-200 text-dark hover:bg-orange-600 hover:text-white">Track</button>
+                                        <button className="border px-4 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-orange-600 hover:text-white">Track</button>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -357,7 +357,7 @@ export default function Step2Prompts({
                                 <TableCell>1 day ago</TableCell>
                                 <TableCell>
                                     <div className="flex justify-center">
-                                        <button className="border px-4 py-1 rounded-sm bg-gray-200 text-dark hover:bg-orange-600 hover:text-white">Added</button>
+                                        <button className="border px-4 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-orange-600 hover:text-white">Added</button>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -367,7 +367,7 @@ export default function Step2Prompts({
                                 <TableCell>1 day ago</TableCell>
                                 <TableCell>
                                     <div className="flex justify-center">
-                                        <button className="border px-4 py-1 rounded-sm bg-gray-200 text-dark hover:bg-orange-600 hover:text-white">Added</button>
+                                        <button className="border px-4 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-orange-600 hover:text-white">Added</button>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -377,7 +377,7 @@ export default function Step2Prompts({
                                 <TableCell>1 day ago</TableCell>
                                 <TableCell>
                                     <div className="flex justify-center">
-                                        <button className="border px-4 py-1 rounded-sm bg-gray-200 text-dark hover:bg-orange-600 hover:text-white">Added</button>
+                                        <button className="border px-4 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-orange-600 hover:text-white">Added</button>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -387,7 +387,7 @@ export default function Step2Prompts({
                                 <TableCell>1 day ago</TableCell>
                                 <TableCell>
                                     <div className="flex justify-center">
-                                        <button className="border px-4 py-1 rounded-sm bg-gray-200 text-dark hover:bg-orange-600 hover:text-white">Added</button>
+                                        <button className="border px-4 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-orange-600 hover:text-white">Added</button>
                                     </div>
                                 </TableCell>
                             </TableRow>

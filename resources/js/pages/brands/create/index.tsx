@@ -7,11 +7,10 @@ import HeadingSmall from '@/components/heading-small';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { 
-    Building2, 
-    FileText, 
-    CheckCircle,
-    Calendar,
-    Shield
+    MessagesSquare, 
+    FileText,
+    CalendarDays,
+    Swords
 } from 'lucide-react';
 
 // Import step components
@@ -38,10 +37,10 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const steps = [
-    { id: 1, title: 'Basic Info', icon: Building2 },
-    { id: 2, title: 'Prompts', icon: FileText },
-    { id: 3, title: 'Competitors', icon: Shield },
-    { id: 4, title: 'Monthly Posts', icon: Calendar },
+    { id: 1, title: 'Basic Info', icon: FileText },
+    { id: 2, title: 'Prompts', icon: MessagesSquare },
+    { id: 3, title: 'Competitors', icon: Swords },
+    { id: 4, title: 'Monthly Posts', icon: CalendarDays },
     // { id: 5, title: 'Review', icon: CheckCircle },
     // { id: 6, title: 'Account Setup', icon: FileText },
 ];
@@ -330,12 +329,12 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
                 <div className="step-wrapp">
                     {/* <HeadingSmall title="Create New Brand" /> */}
 
-                    <form onSubmit={handleSubmit} className="space-y-6 step-wrapp-card">
-                        <Card>
+                    <form onSubmit={handleSubmit} className="space-y-10 step-wrapp-card">
+                        <Card className='bg-sidebar'>
                             <CardHeader>
                                 <CardTitle className="brand-heading"> <span><img src="../images/brand-wizard.png" alt="icon" /></span> Brand Setup Wizard</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-6">
+                            <CardContent className="space-y-10">
                                 <StepNavigation
                                     currentStep={currentStep}
                                     totalSteps={steps.length}
@@ -347,7 +346,7 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
                                     steps={steps}
                                 />
 
-                                <div className="min-h-[400px]">
+                                <div className="min-h-[300px]">
                                     {renderStep()}
                                 </div>
                             </CardContent>
