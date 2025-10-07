@@ -26,8 +26,37 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                 </div>
             </DropdownMenuLabel>
             <div className="dropdown-menu-mail">
+                <Link href="/" className='active'>
+                    Apryse
+                    <span>Pitch</span>
+                </Link>
                 <Link href="/">
-                    New Brand
+                    ArticleHub
+                    <span>Pitch</span>
+                </Link>
+                <Link href="/">
+                    Baros
+                    <span>Pitch</span>
+                </Link>
+                <Link href="/">
+                    Freelancer
+                    <span>Pitch</span>
+                </Link>
+                <Link href="/">
+                    Jacadi USA
+                    <span>Pitch</span>
+                </Link>
+                <Link href="/">
+                    New Project
+                    <span>Pitch</span>
+                </Link>
+                <Link href="/">
+                    Pix-star.com
+                    <span>Pitch</span>
+                </Link>
+                <Link href="/">
+                    poptribe
+                    <span>Pitch</span>
                 </Link>
             </div>
             <DropdownMenuGroup className='dropdown-menu-link'>
