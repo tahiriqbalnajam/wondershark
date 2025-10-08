@@ -30,6 +30,188 @@ button{
     color: var(--color-white);
 }
 
+/** Left Side Bar **/
+.left-side-wrapp{
+    background:var(--gray-text-bg);
+}
+.left-side-wrapp .bg-sidebar{
+    background:transparent !important;
+    border:none;
+}
+.site-logo-box {
+	background:var(--color-primary-foreground);
+	height: 90px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.site-logo-box button{
+    background:transparent !important;
+    cursor: pointer;
+}
+
+
+/** Main Content **/
+.main-content{
+    border:1px solid var(--border);
+    border-radius:0;
+    margin:0;
+}
+
+/** Main Navbar **/
+.site-logo-box button > span {
+	width: 32px;
+}
+.main-menu-links{
+    padding:32px 16px;
+}
+.main-menu-links .menu-link {
+	font-size: 14px;
+	gap: 10px;
+	display: flex;
+	align-items: center;
+	height: 40px;
+    background: var(--color-sidebar-accent);
+}
+.main-menu-links .menu-link .menu-icon{
+    width:25px;
+    height:25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-white);
+    border-radius:5px;
+    color: var(--color-black);
+}
+.main-menu-links .menu-link .menu-icon svg{
+    width:15px;
+}
+.main-menu-links .menu-link[data-active="true"],
+.main-menu-links .menu-link:hover{
+    background: var(--orange-1);
+    color: var(--color-white);
+}
+.main-menu-links .menu-link:hover .menu-icon{
+    color: var(--orange-1);
+}
+
+[data-state="collapsed"] .site-logo-box button {
+	margin: 0 auto;
+}
+[data-state="collapsed"] .main-menu-links .menu-link{
+    background: var(--color-white);
+}
+[data-state="collapsed"] .main-menu-links .menu-link:hover{
+    background: var(--orange-1);
+}
+[data-state="collapsed"] .main-menu-links .menu-link:hover .menu-icon{
+	background: transparent;
+    color: var(--color-white);
+}
+.sidebar-menu-sub {
+	margin: 0;
+	border: 0;
+	background:var(--primary);
+	padding: 15px 15px;
+	border-radius: 10px;
+	box-shadow: 0 4px 15px 0 rgba(0,0,0,0.15);
+}
+
+/* Left Menu Dropdown */
+.menu-dropdoen-wrapp {
+	border-radius: 0;
+	border: none;
+	min-width: 300px;
+	background: #fff;
+	box-shadow: 0 10px 15px 0 rgba(0,0,0,0.15);
+	padding: 0;
+}
+.menu-dropdoen-wrapp .user-name,
+.menu-dropdoen-wrapp .user-img{
+    display:none;
+}
+.truncate.text-xs.text-muted-foreground {
+	font-size: 14px;
+}
+.dropdown-menu-mail{
+    padding:15px 0;
+    margin:0 5px;
+}
+.dropdown-menu-mail a{
+    font-size:12px;
+    color: var(--color-black);
+    display: flex;
+    justify-content: space-between;
+    padding:8px 15px;
+    border-radius:17px;
+    position: relative;
+}
+.dropdown-menu-mail a span{
+    width:50px;
+    height:16px;
+    font-size:8px;
+    text-transform: uppercase;
+    background: #FFE7E4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius:8px;
+}
+.dropdown-menu-mail a::before{
+    content:"";
+    height:10px;
+    width:10px;
+    border-radius:50%;
+    background: var(--orange-1);
+    position: absolute;
+    transform: translateY(-50%);
+    top:50%;
+    left:15px;
+    opacity:0;
+}
+.dropdown-menu-mail a:hover{
+    background:var(--color-gray-100);
+}
+.dropdown-menu-mail a.active{
+    padding-left:32px;
+}
+.dropdown-menu-mail a.active::before{
+    opacity:1;
+}
+.dropdown-menu-link {
+	padding: 15px;
+}
+.dropdown-menu-link .btn-default,
+.dropdown-menu-link .btn-logout{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 35px;
+    background:var(--gray-text-bg);
+    margin:10px 0;
+    cursor: pointer;
+    color: var(--primary);
+}.dropdown-menu-link .btn-default svg,
+.dropdown-menu-link .btn-logout svg{
+    color: var(--orange-1);
+}
+.dropdown-menu-link .btn-default:hover{
+    background: var(--orange-1);
+    color: var(--color-white);
+}
+.dropdown-menu-link .btn-default:hover svg,
+.dropdown-menu-link .btn-logout:hover svg{
+    color: var(--color-white);
+}
+.dropdown-menu-link .btn-logout{
+    background:#FFE6EC;
+    color:#FF003F;
+}
+.dropdown-menu-link .btn-logout:hover{
+    background:#FF003F;
+    color:#fff;
+}
+
 /** Steps **/
 .step-wrapp-card .bg-card {
 	box-shadow: 0 2px 25px 0 rgba(0,0,0,0.10);

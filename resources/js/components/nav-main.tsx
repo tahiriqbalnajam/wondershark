@@ -16,7 +16,7 @@ import { ChevronRight } from 'lucide-react';
 export function NavMain({ items = [] }: { items: NavItem[] }) {
     const page = usePage();
     return (
-        <SidebarGroup className="px-2 py-0">
+        <SidebarGroup className="p-0 main-menu-links">
             <SidebarGroupLabel>General</SidebarGroupLabel>
             <SidebarMenu>
                 {items.map((item) => {
@@ -27,8 +27,8 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                             <Collapsible key={item.title} asChild defaultOpen={isActive}>
                                 <SidebarMenuItem>
                                     <CollapsibleTrigger asChild>
-                                        <SidebarMenuButton tooltip={{ children: item.title }}>
-                                            {item.icon && <item.icon />}
+                                        <SidebarMenuButton tooltip={{ children: item.title }}  className='menu-link'>
+                                            <span className='menu-icon'>{item.icon && <item.icon />}</span>
                                             <span>{item.title}</span>
                                             <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                                         </SidebarMenuButton>
@@ -38,8 +38,8 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                                             {item.items.map((subItem) => (
                                                 <SidebarMenuSubItem key={subItem.title}>
                                                     <SidebarMenuSubButton asChild isActive={page.url.startsWith(subItem.href)}>
-                                                        <Link href={subItem.href} prefetch>
-                                                            {subItem.icon && <subItem.icon />}
+                                                        <Link href={subItem.href} prefetch className='menu-link'>
+                                                            <span className='menu-icon'>{subItem.icon && <subItem.icon />}</span>
                                                             <span>{subItem.title}</span>
                                                         </Link>
                                                     </SidebarMenuSubButton>
@@ -55,8 +55,8 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                     return (
                         <SidebarMenuItem key={item.title}>
                             <SidebarMenuButton asChild isActive={isActive} tooltip={{ children: item.title }}>
-                                <Link href={item.href} prefetch>
-                                    {item.icon && <item.icon />}
+                                <Link href={item.href} prefetch className='menu-link'>
+                                    <span className='menu-icon'>{item.icon && <item.icon />}</span>
                                     <span>{item.title}</span>
                                 </Link>
                             </SidebarMenuButton>
