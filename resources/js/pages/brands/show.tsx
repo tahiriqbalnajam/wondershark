@@ -183,7 +183,7 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
     }
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs(brand)}>
+        <AppLayout title="Create Brand" icon={Building2} breadcrumbs={breadcrumbs(brand)}>
             <Head title={`${brand.name} - Brand Details`} />
 
             <div className="space-y-6">

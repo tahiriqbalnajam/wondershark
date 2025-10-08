@@ -10,7 +10,8 @@ import {
     MessagesSquare, 
     FileText,
     CalendarDays,
-    Swords
+    Swords,
+    CheckCircle
 } from 'lucide-react';
 
 // Import step components
@@ -38,11 +39,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const steps = [
     { id: 1, title: 'Basic Info', icon: FileText },
-    { id: 2, title: 'Prompts', icon: MessagesSquare },
-    { id: 3, title: 'Competitors', icon: Swords },
+    { id: 2, title: 'Competitors', icon: Swords },
+    { id: 3, title: 'Prompts', icon: MessagesSquare },
     { id: 4, title: 'Monthly Posts', icon: CalendarDays },
     // { id: 5, title: 'Review', icon: CheckCircle },
-    // { id: 6, title: 'Account Setup', icon: FileText },
+    { id: 5, title: 'Account Setup', icon: FileText },
 ];
 
 type Props = {
@@ -60,7 +61,18 @@ type Props = {
 
 export default function CreateBrand({ existingBrand, aiModels = [], sessionId }: Props) {
     const [currentStep, setCurrentStep] = useState(1);
-    const [competitors, setCompetitors] = useState<Competitor[]>([]);
+    
+    // Load competitors from sessionStorage on mount
+    const [competitors, setCompetitors] = useState<Competitor[]>(() => {
+        try {
+            const saved = sessionStorage.getItem('brandCreation_competitors');
+            return saved ? JSON.parse(saved) : [];
+        } catch (error) {
+            console.error('Error loading competitors from sessionStorage:', error);
+            return [];
+        }
+    });
+    
     const [aiGeneratedPrompts, setAiGeneratedPrompts] = useState<GeneratedPrompt[]>([]);
     const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
     const generationAttemptedRef = useRef<string | null>(null);
@@ -79,6 +91,15 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
         create_account: true,
         ai_providers: aiModels.filter(model => model.is_enabled).map(model => model.name),
     });
+
+    // Save competitors to sessionStorage whenever they change
+    useEffect(() => {
+        try {
+            sessionStorage.setItem('brandCreation_competitors', JSON.stringify(competitors));
+        } catch (error) {
+            console.error('Error saving competitors to sessionStorage:', error);
+        }
+    }, [competitors]);
 
     // Reset prompt generation when website changes
     useEffect(() => {
@@ -105,9 +126,9 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
             errorMessages.forEach(([field, message]) => {
                 if (['name', 'website', 'description', 'country'].includes(field)) {
                     stepErrors[1].push(message);
-                } else if (field === 'prompts') {
-                    stepErrors[2].push(message);
                 } else if (field === 'competitors') {
+                    stepErrors[2].push(message);
+                } else if (field === 'prompts') {
                     stepErrors[3].push(message);
                 } else if (field === 'monthly_posts') {
                     stepErrors[4].push(message);
@@ -202,10 +223,10 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
         await generateAIPrompts();
     }, [generateAIPrompts]);
 
-    // Auto-generate prompts when moving to step 2
+    // Auto-generate prompts when moving to step 3 (Prompts step)
     useEffect(() => {
         if (
-            currentStep === 2 && 
+            currentStep === 3 && 
             data.website && 
             data.website.trim() !== '' &&
             !isGeneratingPrompts && 
@@ -259,15 +280,13 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
         switch (currentStep) {
             case 1: // Basic Info
                 return !!(data.name.trim()) && !errors.name && !errors.website && !errors.description && !errors.country;
-            case 2: // Prompts - optional, always allow proceeding
+            case 2: // Competitors - optional, always allow proceeding
                 return true;
-            case 3: // Competitors - optional, always allow proceeding  
+            case 3: // Prompts - optional, always allow proceeding  
                 return true;
             case 4: // Monthly Posts
                 return data.monthly_posts > 0 && !errors.monthly_posts;
-            case 5: // Review
-                return true;
-            case 6: // Account Setup
+            case 5: // Account Setup
                 return !data.create_account || (!!(data.brand_email.trim() && data.brand_password.trim()) && !errors.brand_email && !errors.brand_password);
             default:
                 return true;
@@ -289,6 +308,13 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
             case 1:
                 return <Step1BasicInfo {...stepProps} />;
             case 2:
+                 return <Step3Competitors 
+                    {...stepProps}
+                    competitors={competitors}
+                    setCompetitors={setCompetitors}
+                    sessionId={sessionId}
+                />;
+            case 3:
                 return <Step2Prompts 
                     {...stepProps} 
                     isGeneratingPrompts={isGeneratingPrompts}
@@ -303,18 +329,9 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
                     removePrompt={removePrompt}
                     aiModels={aiModels}
                 />;
-            case 3:
-                return <Step3Competitors 
-                    {...stepProps}
-                    competitors={competitors}
-                    setCompetitors={setCompetitors}
-                    sessionId={sessionId}
-                />;
             case 4:
                 return <Step4MonthlyPosts {...stepProps} />;
             case 5:
-                return <Step5Review {...stepProps} />;
-            case 6:
                 return <Step6AccountSetup {...stepProps} />;
             default:
                 return null;

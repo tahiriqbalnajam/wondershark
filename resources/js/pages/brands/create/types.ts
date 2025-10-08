@@ -18,7 +18,7 @@ export type Competitor = {
     name: string;
     domain: string;
     mentions: number;
-    status: 'suggested' | 'accepted';
+    status: 'suggested' | 'accepted' | 'rejected';
     source: 'ai' | 'manual';
 };
 

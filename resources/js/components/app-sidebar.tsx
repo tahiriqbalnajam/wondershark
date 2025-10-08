@@ -141,13 +141,7 @@ export function AppSidebar() {
     return (
         <Sidebar collapsible="icon" variant="inset" className='left-side-wrapp p-0 rounded-xl'>
             <SidebarHeader>
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
-                            <NavUser />
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
+                <NavUser />
                 
                 {/* New Brand Button for Agency Users */}
                 {/* {permissions.hasRole('agency') && (

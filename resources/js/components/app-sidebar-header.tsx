@@ -8,8 +8,8 @@ export function AppSidebarHeader({ breadcrumbs = [] }: { breadcrumbs?: Breadcrum
         <header className="border-b border-sidebar-border/50 px-6 pb-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4 mb-6">
             <SidebarTrigger className="-ml-1" />
             <div className="flex items-center gap-2 mb-2">
-                <span className="heading-icon"><UserCheck/></span>
-                <h2 className="pageheading">Create New Brand</h2>
+                <span className="heading-icon"><UserCheck /></span>
+                <h2 className="pageheading">{breadcrumbs[breadcrumbs.length - 1]?.title}</h2>
             </div>
             <Breadcrumbs breadcrumbs={breadcrumbs} />
         </header>

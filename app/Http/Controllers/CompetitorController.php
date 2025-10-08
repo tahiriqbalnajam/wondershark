@@ -482,6 +482,47 @@ class CompetitorController extends Controller
         ]);
 
         try {
+            // Normalize the website URL for consistent lookups
+            $normalizedWebsite = rtrim(strtolower($request->website), '/');
+            
+            // Check if we have cached competitors for this website in the database
+            // We'll use a separate table for this or check if any brand has this website
+            $existingBrand = \App\Models\Brand::where('website', $normalizedWebsite)
+                ->orWhere('website', 'LIKE', '%' . parse_url($normalizedWebsite, PHP_URL_HOST) . '%')
+                ->first();
+            
+            if ($existingBrand && $existingBrand->competitors()->exists()) {
+                // Return existing competitors from database
+                $cachedCompetitors = $existingBrand->competitors()
+                    ->select('id', 'name', 'domain', 'mentions', 'status', 'source')
+                    ->get()
+                    ->map(function ($competitor) {
+                        return [
+                            'id' => $competitor->id,
+                            'name' => $competitor->name,
+                            'domain' => $competitor->domain,
+                            'mentions' => $competitor->mentions ?? 0,
+                            'status' => $competitor->status ?? 'suggested',
+                            'source' => $competitor->source ?? 'ai'
+                        ];
+                    })
+                    ->toArray();
+                
+                Log::info('Returned cached competitors from database', [
+                    'website' => $request->website,
+                    'brand_id' => $existingBrand->id,
+                    'competitor_count' => count($cachedCompetitors)
+                ]);
+                
+                return response()->json([
+                    'success' => true,
+                    'competitors' => $cachedCompetitors,
+                    'cached' => true,
+                    'message' => 'Returning previously saved competitors for this website'
+                ]);
+            }
+
+            // If no cached competitors, fetch from AI
             // Get enabled AI model with API key
             $aiModel = \App\Models\AiModel::where('is_enabled', true)
                 ->whereNotNull('api_config')
