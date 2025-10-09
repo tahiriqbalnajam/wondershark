@@ -444,9 +444,17 @@ export default function Step2Prompts({
                                             />
                                         </TableHead>
                                         <TableCell>{prompt.prompt}</TableCell>
-                                        <TableCell>17%</TableCell>
-                                        <TableCell><Badge className="sentiment-td"><span></span> 62</Badge></TableCell>
-                                        <TableCell><Badge className="position-td"><span>#</span> 3.5</Badge></TableCell>
+                                        <TableCell>{prompt.visibility || '17%'}</TableCell>
+                                        <TableCell>
+                                            <Badge className="sentiment-td">
+                                                <span></span> {prompt.sentiment || 62}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge className="position-td">
+                                                <span>#</span> {prompt.position || '3.5'}
+                                            </Badge>
+                                        </TableCell>
                                         <TableCell>
                                             <div className="flex space-x-1 items-center">
                                                 <Avatar className="img-avatar">
@@ -464,12 +472,14 @@ export default function Step2Prompts({
                                                 <Avatar className="img-avatar">
                                                     <img src="../images/b5.png" alt="icon" />
                                                 </Avatar>
-                                                <Badge className="h-5 min-w-5 rounded-xs px-1 font-mono tabular-nums bg-fuchsia-200 text-gray-950">+8 </Badge>
+                                                <Badge className="h-5 min-w-5 rounded-xs px-1 font-mono tabular-nums bg-fuchsia-200 text-gray-950">
+                                                    +{prompt.mentions || 8}
+                                                </Badge>
                                             </div>
                                         </TableCell>
                                         <TableCell>
                                             <Avatar className="img-avatar">
-                                                <img src="../images/usa.png" alt="icon" /> USA
+                                                <img src="../images/usa.png" alt="icon" /> {prompt.location || 'USA'}
                                             </Avatar>
                                         </TableCell>
                                     </TableRow>
@@ -500,6 +510,10 @@ export default function Step2Prompts({
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Suggested Prompt</TableHead>
+                                    <TableHead><div className="flex items-center"><Eye className="w-4 mr-2"/> Visibility</div></TableHead>
+                                    <TableHead><div className="flex items-center"><Smile className="w-4 mr-2"/> Sentiment</div></TableHead>
+                                    <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2"/> Position</div></TableHead>
+                                    <TableHead><div className="flex items-center"><Trophy className="w-4 mr-2"/> Mentions</div></TableHead>
                                     <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2"/> Suggested At</div></TableHead>
                                     <TableHead></TableHead>
                                 </TableRow>
@@ -508,6 +522,22 @@ export default function Step2Prompts({
                                 {suggestedPrompts.map((prompt) => (
                                     <TableRow key={prompt.id}>
                                         <TableCell>{prompt.prompt}</TableCell>
+                                        <TableCell>{prompt.visibility || 'N/A'}</TableCell>
+                                        <TableCell>
+                                            {prompt.sentiment ? (
+                                                <Badge className="sentiment-td"><span></span> {prompt.sentiment}</Badge>
+                                            ) : (
+                                                'N/A'
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            {prompt.position ? (
+                                                <Badge className="position-td"><span>#</span> {prompt.position}</Badge>
+                                            ) : (
+                                                'N/A'
+                                            )}
+                                        </TableCell>
+                                        <TableCell>{prompt.mentions || 0}</TableCell>
                                         <TableCell>{formatTimestamp(new Date().toISOString())}</TableCell>
                                         <TableCell>
                                             <div className="flex gap-3 justify-center">

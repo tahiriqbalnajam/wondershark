@@ -128,7 +128,7 @@ class AIPromptService
 
     protected function buildPrompt(string $website, string $description = '', int $promptCount = 25): string
     {
-        $contextInfo = $description ? "\n\nAdditional context about the website: {$description}" : '';
+        $contextInfo = $description ? "\n\nKEY FOCUS AREAS / TARGET KEYWORDS: {$description}\n\nIMPORTANT: Generate statements that naturally incorporate these keywords and focus areas while remaining generic and avoiding brand names." : '';
         
         return "Given a website {$website} and a desired number of statements {$promptCount}, analyze the website's content to identify key themes, products, benefits, problems solved, and target user needs. Then, generate {$promptCount} unique, generic statements (a mix of questions and declarative phrases) that reflect natural user intents, as if potential customers are seeking solutions where the website's offerings would be highly relevant.{$contextInfo}
 
@@ -140,6 +140,7 @@ class AIPromptService
                 4. Is concise, actionable, and under 20 words, relevant to what users might search for based on the website's described benefits and testimonials.
                 5. Remains generic and does not use website-specific keywords; base phrasing on inferred user needs from content analysis.
                 6. Reflects real search behaviors, like how-to guides, remedy suggestions, or best options for common issues addressed by the site.
+                7. When keywords/focus areas are provided, naturally incorporate them into the statements while maintaining a generic, user-intent focused approach.
 
                 Requirements:
                 - Return ONLY the statements, one per line

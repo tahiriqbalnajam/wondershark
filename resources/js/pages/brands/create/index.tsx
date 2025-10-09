@@ -193,6 +193,7 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
                 body: JSON.stringify({
                     website: data.website,
                     description: data.description,
+                    keywords: data.description, // Pass keywords/description for prompt generation
                 })
             });
 

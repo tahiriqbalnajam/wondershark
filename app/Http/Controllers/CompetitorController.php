@@ -485,40 +485,55 @@ class CompetitorController extends Controller
             // Normalize the website URL for consistent lookups
             $normalizedWebsite = rtrim(strtolower($request->website), '/');
             
-            // Check if we have cached competitors for this website in the database
-            // We'll use a separate table for this or check if any brand has this website
-            $existingBrand = \App\Models\Brand::where('website', $normalizedWebsite)
-                ->orWhere('website', 'LIKE', '%' . parse_url($normalizedWebsite, PHP_URL_HOST) . '%')
-                ->first();
+            // Check if the website has changed in this session
+            $sessionKey = 'brand_creation_website_' . ($request->session_id ?? session()->getId());
+            $previousWebsite = session($sessionKey);
+            $websiteChanged = $previousWebsite && $previousWebsite !== $normalizedWebsite;
             
-            if ($existingBrand && $existingBrand->competitors()->exists()) {
-                // Return existing competitors from database
-                $cachedCompetitors = $existingBrand->competitors()
-                    ->select('id', 'name', 'domain', 'mentions', 'status', 'source')
-                    ->get()
-                    ->map(function ($competitor) {
-                        return [
-                            'id' => $competitor->id,
-                            'name' => $competitor->name,
-                            'domain' => $competitor->domain,
-                            'mentions' => $competitor->mentions ?? 0,
-                            'status' => $competitor->status ?? 'suggested',
-                            'source' => $competitor->source ?? 'ai'
-                        ];
-                    })
-                    ->toArray();
+            // Store current website in session
+            session([$sessionKey => $normalizedWebsite]);
+            
+            // If website changed, skip cache and generate fresh competitors
+            if (!$websiteChanged) {
+                // Check if we have cached competitors for this website in the database
+                $existingBrand = \App\Models\Brand::where('website', $normalizedWebsite)
+                    ->orWhere('website', 'LIKE', '%' . parse_url($normalizedWebsite, PHP_URL_HOST) . '%')
+                    ->first();
                 
-                Log::info('Returned cached competitors from database', [
-                    'website' => $request->website,
-                    'brand_id' => $existingBrand->id,
-                    'competitor_count' => count($cachedCompetitors)
-                ]);
-                
-                return response()->json([
-                    'success' => true,
-                    'competitors' => $cachedCompetitors,
-                    'cached' => true,
-                    'message' => 'Returning previously saved competitors for this website'
+                if ($existingBrand && $existingBrand->competitors()->exists()) {
+                    // Return existing competitors from database
+                    $cachedCompetitors = $existingBrand->competitors()
+                        ->select('id', 'name', 'domain', 'mentions', 'status', 'source')
+                        ->get()
+                        ->map(function ($competitor) {
+                            return [
+                                'id' => $competitor->id,
+                                'name' => $competitor->name,
+                                'domain' => $competitor->domain,
+                                'mentions' => $competitor->mentions ?? 0,
+                                'status' => $competitor->status ?? 'suggested',
+                                'source' => $competitor->source ?? 'ai'
+                            ];
+                        })
+                        ->toArray();
+                    
+                    Log::info('Returned cached competitors from database', [
+                        'website' => $request->website,
+                        'brand_id' => $existingBrand->id,
+                        'competitor_count' => count($cachedCompetitors)
+                    ]);
+                    
+                    return response()->json([
+                        'success' => true,
+                        'competitors' => $cachedCompetitors,
+                        'cached' => true,
+                        'message' => 'Returning previously saved competitors for this website'
+                    ]);
+                }
+            } else {
+                Log::info('Website changed, skipping cache and generating fresh competitors', [
+                    'previous_website' => $previousWebsite,
+                    'new_website' => $normalizedWebsite
                 ]);
             }
 

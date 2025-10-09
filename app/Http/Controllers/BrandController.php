@@ -449,8 +449,36 @@ class BrandController extends Controller
             $sessionId = session()->getId();
             $aiService = app(\App\Services\AIPromptService::class);
             
-            // Check if we already have prompts for this website
-            $existingPrompts = $aiService->getPromptsForWebsite($request->website);
+            // Normalize the website URL for consistent lookups
+            $normalizedWebsite = rtrim(strtolower($request->website), '/');
+            
+            // Check if the website has changed in this session
+            $sessionKey = 'brand_creation_website_prompts_' . $sessionId;
+            $previousWebsite = session($sessionKey);
+            $websiteChanged = $previousWebsite && $previousWebsite !== $normalizedWebsite;
+            
+            // Store current website in session
+            session([$sessionKey => $normalizedWebsite]);
+            
+            // If website changed, delete old prompts and generate fresh ones
+            if ($websiteChanged) {
+                Log::info('Website changed, deleting old prompts and generating fresh ones', [
+                    'previous_website' => $previousWebsite,
+                    'new_website' => $normalizedWebsite,
+                    'session_id' => $sessionId
+                ]);
+                
+                // Delete prompts associated with the old website for this session
+                \App\Models\GeneratedPrompt::where('session_id', $sessionId)
+                    ->where('website', '!=', $normalizedWebsite)
+                    ->delete();
+                
+                // Skip cache check and go directly to generation
+                $existingPrompts = collect([]);
+            } else {
+                // Check if we already have prompts for this website
+                $existingPrompts = $aiService->getPromptsForWebsite($request->website);
+            }
             
             if (count($existingPrompts) > 0) {
                 // Return existing prompts but mark them as for current session
@@ -468,6 +496,12 @@ class BrandController extends Controller
                             'ai_provider' => $prompt->ai_provider,
                             'is_selected' => true,
                             'order' => $prompt->order,
+                            // Add mock stats for cached prompts too
+                            'visibility' => $this->generateMockVisibility(),
+                            'sentiment' => $this->generateMockSentiment(),
+                            'position' => $this->generateMockPosition(),
+                            'mentions' => $this->generateMockMentions(),
+                            'location' => 'USA',
                         ];
                     })->toArray(),
                     'cached' => true,
@@ -518,6 +552,12 @@ class BrandController extends Controller
                     'ai_provider' => $prompt->ai_provider,
                     'is_selected' => true,
                     'order' => $prompt->order,
+                    // Add mock stats (these will be updated with real data later)
+                    'visibility' => $this->generateMockVisibility(),
+                    'sentiment' => $this->generateMockSentiment(),
+                    'position' => $this->generateMockPosition(),
+                    'mentions' => $this->generateMockMentions(),
+                    'location' => 'USA',
                 ];
             }
 
@@ -782,4 +822,37 @@ class BrandController extends Controller
             'jobs_queued' => $jobsQueued
         ]);
     }
+
+    /**
+     * Generate mock visibility percentage (10-90%)
+     */
+    private function generateMockVisibility(): string
+    {
+        return rand(10, 90) . '%';
+    }
+
+    /**
+     * Generate mock sentiment score (50-95)
+     */
+    private function generateMockSentiment(): int
+    {
+        return rand(50, 95);
+    }
+
+    /**
+     * Generate mock position (1.0-10.0)
+     */
+    private function generateMockPosition(): string
+    {
+        return number_format(rand(10, 100) / 10, 1);
+    }
+
+    /**
+     * Generate mock mentions count (0-100)
+     */
+    private function generateMockMentions(): int
+    {
+        return rand(0, 100);
+    }
 }
+
