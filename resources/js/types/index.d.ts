@@ -43,6 +43,7 @@ export interface SharedData {
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
+    brands: Array<{ id: number; name: string; website: string }>;
     ziggy: Config & { location: string };
     sidebarOpen: boolean;
     [key: string]: unknown;

@@ -45,6 +45,15 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
         });
     }
 
+    // Search Analytics - for admin users
+    if (permissions.hasRole('admin')) {
+        items.push({
+            title: 'Search Analytics',
+            href: '/search-analytics',
+            icon: BarChart3,
+        });
+    }
+
     // User Management - only for admin users (skip for agency and brand)
     if (permissions.can('viewUsers') && permissions.hasRole('admin')) {
         items.push({
