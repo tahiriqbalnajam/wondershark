@@ -27,12 +27,6 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
         });
 
         items.push({
-            title: 'Search Analytics',
-            href: '/search-analytics',
-            icon: BarChart3,
-        });
-
-        items.push({
             title: 'Competitors',
             href: '/competitors',
             icon: Shield,
