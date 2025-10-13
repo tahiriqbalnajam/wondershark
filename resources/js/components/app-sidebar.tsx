@@ -1,10 +1,8 @@
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
-import { Button } from '@/components/ui/button';
-import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import { Sidebar, SidebarContent, SidebarHeader } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/react';
-import { LayoutGrid, Users, Shield, Building2, Plus, Settings, FileText, Clock, BarChart3 } from 'lucide-react';
+import { LayoutGrid, Users, Shield, Settings, FileText, Clock, BarChart3 } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 
 const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavItem[] => {
@@ -20,35 +18,8 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
         });
     }
 
-    // Settings - available to all authenticated users
-    items.push({
-        title: 'Settings',
-        href: '/settings',
-        icon: Settings,
-    });
-
-
-    // Brands menu - only for agency users
+    // Posts - only for agency users
     if (permissions.hasRole('agency')) {
-        items.push({
-            title: 'Brands',
-            href: '/brands',
-            icon: Building2,
-            items: [
-                {
-                    title: 'Brand List',
-                    href: '/brands',
-                    icon: Building2,
-                },
-                {
-                    title: 'Add Brand',
-                    href: '/brands/create',
-                    icon: Plus,
-                },
-                // We'll add dynamic brand list here later
-            ]
-        });
-        
         items.push({
             title: 'Posts',
             href: '/posts',

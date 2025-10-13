@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
 
@@ -43,6 +44,34 @@ class HandleInertiaRequests extends Middleware
         $userRoles = $user ? $user->getRoleNames() : [];
         $userPermissions = $user ? $user->getPermissionNames() : [];
 
+        // Fetch user's brands (limit to 10 most recent)
+        $brands = collect();
+        if ($user) {
+            $isAdmin = $user->hasRole('admin');
+            
+            $query = \App\Models\Brand::query();
+            
+            if ($isAdmin) {
+                // Admin can see all brands, limit to 10 most recent
+                $query->whereNotNull('website')
+                      ->where('website', '!=', '')
+                      ->orderBy('updated_at', 'desc')
+                      ->limit(10);
+            } else {
+                // Regular users see only their own brands
+                $query->where(function($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                      ->orWhere('agency_id', $user->id);
+                })
+                ->whereNotNull('website')
+                ->where('website', '!=', '')
+                ->orderBy('updated_at', 'desc')
+                ->limit(10);
+            }
+            
+            $brands = $query->select('id', 'name', 'website')->get();
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -64,6 +93,7 @@ class HandleInertiaRequests extends Middleware
                     'manageSystem' => $user->can('manage-system'),
                 ] : [],
             ],
+            'brands' => $brands,
             'ziggy' => fn (): array => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
