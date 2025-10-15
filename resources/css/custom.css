@@ -101,9 +101,11 @@ button{
 [data-state="collapsed"] .main-menu-links .menu-link{
     background: var(--color-white);
 }
+[data-state="collapsed"] .main-menu-links .menu-link[data-active="true"],
 [data-state="collapsed"] .main-menu-links .menu-link:hover{
     background: var(--orange-1);
 }
+[data-state="collapsed"] .main-menu-links .menu-link[data-active="true"] .menu-icon,
 [data-state="collapsed"] .main-menu-links .menu-link:hover .menu-icon{
 	background: transparent;
     color: var(--color-white);
@@ -111,10 +113,9 @@ button{
 .sidebar-menu-sub {
 	margin: 0;
 	border: 0;
-	background:var(--primary);
 	padding: 15px 15px;
 	border-radius: 10px;
-	box-shadow: 0 4px 15px 0 rgba(0,0,0,0.15);
+	box-shadow:0 0 10px 0 rgba(0,0,0,0.10);
 }
 
 /* Left Menu Dropdown */
@@ -540,4 +541,47 @@ textarea.form-control{
 .competitor-btn-action button.btn-action-check:hover {
     background:#6DC323;
     color:var(--color-white);
+}
+
+.competitor-title span{
+    width:30px;
+    height:30px;
+    background: var(--color-gray-200);
+    border-radius:3px;
+    color: var(--color-black);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.competitor-title span svg{
+    width:15px;
+}
+.buttons-wrapp {
+    border-top:1px solid #E5E5E5;
+    padding:10px;
+}
+.buttons-wrapp a {
+	flex: 0 0 80px;
+	height: 30px;
+	padding: 0;
+    border-radius:5px;
+}
+.buttons-wrapp a:hover{
+    color: white;
+    background: var(--orange-1);
+}
+.buttons-wrapp .cancel-btn{
+    background:rgba(255,0,63,.10);
+    color: #FF003F;
+}
+.buttons-wrapp .cancel-btn:hover{
+    background:#FF003F;
+    color: #fff;
+}
+
+.Create-Competitor {
+	display: flex;
+	justify-content: center;
+	flex-direction: column;
+	height: auto;
 }
