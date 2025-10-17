@@ -559,13 +559,16 @@ textarea.form-control{
     border-top:1px solid #E5E5E5;
     padding:10px;
 }
-.buttons-wrapp a {
+.buttons-wrapp .cancel-btn,
+.buttons-wrapp button.df-btn,
+.buttons-wrapp a.df-btn{
 	flex: 0 0 80px;
-	height: 30px;
+	height: 36px;
 	padding: 0;
     border-radius:5px;
+    border:none;
 }
-.buttons-wrapp a:hover{
+.buttons-wrapp button.df-btn:hover{
     color: white;
     background: var(--orange-1);
 }
