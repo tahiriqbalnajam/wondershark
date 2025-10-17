@@ -1,6 +1,5 @@
-import React from 'react';
-import { Head } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
+import React, { useState } from 'react';
+import { useForm, router } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building2 } from 'lucide-react';
@@ -17,67 +16,138 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
+
+
 interface Brand {
     id: number;
     name: string;
     website: string;
 }
 
-interface Props {
-    brands?: Brand[];
+interface Competitor {
+    id: number;
+    name: string;
+    domain: string;
+    mentions?: number;
+    status: string;
 }
 
-export default function CompetitorsIndex({ brands = [] }: Props) {
-    return (
-        <AppLayout
-            breadcrumbs={[
-                { title: 'Competitors', href: '' }
-            ]}
-        >
-            <Head title="Competitor Analysis" />
+interface Props {
+    selectedBrand?: Brand;
+    suggestedCompetitors?: Competitor[];
+    acceptedCompetitors?: Competitor[];
+}
 
-                
-            <Drawer direction="right">
+export default function CompetitorSelector({ 
+    selectedBrand,
+    suggestedCompetitors = [],
+    acceptedCompetitors = []
+}: Props) {
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [updating, setUpdating] = useState<number | null>(null);
+
+    const handleCompetitorAction = (competitorId: number, action: 'accepted' | 'rejected') => {
+        setUpdating(competitorId);
+        
+        router.put(route('competitors.update', competitorId), 
+            { status: action },
+            {
+                onSuccess: () => {
+                    setUpdating(null);
+                },
+                onError: (errors) => {
+                    console.error('Failed to update competitor:', errors);
+                    setUpdating(null);
+                }
+            }
+        );
+    };
+
+    const handleRemoveCompetitor = (competitorId: number) => {
+        setUpdating(competitorId);
+        
+        router.put(route('competitors.update', competitorId), 
+            { status: 'suggested' },
+            {
+                onSuccess: () => {
+                    setUpdating(null);
+                },
+                onError: (errors) => {
+                    console.error('Failed to remove competitor:', errors);
+                    setUpdating(null);
+                }
+            }
+        );
+    };
+    
+    const { data, setData, post, processing, errors, reset } = useForm({
+        name: '',
+        domain: '',
+        brand_id: selectedBrand?.id.toString() || '',
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        if (!selectedBrand) return;
+        
+        post(route('competitors.store', selectedBrand.id), {
+            onSuccess: () => {
+                reset();
+                setIsDrawerOpen(false);
+            },
+        });
+    };
+    return (  
+            <Drawer direction="right" open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
                 <div className="mx-auto py-6 space-y-6">
+                    {/* Suggested Competitors Section */}
                     <Card>
                         <CardHeader>
-                            {/* <CardTitle className="flex items-center gap-2">
-                                <Shield className="h-5 w-5" />
-                                Select a Brand to Analyze Competitors
-                            </CardTitle> */}
                             <div className="flex items-center justify-between">
-                                <h2 className="text-2xl font-bold">Suggested Competitors <span className='text-gray-400 font-normal text-sm'>- 10+</span></h2>
+                                <h2 className="text-2xl font-bold">
+                                    Suggested Competitors 
+                                    <span className='text-gray-400 font-normal text-sm'>
+                                        {suggestedCompetitors.length > 0 ? `- ${suggestedCompetitors.length}` : ''}
+                                    </span>
+                                </h2>
                                 
                                 <DrawerTrigger asChild>
-                                    <Button variant="outline">Open Drawer</Button>
+                                    <Button variant="outline">Add Competitor</Button>
                                 </DrawerTrigger>
                             </div>
                         </CardHeader>
                         <CardContent>
-                            {brands.length > 0 ? (
+                            {suggestedCompetitors.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    {brands.map((brand) => (
-                                        <Card key={brand.id} className="hover:shadow-md transition-shadow pb-0 justify-between">
+                                    {suggestedCompetitors.map((competitor) => (
+                                        <Card key={competitor.id} className="hover:shadow-md transition-shadow pb-0 justify-between">
                                             <CardHeader>
                                                 <CardTitle className="text-lg flex items-center gap-2 competitor-title">
                                                     <span><Building2 className="h-4 w-4" /></span>
-                                                    {brand.name}
+                                                    {competitor.name}
                                                 </CardTitle>
                                             </CardHeader>
                                             <CardContent className='p-0'>
-                                                <p className="text-sm text-gray-600 mx-6 my-3">{brand.website}</p>
+                                                <p className="text-sm text-gray-600 mx-6 my-3">{competitor.domain}</p>
                                                 <div className="buttons-wrapp flex items-center justify-between">
-                                                    <p className="text-sm text-gray-600">27 Mentions</p>
+                                                    <p className="text-sm text-gray-600">{competitor.mentions || 0} Mentions</p>
                                                     <div className="flex items-center justify-end gap-3">
-                                                        <Button asChild className="">
-                                                            <Link href={route('competitors.index', { brand: brand.id })}>
-                                                                Track
-                                                            </Link>
+                                                        <Button 
+                                                            size="sm" 
+                                                            variant="default"
+                                                            onClick={() => handleCompetitorAction(competitor.id, 'accepted')}
+                                                            disabled={updating === competitor.id}
+                                                        >
+                                                            {updating === competitor.id ? 'Accepting...' : 'Accept'}
                                                         </Button>
-                                                        <Button asChild className="cancel-btn">
-                                                            <Link href='/'>
-                                                                Cancel
-                                                            </Link>
+                                                        <Button 
+                                                            size="sm" 
+                                                            variant="outline"
+                                                            onClick={() => handleCompetitorAction(competitor.id, 'rejected')}
+                                                            disabled={updating === competitor.id}
+                                                        >
+                                                            {updating === competitor.id ? 'Rejecting...' : 'Reject'}
                                                         </Button>
                                                     </div>
                                                 </div>
@@ -88,47 +158,64 @@ export default function CompetitorsIndex({ brands = [] }: Props) {
                             ) : (
                                 <div className="text-center py-8">
                                     <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                    <p className="text-gray-600 mb-4">No brands available for competitor analysis.</p>
-                                    <Button asChild>
-                                        <Link href="/brands/create">
-                                            Create Your First Brand
-                                        </Link>
-                                    </Button>
+                                    <p className="text-gray-600 mb-4">No suggested competitors found.</p>
+                                    {selectedBrand && (
+                                        <Button 
+                                            asChild
+                                            onClick={() => {
+                                                // Trigger AI competitor fetch
+                                                window.location.href = route('competitors.fetch-sync', selectedBrand.id);
+                                            }}
+                                        >
+                                            <Link 
+                                                href={route('competitors.fetch-sync', selectedBrand.id)}
+                                                method="post"
+                                                as="button"
+                                            >
+                                                Fetch AI Competitors
+                                            </Link>
+                                        </Button>
+                                    )}
                                 </div>
                             )}
                         </CardContent>
                     </Card>
 
+                    {/* Accepted Competitors Section */}
                     <Card>
                         <CardHeader>
-                            {/* <CardTitle className="flex items-center gap-2">
-                                <Shield className="h-5 w-5" />
-                                Select a Brand to Analyze Competitors
-                            </CardTitle> */}
                             <div className="flex items-center justify-between">
-                                <h2 className="text-2xl font-bold">Your Competitors</h2>
+                                <h2 className="text-2xl font-bold">
+                                    Your Competitors
+                                    <span className='text-gray-400 font-normal text-sm'>
+                                        {acceptedCompetitors.length > 0 ? `- ${acceptedCompetitors.length}` : ''}
+                                    </span>
+                                </h2>
                             </div>
                         </CardHeader>
                         <CardContent>
-                            {brands.length > 0 ? (
+                            {acceptedCompetitors.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    {brands.map((brand) => (
-                                        <Card key={brand.id} className="hover:shadow-md transition-shadow pb-0 justify-between">
+                                    {acceptedCompetitors.map((competitor) => (
+                                        <Card key={competitor.id} className="hover:shadow-md transition-shadow pb-0 justify-between">
                                             <CardHeader>
                                                 <CardTitle className="text-lg flex items-center gap-2 competitor-title">
                                                     <span><Building2 className="h-4 w-4" /></span>
-                                                    {brand.name}
+                                                    {competitor.name}
                                                 </CardTitle>
                                             </CardHeader>
                                             <CardContent className='p-0'>
-                                                <p className="text-sm text-gray-600 mx-6 my-3">{brand.website}</p>
+                                                <p className="text-sm text-gray-600 mx-6 my-3">{competitor.domain}</p>
                                                 <div className="buttons-wrapp flex items-center justify-between">
-                                                    <p className="text-sm text-gray-600">27 Mentions</p>
+                                                    <p className="text-sm text-gray-600">{competitor.mentions || 0} Mentions</p>
                                                     <div className="flex items-center justify-end gap-3">
-                                                        <Button asChild className="cancel-btn">
-                                                            <Link href='/'>
-                                                                Delete
-                                                            </Link>
+                                                        <Button 
+                                                            size="sm" 
+                                                            variant="destructive"
+                                                            onClick={() => handleRemoveCompetitor(competitor.id)}
+                                                            disabled={updating === competitor.id}
+                                                        >
+                                                            {updating === competitor.id ? 'Removing...' : 'Remove'}
                                                         </Button>
                                                     </div>
                                                 </div>
@@ -139,12 +226,8 @@ export default function CompetitorsIndex({ brands = [] }: Props) {
                             ) : (
                                 <div className="text-center py-8">
                                     <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                    <p className="text-gray-600 mb-4">No brands available for competitor analysis.</p>
-                                    <Button asChild>
-                                        <Link href="/brands/create">
-                                            Create Your First Brand
-                                        </Link>
-                                    </Button>
+                                    <p className="text-gray-600 mb-4">No competitors added yet.</p>
+                                    <p className="text-sm text-muted-foreground">Add competitors using the button above.</p>
                                 </div>
                             )}
                         </CardContent>
@@ -152,30 +235,65 @@ export default function CompetitorsIndex({ brands = [] }: Props) {
                     <DrawerContent className="w-[25%] right-0 left-auto top-0 bottom-0 m-0 rounded-bl-md items-center Create-Competitor">
                         <div className="mx-auto w-full max-w-sm">
                             <DrawerHeader className='p-0 mb-5'>
-                                <DrawerTitle className="text-xl font-semibold mb-6 mt-10">Create Competitor</DrawerTitle>
+                                <DrawerTitle className="text-xl font-semibold mb-6 mt-10">Add New Competitor</DrawerTitle>
                             </DrawerHeader>
                             <div className="flex items-center w-full">
-                                <form className="w-full">
+                                <form onSubmit={handleSubmit} className="w-full space-y-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="name">Full Name</Label>
-                                        <Input id="name" className='form-control' type="text" placeholder="Enter your name" />
+                                        <Label htmlFor="name">Competitor Name *</Label>
+                                        <Input 
+                                            id="name" 
+                                            className='form-control' 
+                                            type="text" 
+                                            placeholder="e.g., Example Company" 
+                                            value={data.name}
+                                            onChange={(e) => setData('name', e.target.value)}
+                                            required
+                                        />
+                                        {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
                                     </div>
+                                    
                                     <div className="space-y-2">
-                                        <Label htmlFor="email">Email Address</Label>
-                                        <Input id="email" className='form-control' type="email" placeholder="you@example.com" />
+                                        <Label htmlFor="domain">Website URL *</Label>
+                                        <Input 
+                                            id="domain" 
+                                            className='form-control' 
+                                            type="url" 
+                                            placeholder="https://example.com" 
+                                            value={data.domain}
+                                            onChange={(e) => {
+                                                const value = e.target.value.trim();
+                                                setData('domain', value);
+                                            }}
+                                            onBlur={(e) => {
+                                                let value = e.target.value.trim();
+                                                // Auto-add https:// if not present and value is not empty
+                                                if (value && !value.startsWith('http://') && !value.startsWith('https://')) {
+                                                    value = 'https://' + value;
+                                                    setData('domain', value);
+                                                }
+                                            }}
+                                            required
+                                        />
+                                        {errors.domain && <p className="text-sm text-red-600">{errors.domain}</p>}
                                     </div>
                                 </form>
                             </div>
                             <DrawerFooter className='flex'>
                                 <DrawerClose asChild>
-                                    <Button variant="outline">Cancel</Button>
+                                    <Button variant="outline" type="button">Cancel</Button>
                                 </DrawerClose>
-                                <Button type='submit'>Add Competitor</Button>
+                                <Button 
+                                    type='button' 
+                                    onClick={handleSubmit}
+                                    disabled={processing || !selectedBrand}
+                                >
+                                    {processing ? 'Adding...' : 'Add Competitor'}
+                                </Button>
                             </DrawerFooter>
                         </div>
                     </DrawerContent>
                 </div>
             </Drawer>
-        </AppLayout>
     );
 }

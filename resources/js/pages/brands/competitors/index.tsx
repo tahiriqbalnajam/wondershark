@@ -112,18 +112,9 @@ const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, tot
                 </div>
 
                 <CompetitorSelector
-                    competitors={competitors}
-                    setCompetitors={setCompetitors}
-                    brandData={{
-                        website: brand.website,
-                        name: brand.name,
-                        description: ''
-                    }}
-                    fetchEndpoint={`/brands/${brand.id}/competitors/fetch-sync`}
-                    title="AI-Suggested Competitors"
-                    description="Review and manage AI-suggested competitors for your brand."
-                    showTitle={false}
-                    persistChanges={true}
+                    selectedBrand={brand}
+                    suggestedCompetitors={suggestedCompetitors}
+                    acceptedCompetitors={acceptedCompetitors}
                 />
             </div>
         </AppLayout>

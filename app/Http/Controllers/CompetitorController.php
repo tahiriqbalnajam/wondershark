@@ -335,16 +335,32 @@ class CompetitorController extends Controller
     public function update(Request $request, Competitor $competitor)
     {
         $request->validate([
-            'status' => 'required|in:accepted,suggested,rejected',
+            'status' => 'required|in:suggested,accepted,rejected,removed'
         ]);
 
-        $competitor->update(['status' => $request->status]);
+        // If status is rejected, delete the competitor permanently
+        if ($request->status === 'rejected') {
+            $competitor->delete();
+            
+            // Handle non-Inertia AJAX requests (like API calls)
+            if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && !request()->header('X-Inertia')) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Competitor rejected and deleted.'
+                ]);
+            }
 
-        // Handle AJAX requests vs form requests
-        if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
+            return back()->with('success', 'Competitor rejected and deleted.');
+        }
+
+        $competitor->update([
+            'status' => $request->status
+        ]);
+
+        // Handle non-Inertia AJAX requests (like API calls)
+        if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && !request()->header('X-Inertia')) {
             return response()->json([
                 'success' => true,
-                'message' => 'Competitor status updated.',
                 'competitor' => $competitor
             ]);
         }
@@ -356,8 +372,8 @@ class CompetitorController extends Controller
     {
         $competitor->delete();
 
-        // Handle AJAX requests vs form requests
-        if (request()->expectsJson() || request()->ajax() || request()->wantsJson()) {
+        // Handle non-Inertia AJAX requests (like API calls)
+        if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && !request()->header('X-Inertia')) {
             return response()->json([
                 'success' => true,
                 'message' => 'Competitor removed.'
