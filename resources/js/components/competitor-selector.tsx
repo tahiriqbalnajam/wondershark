@@ -134,6 +134,7 @@ export default function CompetitorSelector({
                                                     <p className="text-sm text-gray-600">{competitor.mentions || 0} Mentions</p>
                                                     <div className="flex items-center justify-end gap-3">
                                                         <Button 
+                                                        className='df-btn'
                                                             size="sm" 
                                                             variant="default"
                                                             onClick={() => handleCompetitorAction(competitor.id, 'accepted')}
@@ -142,6 +143,7 @@ export default function CompetitorSelector({
                                                             {updating === competitor.id ? 'Accepting...' : 'Accept'}
                                                         </Button>
                                                         <Button 
+                                                        className='cancel-btn'
                                                             size="sm" 
                                                             variant="outline"
                                                             onClick={() => handleCompetitorAction(competitor.id, 'rejected')}
