@@ -572,6 +572,7 @@ textarea.form-control{
 .buttons-wrapp .cancel-btn{
     background:rgba(255,0,63,.10);
     color: #FF003F;
+    border-radius:3px;
 }
 .buttons-wrapp .cancel-btn:hover{
     background:#FF003F;
@@ -583,4 +584,49 @@ textarea.form-control{
 	justify-content: center;
 	flex-direction: column;
 	height: auto;
+}
+.refresh-ai-analysis-btn,
+.add-competitor-btn {
+	background: var(--color-white);
+	color: var(--color-black);
+	padding: 30px 40px;
+	border: none;
+	box-shadow: 0 0 15px 0 rgba(0,0,0,0.15);
+	font-size: 16px;
+}
+.fetch-ai-competitors{
+	padding: 30px 40px;
+}
+.fetch-ai-competitors:hover,
+.refresh-ai-analysis-btn:hover,
+.add-competitor-btn:hover{
+	background: var(--orange-1);
+	color: var(--color-white);
+}
+
+.competitors-popup-btns{
+    display: flex;
+    gap:15px;
+    flex-direction:row;
+}
+.competitors-popup-btns button{
+    padding: 30px 40px;
+    flex:0 0 50%;
+    max-width:50%;
+    width:100%;
+	font-size: 16px;
+    border:none;
+}
+.competitors-popup-btns button.cancel-btn{
+    background:rgba(255,0,63,.10);
+    color: #FF003F;
+}
+
+.competitors-popup-btns button:hover{
+    background: var(--orange-1);
+    color: var(--color-white);
+}
+.competitors-popup-btns button.cancel-btn:hover{
+    background:#FF003F;
+    color: #fff;
 }

@@ -78,7 +78,7 @@ const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, tot
         >
             <Head title={`Competitors for ${brand.name}`} />
 
-            <div className="max-w-7xl mx-auto py-6 space-y-6">
+            <div className="mx-auto py-6 space-y-6">
                 <div className="flex justify-between items-center">
                     <div>
                         <h2 className="text-2xl font-bold">Competitor Analysis</h2>
@@ -91,6 +91,7 @@ const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, tot
                     <div className="flex gap-2">
                         {totalCompetitors > 0 && (
                             <Button 
+                                className='refresh-ai-analysis-btn'
                                 variant="outline" 
                                 onClick={handleRefreshCompetitors} 
                                 disabled={refreshing}

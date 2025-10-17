@@ -113,7 +113,7 @@ export default function CompetitorSelector({
                                 </h2>
                                 
                                 <DrawerTrigger asChild>
-                                    <Button variant="outline">Add Competitor</Button>
+                                    <Button variant="outline" className='add-competitor-btn'>Add Competitor</Button>
                                 </DrawerTrigger>
                             </div>
                         </CardHeader>
@@ -171,6 +171,7 @@ export default function CompetitorSelector({
                                                 href={route('competitors.fetch-sync', selectedBrand.id)}
                                                 method="post"
                                                 as="button"
+                                                className="fetch-ai-competitors"
                                             >
                                                 Fetch AI Competitors
                                             </Link>
@@ -188,7 +189,7 @@ export default function CompetitorSelector({
                                 <h2 className="text-2xl font-bold">
                                     Your Competitors
                                     <span className='text-gray-400 font-normal text-sm'>
-                                        {acceptedCompetitors.length > 0 ? `- ${acceptedCompetitors.length}` : ''}
+                                        {acceptedCompetitors.length > 0 ? `- ${acceptedCompetitors.length}` : ''}+
                                     </span>
                                 </h2>
                             </div>
@@ -210,6 +211,7 @@ export default function CompetitorSelector({
                                                     <p className="text-sm text-gray-600">{competitor.mentions || 0} Mentions</p>
                                                     <div className="flex items-center justify-end gap-3">
                                                         <Button 
+                                                            className="cancel-btn"
                                                             size="sm" 
                                                             variant="destructive"
                                                             onClick={() => handleRemoveCompetitor(competitor.id)}
@@ -279,9 +281,9 @@ export default function CompetitorSelector({
                                     </div>
                                 </form>
                             </div>
-                            <DrawerFooter className='flex'>
+                            <DrawerFooter className='competitors-popup-btns p-0 mt-10'>
                                 <DrawerClose asChild>
-                                    <Button variant="outline" type="button">Cancel</Button>
+                                    <Button variant="outline" type="button" className='cancel-btn'>Cancel</Button>
                                 </DrawerClose>
                                 <Button 
                                     type='button' 
