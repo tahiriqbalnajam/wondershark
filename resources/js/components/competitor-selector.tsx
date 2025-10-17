@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building2 } from 'lucide-react';
+import { Building2, RefreshCw, Loader2 } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 import {
   Drawer,
@@ -11,7 +11,6 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-  DrawerTrigger,
 } from "@/components/ui/drawer";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -33,21 +32,27 @@ interface Competitor {
 }
 
 interface Props {
-    selectedBrand?: Brand;
-    suggestedCompetitors?: Competitor[];
-    acceptedCompetitors?: Competitor[];
+    selectedBrand: Brand;
+    suggestedCompetitors: Competitor[];
+    acceptedCompetitors: Competitor[];
+    onRefreshCompetitors?: () => void;
+    refreshing?: boolean;
+    totalCompetitors?: number;
 }
 
 export default function CompetitorSelector({ 
     selectedBrand,
     suggestedCompetitors = [],
-    acceptedCompetitors = []
+    acceptedCompetitors = [],
+    onRefreshCompetitors,
+    refreshing = false,
+    totalCompetitors = 0
 }: Props) {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    const [updating, setUpdating] = useState<number | null>(null);
+    const [updating, setUpdating] = useState<{id: number, action: string} | null>(null);
 
     const handleCompetitorAction = (competitorId: number, action: 'accepted' | 'rejected') => {
-        setUpdating(competitorId);
+        setUpdating({id: competitorId, action});
         
         router.put(route('competitors.update', competitorId), 
             { status: action },
@@ -64,7 +69,7 @@ export default function CompetitorSelector({
     };
 
     const handleRemoveCompetitor = (competitorId: number) => {
-        setUpdating(competitorId);
+        setUpdating({id: competitorId, action: 'remove'});
         
         router.put(route('competitors.update', competitorId), 
             { status: 'suggested' },
@@ -112,9 +117,26 @@ export default function CompetitorSelector({
                                     </span>
                                 </h2>
                                 
-                                <DrawerTrigger asChild>
-                                    <Button variant="outline" className='add-competitor-btn'>Add Competitor</Button>
-                                </DrawerTrigger>
+                                {totalCompetitors > 0 && onRefreshCompetitors && (
+                                    <Button 
+                                        className='refresh-ai-analysis-btn'
+                                        variant="outline" 
+                                        onClick={onRefreshCompetitors} 
+                                        disabled={refreshing}
+                                    >
+                                        {refreshing ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Refreshing...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <RefreshCw className="mr-2 h-4 w-4" />
+                                                Refresh AI Analysis
+                                            </>
+                                        )}
+                                    </Button>
+                                )}
                             </div>
                         </CardHeader>
                         <CardContent>
@@ -138,18 +160,18 @@ export default function CompetitorSelector({
                                                             size="sm" 
                                                             variant="default"
                                                             onClick={() => handleCompetitorAction(competitor.id, 'accepted')}
-                                                            disabled={updating === competitor.id}
+                                                            disabled={updating?.id === competitor.id && updating?.action === 'accepted'}
                                                         >
-                                                            {updating === competitor.id ? 'Accepting...' : 'Accept'}
+                                                            {updating?.id === competitor.id && updating?.action === 'accepted' ? 'Accepting...' : 'Accept'}
                                                         </Button>
                                                         <Button 
                                                         className='cancel-btn'
                                                             size="sm" 
                                                             variant="outline"
                                                             onClick={() => handleCompetitorAction(competitor.id, 'rejected')}
-                                                            disabled={updating === competitor.id}
+                                                            disabled={updating?.id === competitor.id && updating?.action === 'rejected'}
                                                         >
-                                                            {updating === competitor.id ? 'Rejecting...' : 'Reject'}
+                                                            {updating?.id === competitor.id && updating?.action === 'rejected' ? 'Rejecting...' : 'Reject'}
                                                         </Button>
                                                     </div>
                                                 </div>
@@ -217,9 +239,9 @@ export default function CompetitorSelector({
                                                             size="sm" 
                                                             variant="destructive"
                                                             onClick={() => handleRemoveCompetitor(competitor.id)}
-                                                            disabled={updating === competitor.id}
+                                                            disabled={updating?.id === competitor.id && updating?.action === 'remove'}
                                                         >
-                                                            {updating === competitor.id ? 'Removing...' : 'Remove'}
+                                                            {updating?.id === competitor.id && updating?.action === 'remove' ? 'Removing...' : 'Remove'}
                                                         </Button>
                                                     </div>
                                                 </div>

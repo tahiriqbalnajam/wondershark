@@ -20,7 +20,20 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
             <SidebarGroupLabel>General</SidebarGroupLabel>
             <SidebarMenu>
                 {items.map((item) => {
-                    const isActive = page.url.startsWith(item.href);
+                    // More precise active state detection
+                    const currentUrl = page.url;
+                    const itemHref = item.href;
+                    
+                    // For exact matches (like dashboard brand pages)
+                    const isExactMatch = currentUrl === itemHref;
+                    
+                    // For brand-specific dashboard routes (e.g., /brands/5 should not match /brands/5/posts)
+                    const isBrandDashboard = !!itemHref.match(/^\/brands\/\d+$/) && !!currentUrl.match(/^\/brands\/\d+$/);
+                    
+                    // For other routes, use startsWith but ensure it's not a brand dashboard conflict
+                    const isStartsWithMatch = currentUrl.startsWith(itemHref) && !itemHref.match(/^\/brands\/\d+$/);
+                    
+                    const isActive = isExactMatch || isBrandDashboard || isStartsWithMatch;
                     
                     if (item.items && item.items.length > 0) {
                         return (
@@ -35,16 +48,24 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                                     </CollapsibleTrigger>
                                     <CollapsibleContent>
                                         <SidebarMenuSub>
-                                            {item.items.map((subItem) => (
-                                                <SidebarMenuSubItem key={subItem.title}>
-                                                    <SidebarMenuSubButton asChild isActive={page.url.startsWith(subItem.href)}>
-                                                        <Link href={subItem.href} prefetch className='menu-link'>
-                                                            <span className='menu-icon'>{subItem.icon && <subItem.icon />}</span>
-                                                            <span>{subItem.title}</span>
-                                                        </Link>
-                                                    </SidebarMenuSubButton>
-                                                </SidebarMenuSubItem>
-                                            ))}
+                                            {item.items.map((subItem) => {
+                                                const subCurrentUrl = page.url;
+                                                const subItemHref = subItem.href;
+                                                const subIsExactMatch = subCurrentUrl === subItemHref;
+                                                const subIsStartsWithMatch = subCurrentUrl.startsWith(subItemHref);
+                                                const subIsActive = subIsExactMatch || subIsStartsWithMatch;
+                                                
+                                                return (
+                                                    <SidebarMenuSubItem key={subItem.title}>
+                                                        <SidebarMenuSubButton asChild isActive={subIsActive}>
+                                                            <Link href={subItem.href} prefetch className='menu-link'>
+                                                                <span className='menu-icon'>{subItem.icon && <subItem.icon />}</span>
+                                                                <span>{subItem.title}</span>
+                                                            </Link>
+                                                        </SidebarMenuSubButton>
+                                                    </SidebarMenuSubItem>
+                                                );
+                                            })}
                                         </SidebarMenuSub>
                                     </CollapsibleContent>
                                 </SidebarMenuItem>

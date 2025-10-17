@@ -3,8 +3,20 @@ import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import CompetitorSelector from '@/components/competitor-selector';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { useForm } from '@inertiajs/react';
+import { route } from 'ziggy-js';
 
 interface Competitor {
     id: number;
@@ -35,6 +47,23 @@ const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, tot
         ...acceptedCompetitors
     ]);
     const [refreshing, setRefreshing] = useState(false);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    const { data, setData, post, processing, errors, reset } = useForm({
+        name: '',
+        domain: '',
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        post(route('competitors.store', brand.id), {
+            onSuccess: () => {
+                reset();
+                setIsDrawerOpen(false);
+            },
+        });
+    };
 
     // Update competitors when props change
     useEffect(() => {
@@ -89,26 +118,72 @@ const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, tot
                         )}
                     </div>
                     <div className="flex gap-2">
-                        {totalCompetitors > 0 && (
-                            <Button 
-                                className='refresh-ai-analysis-btn'
-                                variant="outline" 
-                                onClick={handleRefreshCompetitors} 
-                                disabled={refreshing}
-                            >
-                                {refreshing ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Refreshing...
-                                    </>
-                                ) : (
-                                    <>
-                                        <RefreshCw className="mr-2 h-4 w-4" />
-                                        Refresh AI Analysis
-                                    </>
-                                )}
-                            </Button>
-                        )}
+                        <Drawer direction="right" open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+                            <DrawerTrigger asChild>
+                                <Button variant="outline" className='add-competitor-btn'>Add Competitor</Button>
+                            </DrawerTrigger>
+                            <DrawerContent className="w-[25%] right-0 left-auto top-0 bottom-0 m-0 rounded-bl-md items-center Create-Competitor">
+                                <div className="mx-auto w-full max-w-sm">
+                                    <DrawerHeader className='p-0 mb-5'>
+                                        <DrawerTitle className="text-xl font-semibold mb-6 mt-10">Add New Competitor</DrawerTitle>
+                                    </DrawerHeader>
+                                    <div className="flex items-center w-full">
+                                        <form onSubmit={handleSubmit} className="w-full space-y-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="name">Competitor Name *</Label>
+                                                <Input 
+                                                    id="name" 
+                                                    className='form-control' 
+                                                    type="text" 
+                                                    placeholder="e.g., Example Company" 
+                                                    value={data.name}
+                                                    onChange={(e) => setData('name', e.target.value)}
+                                                    required
+                                                />
+                                                {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
+                                            </div>
+                                            
+                                            <div className="space-y-2">
+                                                <Label htmlFor="domain">Website URL *</Label>
+                                                <Input 
+                                                    id="domain" 
+                                                    className='form-control' 
+                                                    type="url" 
+                                                    placeholder="https://example.com" 
+                                                    value={data.domain}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value.trim();
+                                                        setData('domain', value);
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        let value = e.target.value.trim();
+                                                        // Auto-add https:// if not present and value is not empty
+                                                        if (value && !value.startsWith('http://') && !value.startsWith('https://')) {
+                                                            value = 'https://' + value;
+                                                            setData('domain', value);
+                                                        }
+                                                    }}
+                                                    required
+                                                />
+                                                {errors.domain && <p className="text-sm text-red-600">{errors.domain}</p>}
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <DrawerFooter className='flex'>
+                                        <DrawerClose asChild>
+                                            <Button variant="outline" type="button">Cancel</Button>
+                                        </DrawerClose>
+                                        <Button 
+                                            type='button' 
+                                            onClick={handleSubmit}
+                                            disabled={processing}
+                                        >
+                                            {processing ? 'Adding...' : 'Add Competitor'}
+                                        </Button>
+                                    </DrawerFooter>
+                                </div>
+                            </DrawerContent>
+                        </Drawer>
                     </div>
                 </div>
 
@@ -116,6 +191,9 @@ const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, tot
                     selectedBrand={brand}
                     suggestedCompetitors={suggestedCompetitors}
                     acceptedCompetitors={acceptedCompetitors}
+                    onRefreshCompetitors={handleRefreshCompetitors}
+                    refreshing={refreshing}
+                    totalCompetitors={totalCompetitors}
                 />
             </div>
         </AppLayout>

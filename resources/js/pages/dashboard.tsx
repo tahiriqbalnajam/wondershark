@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage, router } from '@inertiajs/react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { PermissionWrapper } from '@/components/permission-wrapper';
 import { 
@@ -38,7 +38,7 @@ import {
     TrendingUp,
     Award
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
     LineChart, 
     Line, 
@@ -97,6 +97,18 @@ const brands = [
 
 export default function Dashboard() {
     const { roles } = usePermissions();
+    const { props } = usePage<{brands?: Array<{id: number, name: string}>}>();
+    
+    const userBrands = useMemo(() => props.brands || [], [props.brands]);
+    
+    // Redirect to first brand if user has brands
+    useEffect(() => {
+        if (userBrands.length > 0) {
+            const firstBrand = userBrands[0];
+            router.visit(`/brands/${firstBrand.id}`);
+        }
+    }, [userBrands]);
+    
     const [selectedBrand, setSelectedBrand] = useState('all');
     const [selectedAIModel, setSelectedAIModel] = useState('openai');
     const [selectedDateRange, setSelectedDateRange] = useState('30');
