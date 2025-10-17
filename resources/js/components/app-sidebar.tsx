@@ -4,15 +4,17 @@ import { Sidebar, SidebarContent, SidebarHeader } from '@/components/ui/sidebar'
 import { type NavItem } from '@/types';
 import { LayoutGrid, Users, Shield, Settings, FileText, Clock, BarChart3 } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
+import { usePage } from '@inertiajs/react';
+import { type SharedData } from '@/types';
 
-const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavItem[] => {
+const getMainNavItems = (permissions: ReturnType<typeof usePermissions>, selectedBrandId?: number): NavItem[] => {
     const items: NavItem[] = [];
 
     // Dashboard - available to all authenticated users
     if (permissions.can('viewDashboard')) {
         items.push({
             title: 'Dashboard',
-            href: '/dashboard',
+            href: selectedBrandId ? `/brands/${selectedBrandId}` : '/dashboard',
             icon: LayoutGrid,
             permission: 'view-dashboard',
         });
@@ -22,13 +24,13 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
     if (permissions.hasRole('agency')) {
         items.push({
             title: 'Posts',
-            href: '/posts',
+            href: selectedBrandId ? `/brands/${selectedBrandId}/posts` : '/posts',
             icon: FileText,
         });
 
         items.push({
             title: 'Competitors',
-            href: '/competitors',
+            href: selectedBrandId ? `/brands/${selectedBrandId}/competitors` : '/competitors',
             icon: Shield,
         });
 
@@ -110,7 +112,17 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>): NavIte
 
 export function AppSidebar() {
     const permissions = usePermissions();
-    const mainNavItems = getMainNavItems(permissions);
+    const page = usePage<SharedData>();
+    
+    // Extract brand ID from current URL path
+    const getCurrentBrandId = (): number | undefined => {
+        const path = page.url;
+        const match = path.match(/\/brands\/(\d+)/);
+        return match ? parseInt(match[1], 10) : undefined;
+    };
+    
+    const currentBrandId = getCurrentBrandId();
+    const mainNavItems = getMainNavItems(permissions, currentBrandId);
 
     return (
         <Sidebar collapsible="icon" variant="inset" className='left-side-wrapp p-0 rounded-xl'>

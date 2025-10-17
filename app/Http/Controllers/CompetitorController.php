@@ -25,6 +25,9 @@ class CompetitorController extends Controller
 
     public function index(Brand $brand)
     {
+        // Store selected brand in session
+        session(['selected_brand_id' => $brand->id]);
+        
         // Get existing competitors
         $suggestedCompetitors = $brand->competitors()->where('status', 'suggested')->get();
         $acceptedCompetitors = $brand->competitors()->where('status', 'accepted')->get();

@@ -72,6 +72,20 @@ class HandleInertiaRequests extends Middleware
             $brands = $query->select('id', 'name', 'website')->get();
         }
 
+        // Get selected brand from session
+        $selectedBrandId = session('selected_brand_id');
+        $selectedBrand = null;
+        
+        if ($selectedBrandId && $user) {
+            $selectedBrand = \App\Models\Brand::where('id', $selectedBrandId)
+                ->where(function($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                      ->orWhere('agency_id', $user->id);
+                })
+                ->select('id', 'name', 'website')
+                ->first();
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -94,6 +108,7 @@ class HandleInertiaRequests extends Middleware
                 ] : [],
             ],
             'brands' => $brands,
+            'selectedBrand' => $selectedBrand,
             'ziggy' => fn (): array => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),

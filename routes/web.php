@@ -10,6 +10,7 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\PostPromptController;
 use App\Http\Controllers\IndustryAnalysisController;
 use App\Http\Controllers\CompetitorController;
+use App\Http\Controllers\DashboardController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -37,9 +38,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('posts.admin-import.template')
         ->middleware('role.permission:view-admin-panel,manage-system');
     
-    Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('dashboard')->middleware('role.permission:view-dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])
+        ->name('dashboard')
+        ->middleware('role.permission:view-dashboard');
+    
+    // Brand-specific dashboard
+    Route::get('brands/{brand}/dashboard', [\App\Http\Controllers\BrandController::class, 'dashboard'])
+        ->name('brands.dashboard')
+        ->middleware('role.permission:view-dashboard');
     
     Route::get('mypage', function () {
         return Inertia::render('mypage');
@@ -191,6 +197,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         
         // Post Management Routes
         Route::resource('posts', PostController::class);
+        
+        // Brand-specific post routes
+        Route::get('brands/{brand}/posts', [PostController::class, 'brandIndex'])->name('brands.posts.index');
+        Route::get('brands/{brand}/posts/create', [PostController::class, 'brandCreate'])->name('brands.posts.create');
+        
         Route::post('posts/{post}/citations', [PostController::class, 'storeCitation'])->name('posts.citations.store');
         Route::get('posts/{post}/prompts', [PostController::class, 'showPrompts'])->name('posts.prompts');
         

@@ -9,7 +9,6 @@ import {
   Drawer,
   DrawerClose,
   DrawerContent,
-  DrawerDescription,
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
@@ -25,10 +24,10 @@ interface Brand {
 }
 
 interface Props {
-    brands: Brand[];
+    brands?: Brand[];
 }
 
-export default function CompetitorsIndex({ brands }: Props) {
+export default function CompetitorsIndex({ brands = [] }: Props) {
     return (
         <AppLayout
             breadcrumbs={[

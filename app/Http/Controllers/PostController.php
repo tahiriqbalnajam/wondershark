@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Models\Brand;
 use App\Models\SystemSetting;
+use App\Models\User;
 use App\Jobs\GeneratePostPrompts;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +19,7 @@ class PostController extends Controller
      */
     public function index(Request $request)
     {
+        /** @var User $user */
         $user = Auth::user();
         
         $posts = Post::with(['brand', 'user', 'citations'])
@@ -54,6 +56,90 @@ class PostController extends Controller
                     'mentioned_in_ai' => $post->citations->where('is_mentioned', true)->count(),
                 ];
             }),
+        ]);
+    }
+
+    /**
+     * Display posts for a specific brand.
+     */
+    public function brandIndex(Request $request, Brand $brand)
+    {
+        /** @var User $user */
+        $user = Auth::user();
+        
+        // Ensure the brand belongs to the authenticated agency
+        if ($brand->agency_id !== $user->id && !$user->hasRole('admin')) {
+            abort(403);
+        }
+
+        // Store selected brand in session
+        session(['selected_brand_id' => $brand->id]);
+
+        $posts = Post::with(['brand', 'user', 'citations'])
+            ->where('brand_id', $brand->id)
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        return Inertia::render('posts/index', [
+            'posts' => $posts->through(function ($post) {
+                return [
+                    'id' => $post->id,
+                    'title' => $post->title,
+                    'url' => $post->url,
+                    'description' => $post->description,
+                    'status' => $post->status,
+                    'posted_at' => $post->posted_at,
+                    'created_at' => $post->created_at,
+                    'brand' => [
+                        'id' => $post->brand->id,
+                        'name' => $post->brand->name,
+                    ],
+                    'user' => [
+                        'id' => $post->user->id,
+                        'name' => $post->user->name,
+                    ],
+                    'citations_count' => $post->citations->count(),
+                    'mentioned_in_ai' => $post->citations->where('is_mentioned', true)->count(),
+                ];
+            }),
+            'brand' => $brand,
+        ]);
+    }
+
+    /**
+     * Show the form for creating a new post for a specific brand.
+     */
+    public function brandCreate(Brand $brand)
+    {
+        /** @var User $user */
+        $user = Auth::user();
+        
+        // Ensure the brand belongs to the authenticated agency
+        if ($brand->agency_id !== $user->id && !$user->hasRole('admin')) {
+            abort(403);
+        }
+
+        // Store selected brand in session
+        session(['selected_brand_id' => $brand->id]);
+
+        // Check if user or brand can create posts
+        $canCreatePosts = $user->can_create_posts && $brand->can_create_posts;
+        $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
+
+        return Inertia::render('posts/create', [
+            'brands' => collect([$brand])->map(fn($b) => [
+                'id' => $b->id,
+                'name' => $b->name,
+                'can_create_posts' => $b->can_create_posts,
+                'post_creation_note' => $b->post_creation_note,
+                'monthly_posts' => $b->monthly_posts,
+            ]),
+            'selectedBrandId' => $brand->id,
+            'canCreatePosts' => $canCreatePosts,
+            'adminEmail' => $adminEmail,
+            'userCanCreatePosts' => $user->can_create_posts,
+            'userPostCreationNote' => $user->post_creation_note,
+            'brand' => $brand,
         ]);
     }
 

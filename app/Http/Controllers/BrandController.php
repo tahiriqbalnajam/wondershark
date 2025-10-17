@@ -191,6 +191,9 @@ class BrandController extends Controller
             abort(403);
         }
 
+        // Store selected brand in session
+        session(['selected_brand_id' => $brand->id]);
+
         $brand->load([
             'prompts.promptResources', 
             'subreddits', 
@@ -212,6 +215,29 @@ class BrandController extends Controller
         return Inertia::render('brands/show', [
             'brand' => $brand,
             'competitiveStats' => $competitiveStats,
+        ]);
+    }
+
+    /**
+     * Display the brand-specific dashboard.
+     */
+    public function dashboard(Brand $brand): Response
+    {
+        /** @var User $user */
+        $user = Auth::user();
+        
+        // Ensure the brand belongs to the authenticated agency
+        if ($brand->agency_id !== $user->id) {
+            abort(403);
+        }
+
+        // Store selected brand in session
+        session(['selected_brand_id' => $brand->id]);
+
+        // You can add brand-specific dashboard data here
+        // For now, just render the dashboard with brand context
+        return Inertia::render('dashboard', [
+            'brand' => $brand,
         ]);
     }
 

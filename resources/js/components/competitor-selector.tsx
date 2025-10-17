@@ -1,445 +1,181 @@
-import React, { useState, FormEvent, useCallback } from 'react';
+import React from 'react';
+import { Head } from '@inertiajs/react';
+import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Check, X, Plus, Loader2, Zap, Shield } from 'lucide-react';
-import { toast } from 'sonner';
-import { useForm } from '@inertiajs/react';
+import { Building2 } from 'lucide-react';
+import { Link } from '@inertiajs/react';
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
-interface Competitor {
+interface Brand {
     id: number;
     name: string;
-    domain: string;
-    mentions: number;
-    status: 'suggested' | 'accepted' | 'rejected';
-    source: 'ai' | 'manual';
+    website: string;
 }
 
-interface CompetitorSelectorProps {
-    competitors: Competitor[];
-    setCompetitors: (competitors: Competitor[]) => void;
-    brandData?: {
-        website?: string;
-        name?: string;
-        description?: string;
-    };
-    sessionId?: string;
-    fetchEndpoint?: string; // Allow custom endpoint for different contexts
-    title?: string;
-    description?: string;
-    showTitle?: boolean;
-    persistChanges?: boolean; // Whether to persist status changes to database
+interface Props {
+    brands?: Brand[];
 }
 
-export default function CompetitorSelector({
-    competitors,
-    setCompetitors,
-    brandData,
-    sessionId,
-    fetchEndpoint = '/api/competitors/fetch-for-brand-creation',
-    title = "Competitor Analysis",
-    description = "Identify your main competitors to better understand your market position.",
-    showTitle = true,
-    persistChanges = false // Default to false for brand creation
-}: CompetitorSelectorProps) {
-    const [showForm, setShowForm] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [progress, setProgress] = useState(0);
-    const [progressText, setProgressText] = useState('');
-    
-    const { data: formData, setData: setFormData, processing, errors: formErrors, reset } = useForm({
-        name: '',
-        domain: '',
-    });
-
-    const suggestedCompetitors = competitors.filter(c => c.status === 'suggested');
-    const acceptedCompetitors = competitors.filter(c => c.status === 'accepted');
-
-    const handleFetchFromAI = useCallback(async () => {
-        if (!brandData?.website) {
-            toast.error('Please enter a website first');
-            return;
-        }
-
-        setLoading(true);
-        setProgress(10);
-        setProgressText('Connecting to AI service...');
-        
-        try {
-            setProgress(25);
-            setProgressText('Analyzing brand information...');
-            
-            const response = await fetch(fetchEndpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-                body: JSON.stringify({
-                    website: brandData.website,
-                    name: brandData.name,
-                    description: brandData.description,
-                    session_id: sessionId
-                })
-            });
-            
-            setProgress(75);
-            setProgressText('Processing competitor data...');
-            
-            const responseData = await response.json();
-            
-            if (responseData.success && responseData.competitors) {
-                setProgress(100);
-                setProgressText('Competitors loaded successfully!');
-                
-                // Add new competitors to state
-                const newCompetitors = responseData.competitors.map((comp: { name: string; domain: string; mentions?: number }, index: number) => ({
-                    id: Date.now() + index, // Temporary ID for brand creation
-                    name: comp.name,
-                    domain: comp.domain,
-                    mentions: comp.mentions || 0,
-                    status: 'suggested' as const,
-                    source: 'ai' as const
-                }));
-                
-                setCompetitors([...competitors, ...newCompetitors]);
-                toast.success('Competitors fetched successfully!');
-            } else {
-                throw new Error(responseData.error || 'Failed to fetch competitors');
-            }
-        } catch (error) {
-            console.error('Error fetching competitors:', error);
-            toast.error('Failed to fetch competitors. You can add them manually or skip this step.');
-            setProgress(0);
-            setProgressText('');
-        } finally {
-            setTimeout(() => {
-                setLoading(false);
-                setProgress(0);
-                setProgressText('');
-            }, 2000);
-        }
-    }, [brandData?.website, brandData?.name, brandData?.description, sessionId, competitors, setCompetitors, fetchEndpoint]);
-
-    const handleAccept = async (competitorId: number) => {
-        if (persistChanges) {
-            // For existing brand pages - persist to database
-            try {
-                const response = await fetch(`/competitors/${competitorId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    },
-                    body: JSON.stringify({
-                        status: 'accepted'
-                    })
-                });
-
-                if (response.ok) {
-                    // Update local state only after successful API call
-                    // Move competitor from suggested to accepted status
-                    setCompetitors(competitors.map(c => 
-                        c.id === competitorId ? { ...c, status: 'accepted' as const } : c
-                    ));
-                    toast.success('Competitor accepted!');
-                } else {
-                    const errorData = await response.text();
-                    console.error('API Error Response:', response.status, errorData);
-                    throw new Error(`Failed to update competitor status: ${response.status} - ${errorData}`);
-                }
-            } catch (error) {
-                console.error('Error accepting competitor:', error);
-                toast.error('Failed to accept competitor');
-            }
-        } else {
-            // For brand creation - just update local state
-            setCompetitors(competitors.map(c => 
-                c.id === competitorId ? { ...c, status: 'accepted' as const } : c
-            ));
-        }
-    };
-
-    const handleReject = async (competitorId: number) => {
-        if (persistChanges) {
-            // For existing brand pages - update status to rejected (hide from UI)
-            try {
-                const response = await fetch(`/competitors/${competitorId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    },
-                    body: JSON.stringify({
-                        status: 'rejected'
-                    })
-                });
-
-                if (response.ok) {
-                    // Remove from local state (hide rejected competitors)
-                    setCompetitors(competitors.filter(c => c.id !== competitorId));
-                    toast.success('Competitor rejected!');
-                } else {
-                    const errorData = await response.text();
-                    console.error('API Error Response:', response.status, errorData);
-                    throw new Error(`Failed to update competitor status: ${response.status} - ${errorData}`);
-                }
-            } catch (error) {
-                console.error('Error rejecting competitor:', error);
-                toast.error('Failed to reject competitor');
-            }
-        } else {
-            // For brand creation - just update local state
-            setCompetitors(competitors.filter(c => c.id !== competitorId));
-        }
-    };
-
-    const handleMoveToSuggested = async (competitorId: number) => {
-        if (persistChanges) {
-            // For existing brand pages - move from accepted back to suggested
-            try {
-                const response = await fetch(`/competitors/${competitorId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    },
-                    body: JSON.stringify({
-                        status: 'suggested'
-                    })
-                });
-
-                if (response.ok) {
-                    // Update local state - move from accepted back to suggested
-                    setCompetitors(competitors.map(c => 
-                        c.id === competitorId ? { ...c, status: 'suggested' as const } : c
-                    ));
-                    toast.success('Competitor moved back to suggestions!');
-                } else {
-                    const errorData = await response.text();
-                    console.error('API Error Response:', response.status, errorData);
-                    throw new Error(`Failed to update competitor status: ${response.status} - ${errorData}`);
-                }
-            } catch (error) {
-                console.error('Error updating competitor:', error);
-                toast.error('Failed to update competitor');
-            }
-        } else {
-            // For brand creation - just update local state
-            setCompetitors(competitors.map(c => 
-                c.id === competitorId ? { ...c, status: 'suggested' as const } : c
-            ));
-        }
-    };
-
-    const handleManualAdd = (e: FormEvent) => {
-        e.preventDefault();
-        
-        if (!formData.name.trim() || !formData.domain.trim()) {
-            toast.error('Please enter both name and domain');
-            return;
-        }
-
-        const newCompetitor: Competitor = {
-            id: Date.now(),
-            name: formData.name.trim(),
-            domain: formData.domain.trim(),
-            mentions: 0,
-            status: 'accepted',
-            source: 'manual'
-        };
-
-        setCompetitors([...competitors, newCompetitor]);
-        setShowForm(false);
-        reset();
-        toast.success('Competitor added successfully');
-    };
-
+export default function CompetitorsIndex({ brands = [] }: Props) {
     return (
-        <div className="space-y-6">
-            {showTitle && (
-                <div>
-                    <h3 className="text-lg font-semibold mb-2">{title}</h3>
-                    <p className="text-muted-foreground">{description}</p>
-                </div>
-            )}
+        <AppLayout
+            breadcrumbs={[
+                { title: 'Competitors', href: '' }
+            ]}
+        >
+            <Head title="Competitor Analysis" />
 
-            <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">
-                    {acceptedCompetitors.length} accepted • {suggestedCompetitors.length} pending review
-                </div>
-                <div className="flex gap-2">
-                    <Button 
-                        variant="outline" 
-                        onClick={handleFetchFromAI} 
-                        disabled={loading || !brandData?.website}
-                    >
-                        {loading ? (
-                            <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Analyzing...
-                            </>
-                        ) : (
-                            <>
-                                <Zap className="mr-2 h-4 w-4" />
-                                {suggestedCompetitors.length > 0 ? 'Find More' : 'Fetch with AI'}
-                            </>
-                        )}
-                    </Button>
-                </div>
-            </div>
-
-            {/* Progress indicator */}
-            {loading && (
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="space-y-3">
-                            <div className="flex items-center space-x-2">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                <span className="text-sm font-medium">{progressText}</span>
+                
+            <Drawer direction="right">
+                <div className="mx-auto py-6 space-y-6">
+                    <Card>
+                        <CardHeader>
+                            {/* <CardTitle className="flex items-center gap-2">
+                                <Shield className="h-5 w-5" />
+                                Select a Brand to Analyze Competitors
+                            </CardTitle> */}
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-2xl font-bold">Suggested Competitors <span className='text-gray-400 font-normal text-sm'>- 10+</span></h2>
+                                
+                                <DrawerTrigger asChild>
+                                    <Button variant="outline">Open Drawer</Button>
+                                </DrawerTrigger>
                             </div>
-                            <Progress value={progress} className="w-full" />
-                            <p className="text-xs text-muted-foreground">
-                                AI is analyzing your brand to find relevant competitors...
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Suggested Competitors */}
-            {suggestedCompetitors.length > 0 && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Shield className="h-5 w-5" />
-                            Suggested Competitors
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {suggestedCompetitors.map((competitor) => (
-                                <Card key={competitor.id}>
-                                    <CardHeader>
-                                        <CardTitle className="text-lg">{competitor.name}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <a href={competitor.domain} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline truncate block">
-                                            {competitor.domain}
-                                        </a>
-                                        <div className="mt-2">
-                                            <Badge variant="secondary">Mentions: {competitor.mentions}</Badge>
-                                        </div>
-                                    </CardContent>
-                                    <div className="flex justify-end p-4 border-t gap-2">
-                                        <Button variant="ghost" size="sm" onClick={() => handleReject(competitor.id)}>
-                                            <X className="h-4 w-4 text-red-500" />
-                                        </Button>
-                                        <Button variant="ghost" size="sm" onClick={() => handleAccept(competitor.id)}>
-                                            <Check className="h-4 w-4 text-green-500" />
-                                        </Button>
-                                    </div>
-                                </Card>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Accepted Competitors */}
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                        <Shield className="h-5 w-5" />
-                        Accepted Competitors
-                    </CardTitle>
-                    <Button size="sm" onClick={() => setShowForm(!showForm)}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Manually
-                    </Button>
-                </CardHeader>
-                <CardContent>
-                    {showForm && (
-                        <form onSubmit={handleManualAdd} className="p-4 border rounded-lg mb-6 bg-muted/20">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <Input
-                                        id="name"
-                                        name="name"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData('name', e.target.value)}
-                                        placeholder="Competitor Name"
-                                        className="w-full"
-                                    />
-                                    {formErrors.name && <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>}
+                        </CardHeader>
+                        <CardContent>
+                            {brands.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {brands.map((brand) => (
+                                        <Card key={brand.id} className="hover:shadow-md transition-shadow pb-0 justify-between">
+                                            <CardHeader>
+                                                <CardTitle className="text-lg flex items-center gap-2 competitor-title">
+                                                    <span><Building2 className="h-4 w-4" /></span>
+                                                    {brand.name}
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent className='p-0'>
+                                                <p className="text-sm text-gray-600 mx-6 my-3">{brand.website}</p>
+                                                <div className="buttons-wrapp flex items-center justify-between">
+                                                    <p className="text-sm text-gray-600">27 Mentions</p>
+                                                    <div className="flex items-center justify-end gap-3">
+                                                        <Button asChild className="">
+                                                            <Link href={route('competitors.index', { brand: brand.id })}>
+                                                                Track
+                                                            </Link>
+                                                        </Button>
+                                                        <Button asChild className="cancel-btn">
+                                                            <Link href='/'>
+                                                                Cancel
+                                                            </Link>
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
                                 </div>
-                                <div>
-                                    <Input
-                                        id="domain"
-                                        name="domain"
-                                        value={formData.domain}
-                                        onChange={(e) => setFormData('domain', e.target.value)}
-                                        placeholder="https://competitor.com"
-                                        className="w-full"
-                                    />
-                                    {formErrors.domain && <p className="text-red-500 text-xs mt-1">{formErrors.domain}</p>}
+                            ) : (
+                                <div className="text-center py-8">
+                                    <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                                    <p className="text-gray-600 mb-4">No brands available for competitor analysis.</p>
+                                    <Button asChild>
+                                        <Link href="/brands/create">
+                                            Create Your First Brand
+                                        </Link>
+                                    </Button>
                                 </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            {/* <CardTitle className="flex items-center gap-2">
+                                <Shield className="h-5 w-5" />
+                                Select a Brand to Analyze Competitors
+                            </CardTitle> */}
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-2xl font-bold">Your Competitors</h2>
                             </div>
-                            <div className="flex justify-end mt-4 gap-2">
-                                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-                                    Cancel
-                                </Button>
-                                <Button type="submit" disabled={processing}>
-                                    Add Competitor
-                                </Button>
-                            </div>
-                        </form>
-                    )}
-
-                    {acceptedCompetitors.length > 0 ? (
-                        <div className="space-y-4">
-                            {acceptedCompetitors.map((competitor) => (
-                                <div key={competitor.id} className="flex items-center justify-between p-4 border rounded-lg">
-                                    <div>
-                                        <p className="font-semibold">{competitor.name}</p>
-                                        <a href={competitor.domain} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">
-                                            {competitor.domain}
-                                        </a>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <Badge variant="outline">Mentions: {competitor.mentions}</Badge>
-                                        <Badge variant={competitor.source === 'ai' ? 'default' : 'secondary'}>
-                                            {competitor.source.toUpperCase()}
-                                        </Badge>
-                                        <Button variant="ghost" size="icon" onClick={() => handleMoveToSuggested(competitor.id)}>
-                                            <X className="h-4 w-4 text-gray-500" />
-                                        </Button>
-                                    </div>
+                        </CardHeader>
+                        <CardContent>
+                            {brands.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {brands.map((brand) => (
+                                        <Card key={brand.id} className="hover:shadow-md transition-shadow pb-0 justify-between">
+                                            <CardHeader>
+                                                <CardTitle className="text-lg flex items-center gap-2 competitor-title">
+                                                    <span><Building2 className="h-4 w-4" /></span>
+                                                    {brand.name}
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent className='p-0'>
+                                                <p className="text-sm text-gray-600 mx-6 my-3">{brand.website}</p>
+                                                <div className="buttons-wrapp flex items-center justify-between">
+                                                    <p className="text-sm text-gray-600">27 Mentions</p>
+                                                    <div className="flex items-center justify-end gap-3">
+                                                        <Button asChild className="cancel-btn">
+                                                            <Link href='/'>
+                                                                Delete
+                                                            </Link>
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
                                 </div>
-                            ))}
+                            ) : (
+                                <div className="text-center py-8">
+                                    <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                                    <p className="text-gray-600 mb-4">No brands available for competitor analysis.</p>
+                                    <Button asChild>
+                                        <Link href="/brands/create">
+                                            Create Your First Brand
+                                        </Link>
+                                    </Button>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                    <DrawerContent className="w-[25%] right-0 left-auto top-0 bottom-0 m-0 rounded-bl-md items-center Create-Competitor">
+                        <div className="mx-auto w-full max-w-sm">
+                            <DrawerHeader className='p-0 mb-5'>
+                                <DrawerTitle className="text-xl font-semibold mb-6 mt-10">Create Competitor</DrawerTitle>
+                            </DrawerHeader>
+                            <div className="flex items-center w-full">
+                                <form className="w-full">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="name">Full Name</Label>
+                                        <Input id="name" className='form-control' type="text" placeholder="Enter your name" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="email">Email Address</Label>
+                                        <Input id="email" className='form-control' type="email" placeholder="you@example.com" />
+                                    </div>
+                                </form>
+                            </div>
+                            <DrawerFooter className='flex'>
+                                <DrawerClose asChild>
+                                    <Button variant="outline">Cancel</Button>
+                                </DrawerClose>
+                                <Button type='submit'>Add Competitor</Button>
+                            </DrawerFooter>
                         </div>
-                    ) : (
-                        <div className="text-center py-8 text-muted-foreground">
-                            <Shield className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                            <p>No competitors added yet.</p>
-                            <p className="text-sm mt-2">
-                                {!brandData?.website 
-                                    ? "Enter your website to use AI detection."
-                                    : "Click 'Fetch with AI' to discover competitors or add them manually."
-                                }
-                            </p>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
+                    </DrawerContent>
+                </div>
+            </Drawer>
+        </AppLayout>
     );
 }
