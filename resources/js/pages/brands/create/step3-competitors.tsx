@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import CompetitorSelector from '@/components/competitor-selector';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -51,14 +51,19 @@ export default function Step3Competitors({
     const [progressText, setProgressText] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState({ name: '', domain: '' });
+    
+    // Track if we've already attempted to fetch automatically
+    const autoFetchAttemptedRef = useRef<string | null>(null);
 
     // Separate competitors by status
     const suggestedCompetitors = competitors.filter(c => c.status === 'suggested');
     const acceptedCompetitors = competitors.filter(c => c.status === 'accepted');
     const rejectedCompetitors = competitors.filter(c => c.status === 'rejected');
 
+
+
     // AI fetch functionality
-    const handleFetchFromAI = async () => {
+    const handleFetchFromAI = useCallback(async () => {
         if (!data.website) {
             toast.error('Please enter your website first to fetch competitors');
             return;
@@ -119,7 +124,23 @@ export default function Step3Competitors({
                 setProgressText('');
             }, 2000);
         }
-    };
+    }, [data.website, data.name, data.description, competitors, sessionId, setCompetitors]);
+
+    // Auto-fetch competitors when component mounts if no competitors exist and we have website data
+    useEffect(() => {
+        const shouldAutoFetch = (
+            data.website && 
+            data.website.trim() !== '' &&
+            !loading && 
+            competitors.length === 0 &&
+            autoFetchAttemptedRef.current !== data.website
+        );
+
+        if (shouldAutoFetch) {
+            autoFetchAttemptedRef.current = data.website;
+            handleFetchFromAI();
+        }
+    }, [data.website, competitors.length, loading, handleFetchFromAI]);
 
     // Handle competitor actions
     const handleAccept = (competitorId: number) => {

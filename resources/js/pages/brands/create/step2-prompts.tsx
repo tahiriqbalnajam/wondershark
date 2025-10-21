@@ -26,10 +26,50 @@ import {
     CircleCheckBig,
     CircleAlert,
     Power,
-    Sparkles
+    Sparkles,
+    Loader2
 } from 'lucide-react';
 import { Step2Props, GeneratedPrompt } from './types';
 import { useState, useEffect, useCallback } from 'react';
+import { countries } from '@/data/countries';
+
+// Helper function to get country info (flag emoji and name) from location or country code
+const getCountryInfo = (location?: string, fallbackCountry?: string) => {
+    // First try to find by location (could be country name or code)
+    if (location) {
+        const countryByName = countries.find(c => 
+            c.name.toLowerCase() === location.toLowerCase() ||
+            c.code.toLowerCase() === location.toLowerCase()
+        );
+        if (countryByName) {
+            return {
+                flag: countryByName.flag,
+                name: countryByName.name,
+                code: countryByName.code
+            };
+        }
+    }
+    
+    // Fallback to brand's selected country
+    if (fallbackCountry) {
+        const countryByCode = countries.find(c => c.code === fallbackCountry);
+        if (countryByCode) {
+            return {
+                flag: countryByCode.flag,
+                name: countryByCode.name,
+                code: countryByCode.code
+            };
+        }
+    }
+    
+    // Final fallback to USA
+    const usaCountry = countries.find(c => c.code === 'US');
+    return {
+        flag: usaCountry?.flag || '🇺🇸',
+        name: usaCountry?.name || 'United States',
+        code: usaCountry?.code || 'US'
+    };
+};
 
 export default function Step2Prompts({ 
     data, 
@@ -478,9 +518,10 @@ export default function Step2Prompts({
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <Avatar className="img-avatar">
-                                                <img src="../images/usa.png" alt="icon" /> {prompt.location || 'USA'}
-                                            </Avatar>
+                                            <div className="flex items-center space-x-2">
+                                                <span className="text-lg">{getCountryInfo(prompt.location, data.country).flag}</span>
+                                                <span className="text-sm">{getCountryInfo(prompt.location, data.country).name}</span>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -499,27 +540,52 @@ export default function Step2Prompts({
                             {isGeneratingPrompts ? 'Generating...' : 'Suggest More'}
                         </button>
                     </div>
-                    {suggestedPrompts.length === 0 ? (
+                    {suggestedPrompts.length === 0 && !isGeneratingPrompts ? (
                         <div className="text-center py-12 border rounded-lg">
                             <Sparkles className="w-12 h-12 mx-auto text-gray-400 mb-4" />
                             <p className="text-gray-500 mb-2">No suggested prompts yet</p>
                             <p className="text-gray-400 text-sm">Click "Suggest More" to generate AI-powered prompts</p>
                         </div>
                     ) : (
-                        <Table className="default-table">
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Suggested Prompt</TableHead>
-                                    <TableHead><div className="flex items-center"><Eye className="w-4 mr-2"/> Visibility</div></TableHead>
-                                    <TableHead><div className="flex items-center"><Smile className="w-4 mr-2"/> Sentiment</div></TableHead>
-                                    <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2"/> Position</div></TableHead>
-                                    <TableHead><div className="flex items-center"><Trophy className="w-4 mr-2"/> Mentions</div></TableHead>
-                                    <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2"/> Suggested At</div></TableHead>
-                                    <TableHead></TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {suggestedPrompts.map((prompt) => (
+                        <div className="relative">
+                            <Table className="default-table">
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Suggested Prompt</TableHead>
+                                        <TableHead><div className="flex items-center"><Eye className="w-4 mr-2"/> Visibility</div></TableHead>
+                                        <TableHead><div className="flex items-center"><Smile className="w-4 mr-2"/> Sentiment</div></TableHead>
+                                        <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2"/> Position</div></TableHead>
+                                        <TableHead><div className="flex items-center"><Trophy className="w-4 mr-2"/> Mentions</div></TableHead>
+                                        <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2"/> Suggested At</div></TableHead>
+                                        <TableHead></TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {isGeneratingPrompts ? (
+                                        // Show loading rows when generating
+                                        Array.from({ length: 5 }).map((_, index) => (
+                                            <TableRow key={`loading-${index}`}>
+                                                <TableCell>
+                                                    <div className="flex items-center space-x-2">
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                        <span className="text-gray-500">Generating prompt...</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell><div className="w-16 h-4 bg-gray-200 animate-pulse rounded"></div></TableCell>
+                                                <TableCell><div className="w-20 h-4 bg-gray-200 animate-pulse rounded"></div></TableCell>
+                                                <TableCell><div className="w-12 h-4 bg-gray-200 animate-pulse rounded"></div></TableCell>
+                                                <TableCell><div className="w-16 h-4 bg-gray-200 animate-pulse rounded"></div></TableCell>
+                                                <TableCell><div className="w-24 h-4 bg-gray-200 animate-pulse rounded"></div></TableCell>
+                                                <TableCell>
+                                                    <div className="flex gap-3 justify-center">
+                                                        <div className="w-16 h-8 bg-gray-200 animate-pulse rounded"></div>
+                                                        <div className="w-16 h-8 bg-gray-200 animate-pulse rounded"></div>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        suggestedPrompts.map((prompt) => (
                                     <TableRow key={prompt.id}>
                                         <TableCell>{prompt.prompt}</TableCell>
                                         <TableCell>{prompt.visibility || 'N/A'}</TableCell>
@@ -556,9 +622,11 @@ export default function Step2Prompts({
                                             </div>
                                         </TableCell>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
                     )}
                 </TabsContent>
                 <TabsContent value="inactive" className="active-table-prompt">
