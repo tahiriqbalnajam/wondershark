@@ -12,6 +12,30 @@ button{
     cursor: pointer;
     transition: ease all 0.5s;
 }
+.primary-btn {
+	background: var(--orange-1);
+	color: var(--color-white);
+	padding: 15px;
+	font-size: 14px;
+	line-height: 24px;
+	border-radius: 5px;
+	min-height: 50px;
+	min-width: 180px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+    transition: ease all 0.5s;
+}
+.primary-btn:hover{
+    background:var(--color-black);
+    color:var(--color-white);
+}
+.primary-btn.btn-sm {
+	min-height: 40px;
+	min-width: 140px;
+	padding: 10px;
+	border-radius: 30px;
+}
 .pageheading{
     font-size:20px;
     font-weight:600;
@@ -632,4 +656,57 @@ textarea.form-control{
 .competitors-popup-btns button.cancel-btn:hover{
     background:#FF003F;
     color: #fff;
+}
+
+
+/** Dashboard **/
+:root {
+  --color-chrome: #FF5B49;   /* Blue - Chrome */
+  --color-safari: #10A0CF;   /* Light Blue - Safari */
+  --color-firefox: #FE9901;  /* Orange - Firefox */
+  --color-edge: #3D57FF;     /* Blue - Edge */
+  --color-other: #7F00FF;    /* Gray - Other */
+}
+.default-card{
+    border:none;
+    box-shadow:0 4px 15px 0 var(--ligt-shadow-color);
+    border-radius:0.75rem;
+}
+.common-fields {
+	background: #E5E5E5;
+	padding: 0 15px;
+	align-items: center;
+	border-radius: 3px;
+    min-width: 160px;
+}
+.common-fields svg{
+    width:24px;
+    height: 24px;
+}
+.common-fields button{
+    padding:0;
+    border: none;
+    font-size:14px;
+    font-weight:500;
+    box-shadow: none;
+}
+.sentiment-tag{
+    width:50px;
+    height:20px;
+    background: rgba(0,220,75,0.15);
+    font-size:12px;
+    color: var(--color-black);
+    border-radius:10px;
+    justify-content: space-between;
+    align-items: center;
+    display: flex;
+    padding:0 5px;
+}
+.sentiment-tag::before{
+    content:"";
+    height:10px;
+    width:10px;
+    background:#00DC4B;
+    flex:0 0 10px;
+    border-radius:50%;
 }
