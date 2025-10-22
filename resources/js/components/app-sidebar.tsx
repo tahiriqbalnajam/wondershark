@@ -2,7 +2,7 @@ import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarHeader } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
-import { LayoutGrid, Users, Shield, Settings, FileText, Clock, BarChart3 } from 'lucide-react';
+import { LayoutGrid, Users, Shield, Settings, FileText, Clock, BarChart3, MessageSquare } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { usePage } from '@inertiajs/react';
 import { type SharedData } from '@/types';
@@ -27,6 +27,15 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>, selecte
             href: selectedBrandId ? `/brands/${selectedBrandId}/posts` : '/posts',
             icon: FileText,
         });
+
+        // Only show Prompts menu when a specific brand is selected
+        if (selectedBrandId) {
+            items.push({
+                title: 'Prompts',
+                href: `/brands/${selectedBrandId}/prompts`,
+                icon: MessageSquare,
+            });
+        }
 
         items.push({
             title: 'Competitors',
