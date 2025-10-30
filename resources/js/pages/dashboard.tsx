@@ -1,51 +1,81 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Head, Link, usePage, router } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
-import { usePermissions } from '@/hooks/use-permissions';
-import { PermissionWrapper } from '@/components/permission-wrapper';
+import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChartPieData } from '@/components/chart/sources-type';
-import { BrandVisibilityIndex } from '@/components/dashboard-table/brand-visibility';
-import { VisibilityChart } from '@/components/chart/visibility';
-import { SourceUsageTable } from "@/components/dashboard-table/all-sources";
-import { AiCitations } from "@/components/chat/ai-citations";
-import { DayPicker } from 'react-day-picker';
-import { format } from 'date-fns';
-
-import {
+import { Badge } from '@/components/ui/badge';
+import { 
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
-
+import { Separator } from '@/components/ui/separator';
 import {
-    MessagesSquare,
-    ChartNoAxesCombined,
-    FileChartLine,
-    Users,
-    Shield,
-    Settings,
-    UsersRound,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import AppLayout from '@/layouts/app-layout';
+import { type BreadcrumbItem } from '@/types';
+import { Head, Link, usePage, router } from '@inertiajs/react';
+import { usePermissions } from '@/hooks/use-permissions';
+import { PermissionWrapper } from '@/components/permission-wrapper';
+import { 
+    Users, 
+    Shield, 
+    Settings, 
+    BarChart3, 
     Calendar,
-    CalendarRange,
-    Sparkles,
-    FolderTree,
-    DatabaseZap,
-    Globe
+    Filter,
+    TrendingUp,
+    Award
 } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { 
+    LineChart, 
+    Line, 
+    XAxis, 
+    YAxis, 
+    CartesianGrid, 
+    Tooltip, 
+    Legend, 
+    ResponsiveContainer 
+} from 'recharts';
+import { DayPicker } from 'react-day-picker';
+import { format, addDays, subDays } from 'date-fns';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: '/dashboard' },
+    {
+        title: 'Dashboard',
+        href: '/dashboard',
+    },
+];
+
+// Dummy data for the line chart
+const visibilityData = [
+    { date: 'Jan', fiverr: 45, upwork: 38, influencity: 25, famebit: 15, amazon: 30 },
+    { date: 'Feb', fiverr: 52, upwork: 42, influencity: 28, famebit: 18, amazon: 35 },
+    { date: 'Mar', fiverr: 48, upwork: 45, influencity: 32, famebit: 22, amazon: 38 },
+    { date: 'Apr', fiverr: 55, upwork: 40, influencity: 35, famebit: 25, amazon: 42 },
+    { date: 'May', fiverr: 58, upwork: 47, influencity: 38, famebit: 28, amazon: 45 },
+    { date: 'Jun', fiverr: 62, upwork: 50, influencity: 42, famebit: 30, amazon: 48 },
+];
+
+// Dummy data for industry ranking
+const industryRanking = [
+    { brand: 'Fiverr', position: 1, sentiment: 'positive', visibility: 'high' },
+    { brand: 'Upwork', position: 2, sentiment: 'positive', visibility: 'high' },
+    { brand: 'Influencity', position: 3, sentiment: 'neutral', visibility: 'medium' },
+    { brand: 'Amazon Creator Connections', position: 4, sentiment: 'positive', visibility: 'medium' },
+    { brand: 'FameBit', position: 5, sentiment: 'neutral', visibility: 'low' },
 ];
 
 const aiModels = [
@@ -67,125 +97,154 @@ const brands = [
 
 export default function Dashboard() {
     const { roles } = usePermissions();
-    const { props } = usePage<{ brands?: Array<{ id: number; name: string }> }>();
+    const { props } = usePage<{brands?: Array<{id: number, name: string}>}>();
+    
     const userBrands = useMemo(() => props.brands || [], [props.brands]);
-
+    
+    // Redirect to first brand if user has brands
     useEffect(() => {
         if (userBrands.length > 0) {
             const firstBrand = userBrands[0];
             router.visit(`/brands/${firstBrand.id}`);
         }
     }, [userBrands]);
-
+    
     const [selectedBrand, setSelectedBrand] = useState('all');
     const [selectedAIModel, setSelectedAIModel] = useState('openai');
     const [selectedDateRange, setSelectedDateRange] = useState('30');
     const [calendarOpen, setCalendarOpen] = useState(false);
     const [customDateRange, setCustomDateRange] = useState<{ from?: Date; to?: Date }>({});
 
+    const getSentimentColor = (sentiment: string) => {
+        switch (sentiment) {
+            case 'positive':
+                return 'bg-green-100 text-green-800';
+            case 'neutral':
+                return 'bg-yellow-100 text-yellow-800';
+            case 'negative':
+                return 'bg-red-100 text-red-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    const getVisibilityColor = (visibility: string) => {
+        switch (visibility) {
+            case 'high':
+                return 'bg-blue-100 text-blue-800';
+            case 'medium':
+                return 'bg-orange-100 text-orange-800';
+            case 'low':
+                return 'bg-red-100 text-red-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
+        }
+    };
+
     const handleDateRangeSelect = (days: string) => {
         setSelectedDateRange(days);
-        if (days !== 'custom') setCustomDateRange({});
+        if (days !== 'custom') {
+            setCustomDateRange({});
+        }
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
-            <div className="flex flex-col gap-6 rounded-xl p-4 overflow-x-auto">
+            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4 overflow-x-auto">
+                {/* Welcome section */}
+
                 {/* Filters Section */}
-                <div className="flex flex-wrap gap-4 items-end">
-                    {/* Date Range Filter */}
-                    <div className="flex gap-2 common-fields">
-                        <CalendarRange />
-                        <Select value={selectedDateRange} onValueChange={handleDateRangeSelect}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select range" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="7">Last 7 days</SelectItem>
-                                <SelectItem value="14">Last 14 days</SelectItem>
-                                <SelectItem value="30">Last 30 days</SelectItem>
-                                <SelectItem value="custom">Custom</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        {selectedDateRange === 'custom' && (
-                            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" className="w-fit">
-                                        <Calendar className="h-4 w-4 mr-2" />
-                                        {customDateRange.from ? (
-                                            customDateRange.to ? (
-                                                `${format(customDateRange.from, 'MMM dd')} - ${format(
-                                                    customDateRange.to,
-                                                    'MMM dd'
-                                                )}`
-                                            ) : (
-                                                format(customDateRange.from, 'MMM dd, yyyy')
-                                            )
-                                        ) : (
-                                            'Pick a date'
-                                        )}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <DayPicker
-                                        mode="range"
-                                        selected={{
-                                            from: customDateRange.from,
-                                            to: customDateRange.to,
-                                        }}
-                                        onSelect={(range) => setCustomDateRange(range || {})}
-                                        numberOfMonths={2}
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                        )}
-                    </div>
+                        <div className="flex flex-wrap gap-4 items-end">
+                            {/* Date Range Filter */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Date Range</label>
+                                <div className="flex gap-2">
+                                    <Select value={selectedDateRange} onValueChange={handleDateRangeSelect}>
+                                        <SelectTrigger className="w-32">
+                                            <SelectValue placeholder="Select range" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="7">7 days</SelectItem>
+                                            <SelectItem value="14">14 days</SelectItem>
+                                            <SelectItem value="30">30 days</SelectItem>
+                                            <SelectItem value="custom">Custom</SelectItem>
+                                        </SelectContent>
+                                    </Select>
 
-                    {/* Brand Filter */}
-                    <div className="flex gap-2 common-fields">
-                        <UsersRound />
-                        <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select brand" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {brands.map((brand) => (
-                                    <SelectItem key={brand.value} value={brand.value}>
-                                        {brand.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                                    {selectedDateRange === 'custom' && (
+                                        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="outline" className="w-fit">
+                                                    <Calendar className="h-4 w-4 mr-2" />
+                                                    {customDateRange.from ? (
+                                                        customDateRange.to ? (
+                                                            `${format(customDateRange.from, 'MMM dd')} - ${format(customDateRange.to, 'MMM dd')}`
+                                                        ) : (
+                                                            format(customDateRange.from, 'MMM dd, yyyy')
+                                                        )
+                                                    ) : (
+                                                        'Pick a date'
+                                                    )}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <DayPicker
+                                                    mode="range"
+                                                    selected={{ from: customDateRange.from, to: customDateRange.to }}
+                                                    onSelect={(range) => setCustomDateRange(range || {})}
+                                                    numberOfMonths={2}
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    )}
+                                </div>
+                            </div>
 
-                    {/* AI Model Filter */}
-                    <div className="flex gap-2 common-fields">
-                        <Sparkles />
-                        <Select value={selectedAIModel} onValueChange={setSelectedAIModel}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select AI model" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {aiModels.map((model) => (
-                                    <SelectItem key={model.value} value={model.value}>
-                                        {model.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
+                            {/* Brand Filter */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Brand</label>
+                                <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                                    <SelectTrigger className="w-48">
+                                        <SelectValue placeholder="Select brand" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {brands.map((brand) => (
+                                            <SelectItem key={brand.value} value={brand.value}>
+                                                {brand.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* AI Model Filter */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">AI Model</label>
+                                <Select value={selectedAIModel} onValueChange={setSelectedAIModel}>
+                                    <SelectTrigger className="w-48">
+                                        <SelectValue placeholder="Select AI model" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {aiModels.map((model) => (
+                                            <SelectItem key={model.value} value={model.value}>
+                                                {model.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                <Separator />
 
                 {/* Analytics Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Visibility Chart */}
-                    <Card className="default-card">
+                    <Card className="col-span-1">
                         <CardHeader>
                             <div className="flex items-center gap-2">
-                                <div className="bg-gray-200 w-10 h-10 rounded flex items-center justify-center">
-                                    <ChartNoAxesCombined className="h-5 w-5" />
-                                </div>
+                                <TrendingUp className="h-5 w-5" />
                                 <div>
                                     <CardTitle>Visibility</CardTitle>
                                     <p className="text-sm text-muted-foreground">
@@ -194,95 +253,107 @@ export default function Dashboard() {
                                 </div>
                             </div>
                         </CardHeader>
-                        <VisibilityChart/>
+                        <CardContent>
+                            <div className="h-80">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={visibilityData}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="date" />
+                                        <YAxis />
+                                        <Tooltip />
+                                        <Legend />
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="fiverr" 
+                                            stroke="#00c851" 
+                                            strokeWidth={2}
+                                            name="Fiverr"
+                                        />
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="upwork" 
+                                            stroke="#0099cc" 
+                                            strokeWidth={2}
+                                            name="Upwork"
+                                        />
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="influencity" 
+                                            stroke="#ff6900" 
+                                            strokeWidth={2}
+                                            name="Influencity"
+                                        />
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="famebit" 
+                                            stroke="#ff4444" 
+                                            strokeWidth={2}
+                                            name="FameBit"
+                                        />
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="amazon" 
+                                            stroke="#ffbb33" 
+                                            strokeWidth={2}
+                                            name="Amazon Creator Connections"
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </CardContent>
                     </Card>
 
-                    <Card className="default-card">
+                    {/* Industry Ranking Table */}
+                    <Card className="col-span-1">
                         <CardHeader>
                             <div className="flex items-center gap-2">
-                                <div className="bg-gray-200 w-10 h-10 rounded flex items-center justify-center">
-                                    <FileChartLine className="h-5 w-5" />
-                                </div>
+                                <Award className="h-5 w-5" />
                                 <div>
-                                    <CardTitle>Brand Visibility Index</CardTitle>
+                                    <CardTitle>Industry Ranking</CardTitle>
+                                    <p className="text-sm text-muted-foreground">
+                                        Brands with highest visibility
+                                    </p>
                                 </div>
                             </div>
                         </CardHeader>
-                        {/* Industry Ranking */}
-                        <BrandVisibilityIndex />
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-12">#</TableHead>
+                                        <TableHead>Brand</TableHead>
+                                        <TableHead>Position</TableHead>
+                                        <TableHead>Sentiment</TableHead>
+                                        <TableHead>Visibility</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {industryRanking.map((item, index) => (
+                                        <TableRow key={item.brand}>
+                                            <TableCell className="font-medium">{index + 1}</TableCell>
+                                            <TableCell className="font-medium">{item.brand}</TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline">#{item.position}</Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge className={getSentimentColor(item.sentiment)}>
+                                                    {item.sentiment}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge className={getVisibilityColor(item.visibility)}>
+                                                    {item.visibility}
+                                                </Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
                     </Card>
                 </div>
 
-                {/* Top Sources */}
-                <div className="default-card py-10">
-                    <CardHeader className="mb-6">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="bg-gray-200 w-10 h-10 rounded flex items-center justify-center">
-                                    <FolderTree className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <CardTitle>Top Sources</CardTitle>
-                                    <p className="text-sm text-muted-foreground">Sources across active models</p>
-                                </div>
-                            </div>
-                            <div><Link href="/" className="primary-btn btn-sm">More Sources</Link></div>
-                        </div>
-                    </CardHeader>
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-6">
-                        <div className="">
-                            <Card className="default-card">
-                                <CardHeader className='mb-6'>
-                                    <div className="flex items-center gap-2">
-                                        <div className="bg-gray-200 w-10 h-10 rounded flex items-center justify-center">
-                                            <DatabaseZap className="h-5 w-5" />
-                                        </div>
-                                        <div>
-                                            <CardTitle>Sources Type</CardTitle>
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                <ChartPieData />
-                            </Card>
-                        </div>
-                        <div className="col-span-2">
-                            <Card className="default-card">
-                                <CardHeader className='mb-6'>
-                                    <div className="flex items-center gap-2">
-                                        <div className="bg-gray-200 w-10 h-10 rounded flex items-center justify-center">
-                                            <Globe className="h-5 w-5" />
-                                        </div>
-                                        <div>
-                                            <CardTitle>All Sources</CardTitle>
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                <SourceUsageTable/>
-                            </Card>
-                        </div>
-                    </div>
-                </div>
-                
-                {/* AI Citations */}
-                <div className="default-card py-10">
-                    <CardHeader className="mb-6">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="bg-gray-200 w-10 h-10 rounded flex items-center justify-center">
-                                    <MessagesSquare className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <CardTitle className='flex gap-2 items-center'>Recent <img src="../images/b7.png" alt="icon"/> AI Citations</CardTitle>
-                                    <p className="text-sm text-muted-foreground">Chats that FameBit mentioned</p>
-                                </div>
-                            </div>
-                            <div><Link href="/" className="primary-btn btn-sm">All Citations</Link></div>
-                        </div>
-                    </CardHeader>
-                    <AiCitations/>
-                </div>
-
-                {/* Quick Actions */}
+                {/* Quick Actions Grid */}
                 <div className="grid auto-rows-min gap-4 md:grid-cols-3">
                     <PermissionWrapper permission="view-users">
                         <Card>
@@ -292,7 +363,9 @@ export default function Dashboard() {
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">Manage Users</div>
-                                <p className="text-xs text-muted-foreground">View and manage system users</p>
+                                <p className="text-xs text-muted-foreground">
+                                    View and manage system users
+                                </p>
                                 <Button asChild className="mt-2" size="sm">
                                     <Link href="/users">Go to Users</Link>
                                 </Button>
@@ -308,7 +381,9 @@ export default function Dashboard() {
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">Admin Tools</div>
-                                <p className="text-xs text-muted-foreground">Access admin functionality</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Access admin functionality
+                                </p>
                                 <Button asChild className="mt-2" size="sm">
                                     <Link href="/admin">Go to Admin</Link>
                                 </Button>
@@ -324,7 +399,9 @@ export default function Dashboard() {
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">Configure</div>
-                                <p className="text-xs text-muted-foreground">Manage your settings</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Manage your settings
+                                </p>
                                 <Button asChild className="mt-2" size="sm">
                                     <Link href="/settings/profile">Go to Settings</Link>
                                 </Button>

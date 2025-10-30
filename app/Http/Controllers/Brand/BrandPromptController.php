@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Brand;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\BrandPrompt;
+use App\Services\AIPromptService;
+use App\Jobs\ProcessBrandPromptAnalysis;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class BrandPromptController extends Controller
@@ -31,6 +34,7 @@ class BrandPromptController extends Controller
                     'visibility' => $prompt->visibility,
                     'country_code' => $prompt->country_code,
                     'is_active' => $prompt->is_active,
+                    'session_id' => $prompt->session_id,
                     'created_at' => $prompt->created_at,
                     'days_ago' => $prompt->created_at->diffInDays(now()),
                 ];
@@ -42,6 +46,7 @@ class BrandPromptController extends Controller
                 'name' => $brand->name,
                 'website' => $brand->website,
                 'description' => $brand->description,
+                'country' => $brand->country,
             ],
             'prompts' => $prompts,
         ]);
@@ -131,5 +136,124 @@ class BrandPromptController extends Controller
         }
 
         return redirect()->back()->with('success', 'Prompts updated successfully');
+    }
+
+    public function generateAI(Request $request, Brand $brand)
+    {
+        Log::info('generateAI called', [
+            'brand_id' => $brand->id,
+            'user_id' => Auth::id(),
+            'method' => $request->method(),
+            'path' => $request->path(),
+        ]);
+
+        // Check if user has access to this brand
+        if ($brand->agency_id !== Auth::user()->id) {
+            Log::warning('Unauthorized access attempt', [
+                'brand_id' => $brand->id,
+                'brand_agency_id' => $brand->agency_id,
+                'user_id' => Auth::id(),
+            ]);
+            abort(403);
+        }
+
+        // Check if brand has required information
+        if (!$brand->website) {
+            Log::warning('Brand missing website', ['brand_id' => $brand->id]);
+            return redirect()->back()->with('error', 'Brand must have a website to generate AI prompts.');
+        }
+
+        Log::info('Brand has website', ['website' => $brand->website]);
+
+        $aiService = app(AIPromptService::class);
+        $availableProviders = array_keys($aiService->getAvailableProviders());
+        
+        Log::info('Available providers', ['providers' => $availableProviders]);
+        
+        // If no providers available, return error
+        if (empty($availableProviders)) {
+            Log::warning('No AI providers available');
+            return redirect()->back()->with('error', 'No AI providers are configured. Please check your settings.');
+        }
+        
+        $request->validate([
+            'ai_provider' => 'sometimes|string|in:' . implode(',', $availableProviders),
+            'count' => 'sometimes|integer|min:1|max:20',
+        ]);
+
+        Log::info('Validation passed');
+
+        try {
+            Log::info('Entered try block');
+            
+            $sessionId = session()->getId();
+            Log::info('Got session ID', ['session_id' => $sessionId]);
+            
+            // Get the first available provider name (the first value in the array)
+            $defaultProvider = !empty($availableProviders) ? $availableProviders[0] : null;
+            Log::info('Default provider', ['provider' => $defaultProvider]);
+            
+            if (!$defaultProvider) {
+                Log::warning('No default provider found');
+                return redirect()->back()->with('error', 'No AI providers are available. Please enable at least one AI model.');
+            }
+            
+            $aiProvider = $request->input('ai_provider', $defaultProvider);
+            $count = $request->input('count', 10);
+            
+            Log::info('Starting AI prompt generation', [
+                'brand_id' => $brand->id,
+                'website' => $brand->website,
+                'ai_provider' => $aiProvider,
+                'available_providers' => $availableProviders,
+                'count' => $count
+            ]);
+            
+            // Generate prompts using AI
+            $generatedPrompts = $aiService->generatePromptsForWebsite(
+                $brand->website,
+                $sessionId,
+                $aiProvider,
+                $brand->description ?? ''
+            );
+
+            // Create BrandPrompt records and dispatch analysis jobs
+            $brandPrompts = [];
+            foreach ($generatedPrompts as $index => $genPrompt) {
+                $brandPrompt = BrandPrompt::create([
+                    'brand_id' => $brand->id,
+                    'prompt' => $genPrompt->prompt,
+                    'is_active' => false, // Suggested prompts start as inactive
+                    'session_id' => $sessionId,
+                    'order' => $index + 1,
+                ]);
+
+                // Dispatch analysis job to get stats
+                ProcessBrandPromptAnalysis::dispatch($brandPrompt, $sessionId, false);
+                
+                $brandPrompts[] = $brandPrompt;
+                
+                if (count($brandPrompts) >= $count) {
+                    break;
+                }
+            }
+
+            Log::info('Generated AI prompts for brand', [
+                'brand_id' => $brand->id,
+                'count' => count($brandPrompts),
+                'ai_provider' => $aiProvider
+            ]);
+
+            return redirect()->back()->with('success', count($brandPrompts) . ' AI prompts generated successfully. Analysis in progress...');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to generate AI prompts for brand', [
+                'brand_id' => $brand->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()->back()->with('error', 'Failed to generate prompts: ' . $e->getMessage());
+        }
     }
 }
