@@ -84,7 +84,7 @@ button{
 
 /** Main Navbar **/
 .site-logo-box button > span {
-	width: 32px;
+	width:40px;
 }
 .main-menu-links{
     padding:32px 16px;
@@ -323,6 +323,9 @@ span.img-avatar img{
 /** Form Control **/
 .default-table thead th{
     color:var(--gray-text-color);
+    padding: 20px 15px;
+    background: #f8f8f8;
+    font-weight:700;
 }
 .default-table th,
 .default-table td{
@@ -381,7 +384,6 @@ textarea.form-control{
 /** Add Prompts **/
 .add-prompt-lists {
 	padding:10px;
-	box-shadow: 0 5px 15px 0 rgba(0,0,0,0.15);
 	background:var(--color-sidebar);
     gap:5px;
     height:auto;
@@ -389,12 +391,15 @@ textarea.form-control{
 }
 .add-prompt-lists button{
     padding:11px 35px;
-    background:#F4F4F4;
+    background: var(--color-gray-100);
     color:#747272;
     border-radius:5px;
     font-size:14px;
     font-weight:600;
     cursor: pointer;
+}
+.add-prompt-lists button:hover{
+    background: var(--color-gray-200);
 }
 .add-prompt-lists button[aria-selected="true"]{
     background:var(--orange-1);
@@ -448,13 +453,13 @@ textarea.form-control{
 .prompts-action {
 	display: flex;
 	max-width: 500px;
-    width:100%;
+    min-width: 280px;
 	align-items: center;
     justify-content: space-between;
 	gap: 15px;
     padding:10px 10px 10px 20px;
-    border-radius:10px;
-    box-shadow:0 0 15px 0 rgba(0,0,0,0.15);
+    border-radius:5px;
+    box-shadow:0 0 15px 0 rgba(0,0,0,0.10);
     position: fixed;
     bottom:-100%;
     transform: translateX(-50%);
@@ -470,7 +475,12 @@ textarea.form-control{
     font-size:14px;
     font-weight:600;
     margin:0;
+    color:var(--color-gray-400);
+}
+.prompts-action p span{
+    font-weight:800;
     color: var(--color-black);
+    margin-right:5px;
 }
 .prompts-action-btns {
     display: flex;
@@ -479,7 +489,7 @@ textarea.form-control{
 .prompts-action-btns button{
     font-size:14px;
     font-weight:600;
-    padding:10px 15px;
+    padding:10px 25px;
     display:flex;
     gap:10px;
     align-items: center;
@@ -586,9 +596,8 @@ textarea.form-control{
 .buttons-wrapp .cancel-btn,
 .buttons-wrapp button.df-btn,
 .buttons-wrapp a.df-btn{
-	flex: 0 0 80px;
 	height: 36px;
-	padding: 0;
+	padding:0 18px;
     border-radius:5px;
     border:none;
 }

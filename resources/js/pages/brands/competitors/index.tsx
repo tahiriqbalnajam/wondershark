@@ -169,17 +169,11 @@ const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, tot
                                             </div>
                                         </form>
                                     </div>
-                                    <DrawerFooter className='flex'>
-                                        <DrawerClose asChild>
-                                            <Button variant="outline" type="button">Cancel</Button>
+                                    <DrawerFooter className='flex px-0 buttons-wrapp flex-row'>
+                                        <DrawerClose asChild className='w-50 inline-block'>
+                                            <Button variant="outline" type="button" className='cancel-btn min-h-12'>Cancel</Button>
                                         </DrawerClose>
-                                        <Button 
-                                            type='button' 
-                                            onClick={handleSubmit}
-                                            disabled={processing}
-                                        >
-                                            {processing ? 'Adding...' : 'Add Competitor'}
-                                        </Button>
+                                        <Button type='button' className='df-btn w-50 min-h-12 inline-block' onClick={handleSubmit} disabled={processing} > {processing ? 'Adding...' : 'Add Competitor'} </Button>
                                     </DrawerFooter>
                                 </div>
                             </DrawerContent>
