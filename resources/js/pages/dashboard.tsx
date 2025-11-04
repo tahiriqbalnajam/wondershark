@@ -97,17 +97,18 @@ const brands = [
 
 export default function Dashboard() {
     const { roles } = usePermissions();
-    const { props } = usePage<{brands?: Array<{id: number, name: string}>}>();
+    const { props } = usePage<{brands?: Array<{id: number, name: string}>, isAdmin?: boolean}>();
     
     const userBrands = useMemo(() => props.brands || [], [props.brands]);
+    const isAdmin = props.isAdmin || false;
     
-    // Redirect to first brand if user has brands
+    // Redirect to first brand if user has brands (but not for admins)
     useEffect(() => {
-        if (userBrands.length > 0) {
+        if (!isAdmin && userBrands.length > 0) {
             const firstBrand = userBrands[0];
             router.visit(`/brands/${firstBrand.id}`);
         }
-    }, [userBrands]);
+    }, [userBrands, isAdmin]);
     
     const [selectedBrand, setSelectedBrand] = useState('all');
     const [selectedAIModel, setSelectedAIModel] = useState('openai');

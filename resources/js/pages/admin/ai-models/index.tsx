@@ -17,7 +17,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, TestTube } from "lucide-react";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
+import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, TestTube, Info } from "lucide-react";
 import AppLayout from "@/layouts/app-layout";
 import { toast } from "sonner";
 
@@ -133,19 +138,38 @@ export default function Index({ aiModels, flash }: Props) {
               </Button>
             </Link>
           </div>
+
+          <Alert className="mb-6">
+            <Info className="h-4 w-4" />
+            <AlertTitle>Smart AI Model Distribution</AlertTitle>
+            <AlertDescription>
+              When generating prompts, the system distributes analysis across all enabled models based on their <strong>Order/Weight</strong>.
+              <br />
+              <strong>Example:</strong> If you have OpenAI (Order: 5), Gemini (Order: 3), and Anthropic (Order: 2), 
+              out of 10 prompts: OpenAI analyzes 5, Gemini analyzes 3, and Anthropic analyzes 2.
+              <br />
+              <span className="text-xs text-gray-600 mt-1 block">
+                💡 Tip: Set higher order for better/faster models, lower for experimental ones.
+              </span>
+            </AlertDescription>
+          </Alert>
           
           <Card>
             <CardHeader>
               <CardTitle>AI Models</CardTitle>
               <CardDescription>
-                Manage AI models used for automatic prompt generation during brand creation.
+                Manage AI models used for prompt analysis. The <strong>Order/Weight</strong> field controls distribution:
+                higher values mean more prompts will be analyzed by that model (e.g., Order 5 = 50%, Order 3 = 30%, Order 2 = 20%).
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Order</TableHead>
+                    <TableHead>
+                      Order/Weight
+                      <span className="block text-xs font-normal text-gray-500">Higher = More Usage</span>
+                    </TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Display Name</TableHead>
                     <TableHead>Status</TableHead>
@@ -159,7 +183,12 @@ export default function Index({ aiModels, flash }: Props) {
                   {aiModels.map((aiModel) => (
                     <TableRow key={aiModel.id}>
                       <TableCell className="font-medium">
-                        {aiModel.order}
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-bold text-blue-600">{aiModel.order}</span>
+                          <span className="text-xs text-gray-500">
+                            ({Math.round((aiModel.order / aiModels.filter(m => m.is_enabled).reduce((sum, m) => sum + m.order, 0)) * 100)}%)
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <code className="bg-gray-100 px-2 py-1 rounded text-sm">

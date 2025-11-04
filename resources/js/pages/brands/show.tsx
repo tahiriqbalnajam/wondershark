@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
 import HeadingSmall from '@/components/heading-small';
-import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Trophy, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Trophy, TrendingUp, TrendingDown, Bot } from 'lucide-react';
 
 interface CompetitiveStat {
     id: number;
@@ -58,6 +58,12 @@ interface Brand {
         visibility?: number;
         is_active: boolean;
         analysis_completed_at?: string;
+        ai_model?: {
+            id: number;
+            name: string;
+            display_name: string;
+            provider?: string;
+        };
         prompt_resources?: Array<{
             url: string;
             type: string;
@@ -427,7 +433,15 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
                                         onClick={() => handlePromptClick(prompt)}
                                     >
                                         <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                                            <Badge variant="outline">Prompt {index + 1}</Badge>
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="outline">Prompt {index + 1}</Badge>
+                                                {prompt.ai_model && (
+                                                    <Badge variant="secondary" className="flex items-center gap-1">
+                                                        <Bot className="h-3 w-3" />
+                                                        {prompt.ai_model.display_name}
+                                                    </Badge>
+                                                )}
+                                            </div>
                                             <Badge variant={prompt.is_active ? 'default' : 'secondary'}>
                                                 {prompt.is_active ? 'Active' : 'Inactive'}
                                             </Badge>
@@ -506,70 +520,82 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
 
             {/* Prompt Details Modal */}
             <Dialog open={isPromptModalOpen} onOpenChange={setIsPromptModalOpen}>
-                <DialogContent className=" max-w-lg max-h-[90vh] overflow-y-auto" style={{ width: '90vw', maxWidth: '90vw' }}>                    
+                <DialogContent className=" max-w-lg max-h-[90vh] overflow-y-auto" style={{ width: '90vw', maxWidth: '90vw' }}>
                     {selectedPrompt && (
-                        <div className="grid grid-cols-12 gap-6 mt-4">
-                            {/* Left Column - 75% width (9/12) */}
-                            <div className="col-span-9 space-y-4">
-                                {/* Prompt Card - aligned right */}
-                                <div className="flex justify-end">
-                                    <Card className="max-w-md w-full bg-blue-50 border-blue-200">
-                                        <CardContent>
-                                            <p className="text-sm">{selectedPrompt.prompt}</p>
-                                        </CardContent>
-                                    </Card>
+                        <>
+                            {/* AI Model Header - at the very top */}
+                            {selectedPrompt.ai_model && (
+                                <div className="flex items-center gap-2 mb-4 pb-3 border-b">
+                                    <Bot className="h-5 w-5 text-primary" />
+                                    <span className="font-medium text-sm">
+                                        Analyzed by {selectedPrompt.ai_model.display_name}
+                                    </span>
+                                </div>
+                            )}
+                            
+                            <div className="grid grid-cols-12 gap-6">
+                                {/* Left Column - 75% width (9/12) */}
+                                <div className="col-span-9 space-y-4">
+                                    {/* Prompt Card - aligned right */}
+                                    <div className="flex justify-end">
+                                        <Card className="max-w-md w-full bg-blue-50 border-blue-200">
+                                            <CardContent>
+                                                <p className="text-sm">{selectedPrompt.prompt}</p>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+
+                                    {/* AI Response */}
+                                    <div>
+                                        <Card>
+                                            <CardContent className="pt-6">
+                                                {selectedPrompt.ai_response ? (
+                                                    <div 
+                                                        className="prose prose-sm max-w-none"
+                                                        dangerouslySetInnerHTML={{ __html: selectedPrompt.ai_response }}
+                                                    />
+                                                ) : (
+                                                    <p className="text-muted-foreground italic">No AI response available yet.</p>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    </div>
                                 </div>
 
-                                {/* AI Response */}
-                                <div>
-                                    <Card>
-                                        <CardContent className="pt-6">
-                                            {selectedPrompt.ai_response ? (
+                                {/* Right Column - 25% width (3/12) */}
+                                <div className="col-span-3">
+                                    <h3 className="text-lg font-semibold mb-3">Resources</h3>
+                                    <div className="space-y-3">
+                                        {selectedPrompt.prompt_resources && selectedPrompt.prompt_resources.length > 0 ? (
+                                            selectedPrompt.prompt_resources.map((resource: { url: string; type: string; title: string; description: string; domain: string; is_competitor_url: boolean; }, index: number) => (
                                                 <div 
-                                                    className="prose prose-sm max-w-none"
-                                                    dangerouslySetInnerHTML={{ __html: selectedPrompt.ai_response }}
-                                                />
-                                            ) : (
-                                                <p className="text-muted-foreground italic">No AI response available yet.</p>
-                                            )}
-                                        </CardContent>
-                                    </Card>
+                                                    key={index} 
+                                                    className="border rounded-lg p-3 hover:bg-gray-50 transition-colors cursor-pointer hover:shadow-md"
+                                                    onClick={() => window.open(resource.url, '_blank', 'noopener,noreferrer')}
+                                                >
+                                                    <h4 className="font-medium text-sm mb-1">
+                                                        {resource.title || 'Untitled Resource'}
+                                                    </h4>
+                                                    <p className="text-xs text-gray-500 block truncate mb-2" title={resource.url}>
+                                                        {resource.url}
+                                                    </p>
+                                                    {resource.description && (
+                                                        <p className="text-xs text-gray-600 mt-1 mb-2">{resource.description}</p>
+                                                    )}
+                                                    {resource.type && (
+                                                        <Badge variant="outline" className="text-xs">
+                                                            {resource.type}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground">No resources found for this prompt.</p>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-
-                            {/* Right Column - 25% width (3/12) */}
-                            <div className="col-span-3">
-                                <h3 className="text-lg font-semibold mb-3">Resources</h3>
-                                <div className="space-y-3">
-                                    {selectedPrompt.prompt_resources && selectedPrompt.prompt_resources.length > 0 ? (
-                                        selectedPrompt.prompt_resources.map((resource: { url: string; type: string; title: string; description: string; domain: string; is_competitor_url: boolean; }, index: number) => (
-                                            <div 
-                                                key={index} 
-                                                className="border rounded-lg p-3 hover:bg-gray-50 transition-colors cursor-pointer hover:shadow-md"
-                                                onClick={() => window.open(resource.url, '_blank', 'noopener,noreferrer')}
-                                            >
-                                                <h4 className="font-medium text-sm mb-1">
-                                                    {resource.title || 'Untitled Resource'}
-                                                </h4>
-                                                <p className="text-xs text-gray-500 block truncate mb-2" title={resource.url}>
-                                                    {resource.url}
-                                                </p>
-                                                {resource.description && (
-                                                    <p className="text-xs text-gray-600 mt-1 mb-2">{resource.description}</p>
-                                                )}
-                                                {resource.type && (
-                                                    <Badge variant="outline" className="text-xs">
-                                                        {resource.type}
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground">No resources found for this prompt.</p>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+                        </>
                     )}
                 </DialogContent>
             </Dialog>

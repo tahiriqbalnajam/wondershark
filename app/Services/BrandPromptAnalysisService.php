@@ -21,14 +21,15 @@ class BrandPromptAnalysisService
     /**
      * Analyze a brand prompt and generate AI response with competitor analysis
      */
-    public function analyzePrompt(BrandPrompt $brandPrompt, Brand $brand): array
+    public function analyzePrompt(BrandPrompt $brandPrompt, Brand $brand, ?string $preferredModelName = null): array
     {
         $competitors = $brand->competitors()->pluck('name')->toArray();
         
         Log::info("Analyzing brand prompt", [
             'brand_prompt_id' => $brandPrompt->id,
             'brand_name' => $brand->name,
-            'competitors_count' => count($competitors)
+            'competitors_count' => count($competitors),
+            'preferred_model' => $preferredModelName
         ]);
 
         // Generate the enhanced prompt
@@ -38,16 +39,17 @@ class BrandPromptAnalysisService
             $brandPrompt->prompt
         );
 
-        // Get AI response
-        $aiResponse = $this->generateAIResponse($enhancedPrompt);
+        // Get AI response with preferred model
+        $aiResponseData = $this->generateAIResponse($enhancedPrompt, $preferredModelName);
         
         // Parse the response to extract resources and analysis
-        $parsedResponse = $this->parseAIResponse($aiResponse, $brand, $competitors, $brandPrompt);
+        $parsedResponse = $this->parseAIResponse($aiResponseData['text'], $brand, $competitors, $brandPrompt);
 
         return [
             'ai_response' => $parsedResponse['html_response'],
             'resources' => $parsedResponse['resources'],
-            'analysis' => $parsedResponse['analysis']
+            'analysis' => $parsedResponse['analysis'],
+            'ai_model_id' => $aiResponseData['ai_model_id']
         ];
     }
 
@@ -88,30 +90,52 @@ class BrandPromptAnalysisService
     /**
      * Generate AI response using the configured AI model
      */
-    protected function generateAIResponse(string $prompt): string
+    protected function generateAIResponse(string $prompt, ?string $preferredModelName = null): array
     {
         try {
-            // Try to get the preferred AI model in order of preference
-            $preferredProviders = [
-                'openai', 'gemini', 'google', 'anthropic', 'claude', 
-                'groq', 'mistral', 'xai', 'x-ai', 'grok', 
-                'perplexity', 'deepseek', 'openrouter', 'ollama', 
-                'google-ai', 'google-ai-review'
-            ];
-            
             $aiModel = null;
-            foreach ($preferredProviders as $provider) {
+            
+            // If a preferred model is specified, try to use it first
+            if ($preferredModelName) {
                 $aiModel = AiModel::where('is_enabled', true)
-                    ->where('name', $provider)
+                    ->where('name', $preferredModelName)
                     ->first();
+                
                 if ($aiModel) {
-                    break;
+                    Log::info("Using preferred AI model", [
+                        'model_name' => $aiModel->name,
+                        'display_name' => $aiModel->display_name
+                    ]);
+                } else {
+                    Log::warning("Preferred AI model not found or disabled", [
+                        'requested_model' => $preferredModelName
+                    ]);
                 }
             }
-
-            // If no preferred model found, get any enabled model
+            
+            // If no preferred model or it wasn't found, use fallback logic
             if (!$aiModel) {
-                $aiModel = AiModel::where('is_enabled', true)->first();
+                // Try to get the preferred AI model in order of preference
+                $preferredProviders = [
+                    'openai', 'gemini', 'google', 'anthropic', 'claude', 
+                    'groq', 'mistral', 'xai', 'x-ai', 'grok', 
+                    'perplexity', 'deepseek', 'openrouter', 'ollama', 
+                    'google-ai', 'google-ai-overview', 'dataforseo'
+                ];
+            
+                foreach ($preferredProviders as $provider) {
+                    $aiModel = AiModel::where('is_enabled', true)
+                        ->where('name', $provider)
+                        ->first();
+                    if ($aiModel) {
+                        break;
+                    }
+                }
+
+                // If no preferred model found, get any enabled model
+                if (!$aiModel) {
+                    $aiModel = AiModel::where('is_enabled', true)->first();
+                }
             }
 
             if (!$aiModel) {
@@ -120,11 +144,16 @@ class BrandPromptAnalysisService
 
             Log::info("Using AI model for analysis", [
                 'model_name' => $aiModel->name,
-                'display_name' => $aiModel->display_name
+                'display_name' => $aiModel->display_name,
+                'ai_model_id' => $aiModel->id
             ]);
 
             $response = $this->callAiProvider($aiModel, $prompt);
-            return $response->text;
+            
+            return [
+                'text' => $response->text,
+                'ai_model_id' => $aiModel->id
+            ];
 
         } catch (\Exception $e) {
             Log::error('AI Response Generation Failed', [
@@ -169,7 +198,6 @@ class BrandPromptAnalysisService
             case 'gemini':
             case 'google':
             case 'google-ai':
-            case 'google-ai-review':
                 return $this->callGeminiDirect($apiKey, $model, $prompt, $temperature, $maxTokens);
 
             case 'anthropic':
@@ -198,6 +226,10 @@ class BrandPromptAnalysisService
 
             case 'ollama':
                 return $this->callOllamaDirect($apiKey, $model, $prompt, $temperature, $maxTokens, $apiConfig);
+
+            case 'google-ai-overview':
+            case 'dataforseo':
+                return $this->callGoogleAIOverviewDirect($apiKey, $prompt, $apiConfig);
 
             default:
                 // Generic fallback - try OpenAI-compatible API
@@ -464,13 +496,122 @@ class BrandPromptAnalysisService
     }
 
     /**
+     * Call Google AI Overview via DataForSEO API
+     */
+    protected function callGoogleAIOverviewDirect($apiKey, $prompt, $config)
+    {
+        // DataForSEO uses username:password authentication
+        // The API key should be in format "username:password"
+        $credentials = explode(':', $apiKey);
+        if (count($credentials) !== 2) {
+            throw new \Exception("DataForSEO API key must be in format 'username:password'");
+        }
+        
+        [$username, $password] = $credentials;
+        
+        // Extract location code from config, default to US
+        $locationCode = $config['location_code'] ?? 2840; // 2840 = United States
+        $languageCode = $config['language_code'] ?? 'en';
+        
+        // Prepare DataForSEO payload
+        $payload = [
+            [
+                'language_code' => $languageCode,
+                'location_code' => $locationCode,
+                'keyword' => $prompt,
+                'se_type' => 'ai_overview',
+            ]
+        ];
+
+        Log::info("Calling Google AI Overview via DataForSEO", [
+            'keyword' => substr($prompt, 0, 100),
+            'location_code' => $locationCode
+        ]);
+
+        // Call DataForSEO API
+        $response = \Illuminate\Support\Facades\Http::withBasicAuth($username, $password)
+            ->timeout(90) // Increased timeout for live results
+            ->post('https://api.dataforseo.com/v3/serp/google/organic/live/advanced', $payload);
+
+        if (!$response->successful()) {
+            throw new \Exception("DataForSEO API error: " . $response->status() . " - " . $response->body());
+        }
+
+        $data = $response->json();
+
+        // Validate response structure
+        if (!isset($data['tasks'][0]['result'][0])) {
+            throw new \Exception("DataForSEO API returned invalid response structure");
+        }
+
+        $result = $data['tasks'][0]['result'][0];
+        $aiOverviewText = '';
+
+        // Try to get AI Overview answer first
+        if (isset($result['ai_overview']['answer']) && !empty($result['ai_overview']['answer'])) {
+            $aiOverviewText = $result['ai_overview']['answer'];
+            Log::info("Retrieved AI Overview content", ['length' => strlen($aiOverviewText)]);
+        } else {
+            // Fallback: Extract from other sources
+            Log::info("AI Overview not available, extracting from search results");
+            
+            $extractedContent = [];
+            
+            if (isset($result['items']) && is_array($result['items'])) {
+                foreach ($result['items'] as $item) {
+                    // Extract from "Found on Web" sections
+                    if ($item['type'] === 'found_on_web' && isset($item['items'])) {
+                        foreach ($item['items'] as $webItem) {
+                            if (isset($webItem['title'])) {
+                                $extractedContent[] = $webItem['title'];
+                            }
+                            if (isset($webItem['description'])) {
+                                $extractedContent[] = $webItem['description'];
+                            }
+                        }
+                    }
+                    // Extract from organic results
+                    elseif ($item['type'] === 'organic' && isset($item['description'])) {
+                        $extractedContent[] = $item['description'];
+                    }
+                    // Extract from People Also Ask
+                    elseif ($item['type'] === 'people_also_ask' && isset($item['items'])) {
+                        foreach ($item['items'] as $paaItem) {
+                            if (isset($paaItem['title'])) {
+                                $extractedContent[] = $paaItem['title'];
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!empty($extractedContent)) {
+                // Limit to first 15 items to avoid too much text
+                $aiOverviewText = implode(". ", array_slice($extractedContent, 0, 15));
+                Log::info("Extracted content from search results", [
+                    'items_count' => count($extractedContent),
+                    'text_length' => strlen($aiOverviewText)
+                ]);
+            } else {
+                throw new \Exception("No content available from DataForSEO API");
+            }
+        }
+
+        if (empty($aiOverviewText)) {
+            throw new \Exception("DataForSEO API returned empty content");
+        }
+
+        return (object) ['text' => $aiOverviewText];
+    }
+
+    /**
      * Get default model name for each provider
      */
     protected function getDefaultModel(string $provider): string
     {
         return match($provider) {
             'openai' => 'gpt-3.5-turbo',
-            'gemini', 'google', 'google-ai', 'google-ai-review' => 'gemini-pro',
+            'gemini', 'google', 'google-ai' => 'gemini-pro',
             'perplexity' => 'llama-3.1-sonar-small-128k-online',
             'anthropic', 'claude' => 'claude-3-haiku-20240307',
             'grok', 'x-ai', 'xai' => 'grok-beta',
@@ -479,6 +620,7 @@ class BrandPromptAnalysisService
             'ollama' => 'llama3.1',
             'deepseek' => 'deepseek-chat',
             'openrouter' => 'meta-llama/llama-3.1-8b-instruct:free',
+            'google-ai-overview', 'dataforseo' => 'ai_overview',
             default => 'gpt-3.5-turbo'
         };
     }
@@ -493,7 +635,9 @@ class BrandPromptAnalysisService
             'openai', 'gemini', 'google', 'anthropic', 'claude', 'xai', 'x-ai', 'grok',
             'groq', 'mistral', 'ollama', 'deepseek', 'openrouter',
             // OpenAI-compatible providers  
-            'perplexity', 'google-ai', 'google-ai-review'
+            'perplexity', 'google-ai',
+            // DataForSEO Google AI Overview
+            'google-ai-overview', 'dataforseo'
         ];
 
         return in_array($provider, $supportedProviders);
@@ -591,12 +735,13 @@ class BrandPromptAnalysisService
                     'max_tokens' => 2000
                 ];
 
-            case 'google-ai-review':
+            case 'google-ai-overview':
+            case 'dataforseo':
                 return [
-                    'api_key' => 'your-google-ai-review-api-key-here',
-                    'model' => 'gemini-pro',
-                    'temperature' => 0.7,
-                    'max_tokens' => 2000
+                    'api_key' => 'username:password',
+                    'model' => 'ai_overview',
+                    'location_code' => 2840, // United States
+                    'language_code' => 'en'
                 ];
 
             default:

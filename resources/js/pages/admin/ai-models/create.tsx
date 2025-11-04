@@ -103,15 +103,24 @@ export default function Create() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="order">Order *</Label>
+                    <Label htmlFor="order" className="flex items-center gap-2">
+                      Order / Weight / Priority *
+                      <span className="text-xs text-gray-500">(1-10)</span>
+                    </Label>
                     <Input
                       id="order"
                       type="number"
                       min="1"
+                      max="10"
                       value={data.order}
                       onChange={(e) => setData('order', parseInt(e.target.value))}
                       required
                     />
+                    <p className="text-xs text-gray-600">
+                      Higher value = more prompts analyzed by this model.
+                      <br />
+                      Example: Order 5 gets 50%, Order 3 gets 30%, Order 2 gets 20%
+                    </p>
                     {errors.order && (
                       <p className="text-sm text-red-600">{errors.order}</p>
                     )}

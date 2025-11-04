@@ -22,7 +22,8 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
     public function __construct(
         public BrandPrompt $brandPrompt,
         public string $sessionId = '',
-        public bool $forceRegenerate = false
+        public bool $forceRegenerate = false,
+        public ?string $preferredAiModel = null
     ) {}
 
     /**
@@ -35,7 +36,8 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
                 'brand_prompt_id' => $this->brandPrompt->id,
                 'brand_id' => $this->brandPrompt->brand_id,
                 'prompt' => substr($this->brandPrompt->prompt, 0, 100) . '...',
-                'force_regenerate' => $this->forceRegenerate
+                'force_regenerate' => $this->forceRegenerate,
+                'preferred_ai_model' => $this->preferredAiModel
             ]);
 
             // Skip if already analyzed and not forcing regeneration
@@ -61,7 +63,7 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
             }
 
             // Generate AI response and analyze
-            $result = $analysisService->analyzePrompt($this->brandPrompt, $brand);
+            $result = $analysisService->analyzePrompt($this->brandPrompt, $brand, $this->preferredAiModel);
 
             // Update the brand prompt with results
             $this->brandPrompt->update([
@@ -73,6 +75,7 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
                 'competitor_mentions' => json_encode($result['analysis']['competitor_mentions']),
                 'analysis_completed_at' => now(),
                 'session_id' => $this->sessionId ?: $this->brandPrompt->session_id,
+                'ai_model_id' => $result['ai_model_id'] ?? null,
             ]);
 
             Log::info("Successfully completed brand prompt analysis", [

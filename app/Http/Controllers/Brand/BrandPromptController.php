@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\BrandPrompt;
 use App\Services\AIPromptService;
+use App\Services\AiModelDistributionService;
 use App\Jobs\ProcessBrandPromptAnalysis;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -217,6 +218,17 @@ class BrandPromptController extends Controller
                 $brand->description ?? ''
             );
 
+            // Get distribution service
+            $distributionService = app(AiModelDistributionService::class);
+            
+            // Distribute AI models across prompts
+            // Strategy options: 'weighted', 'round_robin', 'random', 'performance_based'
+            $modelDistribution = $distributionService->distributeModelsForPrompts(
+                min($count, count($generatedPrompts)),
+                AiModelDistributionService::STRATEGY_WEIGHTED, // Change this to use different strategy
+                $sessionId
+            );
+
             // Create BrandPrompt records and dispatch analysis jobs
             $brandPrompts = [];
             foreach ($generatedPrompts as $index => $genPrompt) {
@@ -228,8 +240,11 @@ class BrandPromptController extends Controller
                     'order' => $index + 1,
                 ]);
 
-                // Dispatch analysis job to get stats
-                ProcessBrandPromptAnalysis::dispatch($brandPrompt, $sessionId, false);
+                // Get assigned AI model for this prompt
+                $assignedModel = $modelDistribution[$index] ?? $aiProvider;
+
+                // Dispatch analysis job with specific AI model
+                ProcessBrandPromptAnalysis::dispatch($brandPrompt, $sessionId, false, $assignedModel);
                 
                 $brandPrompts[] = $brandPrompt;
                 
@@ -238,10 +253,14 @@ class BrandPromptController extends Controller
                 }
             }
 
+            // Get distribution stats for logging
+            $distributionStats = $distributionService->getDistributionStats($sessionId);
+
             Log::info('Generated AI prompts for brand', [
                 'brand_id' => $brand->id,
                 'count' => count($brandPrompts),
-                'ai_provider' => $aiProvider
+                'ai_provider_used_for_generation' => $aiProvider,
+                'analysis_distribution' => $distributionStats
             ]);
 
             return redirect()->back()->with('success', count($brandPrompts) . ' AI prompts generated successfully. Analysis in progress...');

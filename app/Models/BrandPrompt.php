@@ -27,6 +27,7 @@ class BrandPrompt extends Model
         'analysis_completed_at',
         'analysis_failed_at',
         'analysis_error',
+        'ai_model_id',
     ];
 
     protected $casts = [
@@ -42,6 +43,14 @@ class BrandPrompt extends Model
     public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class);
+    }
+
+    /**
+     * Get the AI model used for this prompt analysis
+     */
+    public function aiModel(): BelongsTo
+    {
+        return $this->belongsTo(AiModel::class);
     }
 
     /**

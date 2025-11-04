@@ -195,7 +195,8 @@ class BrandController extends Controller
         session(['selected_brand_id' => $brand->id]);
 
         $brand->load([
-            'prompts.promptResources', 
+            'prompts.promptResources',
+            'prompts.aiModel',
             'subreddits', 
             'user', 
             'competitors' => function($query) {

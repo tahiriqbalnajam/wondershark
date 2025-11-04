@@ -48,7 +48,7 @@ class AiModelController extends Controller
             'api_config.api_key' => 'nullable|string',
             'api_config.model' => 'nullable|string',
             'api_config.endpoint' => 'nullable|url',
-            'order' => 'required|integer|min:1'
+            'order' => 'required|integer|min:1|max:10'
         ]);
 
         AiModel::create($validated);
@@ -90,7 +90,7 @@ class AiModelController extends Controller
             'api_config.api_key' => 'nullable|string',
             'api_config.model' => 'nullable|string',
             'api_config.endpoint' => 'nullable|url',
-            'order' => 'required|integer|min:1'
+            'order' => 'required|integer|min:1|max:10'
         ]);
 
         $aiModel->update($validated);

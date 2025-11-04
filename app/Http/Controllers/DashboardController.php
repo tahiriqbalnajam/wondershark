@@ -12,14 +12,21 @@ class DashboardController extends Controller
 {
     /**
      * Display the dashboard.
-     * Redirects to the first active brand if available.
+     * Redirects to the first active brand if available (for agency/brand roles).
      */
     public function index()
     {
         /** @var User $user */
         $user = Auth::user();
         
-        // Get user's first brand
+        // If admin, show admin dashboard
+        if ($user->hasRole('admin')) {
+            return Inertia::render('dashboard', [
+                'isAdmin' => true
+            ]);
+        }
+        
+        // Get user's first brand (for agency or brand users)
         $firstBrand = Brand::where(function($query) use ($user) {
             $query->where('user_id', $user->id)
                   ->orWhere('agency_id', $user->id);
