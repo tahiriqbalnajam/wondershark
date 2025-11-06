@@ -7,9 +7,6 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
 import HeadingSmall from '@/components/heading-small';
 import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Trophy, TrendingUp, TrendingDown, Bot } from 'lucide-react';
-import { VisibilityChart } from '@/components/chart/visibility';
-import { BrandVisibilityIndex } from '@/components/dashboard-table/brand-visibility';
-import { AiCitations } from '@/components/chat/ai-citations';
 
 interface CompetitiveStat {
     id: number;
@@ -251,56 +248,246 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
 
                 {/* Brand Overview */}
                 <div className="grid gap-6 lg:grid-cols-4">
-                    <Card className="lg:col-span-2">
+                    <Card className="lg:col-span-1">
                         <CardHeader className="pb-3">
                             <CardTitle className="flex items-center gap-2">
-                                <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><Building2/></span>
-                                <div>
-                                    Visibility
-                                    <p className="mt-2 text-gray-600 text-xs">Percentage of chats mentioning each brand</p>
-                                </div>
+                                <Building2 className="h-5 w-5" />
+                                Basic Information
                             </CardTitle>
                         </CardHeader>
-                        <VisibilityChart/>
+                        <CardContent className="space-y-4">
+                            <div>
+                                <label className="text-sm font-medium">Brand Name</label>
+                                <p className="text-lg font-semibold">{brand.name}</p>
+                            </div>
+                            {brand.website && (
+                                <div>
+                                    <label className="text-sm font-medium">Website</label>
+                                    <a 
+                                        href={brand.website} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 text-primary hover:underline"
+                                    >
+                                        <Globe className="h-4 w-4" />
+                                        {new URL(brand.website).hostname}
+                                        <ExternalLink className="h-3 w-3" />
+                                    </a>
+                                </div>
+                            )}
+                            <div>
+                                <label className="text-sm font-medium">Description</label>
+                                <p className="text-sm text-muted-foreground">{brand.description}</p>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium">Created</label>
+                                <p className="text-sm">{brand.created_at ? new Date(brand.created_at).toLocaleDateString() : 'N/A'}</p>
+                            </div>
+                        </CardContent>
                     </Card>
 
-                    <Card className="lg:col-span-2">
+                    <Card className="lg:col-span-3">
                         <CardHeader className="pb-3">
                             <CardTitle className="flex items-center gap-2">
-                                <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><Trophy/></span>
-                                Brand Visibility Index
+                                <Trophy className="h-5 w-5" />
+                                Industry Ranking
                             </CardTitle>
                         </CardHeader>
-                        <BrandVisibilityIndex/>
+                        <CardContent>
+                            {competitiveStats && competitiveStats.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead>
+                                            <tr className="border-b text-left">
+                                                <th className="pb-3 text-sm font-medium text-muted-foreground w-12">#</th>
+                                                <th className="pb-3 text-sm font-medium text-muted-foreground">Entity</th>
+                                                <th className="pb-3 text-sm font-medium text-muted-foreground text-center w-32">Position</th>
+                                                <th className="pb-3 text-sm font-medium text-muted-foreground text-center w-32">Sentiment</th>
+                                                <th className="pb-3 text-sm font-medium text-muted-foreground text-center w-32">Visibility</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {competitiveStats
+                                                .sort((a, b) => a.position - b.position) // Sort by position (lower is better)
+                                                .map((stat, index) => {
+                                                // Clean domain for display - remove protocol and www
+                                                const cleanDomain = stat.entity_url
+                                                    .replace(/^https?:\/\//, '')
+                                                    .replace(/^www\./, '');
+                                                const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
+                                                const fallbackLogo = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
+                                                
+                                                const isBrand = stat.entity_type === 'brand';
+                                                
+                                                return (
+                                                    <tr key={stat.id}
+                                                        className={`border-b last:border-b-0 hover:bg-muted/50 transition-colors ${isBrand ? 'bg-blue-50/50' : ''}`}
+                                                    >
+                                                        <td className="py-4 text-sm font-medium">
+                                                            {index + 1}
+                                                            {isBrand && <span className="ml-1 text-blue-600">👑</span>}
+                                                        </td>
+                                                        <td className="py-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-10 h-10 rounded-lg border bg-white flex items-center justify-center p-1">
+                                                                    <img 
+                                                                        src={logoUrl}
+                                                                        alt={`${stat.entity_name} logo`}
+                                                                        className="w-full h-full object-contain"
+                                                                        onError={(e) => {
+                                                                            e.currentTarget.src = fallbackLogo;
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className={`font-medium text-sm ${isBrand ? 'text-blue-700' : 'hover:text-primary'}`}>
+                                                                            {stat.entity_name}
+                                                                        </span>
+                                                                        {isBrand && (
+                                                                            <Badge variant="default" className="text-xs px-2 py-0">
+                                                                                Your Brand
+                                                                            </Badge>
+                                                                        )}
+                                                                    </div>
+                                                                    <p className="text-xs text-muted-foreground">{cleanDomain}</p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-4 text-center">
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                {renderTrendIndicator(stat.trends.position_trend, stat.trends.position_change)}
+                                                                <Badge variant={isBrand ? 'default' : 'secondary'} className="font-mono">
+                                                                    {stat.position_formatted || 'N/A'}
+                                                                </Badge>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-4 text-center">
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                {renderTrendIndicator(stat.trends.sentiment_trend, stat.trends.sentiment_change)}
+                                                                <Badge 
+                                                                    variant={
+                                                                        stat.sentiment != null && stat.sentiment >= 75 ? 'default' :
+                                                                        stat.sentiment != null && stat.sentiment >= 60 ? 'secondary' :
+                                                                        'destructive'
+                                                                    }
+                                                                    className="font-mono"
+                                                                >
+                                                                    {stat.sentiment != null ? stat.sentiment : 'N/A'}
+                                                                </Badge>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-4 text-center">
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                {renderTrendIndicator(stat.trends.visibility_trend, stat.trends.visibility_change)}
+                                                                <Badge variant="outline" className="font-mono">
+                                                                    {stat.visibility_percentage || 'N/A'}
+                                                                </Badge>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                    <div className="mt-4 text-xs text-muted-foreground text-center">
+                                        Last updated: {competitiveStats[0]?.analyzed_at ? new Date(competitiveStats[0].analyzed_at).toLocaleDateString() : 'Never'}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center py-12 text-muted-foreground">
+                                    <Trophy className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                                    <h3 className="font-medium mb-1">No competitive analysis data available</h3>
+                                    <p className="text-sm">Run competitive analysis to track industry rankings and performance.</p>
+                                    <Button className="mt-4" size="sm" asChild>
+                                        <Link href={`/brands/${brand.id}/competitive-stats`}>
+                                            View Competitive Analysis
+                                        </Link>
+                                    </Button>
+                                </div>
+                            )}
+                        </CardContent>
                     </Card>
                 </div>
 
                 {/* Recent chats */}
                 <Card>
                     <CardHeader>
-                        <div className='flex items-center justify-between'>
-                            <div className='flex items-center'>
-                                <CardTitle className="flex items-center gap-2">
-                                    <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><MessageSquare/></span>
-                                   Recent AI Citations ({filteredPrompts?.length || 0})
-                                </CardTitle>
-                                {selectedCompetitorDomain && (
-                                    <Button variant="outline" size="sm" className="ml-2" onClick={() => setSelectedCompetitorDomain(null)}>
-                                        Clear competitor filter
-                                    </Button>
-                                )}
-                            </div>
-                            <a href="/" className='primary-btn'> View all AI Citations</a>
-                        </div>
+                        <CardTitle className="flex items-center gap-2">
+                            <MessageSquare className="h-5 w-5" />
+                            Recent chats ({filteredPrompts?.length || 0})
+                        </CardTitle>
+                        {selectedCompetitorDomain && (
+                            <Button variant="outline" size="sm" className="ml-2" onClick={() => setSelectedCompetitorDomain(null)}>
+                                Clear competitor filter
+                            </Button>
+                        )}
                     </CardHeader>
-                    <AiCitations/>
+                    <CardContent>
+                        {filteredPrompts && filteredPrompts.length > 0 ? (
+                            <div className="grid gap-4 md:grid-cols-2">
+                                {filteredPrompts.map((prompt, index) => (
+                                    <Card 
+                                        key={prompt.id} 
+                                        className="border rounded-lg cursor-pointer hover:shadow-md transition-shadow"
+                                        onClick={() => handlePromptClick(prompt)}
+                                    >
+                                        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="outline">Prompt {index + 1}</Badge>
+                                                {prompt.ai_model && (
+                                                    <Badge variant="secondary" className="flex items-center gap-1">
+                                                        <Bot className="h-3 w-3" />
+                                                        {prompt.ai_model.display_name}
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            <Badge variant={prompt.is_active ? 'default' : 'secondary'}>
+                                                {prompt.is_active ? 'Active' : 'Inactive'}
+                                            </Badge>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <p className="text-sm mb-2">{prompt.prompt}</p>
+                                            {/* Optionally show competitor resources here if filtered */}
+                                            {selectedCompetitorDomain && prompt.prompt_resources && (
+                                                <div className="mt-2">
+                                                    <h4 className="font-medium mb-1 text-xs">Competitor Resources:</h4>
+                                                    <div className="space-y-1">
+                                                        {prompt.prompt_resources.map((resource: { url: string; type: string; title: string; description: string; domain: string; is_competitor_url: boolean; }, resourceIndex: number) => (
+                                                            (resource.domain && resource.domain.replace(/^www\./, '') === selectedCompetitorDomain) ? (
+                                                                <a
+                                                                    key={resourceIndex}
+                                                                    href={resource.url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="block text-xs text-primary hover:underline p-1 bg-blue-50 rounded border-l-2 border-l-blue-500"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    {resource.title || resource.url}
+                                                                </a>
+                                                            ) : null
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-muted-foreground">
+                                <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                                <p>No chats found for this competitor.</p>
+                            </div>
+                        )}
+                    </CardContent>
                 </Card>
 
                 {/* Target Subreddits */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><Users/></span>
+                            <Users className="h-5 w-5" />
                             Target Subreddits ({brand.subreddits?.length || 0})
                         </CardTitle>
                     </CardHeader>
