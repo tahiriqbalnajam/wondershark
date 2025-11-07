@@ -43,6 +43,7 @@ class AiModelController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|unique:ai_models,name',
             'display_name' => 'required|string',
+            'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
             'is_enabled' => 'boolean',
             'prompts_per_brand' => 'required|integer|min:0',
             'api_config.api_key' => 'nullable|string',
@@ -50,6 +51,14 @@ class AiModelController extends Controller
             'api_config.endpoint' => 'nullable|url',
             'order' => 'required|integer|min:1|max:10'
         ]);
+
+        // Handle icon upload
+        if ($request->hasFile('icon')) {
+            $iconPath = $request->file('icon')->store('ai-model-icons', 'public');
+            $validated['icon'] = $iconPath;
+        } else {
+            unset($validated['icon']);
+        }
 
         AiModel::create($validated);
 
@@ -85,6 +94,7 @@ class AiModelController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|unique:ai_models,name,' . $aiModel->id,
             'display_name' => 'required|string',
+            'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
             'is_enabled' => 'boolean',
             'prompts_per_brand' => 'required|integer|min:0',
             'api_config.api_key' => 'nullable|string',
@@ -92,6 +102,18 @@ class AiModelController extends Controller
             'api_config.endpoint' => 'nullable|url',
             'order' => 'required|integer|min:1|max:10'
         ]);
+
+        // Handle icon upload
+        if ($request->hasFile('icon')) {
+            // Delete old icon if exists
+            if ($aiModel->icon && \Storage::disk('public')->exists($aiModel->icon)) {
+                \Storage::disk('public')->delete($aiModel->icon);
+            }
+            $iconPath = $request->file('icon')->store('ai-model-icons', 'public');
+            $validated['icon'] = $iconPath;
+        } else {
+            unset($validated['icon']);
+        }
 
         $aiModel->update($validated);
 

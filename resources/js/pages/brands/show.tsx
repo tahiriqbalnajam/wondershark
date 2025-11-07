@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
 import HeadingSmall from '@/components/heading-small';
-import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Trophy, TrendingUp, TrendingDown, Bot } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Trophy, TrendingUp, TrendingDown, Bot, User } from 'lucide-react';
 import { VisibilityChart } from '@/components/chart/visibility';
 import { BrandVisibilityIndex } from '@/components/dashboard-table/brand-visibility';
 import { AiCitations } from '@/components/chat/ai-citations';
@@ -65,6 +65,7 @@ interface Brand {
             id: number;
             name: string;
             display_name: string;
+            icon?: string;
             provider?: string;
         };
         prompt_resources?: Array<{
@@ -98,8 +99,116 @@ const breadcrumbs = (brand: Brand) => [
 export default function BrandShow({ brand, competitiveStats }: Props) {
     const [selectedCompetitorDomain, setSelectedCompetitorDomain] = useState<string | null>(null);
     const [triggeringAnalysis, setTriggeringAnalysis] = useState(false);
+
+    // Calculate visibility data from prompts
+    const visibilityChartData = useMemo(() => {
+        if (!brand.prompts || brand.prompts.length === 0) {
+            return { data: [], granularity: 'month' as 'month' | 'day' };
+        }
+
+        // Get all dates from prompts
+        const dates = brand.prompts
+            .filter(p => p.analysis_completed_at)
+            .map(p => new Date(p.analysis_completed_at!));
+
+        if (dates.length === 0) {
+            return { data: [], granularity: 'month' as 'month' | 'day' };
+        }
+
+        // Determine date range
+        const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+        const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+        const daysDiff = Math.ceil((maxDate.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        // Decide granularity: if less than 60 days, show daily; otherwise monthly
+        const granularity: 'month' | 'day' = daysDiff < 60 ? 'day' : 'month';
+
+        // Get all unique entities (brand + competitors from resources)
+        const entities = new Map<string, { name: string; domain: string }>();
+        
+        // Add brand
+        const brandDomain = (brand.domain || brand.website || '').replace(/^www\./, '');
+        if (brandDomain) {
+            entities.set(brandDomain, { name: brand.name, domain: brandDomain });
+        }
+
+        // Add competitors from resources
+        brand.prompts.forEach(prompt => {
+            prompt.prompt_resources?.forEach(resource => {
+                if (resource.is_competitor_url) {
+                    const cleanDomain = resource.domain.replace(/^www\./, '');
+                    if (!entities.has(cleanDomain)) {
+                        // Try to find competitor name from brand.competitors
+                        const competitor = brand.competitors.find(c => 
+                            c.domain.replace(/^www\./, '') === cleanDomain
+                        );
+                        entities.set(cleanDomain, {
+                            name: competitor?.name || cleanDomain,
+                            domain: cleanDomain
+                        });
+                    }
+                }
+            });
+        });
+
+        // Group prompts by time period
+        const mentionsByPeriod = new Map<string, Map<string, number>>();
+
+        brand.prompts.forEach(prompt => {
+            if (!prompt.analysis_completed_at) return;
+
+            const date = new Date(prompt.analysis_completed_at);
+            const periodKey = granularity === 'month'
+                ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+                : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+            if (!mentionsByPeriod.has(periodKey)) {
+                mentionsByPeriod.set(periodKey, new Map());
+            }
+
+            const periodMentions = mentionsByPeriod.get(periodKey)!;
+
+            // Count mentions in resources
+            prompt.prompt_resources?.forEach(resource => {
+                const cleanDomain = resource.domain.replace(/^www\./, '');
+                if (entities.has(cleanDomain)) {
+                    periodMentions.set(cleanDomain, (periodMentions.get(cleanDomain) || 0) + 1);
+                }
+            });
+        });
+
+        // Convert to chart data format
+        const chartData = Array.from(mentionsByPeriod.entries())
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([period, mentions]) => {
+                const dataPoint: Record<string, string | number> = {
+                    date: granularity === 'month'
+                        ? new Date(period + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+                        : new Date(period).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                };
+
+                // Add mention counts for each entity
+                entities.forEach((entity, domain) => {
+                    dataPoint[domain] = mentions.get(domain) || 0;
+                });
+
+                return dataPoint;
+            });
+
+        return { data: chartData, granularity, entities: Array.from(entities.values()) };
+    }, [brand]);
     const [selectedPrompt, setSelectedPrompt] = useState<Brand['prompts'][0] | null>(null);
     const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
+
+    const handleBrandRowClick = (domain: string) => {
+        // Scroll to Recent AI Citations section
+        const citationsSection = document.getElementById('recent-citations');
+        if (citationsSection) {
+            citationsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        // Set the competitor filter
+        setSelectedCompetitorDomain(domain);
+    };
 
     // Helper function to render trend indicators (only for up/down changes)
     const renderTrendIndicator = (trend: 'up' | 'down' | 'stable' | 'new', change: number) => {
@@ -261,7 +370,11 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
                                 </div>
                             </CardTitle>
                         </CardHeader>
-                        <VisibilityChart/>
+                        <VisibilityChart
+                            data={visibilityChartData.data}
+                            entities={visibilityChartData.entities}
+                            granularity={visibilityChartData.granularity}
+                        />
                     </Card>
 
                     <Card className="lg:col-span-2">
@@ -271,12 +384,15 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
                                 Brand Visibility Index
                             </CardTitle>
                         </CardHeader>
-                        <BrandVisibilityIndex/>
+                        <BrandVisibilityIndex 
+                            competitiveStats={competitiveStats} 
+                            onRowClick={handleBrandRowClick}
+                        />
                     </Card>
                 </div>
 
                 {/* Recent chats */}
-                <Card>
+                <Card id="recent-citations">
                     <CardHeader>
                         <div className='flex items-center justify-between'>
                             <div className='flex items-center'>
@@ -286,14 +402,17 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
                                 </CardTitle>
                                 {selectedCompetitorDomain && (
                                     <Button variant="outline" size="sm" className="ml-2" onClick={() => setSelectedCompetitorDomain(null)}>
-                                        Clear competitor filter
+                                        Clear filter
                                     </Button>
                                 )}
                             </div>
                             <a href="/" className='primary-btn'> View all AI Citations</a>
                         </div>
                     </CardHeader>
-                    <AiCitations/>
+                    <AiCitations 
+                        prompts={filteredPrompts} 
+                        onPromptClick={handlePromptClick}
+                    />
                 </Card>
 
                 {/* Target Subreddits */}
@@ -339,7 +458,18 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
                             {/* AI Model Header - at the very top */}
                             {selectedPrompt.ai_model && (
                                 <div className="flex items-center gap-2 mb-4 pb-3 border-b">
-                                    <Bot className="h-5 w-5 text-primary" />
+                                    {selectedPrompt.ai_model.icon ? (
+                                        <img 
+                                            src={`/storage/${selectedPrompt.ai_model.icon}`}
+                                            alt={selectedPrompt.ai_model.display_name}
+                                            className="w-5 h-5 object-contain rounded"
+                                            onError={(e) => {
+                                                e.currentTarget.style.display = 'none';
+                                            }}
+                                        />
+                                    ) : (
+                                        <Bot className="h-5 w-5 text-primary" />
+                                    )}
                                     <span className="font-medium text-sm">
                                         Analyzed by {selectedPrompt.ai_model.display_name}
                                     </span>
@@ -350,17 +480,40 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
                                 {/* Left Column - 75% width (9/12) */}
                                 <div className="col-span-9 space-y-4">
                                     {/* Prompt Card - aligned right */}
-                                    <div className="flex justify-end">
+                                    <div className="flex items-start justify-end gap-3">
                                         <Card className="max-w-md w-full bg-blue-50 border-blue-200">
                                             <CardContent>
                                                 <p className="text-sm">{selectedPrompt.prompt}</p>
                                             </CardContent>
                                         </Card>
+                                        <div className="flex-shrink-0 mt-3">
+                                            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
+                                                <User className="h-5 w-5 text-white" />
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {/* AI Response */}
-                                    <div>
-                                        <Card>
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex-shrink-0 mt-3">
+                                            {selectedPrompt.ai_model?.icon ? (
+                                                <div className="w-8 h-8 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center p-1">
+                                                    <img 
+                                                        src={`/storage/${selectedPrompt.ai_model.icon}`}
+                                                        alt={selectedPrompt.ai_model.display_name}
+                                                        className="w-full h-full object-contain"
+                                                        onError={(e) => {
+                                                            e.currentTarget.style.display = 'none';
+                                                        }}
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                                    <Bot className="h-5 w-5 text-primary" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <Card className="flex-1">
                                             <CardContent className="pt-6">
                                                 {selectedPrompt.ai_response ? (
                                                     <div 
@@ -379,29 +532,67 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
                                 <div className="col-span-3">
                                     <h3 className="text-lg font-semibold mb-3">Resources</h3>
                                     <div className="space-y-3">
-                                        {selectedPrompt.prompt_resources && selectedPrompt.prompt_resources.length > 0 ? (
-                                            selectedPrompt.prompt_resources.map((resource: { url: string; type: string; title: string; description: string; domain: string; is_competitor_url: boolean; }, index: number) => (
-                                                <div 
-                                                    key={index} 
-                                                    className="border rounded-lg p-3 hover:bg-gray-50 transition-colors cursor-pointer hover:shadow-md"
-                                                    onClick={() => window.open(resource.url, '_blank', 'noopener,noreferrer')}
-                                                >
-                                                    <h4 className="font-medium text-sm mb-1">
-                                                        {resource.title || 'Untitled Resource'}
-                                                    </h4>
-                                                    <p className="text-xs text-gray-500 block truncate mb-2" title={resource.url}>
-                                                        {resource.url}
-                                                    </p>
-                                                    {resource.description && (
-                                                        <p className="text-xs text-gray-600 mt-1 mb-2">{resource.description}</p>
-                                                    )}
-                                                    {resource.type && (
-                                                        <Badge variant="outline" className="text-xs">
-                                                            {resource.type}
-                                                        </Badge>
-                                                    )}
+                                        {/* Brand Icon */}
+                                        <div className="border rounded-lg p-3 bg-gradient-to-br from-blue-50 to-indigo-50">
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center p-1.5">
+                                                    <img 
+                                                        src={`https://img.logo.dev/${brand.domain?.replace(/^www\./, '') || brand.website?.replace(/^www\./, '')}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`}
+                                                        alt={brand.name}
+                                                        className="w-full h-full object-contain"
+                                                        onError={(e) => {
+                                                            e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="%233b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
+                                                        }}
+                                                    />
                                                 </div>
-                                            ))
+                                                <div className="flex-1">
+                                                    <h4 className="font-semibold text-sm">{brand.name}</h4>
+                                                    <p className="text-xs text-muted-foreground">Your Brand</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Competitor Resources */}
+                                        {selectedPrompt.prompt_resources && selectedPrompt.prompt_resources.length > 0 ? (
+                                            selectedPrompt.prompt_resources.map((resource: { url: string; type: string; title: string; description: string; domain: string; is_competitor_url: boolean; }, index: number) => {
+                                                const cleanDomain = resource.domain.replace(/^www\./, '');
+                                                return (
+                                                    <div 
+                                                        key={index} 
+                                                        className="border rounded-lg p-3 hover:bg-gray-50 transition-colors cursor-pointer hover:shadow-md"
+                                                        onClick={() => window.open(resource.url, '_blank', 'noopener,noreferrer')}
+                                                    >
+                                                        <div className="flex items-start gap-3">
+                                                            <div className="flex-shrink-0 w-8 h-8 rounded bg-white border flex items-center justify-center p-1">
+                                                                <img 
+                                                                    src={`https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`}
+                                                                    alt={resource.domain}
+                                                                    className="w-full h-full object-contain"
+                                                                    onError={(e) => {
+                                                                        e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`;
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <h4 className="font-medium text-sm mb-1">
+                                                                    {resource.title || 'Untitled Resource'}
+                                                                </h4>
+                                                                <p className="text-xs text-gray-500 truncate mb-2" title={resource.url}>
+                                                                    {resource.domain}
+                                                                </p>
+                                                                {resource.description && (
+                                                                    <p className="text-xs text-gray-600 mt-1 mb-2 line-clamp-2">{resource.description}</p>
+                                                                )}
+                                                                {resource.type && (
+                                                                    <Badge variant="outline" className="text-xs">
+                                                                        {resource.type}
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
                                         ) : (
                                             <p className="text-sm text-muted-foreground">No resources found for this prompt.</p>
                                         )}

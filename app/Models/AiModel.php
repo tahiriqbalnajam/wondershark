@@ -11,7 +11,8 @@ class AiModel extends Model
 
     protected $fillable = [
         'name',
-        'display_name', 
+        'display_name',
+        'icon',
         'is_enabled',
         'prompts_per_brand',
         'api_config',

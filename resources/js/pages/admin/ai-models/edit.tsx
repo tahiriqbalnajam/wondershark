@@ -10,13 +10,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import AppLayout from "@/layouts/app-layout";
+import { useState } from "react";
 
 interface AiModel {
   id: number;
   name: string;
   display_name: string;
+  icon?: string;
   is_enabled: boolean;
   prompts_per_brand: number;
   api_config: {
@@ -32,9 +34,11 @@ interface Props {
 }
 
 export default function Edit({ aiModel }: Props) {
-  const { data, setData, put, processing, errors } = useForm({
+  const { data, setData, post, processing, errors } = useForm({
+    _method: 'PUT',
     name: aiModel.name,
     display_name: aiModel.display_name,
+    icon: null as File | null,
     is_enabled: aiModel.is_enabled,
     prompts_per_brand: aiModel.prompts_per_brand,
     api_config: {
@@ -45,9 +49,34 @@ export default function Edit({ aiModel }: Props) {
     order: aiModel.order,
   });
 
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [keepExisting, setKeepExisting] = useState(true);
+
+  const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setData('icon', file);
+      setKeepExisting(false);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveNewIcon = () => {
+    setData('icon', null);
+    setPreviewUrl(null);
+    setKeepExisting(true);
+    // Reset file input
+    const fileInput = document.getElementById('icon') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    put(route('admin.ai-models.update', aiModel.id));
+    post(route('admin.ai-models.update', aiModel.id));
   };
 
   return (
@@ -104,6 +133,59 @@ export default function Edit({ aiModel }: Props) {
                       <p className="text-sm text-red-600">{errors.display_name}</p>
                     )}
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="icon">Icon Image</Label>
+                  <div className="space-y-4">
+                    {/* Show existing icon if available and no new one selected */}
+                    {keepExisting && aiModel.icon && (
+                      <div className="flex items-center gap-4 p-4 border rounded-lg bg-gray-50">
+                        <img
+                          src={`/storage/${aiModel.icon}`}
+                          alt="Current icon"
+                          className="w-16 h-16 object-contain rounded"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600">Current icon</p>
+                          <p className="text-xs text-gray-500 mt-1">Upload a new image to replace</p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-4">
+                      <Input
+                        id="icon"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleIconChange}
+                        className="flex-1"
+                      />
+                      {previewUrl && (
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={previewUrl}
+                            alt="Icon preview"
+                            className="w-16 h-16 object-contain rounded border"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleRemoveNewIcon}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Upload an image (JPG, PNG, GIF, SVG, WebP - max 2MB)
+                    </p>
+                  </div>
+                  {errors.icon && (
+                    <p className="text-sm text-red-600">{errors.icon}</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">

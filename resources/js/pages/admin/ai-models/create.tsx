@@ -12,11 +12,13 @@ import {
 } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import AppLayout from "@/layouts/app-layout";
+import { useState } from "react";
 
 export default function Create() {
   const { data, setData, post, processing, errors } = useForm({
     name: '',
     display_name: '',
+    icon: null as File | null,
     is_enabled: true as boolean,
     prompts_per_brand: 25,
     api_config: {
@@ -26,6 +28,20 @@ export default function Create() {
     },
     order: 1,
   });
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setData('icon', file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,6 +106,36 @@ export default function Create() {
                       <p className="text-sm text-red-600">{errors.display_name}</p>
                     )}
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="icon">Icon Image</Label>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <Input
+                        id="icon"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleIconChange}
+                        className="flex-1"
+                      />
+                      {previewUrl && (
+                        <div className="flex-shrink-0">
+                          <img
+                            src={previewUrl}
+                            alt="Icon preview"
+                            className="w-16 h-16 object-contain rounded border"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Upload an image (JPG, PNG, GIF, SVG, WebP - max 2MB)
+                    </p>
+                  </div>
+                  {errors.icon && (
+                    <p className="text-sm text-red-600">{errors.icon}</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">

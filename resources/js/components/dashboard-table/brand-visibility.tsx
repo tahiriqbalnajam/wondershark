@@ -17,19 +17,39 @@ import {
   Info,
   ArrowUpRight,
   ArrowDownRight,
-  FileChartColumn,
 } from "lucide-react";
 
-// 🟦 Dummy data (can later be passed as props)
-const industryRanking = [
-  { brand: "Fiverr", logo: "/images/b2.png", position: { rank: 2.5, trend: "up", score: "98%" }, sentiment: { rank: 55, trend: "down", score: "2" }, visibility: { rank: 3.1, trend: "up", score: "98%" } },
-  { brand: "Upwork", logo: "/images/b3.png", position: { rank: 3.5, trend: "down", score: "98%" }, sentiment: { rank: 60, trend: "down", score: "3" }, visibility: { rank: 3.1, trend: "up", score: "98%" } },
-  { brand: "Influencity", logo: "/images/b6.png", position: { rank: 1.5, trend: "down", score: "98%" }, sentiment: { rank: 65, trend: "down", score: "4" }, visibility: { rank: 3.1, trend: "up", score: "98%" } },
-  { brand: "Amazon Creator Connections", logo: "/images/b5.png", position: { rank: 3.1, trend: "up", score: "98%" }, sentiment: { rank: 70, trend: "down", score: "3" }, visibility: { rank: 3.1, trend: "up", score: "98%" } },
-  { brand: "FameBit", logo: "/images/b7.png", position: { rank: 1.1, trend: "up", score: "98%" }, sentiment: { rank: 75, trend: "down", score: "4" }, visibility: { rank: 3.1, trend: "up", score: "98%" } },
-];
+interface CompetitiveStat {
+    id: number;
+    entity_type: 'brand' | 'competitor';
+    entity_name: string;
+    entity_url: string;
+    visibility: number;
+    sentiment: number;
+    position: number;
+    analyzed_at: string;
+    trends: {
+        visibility_trend: 'up' | 'down' | 'stable' | 'new';
+        sentiment_trend: 'up' | 'down' | 'stable' | 'new';
+        position_trend: 'up' | 'down' | 'stable' | 'new';
+        visibility_change: number;
+        sentiment_change: number;
+        position_change: number;
+    };
+    visibility_percentage: string;
+    position_formatted: string;
+    sentiment_level: string;
+}
 
-export function BrandVisibilityIndex() {
+interface BrandVisibilityIndexProps {
+    competitiveStats: CompetitiveStat[];
+    onRowClick?: (domain: string) => void;
+}
+
+export function BrandVisibilityIndex({ competitiveStats, onRowClick }: BrandVisibilityIndexProps) {
+    // Sort by position (lower is better)
+    const sortedStats = [...competitiveStats].sort((a, b) => a.position - b.position);
+
     return (
         <CardContent>
             <div className="min-h-80">
@@ -50,7 +70,8 @@ export function BrandVisibilityIndex() {
                                 </TooltipTrigger>
                                 <TooltipContent className="w-50">
                                 <p className="text-xs text-center">
-                                    Percentage of chats mentioning the brand in the last 30 days
+                                    The average position of the brand when mentioned in the
+                                    last 30 days
                                 </p>
                                 </TooltipContent>
                             </Tooltip>
@@ -85,8 +106,7 @@ export function BrandVisibilityIndex() {
                                 </TooltipTrigger>
                                 <TooltipContent className="w-50">
                                 <p className="text-xs text-center">
-                                    The average position of the brand when mentioned in the
-                                    last 30 days
+                                    Percentage of chats mentioning the brand in the last 30 days
                                 </p>
                                 </TooltipContent>
                             </Tooltip>
@@ -95,65 +115,86 @@ export function BrandVisibilityIndex() {
                     </TableHeader>
 
                     <TableBody>
-                        {industryRanking.map((item, index) => (
-                            <TableRow key={item.brand}>
-                                <TableCell className="font-medium border-r border-gray-200 text-center">
-                                    {index + 1}
-                                </TableCell>
-                                <TableCell className="font-medium flex items-center gap-2 border-r border-gray-200">
-                                    {item.logo && (
-                                    <img
-                                        src={item.logo}
-                                        alt={item.brand}
-                                        className="w-6 h-6 rounded object-contain"
-                                    />
-                                    )}
-                                    {item.brand}
-                                </TableCell>
-                                <TableCell className="border-r border-gray-200">
-                                    <div className="flex items-center gap-1 justify-between">
-                                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                            {item.position.trend === "up" && (
-                                                <ArrowUpRight className="h-4 w-4 text-green-600" />
-                                            )}
-                                            {item.position.trend === "down" && (
-                                                <ArrowDownRight className="h-4 w-4 text-red-600" />
-                                            )}
-                                            {item.position.rank}
-                                        </span>
-                                        <span className="text-xs">{item.position.score}</span>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="border-r border-gray-200">
-                                    <div className="flex items-center gap-1 justify-between">
-                                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                            {item.sentiment.trend === "up" && (
-                                                <ArrowUpRight className="h-4 w-4 text-green-600" />
-                                            )}
-                                            {item.sentiment.trend === "down" && (
-                                                <ArrowDownRight className="h-4 w-4 text-red-600" />
-                                            )}
-                                            {item.sentiment.rank}
-                                        </span>
-                                        <span className="text-xs">{item.sentiment.score}</span>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="border-r border-gray-200">
-                                    <div className="flex items-center gap-1 justify-between">
-                                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                            {item.visibility.trend === "up" && (
-                                                <ArrowUpRight className="h-4 w-4 text-green-600" />
-                                            )}
-                                            {item.visibility.trend === "down" && (
-                                                <ArrowDownRight className="h-4 w-4 text-red-600" />
-                                            )}
-                                            {item.visibility.rank}
-                                        </span>
-                                        <span className="text-xs">{item.visibility.score}</span>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
+                        {sortedStats.map((stat, index) => {
+                            // Clean domain for display - remove protocol and www
+                            const cleanDomain = stat.entity_url
+                                .replace(/^https?:\/\//, '')
+                                .replace(/^www\./, '');
+                            const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
+                            
+                            return (
+                                <TableRow 
+                                    key={stat.id}
+                                    onClick={() => onRowClick?.(cleanDomain)}
+                                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                                >
+                                    <TableCell className="font-medium border-r border-gray-200 text-center">
+                                        {index + 1}
+                                    </TableCell>
+                                    <TableCell className="font-medium border-r border-gray-200">
+                                        <div className="flex items-center gap-2">
+                                            <img
+                                                src={logoUrl}
+                                                alt={stat.entity_name}
+                                                className="w-6 h-6 rounded object-contain"
+                                                onError={(e) => {
+                                                    e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
+                                                }}
+                                            />
+                                            {stat.entity_name}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="border-r border-gray-200">
+                                        <div className="flex items-center gap-1 justify-between">
+                                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                {stat.trends.position_trend === "up" && (
+                                                    <ArrowUpRight className="h-4 w-4 text-green-600" />
+                                                )}
+                                                {stat.trends.position_trend === "down" && (
+                                                    <ArrowDownRight className="h-4 w-4 text-red-600" />
+                                                )}
+                                                {stat.trends.position_change !== 0 && stat.trends.position_trend !== 'stable' && stat.trends.position_trend !== 'new' && (
+                                                    <span>{Math.abs(stat.trends.position_change)}%</span>
+                                                )}
+                                            </span>
+                                            <span className="text-xs">{stat.position_formatted || 'N/A'}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="border-r border-gray-200">
+                                        <div className="flex items-center gap-1 justify-between">
+                                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                {stat.trends.sentiment_trend === "up" && (
+                                                    <ArrowUpRight className="h-4 w-4 text-green-600" />
+                                                )}
+                                                {stat.trends.sentiment_trend === "down" && (
+                                                    <ArrowDownRight className="h-4 w-4 text-red-600" />
+                                                )}
+                                                {stat.trends.sentiment_change !== 0 && stat.trends.sentiment_trend !== 'stable' && stat.trends.sentiment_trend !== 'new' && (
+                                                    <span>{Math.abs(stat.trends.sentiment_change)}%</span>
+                                                )}
+                                            </span>
+                                            <span className="text-xs">{stat.sentiment != null ? stat.sentiment : 'N/A'}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="border-r border-gray-200">
+                                        <div className="flex items-center gap-1 justify-between">
+                                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                {stat.trends.visibility_trend === "up" && (
+                                                    <ArrowUpRight className="h-4 w-4 text-green-600" />
+                                                )}
+                                                {stat.trends.visibility_trend === "down" && (
+                                                    <ArrowDownRight className="h-4 w-4 text-red-600" />
+                                                )}
+                                                {stat.trends.visibility_change !== 0 && stat.trends.visibility_trend !== 'stable' && stat.trends.visibility_trend !== 'new' && (
+                                                    <span>{Math.abs(stat.trends.visibility_change)}%</span>
+                                                )}
+                                            </span>
+                                            <span className="text-xs">{stat.visibility_percentage || 'N/A'}</span>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
                     </TableBody>
                 </Table>
             </div>
