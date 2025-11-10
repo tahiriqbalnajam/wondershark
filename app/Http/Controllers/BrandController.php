@@ -186,8 +186,8 @@ class BrandController extends Controller
         /** @var User $user */
         $user = Auth::user();
         
-        // Ensure the brand belongs to the authenticated agency
-        if ($brand->agency_id !== $user->id) {
+        // Ensure the brand belongs to the authenticated agency or user is admin
+        if ($brand->agency_id !== $user->id && !$user->hasRole('admin')) {
             abort(403);
         }
 
@@ -227,8 +227,8 @@ class BrandController extends Controller
         /** @var User $user */
         $user = Auth::user();
         
-        // Ensure the brand belongs to the authenticated agency
-        if ($brand->agency_id !== $user->id) {
+        // Ensure the brand belongs to the authenticated agency or user is admin
+        if ($brand->agency_id !== $user->id && !$user->hasRole('admin')) {
             abort(403);
         }
 
@@ -250,8 +250,8 @@ class BrandController extends Controller
         /** @var User $user */
         $user = Auth::user();
         
-        // Ensure the brand belongs to the authenticated agency
-        if ($brand->agency_id !== $user->id) {
+        // Ensure the brand belongs to the authenticated agency or user is admin
+        if ($brand->agency_id !== $user->id && !$user->hasRole('admin')) {
             abort(403);
         }
 
@@ -270,8 +270,8 @@ class BrandController extends Controller
         /** @var User $user */
         $user = Auth::user();
         
-        // Ensure the brand belongs to the authenticated agency
-        if ($brand->agency_id !== $user->id) {
+        // Ensure the brand belongs to the authenticated agency or user is admin
+        if ($brand->agency_id !== $user->id && !$user->hasRole('admin')) {
             abort(403);
         }
 
@@ -340,8 +340,8 @@ class BrandController extends Controller
         /** @var User $user */
         $user = Auth::user();
         
-        // Ensure the brand belongs to the authenticated agency
-        if ($brand->agency_id !== $user->id) {
+        // Ensure the brand belongs to the authenticated agency or user is admin
+        if ($brand->agency_id !== $user->id && !$user->hasRole('admin')) {
             abort(403);
         }
 
@@ -364,8 +364,8 @@ class BrandController extends Controller
         /** @var User $user */
         $user = Auth::user();
         
-        // Ensure the brand belongs to the authenticated agency
-        if ($brand->agency_id !== $user->id) {
+        // Ensure the brand belongs to the authenticated agency or user is admin
+        if ($brand->agency_id !== $user->id && !$user->hasRole('admin')) {
             abort(403);
         }
 
@@ -745,8 +745,8 @@ class BrandController extends Controller
         /** @var User $user */
         $user = Auth::user();
         
-        // Ensure the brand belongs to the authenticated agency
-        if ($brand->agency_id !== $user->id) {
+        // Ensure the brand belongs to the authenticated agency or user is admin
+        if ($brand->agency_id !== $user->id && !$user->hasRole('admin')) {
             abort(403);
         }
 
@@ -808,8 +808,8 @@ class BrandController extends Controller
         /** @var User $user */
         $user = Auth::user();
         
-        // Ensure the brand belongs to the authenticated agency
-        if ($brand->agency_id !== $user->id) {
+        // Ensure the brand belongs to the authenticated agency or user is admin
+        if ($brand->agency_id !== $user->id && !$user->hasRole('admin')) {
             abort(403);
         }
 
