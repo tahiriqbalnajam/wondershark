@@ -58,7 +58,7 @@ class BrandController extends Controller
         // Get enabled AI models for automatic prompt generation
         $aiModels = AiModel::enabled()->ordered()->get();
         
-        return Inertia::render('brands/create', [
+        return Inertia::render('brands/create/index', [
             'sessionId' => session()->getId(),
             'aiModels' => $aiModels,
         ]);

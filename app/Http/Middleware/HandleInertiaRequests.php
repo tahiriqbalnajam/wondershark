@@ -77,13 +77,28 @@ class HandleInertiaRequests extends Middleware
         $selectedBrand = null;
         
         if ($selectedBrandId && $user) {
-            $selectedBrand = \App\Models\Brand::where('id', $selectedBrandId)
-                ->where(function($q) use ($user) {
-                    $q->where('user_id', $user->id)
-                      ->orWhere('agency_id', $user->id);
-                })
-                ->select('id', 'name', 'website')
-                ->first();
+            try {
+                $isAdmin = $user->hasRole('admin');
+                
+                $query = \App\Models\Brand::where('id', $selectedBrandId);
+                
+                // Admins can see any brand, regular users only their own
+                if (!$isAdmin) {
+                    $query->where(function($q) use ($user) {
+                        $q->where('user_id', $user->id)
+                          ->orWhere('agency_id', $user->id);
+                    });
+                }
+                
+                $selectedBrand = $query->select('id', 'name', 'website')->first();
+            } catch (\Exception $e) {
+                Log::error('Error loading selected brand', [
+                    'brand_id' => $selectedBrandId,
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage()
+                ]);
+                $selectedBrand = null;
+            }
         }
 
         return [
