@@ -380,6 +380,19 @@ span.img-avatar img{
 textarea.form-control{
     height:165px;
 }
+.field-icon .form-control{
+    margin-bottom:0;
+}
+.field-icon span{
+    position: absolute;
+    transform: translateY(-50%);
+    top:50%;
+    right:15px;
+    color:var(--orange-1);
+}
+.field-icon span svg {
+	width: 16px;
+}
 
 /** Add Prompts **/
 .add-prompt-lists {
@@ -398,9 +411,11 @@ textarea.form-control{
     font-weight:600;
     cursor: pointer;
 }
+.add-prompt-lists button.active,
 .add-prompt-lists button:hover{
     background: var(--color-gray-200);
 }
+.add-prompt-lists button.active,
 .add-prompt-lists button[aria-selected="true"]{
     background:var(--orange-1);
     color:var(--color-white);
@@ -718,4 +733,10 @@ textarea.form-control{
     background:#00DC4B;
     flex:0 0 10px;
     border-radius:50%;
+}
+
+@media(max-width:991px){
+    .add-prompt-lists button {
+        padding:10px 15px;
+    }
 }

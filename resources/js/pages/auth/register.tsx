@@ -38,10 +38,11 @@ export default function Register() {
         <AuthLayout title="Create an account" description="Enter your details below to create your account">
             <Head title="Register" />
             <form className="flex flex-col gap-6" onSubmit={submit}>
-                <div className="grid gap-6">
+                <div className="grid">
                     <div className="grid gap-2">
                         <Label htmlFor="name">Name</Label>
                         <Input
+                            className='form-control'
                             id="name"
                             type="text"
                             required
@@ -59,6 +60,7 @@ export default function Register() {
                     <div className="grid gap-2">
                         <Label htmlFor="email">Email address</Label>
                         <Input
+                            className='form-control'
                             id="email"
                             type="email"
                             required
@@ -75,6 +77,7 @@ export default function Register() {
                     <div className="grid gap-2">
                         <Label htmlFor="password">Password</Label>
                         <Input
+                            className='form-control'
                             id="password"
                             type="password"
                             required
@@ -91,6 +94,7 @@ export default function Register() {
                     <div className="grid gap-2">
                         <Label htmlFor="password_confirmation">Confirm password</Label>
                         <Input
+                            className='form-control'
                             id="password_confirmation"
                             type="password"
                             required
@@ -114,22 +118,22 @@ export default function Register() {
                             <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
                                 <RadioGroupItem value="brand" id="brand" />
                                 <Label htmlFor="brand" className="flex-1 cursor-pointer">
-                                    <div className="font-medium">Brand</div>
-                                    <div className="text-sm text-muted-foreground">For businesses looking to promote their products</div>
+                                    <div className="font-bold text-orange-600">Brand</div>
+                                    <div className="text-xs text-muted-foreground">For businesses looking to promote their products</div>
                                 </Label>
                             </div>
                             <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
                                 <RadioGroupItem value="agency" id="agency" />
                                 <Label htmlFor="agency" className="flex-1 cursor-pointer">
-                                    <div className="font-medium">Agency</div>
-                                    <div className="text-sm text-muted-foreground">For marketing agencies and service providers</div>
+                                    <div className="font-bold text-orange-600">Agency</div>
+                                    <div className="text-xs text-muted-foreground">For marketing agencies and service providers</div>
                                 </Label>
                             </div>
                         </RadioGroup>
                         <InputError message={errors.role} />
                     </div>
 
-                    <Button type="submit" className="mt-2 w-full" tabIndex={5} disabled={processing}>
+                    <Button type="submit" className="mt-5 w-full primary-btn uppercase font-bold" tabIndex={5} disabled={processing}>
                         {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
                         Create account
                     </Button>
