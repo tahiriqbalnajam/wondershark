@@ -232,62 +232,90 @@ export default function Step3Competitors({
             {/* Suggested Competitors Grid */}
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
                 {/* Suggested competitors */}
-                {suggestedCompetitors.map((competitor) => (
-                    <div key={competitor.id} className="block">
-                        <div className="competitor-box bg-sidebar border">
-                            <div className="flex items-center justify-between mb-12">
-                                <div className="flex items-center gap-[10px]">
-                                    <span className='w-[20px]'><img src="../images/StackInfluence.png" alt="icon" /></span>
-                                    <h4>{competitor.name}</h4>
+                {suggestedCompetitors.map((competitor) => {
+                    const cleanDomain = competitor.domain.replace(/^https?:\/\//, '').replace(/^www\./, '');
+                    const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
+                    
+                    return (
+                        <div key={competitor.id} className="block">
+                            <div className="competitor-box bg-sidebar border">
+                                <div className="flex items-center justify-between mb-12">
+                                    <div className="flex items-center gap-[10px]">
+                                        <span className='w-[20px] h-[20px] flex items-center justify-center'>
+                                            <img 
+                                                src={logoUrl} 
+                                                alt={competitor.name}
+                                                className="w-full h-full object-contain"
+                                                onError={(e) => {
+                                                    e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`;
+                                                }}
+                                            />
+                                        </span>
+                                        <h4>{competitor.name}</h4>
+                                    </div>
+                                    <button className="edit-btn">
+                                        <Pencil className="w-[15px]"/>
+                                    </button>
                                 </div>
-                                <button className="edit-btn">
-                                    <Pencil className="w-[15px]"/>
-                                </button>
-                            </div>
-                            <p className='text-gray-400'>{competitor.mentions} Mentions</p>
-                            <div className="competitor-btn-action">
-                                <button
-                                    className='btn-action-close'
-                                    onClick={() => handleReject(competitor.id)}
-                                >
-                                    <X className="w-[15px]"/>
-                                </button>
-                                <button
-                                    className='btn-action-check'
-                                    onClick={() => handleAccept(competitor.id)}
-                                >
-                                    <Check className="w-[15px]"/>
-                                </button>
+                                <p className='text-gray-400'>{competitor.mentions} Mentions</p>
+                                <div className="competitor-btn-action">
+                                    <button
+                                        className='btn-action-close'
+                                        onClick={() => handleReject(competitor.id)}
+                                    >
+                                        <X className="w-[15px]"/>
+                                    </button>
+                                    <button
+                                        className='btn-action-check'
+                                        onClick={() => handleAccept(competitor.id)}
+                                    >
+                                        <Check className="w-[15px]"/>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
 
                 {/* Rejected competitors with gray background */}
-                {rejectedCompetitors.map((competitor) => (
-                    <div key={competitor.id} className="block">
-                        <div className="competitor-box bg-gray-200 border opacity-50">
-                            <div className="flex items-center justify-between mb-12">
-                                <div className="flex items-center gap-[10px]">
-                                    <span className='w-[20px]'><img src="../images/StackInfluence.png" alt="icon" /></span>
-                                    <h4>{competitor.name}</h4>
+                {rejectedCompetitors.map((competitor) => {
+                    const cleanDomain = competitor.domain.replace(/^https?:\/\//, '').replace(/^www\./, '');
+                    const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
+                    
+                    return (
+                        <div key={competitor.id} className="block">
+                            <div className="competitor-box bg-gray-200 border opacity-50">
+                                <div className="flex items-center justify-between mb-12">
+                                    <div className="flex items-center gap-[10px]">
+                                        <span className='w-[20px] h-[20px] flex items-center justify-center'>
+                                            <img 
+                                                src={logoUrl} 
+                                                alt={competitor.name}
+                                                className="w-full h-full object-contain"
+                                                onError={(e) => {
+                                                    e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`;
+                                                }}
+                                            />
+                                        </span>
+                                        <h4>{competitor.name}</h4>
+                                    </div>
+                                    <button className="edit-btn">
+                                        <Pencil className="w-[15px]"/>
+                                    </button>
                                 </div>
-                                <button className="edit-btn">
-                                    <Pencil className="w-[15px]"/>
-                                </button>
-                            </div>
-                            <p className='text-gray-400'>{competitor.mentions} Mentions</p>
-                            <div className="competitor-btn-action">
-                                <button className='btn-action-close opacity-50' disabled>
-                                    <X className="w-[15px]"/>
-                                </button>
-                                <button className='btn-action-check opacity-50' disabled>
-                                    <Check className="w-[15px]"/>
-                                </button>
+                                <p className='text-gray-400'>{competitor.mentions} Mentions</p>
+                                <div className="competitor-btn-action">
+                                    <button className='btn-action-close opacity-50' disabled>
+                                        <X className="w-[15px]"/>
+                                    </button>
+                                    <button className='btn-action-check opacity-50' disabled>
+                                        <Check className="w-[15px]"/>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             <div className="step-wrapp-card mt-[50px]">
@@ -313,9 +341,16 @@ export default function Step3Competitors({
                             <Label htmlFor="domain">Domain</Label>
                             <Input
                                 id="domain"
-                                type="url"
+                                type="text"
                                 value={formData.domain}
-                                onChange={(e) => setFormData(prev => ({ ...prev, domain: e.target.value }))}
+                                onChange={(e) => {
+                                    let value = e.target.value;
+                                    // Auto-add https:// if user starts typing and hasn't added it
+                                    if (value && !value.startsWith('http://') && !value.startsWith('https://')) {
+                                        value = 'https://' + value;
+                                    }
+                                    setFormData(prev => ({ ...prev, domain: value }));
+                                }}
                                 placeholder="https://competitor.com"
                                 className="form-control"
                             />
@@ -323,7 +358,7 @@ export default function Step3Competitors({
 
                         <div className="flex gap-2">
                             <button type="submit" className='flex py-4 justify-center gap-3 text-md border rounded-sm w-[200px] font-medium fetch-ai-btn'>
-                                <CirclePlus className='w-[20px]' /> Add Competitor
+                                <Check className='w-[20px]' /> Save
                             </button>
                             <button type="button" onClick={() => setShowForm(false)} className='flex py-4 justify-center gap-3 text-md border rounded-sm w-[200px] font-medium'>
                                 Cancel
