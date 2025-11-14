@@ -160,6 +160,7 @@ export default function Step3Competitors({
     // Manual add functionality
     const handleManualAdd = (e: React.FormEvent) => {
         e.preventDefault();
+        e.stopPropagation(); // Prevent event from bubbling to parent form
 
         if (!formData.name.trim() || !formData.domain.trim()) {
             toast.error('Please enter both name and domain');
@@ -324,7 +325,7 @@ export default function Step3Competitors({
                 </div>
 
                 {showForm ? (
-                    <form onSubmit={handleManualAdd} className="space-y-4">
+                    <div className="space-y-4">
                         <div className="grid gap-2">
                             <Label htmlFor="name">Name</Label>
                             <Input
@@ -357,14 +358,21 @@ export default function Step3Competitors({
                         </div>
 
                         <div className="flex gap-2">
-                            <button type="submit" className='flex py-4 justify-center gap-3 text-md border rounded-sm w-[200px] font-medium fetch-ai-btn'>
+                            <button 
+                                type="button" 
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    handleManualAdd(e);
+                                }}
+                                className='flex py-4 justify-center gap-3 text-md border rounded-sm w-[200px] font-medium fetch-ai-btn'
+                            >
                                 <Check className='w-[20px]' /> Save
                             </button>
                             <button type="button" onClick={() => setShowForm(false)} className='flex py-4 justify-center gap-3 text-md border rounded-sm w-[200px] font-medium'>
                                 Cancel
                             </button>
                         </div>
-                    </form>
+                    </div>
                 ) : (
                     <button onClick={() => setShowForm(true)} className='flex py-4 justify-center gap-3 text-md border rounded-sm w-[200px] font-medium fetch-ai-btn'>
                         <CirclePlus className='w-[20px]' /> Add Competitor
