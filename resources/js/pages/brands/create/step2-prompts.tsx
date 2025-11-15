@@ -242,31 +242,11 @@ export default function Step2Prompts({
         }
     };
 
-    // Wrapper for handleManualPromptAdd to add prompts to active state
-    const handleManualPromptAddWrapper = (prompt: string, countryCode: string) => {
-        // Create a new GeneratedPrompt object for the manually added prompt
-        const newPrompt: GeneratedPrompt = {
-            id: Date.now(), // Use timestamp as unique ID
-            prompt: prompt,
-            location: countryCode,
-            source: 'manual',
-            ai_provider: 'Manual',
-            is_selected: true,
-            order: allPrompts.length + 1
-        };
-
-        // Add to allPrompts state
-        setAllPrompts(prev => [...prev, newPrompt]);
-
-        // Set as active immediately
-        setPromptStates(prev => ({
-            ...prev,
-            [newPrompt.id]: 'active'
-        }));
-
-        // Call parent function to add to data.prompts with country code
+    // Wrapper for handleManualPromptAdd to add prompts to suggested state
+    const handleManualPromptAddWrapper = (prompt: string, _countryCode: string) => {
+        // Call parent function to add to data.prompts
         if (handleManualPromptAdd) {
-            handleManualPromptAdd(prompt, countryCode);
+            handleManualPromptAdd(prompt);
         }
     };
 
@@ -463,7 +443,7 @@ export default function Step2Prompts({
                         <TabsTrigger value="suggested">Suggested</TabsTrigger>
                         <TabsTrigger value="inactive">Inactive</TabsTrigger>
                     </TabsList>
-                    <AddPromptDialog brandId={undefined} className="add-prompt-btn" onPromptAdd={handleManualPromptAddWrapper} defaultCountry={data.country} />
+                    <AddPromptDialog brandId={undefined} className="add-prompt-btn" onPromptAdd={handleManualPromptAddWrapper} />
                 </div>
                 <TabsContent value="active" className="active-table-prompt">
                     <Table className="default-table">
