@@ -13,11 +13,11 @@ import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { ChevronRight } from 'lucide-react';
 
-export function NavMain({ items = [] }: { items: NavItem[] }) {
+export function NavMain({ items = [], label }: { items: NavItem[]; label?: string | null }) {
     const page = usePage();
     return (
         <SidebarGroup className="p-0 main-menu-links">
-            <SidebarGroupLabel>General</SidebarGroupLabel>
+            {label !== null && label !== undefined && <SidebarGroupLabel>{label}</SidebarGroupLabel>}
             <SidebarMenu>
                 {items.map((item) => {
                     // More precise active state detection

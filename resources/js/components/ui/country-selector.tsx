@@ -1,13 +1,5 @@
-import React, { useState } from 'react';
-import { Check, ChevronsUpDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import React from 'react';
+import Select, { StylesConfig, components, SingleValueProps, OptionProps } from 'react-select';
 import { countries } from '@/data/countries';
 
 interface CountrySelectorProps {
@@ -17,88 +9,131 @@ interface CountrySelectorProps {
   className?: string;
 }
 
+interface CountryOption {
+  value: string;
+  label: string;
+  flag: string;
+  code: string;
+}
+
+const countryOptions: CountryOption[] = countries.map((country) => ({
+  value: country.code,
+  label: country.name,
+  flag: country.flag,
+  code: country.code,
+}));
+
+// Custom option component to display flag, name, and code
+const CustomOption = (props: OptionProps<CountryOption>) => {
+  return (
+    <components.Option {...props}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{props.data.flag}</span>
+          <span>{props.data.label}</span>
+        </div>
+        <span className="text-xs text-gray-500">{props.data.code}</span>
+      </div>
+    </components.Option>
+  );
+};
+
+// Custom single value component to display only name (no flag)
+const CustomSingleValue = (props: SingleValueProps<CountryOption>) => {
+  return (
+    <components.SingleValue {...props}>
+      <span>{props.data.label}</span>
+    </components.SingleValue>
+  );
+};
+
 export function CountrySelector({
   value,
   onValueChange,
   placeholder = "Select country...",
   className
 }: CountrySelectorProps) {
-  const [open, setOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
+  const selectedOption = countryOptions.find((option) => option.value === value);
 
-  const selectedCountry = countries.find((country) => country.code === value);
-
-  const filteredCountries = countries.filter((country) =>
-    country.name.toLowerCase().includes(searchValue.toLowerCase()) ||
-    country.code.toLowerCase().includes(searchValue.toLowerCase())
-  );
-
-  const handleSelect = (countryCode: string) => {
-    onValueChange(countryCode);
-    setOpen(false);
-    setSearchValue("");
+  const customStyles: StylesConfig<CountryOption, false> = {
+    control: (provided, state) => ({
+      ...provided,
+      minHeight: '40px',
+      borderColor: state.isFocused ? 'hsl(var(--ring))' : 'hsl(var(--input))',
+      boxShadow: state.isFocused ? '0 0 0 1px hsl(var(--ring))' : 'none',
+      '&:hover': {
+        borderColor: 'hsl(var(--input))',
+      },
+      backgroundColor: 'hsl(var(--background))',
+      cursor: 'pointer',
+    }),
+    menu: (provided) => ({
+      ...provided,
+      backgroundColor: '#ffffff',
+      border: '1px solid hsl(var(--border))',
+      boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+      zIndex: 50,
+    }),
+    option: (provided, state) => ({
+      ...provided,
+      backgroundColor: state.isSelected
+        ? 'hsl(var(--accent))'
+        : state.isFocused
+        ? 'hsl(var(--accent) / 0.5)'
+        : '#ffffff',
+      color: state.isSelected || state.isFocused ? 'hsl(var(--accent-foreground))' : 'hsl(var(--foreground))',
+      cursor: 'pointer',
+      '&:active': {
+        backgroundColor: 'hsl(var(--accent))',
+      },
+    }),
+    input: (provided) => ({
+      ...provided,
+      color: 'hsl(var(--foreground))',
+    }),
+    singleValue: (provided) => ({
+      ...provided,
+      color: 'hsl(var(--foreground))',
+    }),
+    placeholder: (provided) => ({
+      ...provided,
+      color: 'hsl(var(--muted-foreground))',
+    }),
+    menuList: (provided) => ({
+      ...provided,
+      maxHeight: '300px',
+      '::-webkit-scrollbar': {
+        width: '8px',
+      },
+      '::-webkit-scrollbar-track': {
+        background: '#f1f1f1',
+      },
+      '::-webkit-scrollbar-thumb': {
+        background: '#888',
+        borderRadius: '4px',
+      },
+      '::-webkit-scrollbar-thumb:hover': {
+        background: '#555',
+      },
+    }),
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn("w-full justify-between", className)}
-        >
-          {selectedCountry ? (
-            <div className="flex items-center gap-2">
-              <span className="text-lg">{selectedCountry.flag}</span>
-              <span>{selectedCountry.name}</span>
-            </div>
-          ) : (
-            placeholder
-          )}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[350px] p-0" align="start">
-        <div className="p-2">
-          <Input
-            placeholder="Search country..."
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            className="h-9"
-          />
-        </div>
-        <div className="h-[300px] overflow-y-auto">
-          <div className="p-1">
-            {filteredCountries.length === 0 ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">
-                No country found.
-              </div>
-            ) : (
-              filteredCountries.map((country) => (
-                <div
-                  key={country.code}
-                  onClick={() => handleSelect(country.code)}
-                  className={cn(
-                    "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
-                    value === country.code && "bg-accent text-accent-foreground"
-                  )}
-                >
-                  <span className="text-lg mr-2">{country.flag}</span>
-                  <span className="flex-1">{country.name}</span>
-                  <span className="text-xs text-muted-foreground mr-2">{country.code}</span>
-                  <Check
-                    className={cn(
-                      "h-4 w-4",
-                      value === country.code ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+    <div className={className}>
+      <Select<CountryOption>
+        value={selectedOption}
+        onChange={(option) => option && onValueChange(option.value)}
+        options={countryOptions}
+        placeholder={placeholder}
+        isSearchable={true}
+        styles={customStyles}
+        components={{
+          Option: CustomOption,
+          SingleValue: CustomSingleValue,
+        }}
+        classNamePrefix="react-select"
+        menuPlacement="top"
+      />
+    </div>
   );
 }
