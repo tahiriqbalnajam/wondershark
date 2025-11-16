@@ -78,22 +78,36 @@ export default function Step3Competitors({
                 ? `/api/competitors/fetch-for-brand-creation?session_id=${sessionId}`
                 : '/api/competitors/fetch-for-brand-creation';
 
+            // Get fresh CSRF token from the page
+            const csrfToken = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+            
+            if (!csrfToken) {
+                throw new Error('CSRF token not found. Please refresh the page.');
+            }
+
             const response = await fetch(fetchEndpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-CSRF-TOKEN': csrfToken,
                 },
                 body: JSON.stringify({
                     website: data.website,
                     name: data.name,
                     description: data.description
-                })
+                }),
+                credentials: 'same-origin', // Important for CSRF
             });
 
             if (!response.ok) {
+                if (response.status === 419) {
+                    // CSRF token mismatch - reload page to get fresh token
+                    toast.error('Session expired. Reloading page...');
+                    setTimeout(() => window.location.reload(), 1000);
+                    return;
+                }
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
@@ -118,11 +132,9 @@ export default function Step3Competitors({
             console.error('Error fetching competitors:', error);
             toast.error('Failed to fetch competitors. You can add them manually or skip this step.');
         } finally {
-            setTimeout(() => {
-                setLoading(false);
-                setProgress(0);
-                setProgressText('');
-            }, 2000);
+            setLoading(false);
+            setProgress(0);
+            setProgressText('');
         }
     }, [data.website, data.name, data.description, competitors, sessionId, setCompetitors]);
 
