@@ -497,7 +497,10 @@ class CompetitorController extends Controller
             'website' => 'required|url',
             'name' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'session_id' => 'nullable|string'
+            'session_id' => 'nullable|string',
+            'existing_competitors' => 'nullable|array',
+            'existing_competitors.*.name' => 'nullable|string',
+            'existing_competitors.*.domain' => 'nullable|string'
         ]);
 
         try {
@@ -582,7 +585,8 @@ class CompetitorController extends Controller
             ];
 
             // Prepare the prompt
-            $prompt = $this->getCompetitorPromptForCreation($brandData);
+            $existingCompetitors = $request->input('existing_competitors', []);
+            $prompt = $this->getCompetitorPromptForCreation($brandData, $existingCompetitors);
 
             Log::info('Fetching competitors for brand creation', [
                 'website' => $request->website,
@@ -678,17 +682,26 @@ class CompetitorController extends Controller
     /**
      * Get competitor prompt for brand creation (modified version)
      */
-    private function getCompetitorPromptForCreation(array $brandData): string
+    private function getCompetitorPromptForCreation(array $brandData, array $existingCompetitors = []): string
     {
         $website = $brandData['website'];
         $name = $brandData['name'];
         $description = $brandData['description'];
+
+        $exclusionText = '';
+        if (!empty($existingCompetitors)) {
+            $exclusionList = array_map(function($comp) {
+                return "- {$comp['name']} ({$comp['domain']})";
+            }, $existingCompetitors);
+            $exclusionText = "\n\nIMPORTANT: Exclude the following competitors that have already been suggested:\n" . implode("\n", $exclusionList) . "\n\nProvide NEW competitors that are NOT in the above list.";
+        }
 
         return <<<PROMPT
 I need you to identify the top 5-7 direct competitors for the website: {$website}
 
 Brand name: {$name}
 Description: {$description}
+{$exclusionText}
 
 Please analyze this brand and identify its main competitors in the same industry/niche. Focus on:
 1. Direct competitors offering similar products/services

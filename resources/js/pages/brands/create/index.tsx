@@ -88,7 +88,7 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
         monthly_posts: existingBrand?.monthly_posts || 10,
         brand_email: '',
         brand_password: '',
-        create_account: true,
+        create_account: false,
         ai_providers: aiModels.filter(model => model.is_enabled).map(model => model.name),
     });
 

@@ -96,7 +96,11 @@ export default function Step3Competitors({
                 body: JSON.stringify({
                     website: data.website,
                     name: data.name,
-                    description: data.description
+                    description: data.description,
+                    existing_competitors: competitors.map(c => ({
+                        name: c.name,
+                        domain: c.domain
+                    }))
                 }),
                 credentials: 'same-origin', // Important for CSRF
             });

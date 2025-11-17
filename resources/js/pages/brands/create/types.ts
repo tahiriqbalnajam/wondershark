@@ -29,11 +29,13 @@ export type GeneratedPrompt = {
     ai_provider: string;
     is_selected: boolean;
     order: number;
+    created_at?: string;
     // Stats fields
     visibility?: number | string;
     sentiment?: number | string;
     position?: number | string;
     mentions?: number;
+    volume?: number;
     location?: string;
 };
 

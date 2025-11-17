@@ -252,7 +252,8 @@ export default function Step2Prompts({
             source: 'manual',
             ai_provider: 'Manual',
             is_selected: true,
-            order: allPrompts.length + 1
+            order: allPrompts.length + 1,
+            created_at: new Date().toISOString()
         };
 
         // Add to allPrompts state
@@ -572,10 +573,7 @@ export default function Step2Prompts({
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Suggested Prompt</TableHead>
-                                        <TableHead><div className="flex items-center"><Eye className="w-4 mr-2"/> Visibility</div></TableHead>
-                                        <TableHead><div className="flex items-center"><Smile className="w-4 mr-2"/> Sentiment</div></TableHead>
-                                        <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2"/> Position</div></TableHead>
-                                        <TableHead><div className="flex items-center"><Trophy className="w-4 mr-2"/> Mentions</div></TableHead>
+                                        <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2"/> Volume</div></TableHead>
                                         <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2"/> Suggested At</div></TableHead>
                                         <TableHead></TableHead>
                                     </TableRow>
@@ -592,9 +590,6 @@ export default function Step2Prompts({
                                                     </div>
                                                 </TableCell>
                                                 <TableCell><div className="w-16 h-4 bg-gray-200 animate-pulse rounded"></div></TableCell>
-                                                <TableCell><div className="w-20 h-4 bg-gray-200 animate-pulse rounded"></div></TableCell>
-                                                <TableCell><div className="w-12 h-4 bg-gray-200 animate-pulse rounded"></div></TableCell>
-                                                <TableCell><div className="w-16 h-4 bg-gray-200 animate-pulse rounded"></div></TableCell>
                                                 <TableCell><div className="w-24 h-4 bg-gray-200 animate-pulse rounded"></div></TableCell>
                                                 <TableCell>
                                                     <div className="flex gap-3 justify-center">
@@ -608,23 +603,8 @@ export default function Step2Prompts({
                                         suggestedPrompts.map((prompt) => (
                                     <TableRow key={prompt.id}>
                                         <TableCell>{prompt.prompt}</TableCell>
-                                        <TableCell>{prompt.visibility || 'N/A'}</TableCell>
-                                        <TableCell>
-                                            {prompt.sentiment ? (
-                                                <Badge className="sentiment-td"><span></span> {prompt.sentiment}</Badge>
-                                            ) : (
-                                                'N/A'
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            {prompt.position ? (
-                                                <Badge className="position-td"><span>#</span> {prompt.position}</Badge>
-                                            ) : (
-                                                'N/A'
-                                            )}
-                                        </TableCell>
-                                        <TableCell>{prompt.mentions || 0}</TableCell>
-                                        <TableCell>{formatTimestamp(new Date().toISOString())}</TableCell>
+                                        <TableCell>{prompt.volume || 0}</TableCell>
+                                        <TableCell>{formatTimestamp(prompt.created_at)}</TableCell>
                                         <TableCell>
                                             <div className="flex gap-3 justify-center">
                                                 <button 
@@ -685,7 +665,7 @@ export default function Step2Prompts({
                                             />
                                         </TableHead>
                                         <TableCell>{prompt.prompt}</TableCell>
-                                        <TableCell>{formatTimestamp(new Date().toISOString())}</TableCell>
+                                        <TableCell>{formatTimestamp(prompt.created_at)}</TableCell>
                                         <TableCell>
                                             <div className="flex justify-center">
                                                 <button 
