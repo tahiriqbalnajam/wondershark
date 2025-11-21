@@ -84,7 +84,9 @@ export default function Step2Prompts({
     isPromptRejected,
     handleManualPromptAdd,
     removePrompt,
-    aiModels
+    aiModels,
+    brandId,
+    existingPrompts
 }: Step2Props) {
     const [displayedPrompts, setDisplayedPrompts] = useState<GeneratedPrompt[]>([]);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -92,48 +94,96 @@ export default function Step2Prompts({
     const [totalCount, setTotalCount] = useState(0);
     const [currentOffset, setCurrentOffset] = useState(0);
     
-    // Keep our own copy of all prompts (never remove from this list)
-    // Load from sessionStorage on mount
-    const [allPrompts, setAllPrompts] = useState<GeneratedPrompt[]>(() => {
-        try {
-            const saved = sessionStorage.getItem('allPrompts');
-            return saved ? JSON.parse(saved) : [];
-        } catch {
-            return [];
-        }
-    });
+    // Keep all prompts from database and AI generation (never remove from this list)
+    // Initialize from existingPrompts which comes directly from DB
+    const [allPrompts, setAllPrompts] = useState<GeneratedPrompt[]>(() => existingPrompts || []);
     
-    // Track prompt states: 'suggested' (default for AI generated), 'active' (tracked), 'inactive' (rejected)
-    // Load from sessionStorage on mount
+    // Track prompt states: 'suggested' (is_active=0), 'active' (is_active=1), 'inactive' (rejected)
     const [promptStates, setPromptStates] = useState<Record<number, 'suggested' | 'active' | 'inactive'>>(() => {
-        try {
-            const saved = sessionStorage.getItem('promptStates');
-            return saved ? JSON.parse(saved) : {};
-        } catch {
-            return {};
-        }
+        const states: Record<number, 'suggested' | 'active' | 'inactive'> = {};
+        // Initialize from existing DB prompts - use status field if available
+        (existingPrompts || []).forEach(prompt => {
+            if (prompt.status) {
+                states[prompt.id] = prompt.status;
+            } else {
+                // Fallback to is_selected for backwards compatibility
+                states[prompt.id] = prompt.is_selected ? 'active' : 'suggested';
+            }
+        });
+        return states;
     });
 
-    // Save to sessionStorage whenever promptStates changes
-    useEffect(() => {
-        sessionStorage.setItem('promptStates', JSON.stringify(promptStates));
-    }, [promptStates]);
+    // Save prompts to database in bulk
+    const saveBulkPromptsToDatabase = useCallback(async (prompts: GeneratedPrompt[]) => {
+        if (!brandId) return;
 
-    // Save allPrompts to sessionStorage whenever it changes
-    useEffect(() => {
-        sessionStorage.setItem('allPrompts', JSON.stringify(allPrompts));
-    }, [allPrompts]);
+        try {
+            const csrfToken = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '';
+            
+            const response = await fetch(`/brands/${brandId}/prompts/save-bulk`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({
+                    prompts: prompts.map(p => ({
+                        prompt: p.prompt,
+                        source: p.ai_provider || p.source || 'ai',
+                        is_active: false, // Save as suggested initially
+                        order: p.order || 0,
+                        visibility: p.visibility,
+                        sentiment: p.sentiment,
+                        position: p.position,
+                    }))
+                }),
+            });
+
+            if (!response.ok) {
+                console.error('Failed to save prompts to database');
+            } else {
+                const savedData = await response.json();
+                // Update allPrompts with actual database IDs
+                if (savedData.prompts) {
+                    setAllPrompts(prev => {
+                        const updated = [...prev];
+                        savedData.prompts.forEach((savedPrompt: any, index: number) => {
+                            const originalPrompt = prompts[index];
+                            const promptIndex = updated.findIndex(p => p.prompt === originalPrompt.prompt);
+                            if (promptIndex !== -1) {
+                                updated[promptIndex] = {
+                                    ...updated[promptIndex],
+                                    id: savedPrompt.id,
+                                };
+                            }
+                        });
+                        return updated;
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error saving prompts to database:', error);
+        }
+    }, [brandId]);
 
     // Update allPrompts when aiGeneratedPrompts changes (add new prompts, never remove)
+    // AND save to database immediately
     useEffect(() => {
         if (aiGeneratedPrompts && aiGeneratedPrompts.length > 0) {
             setAllPrompts(prev => {
                 const existingIds = new Set(prev.map(p => p.id));
                 const newPrompts = aiGeneratedPrompts.filter(p => !existingIds.has(p.id));
+                
+                // Save new prompts to database immediately
+                if (newPrompts.length > 0 && brandId) {
+                    saveBulkPromptsToDatabase(newPrompts);
+                }
+                
                 return [...prev, ...newPrompts];
             });
         }
-    }, [aiGeneratedPrompts]);
+    }, [aiGeneratedPrompts, brandId, saveBulkPromptsToDatabase]);
 
     // Initialize all AI-generated prompts as 'suggested' by default
     useEffect(() => {
@@ -172,54 +222,147 @@ export default function Step2Prompts({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [promptStates, aiGeneratedPrompts, allPrompts, suggestedPrompts.length, activePrompts.length, inactivePrompts.length]);
 
-    // Handle Track button - move prompt from suggested to active
-    const handleTrackPrompt = (prompt: GeneratedPrompt) => {
+    // Handle Track button - move prompt from suggested to active and UPDATE DATABASE
+    const handleTrackPrompt = async (prompt: GeneratedPrompt) => {
+        if (!brandId) {
+            console.error('Cannot track prompt: Brand ID is missing');
+            return;
+        }
+
+        // Check if prompt has a valid database ID
+        if (!prompt.id || typeof prompt.id !== 'number' || prompt.id <= 0) {
+            console.error('Cannot track prompt: Invalid prompt ID', prompt);
+            alert('Please wait for prompts to be saved before tracking them.');
+            return;
+        }
+
         console.log('Tracking prompt:', prompt.id, prompt.prompt);
-        setPromptStates(prev => {
-            const newStates = {
+        
+        try {
+            const response = await fetch(`/brands/${brandId}/prompts/${prompt.id}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '',
+                },
+                body: JSON.stringify({ status: 'active' }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Failed to update prompt status');
+            }
+
+            await response.json();
+            
+            // Update local state
+            setPromptStates(prev => ({
                 ...prev,
                 [prompt.id]: 'active' as const
-            };
-            console.log('New states after tracking:', newStates);
-            return newStates;
-        });
-        // Call parent acceptPrompt if available
-        if (acceptPrompt) {
-            acceptPrompt(prompt);
+            }));
+            
+            // Call parent acceptPrompt if available
+            if (acceptPrompt) {
+                acceptPrompt(prompt);
+            }
+        } catch (error) {
+            console.error('Error updating prompt status:', error);
+            alert(`Failed to track prompt: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     };
 
-    // Handle Reject button - move prompt from suggested to inactive
-    const handleRejectPrompt = (prompt: GeneratedPrompt) => {
+    // Handle Reject button - move prompt from suggested to inactive and UPDATE DATABASE
+    const handleRejectPrompt = async (prompt: GeneratedPrompt) => {
+        if (!brandId) {
+            console.error('Cannot reject prompt: Brand ID is missing');
+            return;
+        }
+
+        // Check if prompt has a valid database ID
+        if (!prompt.id || typeof prompt.id !== 'number' || prompt.id <= 0) {
+            console.error('Cannot reject prompt: Invalid prompt ID', prompt);
+            alert('Please wait for prompts to be saved before rejecting them.');
+            return;
+        }
+
         console.log('Rejecting prompt:', prompt.id, prompt.prompt);
-        setPromptStates(prev => {
-            const newStates = {
+        
+        try {
+            const response = await fetch(`/brands/${brandId}/prompts/${prompt.id}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '',
+                },
+                body: JSON.stringify({ status: 'inactive' }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Failed to update prompt status');
+            }
+
+            await response.json();
+            
+            // Update local state
+            setPromptStates(prev => ({
                 ...prev,
                 [prompt.id]: 'inactive' as const
-            };
-            console.log('New states after rejecting:', newStates);
-            return newStates;
-        });
-        // DON'T call parent rejectPrompt - it removes the prompt from the array!
-        // We need to keep it in our allPrompts list to show in Inactive tab
-        // if (rejectPrompt) {
-        //     rejectPrompt(prompt);
-        // }
+            }));
+        } catch (error) {
+            console.error('Error updating prompt status:', error);
+            alert(`Failed to reject prompt: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
     };
 
-    // Handle Add button from inactive - move back to active
-    const handleActivatePrompt = (prompt: GeneratedPrompt) => {
+    // Handle Add button from inactive - move back to active and UPDATE DATABASE
+    const handleActivatePrompt = async (prompt: GeneratedPrompt) => {
+        if (!brandId) {
+            console.error('Cannot activate prompt: Brand ID is missing');
+            return;
+        }
+
+        // Check if prompt has a valid database ID
+        if (!prompt.id || typeof prompt.id !== 'number' || prompt.id <= 0) {
+            console.error('Cannot activate prompt: Invalid prompt ID', prompt);
+            alert('Please wait for prompts to be saved before activating them.');
+            return;
+        }
+
         console.log('Activating prompt:', prompt.id, prompt.prompt);
-        setPromptStates(prev => {
-            const newStates = {
+        
+        try {
+            const response = await fetch(`/brands/${brandId}/prompts/${prompt.id}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '',
+                },
+                body: JSON.stringify({ status: 'active' }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Failed to update prompt status');
+            }
+
+            await response.json();
+            
+            // Update local state
+            setPromptStates(prev => ({
                 ...prev,
                 [prompt.id]: 'active' as const
-            };
-            console.log('New states after activating:', newStates);
-            return newStates;
-        });
-        if (acceptPrompt) {
-            acceptPrompt(prompt);
+            }));
+            
+            if (acceptPrompt) {
+                acceptPrompt(prompt);
+            }
+        } catch (error) {
+            console.error('Error updating prompt status:', error);
+            alert(`Failed to activate prompt: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     };
 
@@ -608,12 +751,14 @@ export default function Step2Prompts({
                                         <TableCell>
                                             <div className="flex gap-3 justify-center">
                                                 <button 
+                                                    type="button"
                                                     onClick={() => handleRejectPrompt(prompt)}
                                                     className="border px-4 py-1 rounded-sm bg-red-100 text-red-600 hover:text-white hover:bg-red-600 hover:border-red-600"
                                                 >
                                                     Reject
                                                 </button>
                                                 <button 
+                                                    type="button"
                                                     onClick={() => handleTrackPrompt(prompt)}
                                                     className="border px-4 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-orange-600 hover:text-white"
                                                 >

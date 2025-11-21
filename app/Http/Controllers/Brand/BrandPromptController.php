@@ -26,18 +26,19 @@ class BrandPromptController extends Controller
         }
 
         $prompts = $brand->prompts()
-            ->orderBy('position')
+            ->orderBy('order')
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($prompt) {
                 return [
                     'id' => $prompt->id,
                     'prompt' => $prompt->prompt,
-                    'position' => $prompt->position,
-                    'sentiment' => $prompt->sentiment,
-                    'visibility' => $prompt->visibility,
-                    'country_code' => $prompt->country_code,
+                    'position' => $prompt->position ?? 0,
+                    'sentiment' => $prompt->sentiment ?? 'neutral',
+                    'visibility' => $prompt->visibility ?? 'public',
+                    'country_code' => $prompt->country_code ?? 'US',
                     'is_active' => $prompt->is_active,
+                    'status' => $prompt->status ?? 'suggested', // Add status field
                     'session_id' => $prompt->session_id,
                     'created_at' => $prompt->created_at,
                     'days_ago' => $prompt->created_at->diffInDays(now()),

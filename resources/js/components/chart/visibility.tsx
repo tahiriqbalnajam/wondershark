@@ -30,31 +30,14 @@ const CHART_COLORS = [
 ];
 
 export function VisibilityChart({ data, entities, granularity = 'month' }: VisibilityChartProps) {
-    // Default data if none provided
-    const defaultData = [
-        { date: 'Jan', fiverr: 45, upwork: 38, influencity: 25, famebit: 15, amazon: 30 },
-        { date: 'Feb', fiverr: 52, upwork: 42, influencity: 28, famebit: 18, amazon: 35 },
-        { date: 'Mar', fiverr: 48, upwork: 45, influencity: 32, famebit: 22, amazon: 38 },
-        { date: 'Apr', fiverr: 55, upwork: 40, influencity: 35, famebit: 25, amazon: 42 },
-        { date: 'May', fiverr: 58, upwork: 47, influencity: 38, famebit: 28, amazon: 45 },
-        { date: 'Jun', fiverr: 62, upwork: 50, influencity: 42, famebit: 30, amazon: 48 },
-    ];
-
-    const defaultEntities = [
-        { name: 'Fiverr', domain: 'fiverr' },
-        { name: 'Upwork', domain: 'upwork' },
-        { name: 'Influencity', domain: 'influencity' },
-        { name: 'FameBit', domain: 'famebit' },
-        { name: 'Amazon', domain: 'amazon' },
-    ];
-
-    const visibilityData = data && data.length > 0 ? data : defaultData;
-    const chartEntities = entities && entities.length > 0 ? entities : defaultEntities;
+    // Use provided data or show empty state
+    const visibilityData = data && data.length > 0 ? data : [];
+    const chartEntities = entities && entities.length > 0 ? entities : [];
 
     return (
         <CardContent>
             <div className="h-80">
-                {visibilityData.length > 0 ? (
+                {visibilityData.length > 0 && chartEntities.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={visibilityData}>
                             <CartesianGrid strokeDasharray="3 3" />
@@ -84,8 +67,9 @@ export function VisibilityChart({ data, entities, granularity = 'month' }: Visib
                         </LineChart>
                     </ResponsiveContainer>
                 ) : (
-                    <div className="flex items-center justify-center h-full text-muted-foreground">
-                        <p>No visibility data available yet.</p>
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                        <p className="text-center mb-2">No visibility data available yet.</p>
+                        <p className="text-sm text-center">Run competitive analysis on your prompts to see brand visibility trends.</p>
                     </div>
                 )}
             </div>

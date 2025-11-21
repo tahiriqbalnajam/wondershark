@@ -3,15 +3,13 @@ import { Head, useForm } from '@inertiajs/react';
 import { useState, FormEventHandler, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 
-import HeadingSmall from '@/components/heading-small';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { 
     MessagesSquare, 
     FileText,
     CalendarDays,
-    Swords,
-    CheckCircle
+    Swords
 } from 'lucide-react';
 
 // Import step components
@@ -19,7 +17,6 @@ import Step1BasicInfo from './step1-basic-info';
 import Step2Prompts from './step2-prompts';
 import Step3Competitors from './step3-competitors';
 import Step4MonthlyPosts from './step4-monthly-posts';
-import Step5Review from './step5-review';
 import Step6AccountSetup from './step6-account-setup';
 import StepNavigation from './step-navigation';
 
@@ -47,59 +44,76 @@ const steps = [
 ];
 
 type Props = {
-    existingBrand?: {
-        id?: number;
-        name?: string;
-        website?: string;
-        description?: string;
-        monthly_posts?: number;
+    currentStep: number;
+    existingData: {
+        brand: {
+            id: number;
+            name: string;
+            website: string;
+            description: string;
+            country: string;
+            monthly_posts: number;
+        } | null;
+        competitors: Array<{
+            id: number;
+            name: string;
+            domain: string;
+            source: string;
+            status: string;
+            mentions: number;
+        }>;
+        prompts: GeneratedPrompt[];
     };
-    generatedPrompts?: GeneratedPrompt[];
     aiModels?: AiModel[];
     sessionId?: string;
 };
 
-export default function CreateBrand({ existingBrand, aiModels = [], sessionId }: Props) {
-    const [currentStep, setCurrentStep] = useState(1);
+export default function CreateBrand({ currentStep: initialStep, existingData, aiModels = [], sessionId }: Props) {
+    const [currentStep, setCurrentStep] = useState(initialStep);
     
-    // Load competitors from sessionStorage on mount
-    const [competitors, setCompetitors] = useState<Competitor[]>(() => {
-        try {
-            const saved = sessionStorage.getItem('brandCreation_competitors');
-            return saved ? JSON.parse(saved) : [];
-        } catch (error) {
-            console.error('Error loading competitors from sessionStorage:', error);
-            return [];
+    // Clean up sessionStorage when starting fresh brand creation
+    useEffect(() => {
+        if (initialStep === 1 && !existingData.brand) {
+            // Clear any old session data from previous creation attempts
+            sessionStorage.removeItem('brandCreation_competitors');
+            sessionStorage.removeItem('allPrompts');
+            sessionStorage.removeItem('promptStates');
         }
+    }, [initialStep, existingData.brand]);
+    
+    // Load competitors from existing data (database)
+    const [competitors, setCompetitors] = useState<Competitor[]>(() => {
+        if (existingData.competitors.length > 0) {
+            return existingData.competitors.map(c => ({
+                id: c.id,
+                name: c.name,
+                domain: c.domain,
+                mentions: c.mentions,
+                status: c.status as 'suggested' | 'accepted' | 'rejected',
+                source: c.source as 'ai' | 'manual'
+            }));
+        }
+        return [];
     });
     
     const [aiGeneratedPrompts, setAiGeneratedPrompts] = useState<GeneratedPrompt[]>([]);
     const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
     const generationAttemptedRef = useRef<string | null>(null);
 
-    const { data, setData, post, processing, errors } = useForm<BrandForm>({
-        name: existingBrand?.name || '',
-        website: existingBrand?.website || '',
-        description: existingBrand?.description || '',
-        country: '',
-        prompts: [],
+    const { data, setData, processing, errors } = useForm<BrandForm>({
+        name: existingData.brand?.name || '',
+        website: existingData.brand?.website || '',
+        description: existingData.brand?.description || '',
+        country: existingData.brand?.country || '',
+        prompts: [], // Don't load prompts here - they're passed separately to Step2Prompts
         subreddits: [],
         competitors: [],
-        monthly_posts: existingBrand?.monthly_posts || 10,
+        monthly_posts: existingData.brand?.monthly_posts || 10,
         brand_email: '',
         brand_password: '',
         create_account: false,
         ai_providers: aiModels.filter(model => model.is_enabled).map(model => model.name),
     });
-
-    // Save competitors to sessionStorage whenever they change
-    useEffect(() => {
-        try {
-            sessionStorage.setItem('brandCreation_competitors', JSON.stringify(competitors));
-        } catch (error) {
-            console.error('Error saving competitors to sessionStorage:', error);
-        }
-    }, [competitors]);
 
     // Reset prompt generation when website changes
     useEffect(() => {
@@ -147,25 +161,178 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
         }
     }, [errors, currentStep]);
 
-    const nextStep = () => {
-        if (currentStep < steps.length) {
-            setCurrentStep(currentStep + 1);
+    const nextStep = async () => {
+        const brandId = existingData.brand?.id;
+        
+        // Handle step submission based on current step
+        if (currentStep === 1 && !brandId) {
+            // Step 1: Create draft brand
+            try {
+                const response = await fetch(route('brands.create.step1'), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    },
+                    body: JSON.stringify({
+                        name: data.name,
+                        website: data.website,
+                        description: data.description,
+                        country: data.country,
+                    }),
+                });
+
+                const result = await response.json();
+                
+                if (result.success && result.redirect_url) {
+                    window.location.href = result.redirect_url;
+                } else {
+                    toast.error(result.message || 'Failed to create brand');
+                }
+            } catch (error) {
+                console.error('Error creating brand:', error);
+                toast.error('Failed to create brand');
+            }
+        } else if (currentStep === 2 && brandId) {
+            // Step 2: Update competitors
+            const acceptedCompetitors = competitors.filter(c => c.status === 'accepted');
+            
+            try {
+                const response = await fetch(route('brands.update.step2', { brand: brandId }), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    },
+                    body: JSON.stringify({
+                        competitors: acceptedCompetitors.map(c => ({
+                            name: c.name,
+                            domain: c.domain,
+                            source: c.source,
+                        })),
+                    }),
+                });
+
+                const result = await response.json();
+                
+                if (result.success && result.redirect_url) {
+                    window.location.href = result.redirect_url;
+                } else {
+                    toast.error(result.message || 'Failed to update competitors');
+                }
+            } catch (error) {
+                console.error('Error updating competitors:', error);
+                toast.error('Failed to update competitors');
+            }
+        } else if (currentStep === 3 && brandId) {
+            // Step 3: Update prompts
+            try {
+                const response = await fetch(route('brands.update.step3', { brand: brandId }), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    },
+                    body: JSON.stringify({
+                        prompts: data.prompts,
+                    }),
+                });
+
+                const result = await response.json();
+                
+                if (result.success && result.redirect_url) {
+                    window.location.href = result.redirect_url;
+                } else {
+                    toast.error(result.message || 'Failed to update prompts');
+                }
+            } catch (error) {
+                console.error('Error updating prompts:', error);
+                toast.error('Failed to update prompts');
+            }
+        } else if (currentStep === 4 && brandId) {
+            // Step 4: Update monthly posts
+            try {
+                const response = await fetch(route('brands.update.step4', { brand: brandId }), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    },
+                    body: JSON.stringify({
+                        monthly_posts: data.monthly_posts,
+                    }),
+                });
+
+                const result = await response.json();
+                
+                if (result.success && result.redirect_url) {
+                    window.location.href = result.redirect_url;
+                } else {
+                    toast.error(result.message || 'Failed to update monthly posts');
+                }
+            } catch (error) {
+                console.error('Error updating monthly posts:', error);
+                toast.error('Failed to update monthly posts');
+            }
+        } else {
+            // Just move to next step locally (for previewing before final submit)
+            if (currentStep < steps.length) {
+                setCurrentStep(currentStep + 1);
+            }
         }
     };
 
     const prevStep = () => {
-        if (currentStep > 1) {
+        const brandId = existingData.brand?.id;
+        
+        if (currentStep > 1 && brandId) {
+            // Navigate back to previous step page
+            window.location.href = route('brands.create.step', { brand: brandId, step: currentStep - 1 });
+        } else if (currentStep > 1) {
             setCurrentStep(currentStep - 1);
         }
     };
 
-    const handleSubmit: FormEventHandler = (e) => {
+    const handleSubmit: FormEventHandler = async (e) => {
         e.preventDefault();
+        const brandId = existingData.brand?.id;
         
-        // Update form data with accepted competitors before submitting
-        setData('competitors', competitors.filter(c => c.status === 'accepted'));
+        if (!brandId) {
+            toast.error('Brand ID not found');
+            return;
+        }
         
-        post(route('brands.store'));
+        // Step 5: Finalize brand (account setup and activation)
+        try {
+            const response = await fetch(route('brands.update.step5', { brand: brandId }), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    create_account: data.create_account,
+                    brand_email: data.brand_email,
+                    brand_password: data.brand_password,
+                }),
+            });
+
+            const result = await response.json();
+            
+            if (result.success && result.redirect_url) {
+                toast.success(result.message || 'Brand created successfully!');
+                window.location.href = result.redirect_url;
+            } else {
+                toast.error(result.message || 'Failed to finalize brand');
+            }
+        } catch (error) {
+            console.error('Error finalizing brand:', error);
+            toast.error('Failed to finalize brand');
+        }
+    };
+
+    const handleFinalSubmit = () => {
+        handleSubmit({ preventDefault: () => {} } as React.FormEvent);
     };
 
     // AI Prompt generation functions
@@ -232,6 +399,7 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
             data.website.trim() !== '' &&
             !isGeneratingPrompts && 
             aiGeneratedPrompts.length === 0 &&
+            existingData.prompts.length === 0 && // Only generate if no prompts exist in DB
             generationAttemptedRef.current !== data.website
         ) {
             generateAIPrompts();
@@ -316,6 +484,7 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
                     competitors={competitors}
                     setCompetitors={setCompetitors}
                     sessionId={sessionId}
+                    brandId={existingData.brand?.id}
                 />;
             case 3:
                 return <Step2Prompts 
@@ -331,6 +500,8 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
                     handleManualPromptAdd={handleManualPromptAdd}
                     removePrompt={removePrompt}
                     aiModels={aiModels}
+                    brandId={existingData.brand?.id}
+                    existingPrompts={existingData.prompts}
                 />;
             case 4:
                 return <Step4MonthlyPosts {...stepProps} />;
@@ -362,7 +533,7 @@ export default function CreateBrand({ existingBrand, aiModels = [], sessionId }:
                                     processing={processing}
                                     onNext={nextStep}
                                     onPrev={prevStep}
-                                    onSubmit={() => post(route('brands.store'))}
+                                    onSubmit={handleFinalSubmit}
                                     steps={steps}
                                 />
 

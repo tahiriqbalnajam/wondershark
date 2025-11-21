@@ -20,6 +20,7 @@ class BrandPrompt extends Model
         'sentiment',
         'visibility',
         'is_active',
+        'status',
         'ai_response',
         'resources',
         'competitor_mentions',
