@@ -1280,13 +1280,15 @@ class BrandController extends Controller
         $forceRegenerate = $request->boolean('force', false);
         $sessionId = $request->get('session_id', \Illuminate\Support\Str::uuid()->toString());
 
-        // Get all prompts for this brand
-        $prompts = BrandPrompt::where('brand_id', $brand->id)->get();
+        // Get only ACTIVE prompts for this brand (is_active = true)
+        $prompts = BrandPrompt::where('brand_id', $brand->id)
+            ->where('is_active', true)
+            ->get();
 
         if ($prompts->isEmpty()) {
             return response()->json([
                 'success' => false,
-                'error' => 'No prompts found for this brand'
+                'error' => 'No active prompts found for this brand'
             ], 404);
         }
 
