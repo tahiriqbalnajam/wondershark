@@ -3,7 +3,7 @@ export type BrandForm = {
     website: string;
     description: string;
     country: string;
-    prompts: string[];
+    prompts: string[] | GeneratedPrompt[];
     subreddits: string[];
     competitors: Competitor[];
     monthly_posts: number;
@@ -28,6 +28,7 @@ export type GeneratedPrompt = {
     source: string;
     ai_provider: string;
     is_selected: boolean;
+    status?: 'suggested' | 'active' | 'inactive'; // Add status field
     order: number;
     created_at?: string;
     // Stats fields
@@ -69,6 +70,8 @@ export type Step2Props = StepProps & {
     handleManualPromptAdd: (prompt: string) => void;
     removePrompt: (index: number) => void;
     aiModels: AiModel[];
+    brandId?: number;
+    existingPrompts: GeneratedPrompt[];
 };
 
 export type Step3Props = StepProps & {

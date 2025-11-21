@@ -53,6 +53,7 @@ type BrandPrompt = {
     visibility: 'public' | 'private' | 'draft';
     country_code: string;
     is_active: boolean;
+    status?: 'suggested' | 'active' | 'inactive'; // Add status field
     session_id?: string | null;
     created_at: string;
     days_ago: number;
@@ -66,7 +67,7 @@ type Props = {
 export default function BrandPromptsIndex({ brand, prompts }: Props) {
     const [selectedPrompts, setSelectedPrompts] = useState<number[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [currentTab, setCurrentTab] = useState<'suggested' | 'active' | 'inactive'>('suggested');
+    const [currentTab, setCurrentTab] = useState<'suggested' | 'active' | 'inactive'>('active');
     const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -84,12 +85,10 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
         },
     ];
 
-    // Categorize prompts by their active status
-    // Suggested prompts: inactive prompts with a session_id (AI-generated)
-    // Inactive prompts: inactive prompts without a session_id (manually deactivated)
-    const activePrompts = prompts.filter(p => p.is_active);
-    const suggestedPrompts = prompts.filter(p => !p.is_active && p.session_id);
-    const inactivePrompts = prompts.filter(p => !p.is_active && !p.session_id);
+    // Categorize prompts by their status field (with fallback to old logic)
+    const activePrompts = prompts.filter(p => p.status === 'active' || (p.is_active && !p.status));
+    const suggestedPrompts = prompts.filter(p => p.status === 'suggested' || (!p.is_active && p.session_id && !p.status));
+    const inactivePrompts = prompts.filter(p => p.status === 'inactive' || (!p.is_active && !p.session_id && !p.status));
 
     // Handle manual prompt addition from dialog
     const handleManualPromptAdd = (promptText: string) => {
@@ -270,7 +269,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                         </Button>
                     </div>
 
-                    <Tabs defaultValue="suggested" className="add-prompts-wrapp" onValueChange={(value) => setCurrentTab(value as 'suggested' | 'active' | 'inactive')}>
+                    <Tabs defaultValue="active" className="add-prompts-wrapp" onValueChange={(value) => setCurrentTab(value as 'suggested' | 'active' | 'inactive')}>
                         <div className="flex justify-between items-center mb-10">
                             <TabsList className="add-prompt-lists border">
                                 <TabsTrigger value="active">Active ({activePrompts.length})</TabsTrigger>

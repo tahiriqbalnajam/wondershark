@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import CompetitorSelector from '@/components/competitor-selector';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StepProps } from './types';
@@ -38,13 +37,15 @@ interface Step3CompetitorsProps extends StepProps {
     competitors: Competitor[];
     setCompetitors: (competitors: Competitor[]) => void;
     sessionId?: string;
+    brandId?: number;
 }
 
 export default function Step3Competitors({
     data,
     competitors,
     setCompetitors,
-    sessionId
+    sessionId,
+    brandId
 }: Step3CompetitorsProps) {
     const [loading, setLoading] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -128,6 +129,48 @@ export default function Step3Competitors({
                 }));
 
                 setCompetitors([...competitors, ...newCompetitors]);
+                
+                // Save to database immediately if we have a brand ID
+                if (brandId) {
+                    try {
+                        const saveResponse = await fetch(`/brands/${brandId}/competitors/save-bulk`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                            },
+                            body: JSON.stringify({
+                                competitors: newCompetitors.map((c: Competitor) => ({
+                                    name: c.name,
+                                    domain: c.domain,
+                                    mentions: c.mentions,
+                                    status: 'suggested'
+                                }))
+                            }),
+                        });
+
+                        if (!saveResponse.ok) {
+                            console.error('Failed to save competitors to database');
+                        } else {
+                            const savedData = await saveResponse.json();
+                            // Update competitors with actual database IDs
+                            if (savedData.competitors) {
+                                setCompetitors([...competitors, ...savedData.competitors.map((comp: CompetitorResponse) => ({
+                                    id: comp.id || Date.now() + Math.random(),
+                                    name: comp.name,
+                                    domain: comp.domain,
+                                    mentions: comp.mentions || 0,
+                                    status: 'suggested' as const,
+                                    source: 'ai' as const
+                                }))]);
+                            }
+                        }
+                    } catch (saveError) {
+                        console.error('Error saving competitors to database:', saveError);
+                    }
+                }
+                
                 toast.success('Competitors fetched successfully!');
             } else {
                 throw new Error(responseData.error || 'Failed to fetch competitors');
@@ -140,15 +183,20 @@ export default function Step3Competitors({
             setProgress(0);
             setProgressText('');
         }
-    }, [data.website, data.name, data.description, competitors, sessionId, setCompetitors]);
+    }, [data.website, data.name, data.description, competitors, sessionId, setCompetitors, brandId]);
 
-    // Auto-fetch competitors when component mounts if no competitors exist and we have website data
+    // Load competitors from database when component mounts
     useEffect(() => {
+        // If we have brand ID but no competitors loaded yet, they will come from server via Inertia props
+        // If we have competitors from DB (they'll have proper IDs), don't auto-fetch
+        const hasExistingCompetitors = competitors.length > 0;
+        
         const shouldAutoFetch = (
+            brandId && // Must have brand ID
             data.website && 
             data.website.trim() !== '' &&
             !loading && 
-            competitors.length === 0 &&
+            !hasExistingCompetitors &&
             autoFetchAttemptedRef.current !== data.website
         );
 
@@ -156,21 +204,71 @@ export default function Step3Competitors({
             autoFetchAttemptedRef.current = data.website;
             handleFetchFromAI();
         }
-    }, [data.website, competitors.length, loading, handleFetchFromAI]);
+    }, [brandId, data.website, competitors, loading, handleFetchFromAI]);
 
-    // Handle competitor actions
-    const handleAccept = (competitorId: number) => {
-        setCompetitors(competitors.map(c =>
-            c.id === competitorId ? { ...c, status: 'accepted' as const } : c
-        ));
-        toast.success('Competitor accepted!');
+    // Handle competitor actions - UPDATE STATUS IN DATABASE
+    const handleAccept = async (competitorId: number) => {
+        if (!brandId) {
+            toast.error('Brand ID is required');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/brands/${brandId}/competitors/${competitorId}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '',
+                },
+                body: JSON.stringify({ status: 'accepted' }),
+            });
+
+            if (!response.ok) throw new Error('Failed to update competitor status');
+
+            await response.json();
+            
+            // Update local state
+            setCompetitors(competitors.map(c =>
+                c.id === competitorId ? { ...c, status: 'accepted' as const } : c
+            ));
+            toast.success('Competitor accepted!');
+        } catch (error) {
+            console.error('Error updating competitor status:', error);
+            toast.error('Failed to accept competitor');
+        }
     };
 
-    const handleReject = (competitorId: number) => {
-        setCompetitors(competitors.map(c =>
-            c.id === competitorId ? { ...c, status: 'rejected' as const } : c
-        ));
-        toast.success('Competitor rejected!');
+    const handleReject = async (competitorId: number) => {
+        if (!brandId) {
+            toast.error('Brand ID is required');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/brands/${brandId}/competitors/${competitorId}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '',
+                },
+                body: JSON.stringify({ status: 'rejected' }),
+            });
+
+            if (!response.ok) throw new Error('Failed to update competitor status');
+
+            await response.json();
+            
+            // Update local state
+            setCompetitors(competitors.map(c =>
+                c.id === competitorId ? { ...c, status: 'rejected' as const } : c
+            ));
+            toast.success('Competitor rejected!');
+        } catch (error) {
+            console.error('Error updating competitor status:', error);
+            toast.error('Failed to reject competitor');
+        }
     };
 
     // Manual add functionality
@@ -204,6 +302,7 @@ export default function Step3Competitors({
                     <h3 className="text-xl font-semibold">Suggested Competitors</h3>
                 </div>
                 <button
+                    type="button"
                     onClick={handleFetchFromAI}
                     disabled={loading || !data.website}
                     className='flex py-3 px-6 gap-3 text-sm border rounded-sm fetch-ai-btn'
@@ -276,12 +375,14 @@ export default function Step3Competitors({
                                 <p className='text-gray-400'>{competitor.mentions} Mentions</p>
                                 <div className="competitor-btn-action">
                                     <button
+                                        type="button"
                                         className='btn-action-close'
                                         onClick={() => handleReject(competitor.id)}
                                     >
                                         <X className="w-[15px]"/>
                                     </button>
                                     <button
+                                        type="button"
                                         className='btn-action-check'
                                         onClick={() => handleAccept(competitor.id)}
                                     >
@@ -382,7 +483,7 @@ export default function Step3Competitors({
                         </div>
                     </form>
                 ) : (
-                    <button onClick={() => setShowForm(true)} className='flex py-4 justify-center gap-3 text-md border rounded-sm w-[200px] font-medium fetch-ai-btn'>
+                    <button type="button" onClick={() => setShowForm(true)} className='flex py-4 justify-center gap-3 text-md border rounded-sm w-[200px] font-medium fetch-ai-btn'>
                         <CirclePlus className='w-[20px]' /> Add Competitor
                     </button>
                 )}

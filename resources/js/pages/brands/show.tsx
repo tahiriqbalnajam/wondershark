@@ -103,17 +103,20 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
     // Calculate visibility data from prompts
     const visibilityChartData = useMemo(() => {
         if (!brand.prompts || brand.prompts.length === 0) {
-            return { data: [], granularity: 'month' as 'month' | 'day' };
+            return { data: [], granularity: 'month' as 'month' | 'day', entities: [] };
         }
 
-        // Get all dates from prompts
-        const dates = brand.prompts
-            .filter(p => p.analysis_completed_at)
-            .map(p => new Date(p.analysis_completed_at!));
+        // Only consider prompts that have been analyzed (have prompt_resources)
+        const analyzedPrompts = brand.prompts.filter(p => 
+            p.analysis_completed_at && p.prompt_resources && p.prompt_resources.length > 0
+        );
 
-        if (dates.length === 0) {
-            return { data: [], granularity: 'month' as 'month' | 'day' };
+        if (analyzedPrompts.length === 0) {
+            return { data: [], granularity: 'month' as 'month' | 'day', entities: [] };
         }
+
+        // Get all dates from analyzed prompts
+        const dates = analyzedPrompts.map(p => new Date(p.analysis_completed_at!));
 
         // Determine date range
         const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
@@ -127,25 +130,27 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
         const entities = new Map<string, { name: string; domain: string }>();
         
         // Add brand
-        const brandDomain = (brand.domain || brand.website || '').replace(/^www\./, '');
+        const brandDomain = (brand.domain || brand.website || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
         if (brandDomain) {
             entities.set(brandDomain, { name: brand.name, domain: brandDomain });
         }
 
-        // Add competitors from resources
-        brand.prompts.forEach(prompt => {
+        // Get accepted competitor domains for filtering (normalize them)
+        const acceptedCompetitors = new Map(
+            brand.competitors.map(c => {
+                const normalizedDomain = c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+                return [normalizedDomain, { name: c.name, domain: normalizedDomain }];
+            })
+        );
+
+        // Add only accepted competitors from resources
+        analyzedPrompts.forEach(prompt => {
             prompt.prompt_resources?.forEach(resource => {
                 if (resource.is_competitor_url) {
-                    const cleanDomain = resource.domain.replace(/^www\./, '');
-                    if (!entities.has(cleanDomain)) {
-                        // Try to find competitor name from brand.competitors
-                        const competitor = brand.competitors.find(c => 
-                            c.domain.replace(/^www\./, '') === cleanDomain
-                        );
-                        entities.set(cleanDomain, {
-                            name: competitor?.name || cleanDomain,
-                            domain: cleanDomain
-                        });
+                    const cleanDomain = resource.domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+                    // Only add if it's an accepted competitor
+                    if (acceptedCompetitors.has(cleanDomain) && !entities.has(cleanDomain)) {
+                        entities.set(cleanDomain, acceptedCompetitors.get(cleanDomain)!);
                     }
                 }
             });
@@ -154,10 +159,8 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
         // Group prompts by time period
         const mentionsByPeriod = new Map<string, Map<string, number>>();
 
-        brand.prompts.forEach(prompt => {
-            if (!prompt.analysis_completed_at) return;
-
-            const date = new Date(prompt.analysis_completed_at);
+        analyzedPrompts.forEach(prompt => {
+            const date = new Date(prompt.analysis_completed_at!);
             const periodKey = granularity === 'month'
                 ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
                 : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -168,9 +171,9 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
 
             const periodMentions = mentionsByPeriod.get(periodKey)!;
 
-            // Count mentions in resources
+            // Count mentions in resources - normalize domains the same way
             prompt.prompt_resources?.forEach(resource => {
-                const cleanDomain = resource.domain.replace(/^www\./, '');
+                const cleanDomain = resource.domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
                 if (entities.has(cleanDomain)) {
                     periodMentions.set(cleanDomain, (periodMentions.get(cleanDomain) || 0) + 1);
                 }
@@ -236,11 +239,16 @@ export default function BrandShow({ brand, competitiveStats }: Props) {
     };
 
     const filteredPrompts = useMemo(() => {
+        // Only show active prompts (status = 'active' or is_active = true)
+        const activePrompts = (brand.prompts || []).filter(prompt => 
+            prompt.is_active === true
+        );
+
         if (!selectedCompetitorDomain) {
-            return brand.prompts || [];
+            return activePrompts;
         }
 
-        return (brand.prompts || []).filter(prompt => {
+        return activePrompts.filter(prompt => {
             if (!prompt.prompt_resources) return false;
             
             return prompt.prompt_resources.some((resource: { url: string; type: string; title: string; description: string; domain: string; is_competitor_url: boolean; }) => {

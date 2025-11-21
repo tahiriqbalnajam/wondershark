@@ -99,7 +99,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('admin/ai-models/{aiModel}/test', [\App\Http\Controllers\Admin\AiModelController::class, 'test'])
             ->name('admin.ai-models.test');
 
-        // Citation Check Management - Admin only
+        // Citation Check Management - Admin only (requires additional manage-citation-check permission)
         Route::prefix('admin/citation-check')->name('admin.citation-check.')->middleware('role.permission:manage-citation-check')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\CitationCheckController::class, 'index'])->name('index');
             Route::get('/{post}', [\App\Http\Controllers\Admin\CitationCheckController::class, 'show'])->name('show');
@@ -116,13 +116,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/clear', [\App\Http\Controllers\Admin\JobMonitorController::class, 'clear'])->name('clear');
         });
 
-        // System Settings - Admin only
+        // System Settings - Admin only (requires additional manage-system permission)
         Route::prefix('admin/settings')->name('admin.settings.')->middleware('role.permission:manage-system')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'index'])->name('index');
             Route::post('/update', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'update'])->name('update');
         });
 
-        // Post Permissions Management - Admin only
+        // Post Permissions Management - Admin only (requires additional manage-system permission)
         Route::prefix('admin/post-permissions')->name('admin.post-permissions.')->middleware('role.permission:manage-system')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\PostPermissionController::class, 'index'])->name('index');
             Route::patch('/users/{user}', [\App\Http\Controllers\Admin\PostPermissionController::class, 'updateUser'])->name('users.update');
@@ -131,7 +131,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/brands/bulk-update', [\App\Http\Controllers\Admin\PostPermissionController::class, 'bulkUpdateBrands'])->name('brands.bulk-update');
         });
 
-        // Post Management - Admin only
+        // Post Management - Admin only (requires additional manage-system permission)
         Route::prefix('admin/posts')->name('admin.posts.')->middleware('role.permission:manage-system')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\PostController::class, 'index'])->name('index');
             Route::get('/create', [\App\Http\Controllers\Admin\PostController::class, 'create'])->name('create');
@@ -147,7 +147,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/import/template', [\App\Http\Controllers\Admin\PostImportController::class, 'downloadTemplate'])->name('import.template');
         });
 
-        // User Management - Admin only
+        // User Management - Admin only (requires additional manage-system permission)
         Route::prefix('admin/users')->name('admin.users.')->middleware('role.permission:manage-system')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('index');
             Route::get('/create', [\App\Http\Controllers\Admin\UserController::class, 'create'])->name('create');
@@ -188,6 +188,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('brands/get-existing-prompts', [BrandController::class, 'getExistingPrompts'])->name('brands.getExistingPrompts');
         Route::get('brands/{brand}/prompts-with-competitor-urls', [BrandController::class, 'getPromptsWithCompetitorUrls'])->name('brands.prompts-with-competitor-urls');
         Route::post('brands/{brand}/trigger-prompt-analysis', [BrandController::class, 'triggerPromptAnalysis'])->name('brands.trigger-prompt-analysis');
+        
+        // Step-by-step brand creation routes
+        Route::post('brands/create/step/1', [BrandController::class, 'storeStep1'])->name('brands.create.step1');
+        Route::get('brands/{brand}/create/step/{step}', [BrandController::class, 'showCreateStep'])->name('brands.create.step')->where('step', '[2-5]');
+        Route::post('brands/{brand}/create/step/2', [BrandController::class, 'updateStep2'])->name('brands.update.step2');
+        Route::post('brands/{brand}/create/step/3', [BrandController::class, 'updateStep3'])->name('brands.update.step3');
+        Route::post('brands/{brand}/create/step/4', [BrandController::class, 'updateStep4'])->name('brands.update.step4');
+        Route::post('brands/{brand}/create/step/5', [BrandController::class, 'updateStep5'])->name('brands.update.step5');
+        
+        // Bulk save and individual status update routes for brand creation
+        Route::post('brands/{brand}/competitors/save-bulk', [BrandController::class, 'saveBulkCompetitors'])->name('brands.competitors.save-bulk');
+        Route::patch('brands/{brand}/competitors/{competitor}/status', [BrandController::class, 'updateCompetitorStatus'])->name('brands.competitors.update-status');
+        Route::post('brands/{brand}/prompts/save-bulk', [BrandController::class, 'saveBulkPrompts'])->name('brands.prompts.save-bulk');
+        Route::patch('brands/{brand}/prompts/{prompt}/status', [BrandController::class, 'updatePromptStatus'])->name('brands.prompts.update-status');
         
         // Competitive Analysis Routes
         Route::get('brands/{brand}/competitive-stats', [\App\Http\Controllers\Brand\CompetitiveStatsController::class, 'index'])->name('brands.competitive-stats.index');
