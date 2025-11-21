@@ -104,7 +104,7 @@ class BrandController extends Controller
 
         $request->validate($validationRules);
 
-        DB::transaction(function () use ($request) {
+        $brand = DB::transaction(function () use ($request) {
             /** @var User $agency */
             $agency = Auth::user();
 
@@ -173,9 +173,14 @@ class BrandController extends Controller
                     ]);
                 }
             }
+
+            return $brand;
         });
 
-        return redirect()->route('brands.index')->with('success', 'Brand created successfully!');
+        // Store the newly created brand in session
+        session(['selected_brand_id' => $brand->id]);
+
+        return redirect()->route('brands.dashboard', $brand)->with('success', 'Brand created successfully!');
     }
 
     /**
@@ -257,8 +262,20 @@ class BrandController extends Controller
 
         $brand->load(['prompts', 'subreddits']);
 
+        // Get all AI models with their status
+        $aiModels = AiModel::all()->map(function ($model) {
+            return [
+                'id' => $model->id,
+                'name' => $model->name,
+                'display_name' => $model->display_name,
+                'is_enabled' => $model->is_enabled,
+                'provider' => $model->provider,
+            ];
+        });
+
         return Inertia::render('brands/edit', [
             'brand' => $brand,
+            'aiModels' => $aiModels,
         ]);
     }
 
@@ -291,6 +308,7 @@ class BrandController extends Controller
             'description' => 'nullable|string|max:1000',
             'country' => 'nullable|string|max:100',
             'monthly_posts' => 'required|integer|min:1|max:1000',
+            'status' => 'nullable|in:active,inactive,pending',
             'prompts' => 'array|max:25',
             'prompts.*' => 'required|string|max:500',
             'subreddits' => 'array|max:20',
@@ -298,13 +316,14 @@ class BrandController extends Controller
         ]);
 
         DB::transaction(function () use ($request, $brand) {
-            // Update brand
+            // Update brand basic info and status
             $brand->update([
                 'name' => $request->name,
                 'website' => $request->website,
                 'description' => $request->description,
                 'country' => $request->country,
                 'monthly_posts' => $request->monthly_posts,
+                'status' => $request->status ?? $brand->status,
             ]);
 
             // Delete existing prompts and create new ones
@@ -329,7 +348,7 @@ class BrandController extends Controller
             }
         });
 
-        return redirect()->route('brands.show', $brand)->with('success', 'Brand updated successfully!');
+        return redirect()->route('brands.edit', $brand)->with('success', 'Brand updated successfully!');
     }
 
     /**
@@ -523,11 +542,13 @@ class BrandController extends Controller
                             'ai_provider' => $prompt->ai_provider,
                             'is_selected' => true,
                             'order' => $prompt->order,
+                            'created_at' => $prompt->created_at?->toISOString(),
                             // Add mock stats for cached prompts too
                             'visibility' => $this->generateMockVisibility(),
                             'sentiment' => $this->generateMockSentiment(),
                             'position' => $this->generateMockPosition(),
                             'mentions' => $this->generateMockMentions(),
+                            'volume' => $this->generateMockVolume(),
                             'location' => 'USA',
                         ];
                     })->toArray(),
@@ -579,11 +600,13 @@ class BrandController extends Controller
                     'ai_provider' => $prompt->ai_provider,
                     'is_selected' => true,
                     'order' => $prompt->order,
+                    'created_at' => $prompt->created_at?->toISOString(),
                     // Add mock stats (these will be updated with real data later)
                     'visibility' => $this->generateMockVisibility(),
                     'sentiment' => $this->generateMockSentiment(),
                     'position' => $this->generateMockPosition(),
                     'mentions' => $this->generateMockMentions(),
+                    'volume' => $this->generateMockVolume(),
                     'location' => 'USA',
                 ];
             }
@@ -880,6 +903,14 @@ class BrandController extends Controller
     private function generateMockMentions(): int
     {
         return rand(0, 100);
+    }
+
+    /**
+     * Generate mock volume count (100-10000)
+     */
+    private function generateMockVolume(): int
+    {
+        return rand(100, 10000);
     }
 }
 

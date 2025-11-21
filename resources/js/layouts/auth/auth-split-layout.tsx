@@ -35,7 +35,7 @@ export default function AuthSplitLayout({ children, title, description }: PropsW
                     <img src="/images/login-bg.png" alt="image" className="max-w-full h-auto object-contain" />
                 </div>
                 {quote && (
-                    <div className="relative z-20 mt-auto text-center">
+                    <div className="relative z-20 mt-auto">
                         <blockquote className="space-y-2">
                             <p className="text-lg">&ldquo;{quote.message}&rdquo;</p>
                             <footer className="text-sm text-neutral-300">{quote.author}</footer>

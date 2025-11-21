@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { 
     Select,
     SelectContent,
@@ -18,17 +19,20 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
-import { AddPromptDialog } from '@/components/brand/add-prompt-dialog';
 import { 
-    Plus, 
     ArrowLeft, 
     Building2, 
-    MessageSquare, 
-    Users, 
-    Edit,
-    Trash2,
-    Save
+    Save,
+    Bot
 } from 'lucide-react';
+
+type AIModel = {
+    id: number;
+    name: string;
+    display_name: string;
+    is_enabled: boolean;
+    provider: string;
+};
 
 type Brand = {
     id: number;
@@ -43,6 +47,7 @@ type Brand = {
 
 type Props = {
     brand: Brand;
+    aiModels?: AIModel[];
 };
 
 type BrandForm = {
@@ -70,9 +75,10 @@ const breadcrumbs = (brand: Brand): BreadcrumbItem[] => [
     },
 ];
 
-export default function BrandEdit({ brand }: Props) {
-    const [newPrompt, setNewPrompt] = useState('');
-    const [newSubreddit, setNewSubreddit] = useState('');
+export default function BrandEdit({ brand, aiModels = [] }: Props) {
+    const [enabledModels, setEnabledModels] = useState<Record<number, boolean>>(
+        aiModels.reduce((acc, model) => ({ ...acc, [model.id]: model.is_enabled }), {})
+    );
 
     const { data, setData, put, processing, errors } = useForm<BrandForm>({
         name: brand.name,
@@ -83,35 +89,6 @@ export default function BrandEdit({ brand }: Props) {
         prompts: brand.prompts.map(p => p.prompt),
         subreddits: brand.subreddits.map(s => s.subreddit_name),
     });
-
-    const addPrompt = () => {
-        if (newPrompt.trim() && data.prompts.length < 25) {
-            setData('prompts', [...data.prompts, newPrompt.trim()]);
-            setNewPrompt('');
-        }
-    };
-
-    const removePrompt = (index: number) => {
-        setData('prompts', data.prompts.filter((_, i) => i !== index));
-    };
-
-    const editPrompt = (index: number, newValue: string) => {
-        const updatedPrompts = [...data.prompts];
-        updatedPrompts[index] = newValue;
-        setData('prompts', updatedPrompts);
-    };
-
-    const addSubreddit = () => {
-        if (newSubreddit.trim() && data.subreddits.length < 20) {
-            const subredditName = newSubreddit.trim().replace(/^r\//, '');
-            setData('subreddits', [...data.subreddits, subredditName]);
-            setNewSubreddit('');
-        }
-    };
-
-    const removeSubreddit = (index: number) => {
-        setData('subreddits', data.subreddits.filter((_, i) => i !== index));
-    };
 
     const handleSubmit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -231,123 +208,51 @@ export default function BrandEdit({ brand }: Props) {
                         </CardContent>
                     </Card>
 
-                    {/* Content Prompts */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <MessageSquare className="h-5 w-5" />
-                                    Content Prompts ({data.prompts.length}/25)
-                                </div>
-                                <AddPromptDialog brandId={brand.id} className="shadow-sm" />
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex gap-2">
-                                <Textarea
-                                    value={newPrompt}
-                                    onChange={(e) => setNewPrompt(e.target.value)}
-                                    placeholder="Enter a new content prompt..."
-                                    rows={2}
-                                    className="resize-none"
-                                />
-                                <Button
-                                    type="button"
-                                    onClick={addPrompt}
-                                    disabled={!newPrompt.trim() || data.prompts.length >= 25}
-                                >
-                                    <Plus className="h-4 w-4" />
-                                </Button>
-                            </div>
-
-                            {data.prompts.length > 0 && (
-                                <div className="space-y-2 max-h-64 overflow-y-auto">
-                                    {data.prompts.map((prompt, index) => (
-                                        <div key={index} className="flex items-start gap-2 p-3 border rounded-lg">
-                                            <div className="flex-1">
-                                                <Badge variant="outline" className="mb-2">
-                                                    Prompt {index + 1}
-                                                </Badge>
-                                                <p className="text-sm">{prompt}</p>
+                    {/* AI Models */}
+                    {aiModels && aiModels.length > 0 && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Bot className="h-5 w-5" />
+                                    AI Models
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-3">
+                                    <p className="text-sm text-muted-foreground mb-4">
+                                        View active AI models. Contact administrator to enable/disable models.
+                                    </p>
+                                    {aiModels.map((model) => (
+                                        <div
+                                            key={model.id}
+                                            className="flex items-center justify-between p-3 border rounded-lg"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{model.display_name}</span>
+                                                    <span className="text-sm text-muted-foreground">
+                                                        Provider: {model.provider}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="flex gap-1">
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        const newValue = window.prompt('Edit prompt:', prompt);
-                                                        if (newValue) editPrompt(index, newValue);
-                                                    }}
-                                                >
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => removePrompt(index)}
-                                                    className="text-destructive hover:text-destructive"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            <InputError message={errors.prompts} />
-                        </CardContent>
-                    </Card>
-
-                    {/* Target Subreddits */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Users className="h-5 w-5" />
-                                Target Subreddits ({data.subreddits.length}/20)
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex gap-2">
-                                <Input
-                                    value={newSubreddit}
-                                    onChange={(e) => setNewSubreddit(e.target.value)}
-                                    placeholder="e.g., technology, marketing, startups"
-                                />
-                                <Button
-                                    type="button"
-                                    onClick={addSubreddit}
-                                    disabled={!newSubreddit.trim() || data.subreddits.length >= 20}
-                                >
-                                    <Plus className="h-4 w-4" />
-                                </Button>
-                            </div>
-
-                            {data.subreddits.length > 0 && (
-                                <div className="grid gap-2 max-h-64 overflow-y-auto">
-                                    {data.subreddits.map((subreddit, index) => (
-                                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                                             <div className="flex items-center gap-2">
-                                                <Badge variant="secondary">r/{subreddit}</Badge>
-                                                <span className="text-sm text-green-600">Approved</span>
+                                                <Badge variant={model.is_enabled ? 'default' : 'secondary'}>
+                                                    {model.is_enabled ? 'Active' : 'Inactive'}
+                                                </Badge>
+                                                <Switch
+                                                    checked={enabledModels[model.id] ?? model.is_enabled}
+                                                    onCheckedChange={(checked: boolean) => {
+                                                        setEnabledModels(prev => ({ ...prev, [model.id]: checked }));
+                                                    }}
+                                                    disabled={true}
+                                                />
                                             </div>
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => removeSubreddit(index)}
-                                                className="text-destructive hover:text-destructive"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
                                         </div>
                                     ))}
                                 </div>
-                            )}
-                            <InputError message={errors.subreddits} />
-                        </CardContent>
-                    </Card>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* Actions */}
                     <div className="flex justify-end gap-2">

@@ -733,6 +733,12 @@ textarea.form-control{
     background:#00DC4B;
     flex:0 0 10px;
     border-radius:50%;
+    }
+
+@media(max-width:991px){
+    .add-prompt-lists button {
+        padding:10px 15px;
+    }
 }
 
 @media(max-width:991px){

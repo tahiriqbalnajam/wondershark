@@ -48,6 +48,15 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>, selecte
             href: '/agency/people',
             icon: Users,
         });
+
+        // Brand edit link - only show when a brand is selected
+        if (selectedBrandId) {
+            items.push({
+                title: 'Brand',
+                href: `/brands/${selectedBrandId}/edit`,
+                icon: Package,
+            });
+        }
     }
 
     // Search Analytics - for admin users
@@ -131,7 +140,13 @@ export function AppSidebar() {
     };
     
     const currentBrandId = getCurrentBrandId();
+    const selectedBrand = page.props.selectedBrand;
     const mainNavItems = getMainNavItems(permissions, currentBrandId);
+    
+    // Get brand-specific nav items if admin has selected a brand
+    const brandNavItems = selectedBrand && permissions.hasRole('admin') 
+        ? getBrandSpecificNavItems(selectedBrand.id)
+        : [];
 
     return (
         <Sidebar collapsible="icon" variant="inset" className='left-side-wrapp p-0 rounded-xl'>

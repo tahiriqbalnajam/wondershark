@@ -30,10 +30,15 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                     // For brand-specific dashboard routes (e.g., /brands/5 should not match /brands/5/posts)
                     const isBrandDashboard = !!itemHref.match(/^\/brands\/\d+$/) && !!currentUrl.match(/^\/brands\/\d+$/);
                     
-                    // For other routes, use startsWith but ensure it's not a brand dashboard conflict
-                    const isStartsWithMatch = currentUrl.startsWith(itemHref) && !itemHref.match(/^\/brands\/\d+$/);
+                    // Special case: /brands should only be active on exact /brands page, not /brands/123
+                    const isBrandsListPage = itemHref === '/brands' && currentUrl === '/brands';
                     
-                    const isActive = isExactMatch || isBrandDashboard || isStartsWithMatch;
+                    // For other routes, use startsWith but ensure it's not a brand dashboard conflict or brands list
+                    const isStartsWithMatch = currentUrl.startsWith(itemHref) && 
+                                             !itemHref.match(/^\/brands\/\d+$/) && 
+                                             itemHref !== '/brands';
+                    
+                    const isActive = isExactMatch || isBrandDashboard || isBrandsListPage || isStartsWithMatch;
                     
                     if (item.items && item.items.length > 0) {
                         return (
