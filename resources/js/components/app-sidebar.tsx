@@ -2,7 +2,7 @@ import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarHeader } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
-import { LayoutGrid, Users, Shield, Settings, FileText, Clock, BarChart3, MessageSquare, Package, Building2 } from 'lucide-react';
+import { LayoutGrid, Users, Shield, Settings, FileText, Clock, BarChart3, MessageSquare, Package, Building2, ShoppingCart } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { usePage } from '@inertiajs/react';
 import { type SharedData } from '@/types';
@@ -47,6 +47,12 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>, selecte
             title: 'People',
             href: '/agency/people',
             icon: Users,
+        });
+
+        items.push({
+            title: 'Orders',
+            href: '/agency/orders',
+            icon: ShoppingCart,
         });
 
         // Brand edit link - only show when a brand is selected

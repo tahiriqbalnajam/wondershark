@@ -248,10 +248,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('brand-prompts/{prompt}', [\App\Http\Controllers\Api\BrandPromptController::class, 'destroy']);
         });
         
-        // Agency People Management Routes
+        // Agency Routes
         Route::prefix('agency')->name('agency.')->group(function () {
+            // People Management
             Route::resource('people', \App\Http\Controllers\Agency\PeopleController::class)->only(['index', 'store', 'destroy']);
             Route::put('people/{member}/rights', [\App\Http\Controllers\Agency\PeopleController::class, 'updateRights'])->name('people.updateRights');
+            
+            // Orders Management
+            Route::get('orders', [\App\Http\Controllers\Agency\OrderController::class, 'index'])->name('orders.index');
         });
     });
 
