@@ -1,3 +1,5 @@
+// Full BrandEdit with 7 ON/OFF toggles (styled like the provided image)
+
 import { type BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/react';
 import { useState, FormEventHandler } from 'react';
@@ -10,262 +12,326 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { 
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
-import { 
-    ArrowLeft, 
-    Building2, 
-    Save,
-    Bot
+import { AddPromptDialog } from '@/components/brand/add-prompt-dialog';
+import {
+  Plus,
+  ArrowLeft,
+  Building2,
+  MessageSquare,
+  Users,
+  Edit,
+  Trash2,
+  Save,
 } from 'lucide-react';
 
-type AIModel = {
-    id: number;
-    name: string;
-    display_name: string;
-    is_enabled: boolean;
-    provider: string;
-};
+// --- Types ---
 
 type Brand = {
-    id: number;
-    name: string;
-    website?: string;
-    description: string;
-    monthly_posts: number;
-    status: 'active' | 'inactive' | 'pending';
-    prompts: Array<{ id: number; prompt: string; order: number; is_active: boolean }>;
-    subreddits: Array<{ id: number; subreddit_name: string; description?: string; status: string }>;
+  id: number;
+  name: string;
+  website?: string;
+  description: string;
+  monthly_posts: number;
+  status: 'active' | 'inactive' | 'pending';
+  prompts: Array<{ id: number; prompt: string; order: number; is_active: boolean }>;
+  subreddits: Array<{ id: number; subreddit_name: string; description?: string; status: string }>;
 };
 
-type Props = {
-    brand: Brand;
-    aiModels?: AIModel[];
-};
+type Props = { brand: Brand };
 
 type BrandForm = {
-    name: string;
-    website: string;
-    description: string;
-    monthly_posts: number;
-    status: 'active' | 'inactive' | 'pending';
-    prompts: string[];
-    subreddits: string[];
+  name: string;
+  website: string;
+  description: string;
+  monthly_posts: number;
+  status: 'active' | 'inactive' | 'pending';
+  prompts: string[];
+  subreddits: string[];
+
+  // toggles
+  Verified: boolean;
+  'GPT-4o Search': boolean;
+  'OpenAI (GPT-4)': boolean;
+  'AI Overview': boolean;
+  'AI Mode': boolean;
+  Perplexity: boolean;
 };
 
 const breadcrumbs = (brand: Brand): BreadcrumbItem[] => [
-    {
-        title: 'Brands',
-        href: '/brands',
-    },
-    {
-        title: brand.name,
-        href: `/brands/${brand.id}`,
-    },
-    {
-        title: 'Edit',
-        href: `/brands/${brand.id}/edit`,
-    },
+  { title: 'Brands', href: '/brands' },
+  { title: brand.name, href: `/brands/${brand.id}` },
+  { title: 'Edit', href: `/brands/${brand.id}/edit` },
 ];
 
-export default function BrandEdit({ brand, aiModels = [] }: Props) {
-    const [enabledModels, setEnabledModels] = useState<Record<number, boolean>>(
-        aiModels.reduce((acc, model) => ({ ...acc, [model.id]: model.is_enabled }), {})
-    );
+export default function BrandEdit({ brand }: Props) {
+  const [newPrompt, setNewPrompt] = useState('');
+  const [newSubreddit, setNewSubreddit] = useState('');
 
-    const { data, setData, put, processing, errors } = useForm<BrandForm>({
-        name: brand.name,
-        website: brand.website || '',
-        description: brand.description,
-        monthly_posts: brand.monthly_posts,
-        status: brand.status,
-        prompts: brand.prompts.map(p => p.prompt),
-        subreddits: brand.subreddits.map(s => s.subreddit_name),
-    });
+  const { data, setData, put, processing, errors } = useForm<BrandForm>({
+    name: brand.name,
+    website: brand.website || '',
+    description: brand.description,
+    monthly_posts: brand.monthly_posts,
+    status: brand.status,
+    prompts: brand.prompts.map((p) => p.prompt),
+    subreddits: brand.subreddits.map((s) => s.subreddit_name),
+    Verified: false,
+    'GPT-4o Search': false,
+    'OpenAI (GPT-4)': false,
+    'AI Overview': false,
+    'AI Mode': false,
+    Perplexity: false,
+  });
 
-    const handleSubmit: FormEventHandler = (e) => {
-        e.preventDefault();
-        put(route('brands.update', brand.id));
-    };
+  const addPrompt = () => {
+    if (newPrompt.trim() && data.prompts.length < 25) {
+      setData('prompts', [...data.prompts, newPrompt.trim()]);
+      setNewPrompt('');
+    }
+  };
 
-    return (
-        <AppLayout breadcrumbs={breadcrumbs(brand)}>
-            <Head title={`Edit ${brand.name}`} />
+  const removePrompt = (index: number) => setData('prompts', data.prompts.filter((_, i) => i !== index));
 
-            <div className="max-w-4xl mx-auto space-y-6">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="sm" asChild>
-                            <a href={`/brands/${brand.id}`}>
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                Back to Details
-                            </a>
-                        </Button>
-                        <HeadingSmall 
-                            title={`Edit ${brand.name}`}
-                            description="Update brand information and content strategy" 
-                        />
-                    </div>
+  const editPrompt = (index: number, val: string) => {
+    const copy = [...data.prompts];
+    copy[index] = val;
+    setData('prompts', copy);
+  };
+
+  const addSubreddit = () => {
+    if (newSubreddit.trim() && data.subreddits.length < 20) {
+      const name = newSubreddit.trim().replace(/^r\//, '');
+      setData('subreddits', [...data.subreddits, name]);
+      setNewSubreddit('');
+    }
+  };
+
+  const removeSubreddit = (index: number) => setData('subreddits', data.subreddits.filter((_, i) => i !== index));
+
+  const handleSubmit: FormEventHandler = (e) => {
+    e.preventDefault();
+    put(route('brands.update', brand.id));
+  };
+
+  
+  const toggles: {
+      img: string | undefined; key: keyof BrandForm; label: string; iconUrl?: string 
+}[] = [
+    { key: 'OpenAI (GPT-4)' as keyof BrandForm, label: 'OpenAI (GPT-4)', img:'/images/b1.png' },
+    { key: 'GPT-4o Search' as keyof BrandForm, label: 'GPT 4o Search', img:'/images/b2.png' },
+    { key: 'AI Overview' as keyof BrandForm, label: 'AI Overview', img:'/images/b3.png' },
+    { key: 'AI Mode' as keyof BrandForm, label: 'AI Mode', img:'/images/b4.png' },
+    { key: 'Perplexity' as keyof BrandForm, label: 'Perplexity', img:'/images/b5.png' },
+    { key: 'Verified' as keyof BrandForm, label: 'Verified', img:'/images/b6.png' },
+  ];
+
+  return (
+    <AppLayout breadcrumbs={breadcrumbs(brand)}>
+      <Head title={`Edit ${brand.name}`} />
+
+      <div className="mx-15 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" asChild>
+              <a href={`/brands/${brand.id}`}>
+                <ArrowLeft className="h-4 w-4 mr-2" /> Back to Details
+              </a>
+            </Button>
+
+            <HeadingSmall title={`Edit ${brand.name}`} description="Update brand information and content strategy" />
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Information */}
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <span className="w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded">
+                  <Building2 />
+                </span>
+                Basic Information
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Brand Name *</Label>
+                <Input id="name" value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder="Enter your brand name" className="form-control" required />
+                <InputError message={errors.name} />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="website">Website</Label>
+                <Input id="website" type="url" value={data.website} onChange={(e) => setData('website', e.target.value)} placeholder="https://example.com" className="form-control" />
+                <InputError message={errors.website} />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="description">Description *</Label>
+                <Textarea id="description" value={data.description} onChange={(e) => setData('description', e.target.value)} placeholder="Put description..." rows={4} className="resize-none form-control" required />
+                <InputError message={errors.description} />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="monthly_posts">Monthly Posts Target</Label>
+                <Input id="monthly_posts" type="number" min={1} max={1000} value={data.monthly_posts} onChange={(e) => setData('monthly_posts', parseInt(e.target.value) || 0)} className="form-control" />
+                <InputError message={errors.monthly_posts} />
+              </div>
+
+              {/* Brand status dropdown */}
+              <div className="grid gap-2">
+                <Label htmlFor="status">Brand Status</Label>
+                <Select value={data.status} onValueChange={(v: 'active' | 'inactive' | 'pending') => setData('status', v)}>
+                  <SelectTrigger className="form-control">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-green-500" /> Active
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="pending">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-yellow-500" /> Pending
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="inactive">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-red-500" /> Inactive
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <InputError message={errors.status} />
+              </div>
+
+              <div className="grid">
+                <div className="bg-white border rounded-lg px-4 py-7">
+                  <div className="space-y-3">
+                    {toggles.map((t) => (
+                        <div key={String(t.key)} className="">
+                            <label className="relative inline-flex items-center cursor-pointer gap-2">
+                                <input type="checkbox" className="sr-only" checked={!!data[t.key]} onChange={(e) => setData(t.key, e.target.checked)} />
+                                <span className={`w-11 h-6 flex items-center rounded-full p-1 transition ${data[t.key] ? 'bg-orange-600' : 'bg-gray-200'}`}>
+                                    <span className={`bg-white w-4 h-4 rounded-full shadow-md transform transition ${data[t.key] ? 'translate-x-5' : 'translate-x-0'}`} />
+                                </span>
+                                <img src={t.img} alt="" className='w-5' />
+                                <div className="text-sm">{t.label}</div>
+                            </label>
+                        </div>
+                    ))}
+                  </div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Basic Information */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Building2 className="h-5 w-5" />
-                                Basic Information
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="name">Brand Name *</Label>
-                                <Input
-                                    id="name"
-                                    value={data.name}
-                                    onChange={(e) => setData('name', e.target.value)}
-                                    placeholder="Enter your brand name"
-                                    required
-                                />
-                                <InputError message={errors.name} />
-                            </div>
+          {/* Content Prompts */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" /> Content Prompts ({data.prompts.length}/25)
+                </div>
+                <AddPromptDialog brandId={brand.id} className="shadow-sm" />
+              </CardTitle>
+            </CardHeader>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="website">Website</Label>
-                                <Input
-                                    id="website"
-                                    type="url"
-                                    value={data.website}
-                                    onChange={(e) => setData('website', e.target.value)}
-                                    placeholder="https://example.com"
-                                />
-                                <InputError message={errors.website} />
-                            </div>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Textarea value={newPrompt} onChange={(e) => setNewPrompt(e.target.value)} placeholder="Enter a new content prompt..." rows={2} className="resize-none" />
+                <Button type="button" onClick={addPrompt} disabled={!newPrompt.trim() || data.prompts.length >= 25}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="description">Description *</Label>
-                                <Textarea
-                                    id="description"
-                                    value={data.description}
-                                    onChange={(e) => setData('description', e.target.value)}
-                                    placeholder="Put description of the important aspects that you would like to promote in AI search."
-                                    rows={4}
-                                    className="resize-none"
-                                    required
-                                />
-                                <InputError message={errors.description} />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="monthly_posts">Monthly Posts Target</Label>
-                                <Input
-                                    id="monthly_posts"
-                                    type="number"
-                                    min="1"
-                                    max="1000"
-                                    value={data.monthly_posts}
-                                    onChange={(e) => setData('monthly_posts', parseInt(e.target.value) || 0)}
-                                />
-                                <InputError message={errors.monthly_posts} />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="status">Brand Status</Label>
-                                <Select value={data.status} onValueChange={(value: 'active' | 'inactive' | 'pending') => setData('status', value)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="active">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                                Active
-                                            </div>
-                                        </SelectItem>
-                                        <SelectItem value="pending">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-                                                Pending
-                                            </div>
-                                        </SelectItem>
-                                        <SelectItem value="inactive">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                                                Inactive
-                                            </div>
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <InputError message={errors.status} />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* AI Models */}
-                    {aiModels && aiModels.length > 0 && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Bot className="h-5 w-5" />
-                                    AI Models
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-3">
-                                    <p className="text-sm text-muted-foreground mb-4">
-                                        View active AI models. Contact administrator to enable/disable models.
-                                    </p>
-                                    {aiModels.map((model) => (
-                                        <div
-                                            key={model.id}
-                                            className="flex items-center justify-between p-3 border rounded-lg"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium">{model.display_name}</span>
-                                                    <span className="text-sm text-muted-foreground">
-                                                        Provider: {model.provider}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Badge variant={model.is_enabled ? 'default' : 'secondary'}>
-                                                    {model.is_enabled ? 'Active' : 'Inactive'}
-                                                </Badge>
-                                                <Switch
-                                                    checked={enabledModels[model.id] ?? model.is_enabled}
-                                                    onCheckedChange={(checked: boolean) => {
-                                                        setEnabledModels(prev => ({ ...prev, [model.id]: checked }));
-                                                    }}
-                                                    disabled={true}
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* Actions */}
-                    <div className="flex justify-end gap-2">
-                        <Button type="button" variant="outline" asChild>
-                            <a href={`/brands/${brand.id}`}>Cancel</a>
+              {data.prompts.length > 0 && (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {data.prompts.map((prompt, index) => (
+                    <div key={index} className="flex items-start gap-2 p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <Badge variant="outline" className="mb-2">Prompt {index + 1}</Badge>
+                        <p className="text-sm">{prompt}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button type="button" variant="ghost" size="sm" onClick={() => {
+                          const newValue = window.prompt('Edit prompt:', prompt);
+                          if (newValue) editPrompt(index, newValue);
+                        }}>
+                          <Edit className="h-4 w-4" />
                         </Button>
-                        <Button type="submit" disabled={processing}>
-                            <Save className="h-4 w-4 mr-2" />
-                            {processing ? 'Saving...' : 'Save Changes'}
+                        <Button type="button" variant="ghost" size="sm" onClick={() => removePrompt(index)} className="text-destructive hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
                         </Button>
+                      </div>
                     </div>
-                </form>
-            </div>
-        </AppLayout>
-    );
+                  ))}
+                </div>
+              )}
+
+              <InputError message={errors.prompts} />
+            </CardContent>
+          </Card>
+
+          {/* Target Subreddits */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" /> Target Subreddits ({data.subreddits.length}/20)
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Input value={newSubreddit} onChange={(e) => setNewSubreddit(e.target.value)} placeholder="e.g., technology, marketing, startups" />
+                <Button type="button" onClick={addSubreddit} disabled={!newSubreddit.trim() || data.subreddits.length >= 20}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {data.subreddits.length > 0 && (
+                <div className="grid gap-2 max-h-64 overflow-y-auto">
+                  {data.subreddits.map((subreddit, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">r/{subreddit}</Badge>
+                        <span className="text-sm text-green-600">Approved</span>
+                      </div>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => removeSubreddit(index)} className="text-destructive hover:text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <InputError message={errors.subreddits} />
+            </CardContent>
+          </Card>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" asChild>
+              <a href={`/brands/${brand.id}`}>Cancel</a>
+            </Button>
+
+            <Button type="submit" disabled={processing}>
+              <Save className="h-4 w-4 mr-2" /> {processing ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </AppLayout>
+  );
 }
