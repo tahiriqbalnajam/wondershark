@@ -19,6 +19,10 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
+// Agency Invitation Routes - Public routes (NO authentication required)
+Route::get('invitation/{token}', [\App\Http\Controllers\Agency\InvitationController::class, 'show'])->name('agency.invitation.accept');
+Route::post('invitation/accept', [\App\Http\Controllers\Agency\InvitationController::class, 'accept'])->name('agency.invitation.store');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     // Working import routes - using controllers to get proper data
     Route::get('posts/agency-import', [\App\Http\Controllers\PostImportController::class, 'index'])
@@ -160,10 +164,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/bulk-update-post-permissions', [\App\Http\Controllers\Admin\UserController::class, 'bulkUpdatePostPermissions'])->name('bulk-update-post-permissions');
         });
     });
-
-    // Agency Invitation Routes - Public routes for accepting invitations
-    Route::get('invitation/{token}', [\App\Http\Controllers\Agency\InvitationController::class, 'show'])->name('agency.invitation.accept');
-    Route::post('invitation/accept', [\App\Http\Controllers\Agency\InvitationController::class, 'accept'])->name('agency.invitation.store');
 
     // Brand Creation Routes - For authenticated users during brand creation
     Route::middleware('auth')->group(function () {
