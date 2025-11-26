@@ -2,7 +2,7 @@ import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarHeader } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
-import { LayoutGrid, Users, Shield, Settings, FileText, Clock, BarChart3, MessageSquare, Package, Building2, ShoppingCart } from 'lucide-react';
+import { LayoutGrid, Users, Shield, Settings, FileText, Clock, BarChart3, MessageSquare } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { usePage } from '@inertiajs/react';
 import { type SharedData } from '@/types';
@@ -49,12 +49,6 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>, selecte
             icon: Users,
         });
 
-        items.push({
-            title: 'Orders',
-            href: '/agency/orders',
-            icon: ShoppingCart,
-        });
-
         // Brand edit link - only show when a brand is selected
         if (selectedBrandId) {
             items.push({
@@ -81,24 +75,6 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>, selecte
             href: '/users',
             icon: Users,
             permission: 'view-users',
-        });
-    }
-
-    // Agencies - only for admin users
-    if (permissions.hasRole('admin')) {
-        items.push({
-            title: 'Agencies',
-            href: '/admin/agencies',
-            icon: Building2,
-        });
-    }
-
-    // Individual Brands - only for admin users
-    if (permissions.hasRole('admin')) {
-        items.push({
-            title: 'Individual Brands',
-            href: '/admin/brands',
-            icon: Package,
         });
     }
 
@@ -152,31 +128,6 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>, selecte
     return items;
 };
 
-const getBrandSpecificNavItems = (brandId: number): NavItem[] => {
-    return [
-        {
-            title: 'Dashboard',
-            href: `/brands/${brandId}`,
-            icon: LayoutGrid,
-        },
-        {
-            title: 'Posts',
-            href: `/brands/${brandId}/posts`,
-            icon: FileText,
-        },
-        {
-            title: 'Prompts',
-            href: `/brands/${brandId}/prompts`,
-            icon: MessageSquare,
-        },
-        {
-            title: 'Competitors',
-            href: `/brands/${brandId}/competitors`,
-            icon: Shield,
-        },
-    ];
-};
-
 export function AppSidebar() {
     const permissions = usePermissions();
     const page = usePage<SharedData>();
@@ -190,11 +141,7 @@ export function AppSidebar() {
     
     const currentBrandId = getCurrentBrandId();
     const selectedBrand = page.props.selectedBrand;
-    
-    // Use selectedBrand from session if available, otherwise use currentBrandId from URL
-    const brandIdForMenu = selectedBrand?.id || currentBrandId;
-    
-    const mainNavItems = getMainNavItems(permissions, brandIdForMenu);
+    const mainNavItems = getMainNavItems(permissions, currentBrandId);
     
     // Get brand-specific nav items if admin has selected a brand
     const brandNavItems = selectedBrand && permissions.hasRole('admin') 
@@ -224,20 +171,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} label="General" />
-                
-                {/* Brand-specific menu for admin when brand is selected */}
-                {selectedBrand && permissions.hasRole('admin') && brandNavItems.length > 0 && (
-                    <div className="px-3 pt-2">
-                        <div className="flex items-center gap-2 px-2 pb-2 text-xs font-semibold text-muted-foreground">
-                            <Package className="h-4 w-4" />
-                            {selectedBrand.name}
-                        </div>
-                        <div className="-mt-8">
-                            <NavMain items={brandNavItems} label={null} />
-                        </div>
-                    </div>
-                )}
+                <NavMain items={mainNavItems} />
             </SidebarContent>
         </Sidebar>
     );

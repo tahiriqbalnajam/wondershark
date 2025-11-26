@@ -431,13 +431,11 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
         return !aiGeneratedPrompts.find(p => p.id === prompt.id);
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const handleManualPromptAdd = (prompt: string, _countryCode?: string) => {
+    const handleManualPromptAdd = (prompt: string) => {
         if (data.prompts.length >= 25) {
             toast.error('Maximum 25 prompts allowed');
             return;
         }
-        // Note: countryCode parameter is reserved for future use when per-prompt location is supported
         setData('prompts', [...data.prompts, prompt]);
     };
 

@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
+import { LoaderCircle,Check } from 'lucide-react';
 import { FormEventHandler } from 'react';
 
 import InputError from '@/components/input-error';
@@ -35,9 +35,40 @@ export default function Register() {
     };
 
     return (
-        <AuthLayout title="Create an account" description="Enter your details below to create your account">
+        <AuthLayout title="Account Type " description="">
             <Head title="Register" />
             <form className="flex flex-col gap-6" onSubmit={submit}>
+
+                <div className="grid gap-3">
+                    <RadioGroup value={data.role} onValueChange={(value: string) => setData('role', value)} className="grid grid-cols-2 gap-3" >
+                        <div className="rounded-lg border p-5 shadow-xl hover:shadow-2xl account-type">
+                            <Label htmlFor="brand" className="flex-1 cursor-pointer">
+                                <div className="font-bold text-orange-600 flex items-center justify-between text-2xl mb-5"><RadioGroupItem value="brand" id="brand" className='radio-btn'/> Brand</div>
+                                <div className="text-md text-muted-foreground leading-5">We'll manage posts snd maximize AI visibility for a standalone brand.</div>
+                                <hr className='my-5'/>
+                                <ul className='p-0 m-0'>
+                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600'/> Single brand</li>
+                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600'/> Company analytics</li>
+                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600'/> Brand optimization</li>
+                                </ul>
+                            </Label>
+                        </div>
+                        <div className="rounded-lg border p-5 shadow-xl hover:shadow-2xl account-type">
+                            <Label htmlFor="agency" className="flex-1 cursor-pointer">
+                                <div className="font-bold text-orange-600 flex items-center justify-between text-2xl mb-5"><RadioGroupItem value="agency" id="agency" className='radio-btn'/> Agency</div>
+                                <div className="text-md text-muted-foreground leading-5">We'll enhance AI visibility and manage posts for an agency serving multiple brand clients.</div>
+                                <hr className='my-5'/>
+                                <ul className='p-0 m-0'>
+                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600'/> Multiple brands</li>
+                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600'/> Client Management</li>
+                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600'/> Multi-brand analytics</li>
+                                </ul>
+                            </Label>
+                        </div>
+                    </RadioGroup>
+                    <InputError message={errors.role} />
+                </div>
+
                 <div className="grid">
                     <div className="grid gap-2">
                         <Label htmlFor="name">Name</Label>
@@ -107,32 +138,6 @@ export default function Register() {
                         />
                         <InputError message={errors.password_confirmation} />
                     </div>
-
-                    <div className="grid gap-3">
-                        <Label>Account Type</Label>
-                        <RadioGroup 
-                            value={data.role} 
-                            onValueChange={(value: string) => setData('role', value)}
-                            className="grid grid-cols-1 gap-3"
-                        >
-                            <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
-                                <RadioGroupItem value="brand" id="brand" />
-                                <Label htmlFor="brand" className="flex-1 cursor-pointer">
-                                    <div className="font-bold text-orange-600">Brand</div>
-                                    <div className="text-xs text-muted-foreground">For businesses looking to promote their products</div>
-                                </Label>
-                            </div>
-                            <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
-                                <RadioGroupItem value="agency" id="agency" />
-                                <Label htmlFor="agency" className="flex-1 cursor-pointer">
-                                    <div className="font-bold text-orange-600">Agency</div>
-                                    <div className="text-xs text-muted-foreground">For marketing agencies and service providers</div>
-                                </Label>
-                            </div>
-                        </RadioGroup>
-                        <InputError message={errors.role} />
-                    </div>
-
                     <Button type="submit" className="mt-5 w-full primary-btn uppercase font-bold" tabIndex={5} disabled={processing}>
                         {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
                         Create account

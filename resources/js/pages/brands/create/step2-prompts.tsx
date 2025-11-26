@@ -395,8 +395,7 @@ export default function Step2Prompts({
             source: 'manual',
             ai_provider: 'Manual',
             is_selected: true,
-            order: allPrompts.length + 1,
-            created_at: new Date().toISOString()
+            order: allPrompts.length + 1
         };
 
         // Add to allPrompts state
@@ -410,7 +409,7 @@ export default function Step2Prompts({
 
         // Call parent function to add to data.prompts with country code
         if (handleManualPromptAdd) {
-            handleManualPromptAdd(prompt, countryCode);
+            handleManualPromptAdd(prompt);
         }
     };
 
@@ -607,7 +606,7 @@ export default function Step2Prompts({
                         <TabsTrigger value="suggested">Suggested</TabsTrigger>
                         <TabsTrigger value="inactive">Inactive</TabsTrigger>
                     </TabsList>
-                    <AddPromptDialog brandId={undefined} className="add-prompt-btn" onPromptAdd={handleManualPromptAddWrapper} defaultCountry={data.country} />
+                    <AddPromptDialog brandId={undefined} className="add-prompt-btn" onPromptAdd={handleManualPromptAddWrapper} />
                 </div>
                 <TabsContent value="active" className="active-table-prompt">
                     <Table className="default-table">

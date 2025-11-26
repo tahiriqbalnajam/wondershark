@@ -69,7 +69,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             : ''
                     }`}
                 >
-                    <FileLock className='w-4'/>Password
+                    Password
                 </button>
                 <button
                     type="button"
@@ -80,7 +80,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             : ''
                     }`}
                 >
-                    <WandSparkles className='w-4'/>Magic Link
+                    Magic Link
                 </button>
             </div>
 

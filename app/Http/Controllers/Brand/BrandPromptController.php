@@ -18,10 +18,7 @@ class BrandPromptController extends Controller
     public function index(Brand $brand)
     {
         // Check if user has access to this brand
-        $user = Auth::user();
-        $isAdmin = $user->hasRole('admin');
-        
-        if (!$isAdmin && $brand->agency_id !== $user->id) {
+        if ($brand->agency_id !== Auth::user()->id) {
             abort(403);
         }
 
@@ -60,10 +57,7 @@ class BrandPromptController extends Controller
     public function update(Request $request, Brand $brand, BrandPrompt $prompt)
     {
         // Check if user has access to this brand
-        $user = Auth::user();
-        $isAdmin = $user->hasRole('admin');
-        
-        if (!$isAdmin && $brand->agency_id !== $user->id) {
+        if ($brand->agency_id !== Auth::user()->id) {
             abort(403);
         }
 
@@ -87,10 +81,7 @@ class BrandPromptController extends Controller
     public function destroy(Brand $brand, BrandPrompt $prompt)
     {
         // Check if user has access to this brand
-        $user = Auth::user();
-        $isAdmin = $user->hasRole('admin');
-        
-        if (!$isAdmin && $brand->agency_id !== $user->id) {
+        if ($brand->agency_id !== Auth::user()->id) {
             abort(403);
         }
 
@@ -107,10 +98,7 @@ class BrandPromptController extends Controller
     public function bulkUpdate(Request $request, Brand $brand)
     {
         // Check if user has access to this brand
-        $user = Auth::user();
-        $isAdmin = $user->hasRole('admin');
-        
-        if (!$isAdmin && $brand->agency_id !== $user->id) {
+        if ($brand->agency_id !== Auth::user()->id) {
             abort(403);
         }
 
@@ -162,10 +150,7 @@ class BrandPromptController extends Controller
         ]);
 
         // Check if user has access to this brand
-        $user = Auth::user();
-        $isAdmin = $user->hasRole('admin');
-        
-        if (!$isAdmin && $brand->agency_id !== $user->id) {
+        if ($brand->agency_id !== Auth::user()->id) {
             Log::warning('Unauthorized access attempt', [
                 'brand_id' => $brand->id,
                 'brand_agency_id' => $brand->agency_id,

@@ -67,7 +67,7 @@ export type Step2Props = StepProps & {
     removeAcceptedPrompt: (promptText: string) => void;
     isPromptAccepted: (prompt: GeneratedPrompt) => boolean;
     isPromptRejected: (prompt: GeneratedPrompt) => boolean;
-    handleManualPromptAdd: (prompt: string, countryCode?: string) => void;
+    handleManualPromptAdd: (prompt: string) => void;
     removePrompt: (index: number) => void;
     aiModels: AiModel[];
     brandId?: number;
