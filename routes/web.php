@@ -161,6 +161,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
     });
 
+    // Agency Invitation Routes - Public routes for accepting invitations
+    Route::get('invitation/{token}', [\App\Http\Controllers\Agency\InvitationController::class, 'show'])->name('agency.invitation.accept');
+    Route::post('invitation/accept', [\App\Http\Controllers\Agency\InvitationController::class, 'accept'])->name('agency.invitation.store');
+
     // Brand Creation Routes - For authenticated users during brand creation
     Route::middleware('auth')->group(function () {
         Route::post('brands/generate-multi-model-prompts', [BrandController::class, 'generateMultiModelPrompts'])->name('brands.generateMultiModelPrompts');
@@ -253,6 +257,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // People Management
             Route::resource('people', \App\Http\Controllers\Agency\PeopleController::class)->only(['index', 'store', 'destroy']);
             Route::put('people/{member}/rights', [\App\Http\Controllers\Agency\PeopleController::class, 'updateRights'])->name('people.updateRights');
+            
+            // Invitation Management
+            Route::post('invitations/{invitation}/resend', [\App\Http\Controllers\Agency\InvitationController::class, 'resend'])->name('invitations.resend');
+            Route::delete('invitations/{invitation}', [\App\Http\Controllers\Agency\InvitationController::class, 'destroy'])->name('invitations.destroy');
             
             // Orders Management
             Route::get('orders', [\App\Http\Controllers\Agency\OrderController::class, 'index'])->name('orders.index');

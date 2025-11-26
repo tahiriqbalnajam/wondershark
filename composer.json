@@ -11,11 +11,14 @@
     "require": {
         "php": "^8.2",
         "echolabsdev/prism": "^0.83.2",
+        "guzzlehttp/guzzle": "^7.9",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
         "league/csv": "^9.24",
+        "s-ichikawa/laravel-sendgrid-driver": "^4.0",
         "spatie/laravel-permission": "^6.21",
+        "symfony/sendgrid-mailer": "^7.3",
         "tightenco/ziggy": "^2.4"
     },
     "require-dev": {

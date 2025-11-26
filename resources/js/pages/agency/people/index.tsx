@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, Plus, Settings, Trash2, Mail, User } from 'lucide-react';
+import { Users, Plus, Settings, Trash2, Mail, User, Clock, RefreshCw, X } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import InputError from '@/components/input-error';
 
@@ -26,8 +26,21 @@ interface AgencyMember {
     };
 }
 
+interface PendingInvitation {
+    id: number;
+    agency_id: number;
+    name: string;
+    email: string;
+    token: string;
+    role: string;
+    rights: string[];
+    expires_at: string;
+    created_at: string;
+}
+
 interface Props {
     members: AgencyMember[];
+    pendingInvitations: PendingInvitation[];
 }
 
 const availableRights = [
@@ -43,7 +56,7 @@ const breadcrumbs = [
     { title: 'People', href: '/agency/people' },
 ];
 
-export default function PeopleIndex({ members }: Props) {
+export default function PeopleIndex({ members, pendingInvitations }: Props) {
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [isRightsDialogOpen, setIsRightsDialogOpen] = useState(false);
     const [selectedMember, setSelectedMember] = useState<AgencyMember | null>(null);
@@ -51,7 +64,6 @@ export default function PeopleIndex({ members }: Props) {
     const { data, setData, post, errors, processing, reset } = useForm({
         name: '',
         email: '',
-        password: '',
         role: 'agency_member',
         rights: [] as string[],
     });
@@ -100,6 +112,30 @@ export default function PeopleIndex({ members }: Props) {
         if (confirm('Are you sure you want to remove this team member? This action cannot be undone.')) {
             router.delete(route('agency.people.destroy', memberId));
         }
+    };
+
+    const resendInvitation = (invitationId: number) => {
+        router.post(route('agency.invitations.resend', invitationId), {}, {
+            preserveScroll: true,
+        });
+    };
+
+    const cancelInvitation = (invitationId: number) => {
+        if (confirm('Are you sure you want to cancel this invitation?')) {
+            router.delete(route('agency.invitations.destroy', invitationId), {
+                preserveScroll: true,
+            });
+        }
+    };
+
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+        });
     };
 
     return (
@@ -152,19 +188,9 @@ export default function PeopleIndex({ members }: Props) {
                                             required
                                         />
                                         <InputError message={errors.email} />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="password">Password</Label>
-                                        <Input
-                                            id="password"
-                                            type="password"
-                                            value={data.password}
-                                            onChange={(e) => setData('password', e.target.value)}
-                                            placeholder="Enter password"
-                                            required
-                                        />
-                                        <InputError message={errors.password} />
+                                        <p className="text-xs text-muted-foreground">
+                                            An invitation email will be sent to this address
+                                        </p>
                                     </div>
 
                                     <div className="grid gap-2">
@@ -198,7 +224,7 @@ export default function PeopleIndex({ members }: Props) {
                                         Cancel
                                     </Button>
                                     <Button type="submit" disabled={processing}>
-                                        {processing ? 'Adding...' : 'Add Member'}
+                                        {processing ? 'Sending Invitation...' : 'Send Invitation'}
                                     </Button>
                                 </DialogFooter>
                             </form>
@@ -206,23 +232,91 @@ export default function PeopleIndex({ members }: Props) {
                     </Dialog>
                 </div>
 
-                {members.length === 0 ? (
-                    <Card>
-                        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                            <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                            <h3 className="text-lg font-semibold mb-2">No team members yet</h3>
-                            <p className="text-muted-foreground mb-4">
-                                Start building your team by adding your first member.
-                            </p>
-                            <Button onClick={() => setIsAddDialogOpen(true)}>
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Your First Member
-                            </Button>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <div className="grid gap-4">
-                        {members.map((member) => (
+                {/* Pending Invitations Section */}
+                {pendingInvitations && pendingInvitations.length > 0 && (
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                            <Clock className="h-5 w-5" />
+                            Pending Invitations ({pendingInvitations.length})
+                        </h3>
+                        <div className="grid gap-4">
+                            {pendingInvitations.map((invitation) => (
+                                <Card key={invitation.id}>
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                                                    <Mail className="h-5 w-5 text-amber-600" />
+                                                </div>
+                                                <div>
+                                                    <CardTitle className="text-lg">{invitation.name}</CardTitle>
+                                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                        <Mail className="h-3 w-3" />
+                                                        {invitation.email}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                                                    <Clock className="h-3 w-3 mr-1" />
+                                                    Pending
+                                                </Badge>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => resendInvitation(invitation.id)}
+                                                >
+                                                    <RefreshCw className="h-4 w-4 mr-1" />
+                                                    Resend
+                                                </Button>
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm"
+                                                    onClick={() => cancelInvitation(invitation.id)}
+                                                >
+                                                    <X className="h-4 w-4 mr-1" />
+                                                    Cancel
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-2">
+                                            <div className="text-sm text-muted-foreground">
+                                                <strong>Sent:</strong> {formatDate(invitation.created_at)}
+                                            </div>
+                                            <div className="text-sm text-muted-foreground">
+                                                <strong>Expires:</strong> {formatDate(invitation.expires_at)}
+                                            </div>
+                                            {invitation.rights && invitation.rights.length > 0 && (
+                                                <div>
+                                                    <h4 className="text-sm font-medium mb-2">Assigned Permissions:</h4>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {invitation.rights.map((right) => (
+                                                            <Badge key={right} variant="outline" className="text-xs">
+                                                                {availableRights.find(r => r.id === right)?.label || right}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Active Members Section */}
+                {members.length > 0 && (
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                            <Users className="h-5 w-5" />
+                            Active Members ({members.length})
+                        </h3>
+                        <div className="grid gap-4">
+                            {members.map((member) => (
                             <Card key={member.id}>
                                 <CardHeader>
                                     <div className="flex items-center justify-between">
@@ -280,7 +374,25 @@ export default function PeopleIndex({ members }: Props) {
                             </Card>
                         ))}
                     </div>
-                )}
+                </div>
+            )}
+
+            {/* Empty State - Show only if no members AND no pending invitations */}
+            {members.length === 0 && (!pendingInvitations || pendingInvitations.length === 0) && (
+                <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                        <Users className="h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">No team members yet</h3>
+                        <p className="text-muted-foreground mb-4">
+                            Start building your team by inviting your first member.
+                        </p>
+                        <Button onClick={() => setIsAddDialogOpen(true)}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Invite Your First Member
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
 
                 {/* Rights Management Dialog */}
                 <Dialog open={isRightsDialogOpen} onOpenChange={setIsRightsDialogOpen}>

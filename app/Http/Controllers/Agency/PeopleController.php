@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Agency;
 
 use App\Http\Controllers\Controller;
 use App\Models\AgencyMember;
+use App\Models\AgencyInvitation;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -28,49 +31,84 @@ class PeopleController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Get pending invitations
+        $pendingInvitations = AgencyInvitation::where('agency_id', $user->id)
+            ->whereNull('accepted_at')
+            ->where('expires_at', '>', now())
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         return Inertia::render('agency/people/index', [
             'members' => $members,
+            'pendingInvitations' => $pendingInvitations,
         ]);
     }
 
     /**
-     * Store a new agency member.
+     * Send an invitation to join the agency.
      */
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8',
-            'role' => 'required|string|in:agency_member',
-            'rights' => 'array',
+            'email' => 'required|email',
+            'role' => 'nullable|string|in:agency_member',
+            'rights' => 'nullable|array',
         ]);
 
-        DB::transaction(function () use ($request) {
-            /** @var User $agency */
-            $agency = Auth::user();
+        /** @var User $agency */
+        $agency = Auth::user();
 
-            // Create the user
-            $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
-                'email_verified_at' => now(),
+        // Check if email is already a user
+        $existingUser = User::where('email', $request->email)->first();
+        if ($existingUser) {
+            return back()->withErrors(['email' => 'This email is already registered in the system.']);
+        }
+
+        // Check if there's already a pending invitation for this email
+        $existingInvitation = AgencyInvitation::where('agency_id', $agency->id)
+            ->where('email', $request->email)
+            ->whereNull('accepted_at')
+            ->where('expires_at', '>', now())
+            ->first();
+
+        if ($existingInvitation) {
+            return back()->withErrors(['email' => 'An invitation has already been sent to this email address.']);
+        }
+
+        // Create the invitation
+        $invitation = AgencyInvitation::create([
+            'agency_id' => $agency->id,
+            'name' => $request->name,
+            'email' => $request->email,
+            'token' => AgencyInvitation::generateToken(),
+            'role' => $request->role ?? 'agency_member',
+            'rights' => $request->rights ?? [],
+            'expires_at' => now()->addHours(48),
+        ]);
+
+        // Generate invitation URL
+        $invitationUrl = route('agency.invitation.accept', ['token' => $invitation->token]);
+
+        // Send invitation email
+        try {
+            Mail::to($invitation->email)->send(
+                new \App\Mail\AgencyInvitation($invitation, $invitationUrl)
+            );
+        } catch (\Exception $e) {
+            // Log the error but don't fail the invitation creation
+            Log::error('Failed to send invitation email', [
+                'invitation_id' => $invitation->id,
+                'email' => $invitation->email,
+                'error' => $e->getMessage()
             ]);
+            
+            return redirect()->route('agency.people.index')
+                ->with('warning', 'Invitation created but email could not be sent. Please check your email configuration.');
+        }
 
-            // Assign the agency_member role
-            $user->assignRole('agency_member');
-
-            // Create agency member relationship
-            AgencyMember::create([
-                'user_id' => $user->id,
-                'agency_id' => $agency->id,
-                'role' => $request->role,
-                'rights' => $request->rights ?? [],
-            ]);
-        });
-
-        return redirect()->route('agency.people.index')->with('success', 'Agency member added successfully!');
+        return redirect()->route('agency.people.index')
+            ->with('success', 'Invitation sent successfully to ' . $invitation->email);
     }
 
     /**
