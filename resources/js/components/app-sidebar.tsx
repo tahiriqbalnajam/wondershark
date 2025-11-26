@@ -12,14 +12,13 @@ import {
     BarChart3, 
     MessageSquare, 
     Package, 
-    Building2, 
-    ShoppingCart 
+    Building2
 } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { usePage } from '@inertiajs/react';
 import { type SharedData } from '@/types';
 
-const getMainNavItems = (permissions: ReturnType<typeof usePermissions>, selectedBrandId?: number): NavItem[] => {
+const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, selectedBrandId?: number): NavItem[] => {
     const items: NavItem[] = [];
 
     // Dashboard - available to all authenticated users
@@ -39,42 +38,6 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>, selecte
             href: selectedBrandId ? `/brands/${selectedBrandId}/posts` : '/posts',
             icon: FileText,
         });
-
-        // Only show Prompts menu when a specific brand is selected
-        if (selectedBrandId) {
-            items.push({
-                title: 'Prompts',
-                href: `/brands/${selectedBrandId}/prompts`,
-                icon: MessageSquare,
-            });
-        }
-
-        items.push({
-            title: 'Competitors',
-            href: selectedBrandId ? `/brands/${selectedBrandId}/competitors` : '/competitors',
-            icon: Shield,
-        });
-
-        items.push({
-            title: 'People',
-            href: '/agency/people',
-            icon: Users,
-        });
-
-        items.push({
-            title: 'Orders',
-            href: '/agency/orders',
-            icon: ShoppingCart,
-        });
-
-        // Brand edit link - only show when a brand is selected
-        if (selectedBrandId) {
-            items.push({
-                title: 'Brand',
-                href: `/brands/${selectedBrandId}/edit`,
-                icon: Package,
-            });
-        }
     }
 
     // Search Analytics - for admin users
@@ -83,6 +46,48 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>, selecte
             title: 'Search Analytics',
             href: '/search-analytics',
             icon: BarChart3,
+        });
+    }
+
+    return items;
+};
+
+const getPreferenceNavItems = (permissions: ReturnType<typeof usePermissions>, selectedBrandId?: number): NavItem[] => {
+    const items: NavItem[] = [];
+
+    // Only show for agency users
+    if (permissions.hasRole('agency')) {
+        items.push({
+            title: 'Competitors',
+            href: selectedBrandId ? `/brands/${selectedBrandId}/competitors` : '/competitors',
+            icon: Shield,
+        });
+
+        items.push({
+            title: 'Prompts',
+            href: selectedBrandId ? `/brands/${selectedBrandId}/prompts` : '/prompts',
+            icon: MessageSquare,
+        });
+    }
+
+    return items;
+};
+
+const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, selectedBrandId?: number): NavItem[] => {
+    const items: NavItem[] = [];
+
+    // People - for agency users
+    if (permissions.hasRole('agency')) {
+        items.push({
+            title: 'People',
+            href: '/agency/people',
+            icon: Users,
+        });
+
+        items.push({
+            title: 'Brand',
+            href: selectedBrandId ? `/brands/${selectedBrandId}/edit` : '/brands',
+            icon: Package,
         });
     }
 
@@ -119,7 +124,7 @@ const getMainNavItems = (permissions: ReturnType<typeof usePermissions>, selecte
         items.push({
             title: 'Admin Panel',
             href: '/admin',
-            icon: Shield,
+            icon: Settings,
             permission: 'view-admin-panel',
             items: [
                 {
@@ -206,7 +211,9 @@ export function AppSidebar() {
     // Use selectedBrand from session if available, otherwise use currentBrandId from URL
     const brandIdForMenu = selectedBrand?.id || currentBrandId;
     
-    const mainNavItems = getMainNavItems(permissions, brandIdForMenu);
+    const generalNavItems = getGeneralNavItems(permissions, brandIdForMenu);
+    const preferenceNavItems = getPreferenceNavItems(permissions, brandIdForMenu);
+    const settingsNavItems = getSettingsNavItems(permissions, brandIdForMenu);
     
     // Get brand-specific nav items if admin has selected a brand
     const brandNavItems = selectedBrand && permissions.hasRole('admin') 
@@ -236,7 +243,20 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} label="General" />
+                {/* General Section */}
+                {generalNavItems.length > 0 && (
+                    <NavMain items={generalNavItems} label="General" />
+                )}
+                
+                {/* Preference Section */}
+                {preferenceNavItems.length > 0 && (
+                    <NavMain items={preferenceNavItems} label="Preference" />
+                )}
+                
+                {/* Settings Section */}
+                {settingsNavItems.length > 0 && (
+                    <NavMain items={settingsNavItems} label="Settings" />
+                )}
                 
                 {/* Brand-specific menu for admin when brand is selected */}
                 {selectedBrand && permissions.hasRole('admin') && brandNavItems.length > 0 && (
