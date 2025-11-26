@@ -14,3 +14,10 @@ Schedule::command('brands:analyze-competitive-stats')
     ->withoutOverlapping()
     ->onOneServer()
     ->runInBackground();
+
+// Brand Prompt Analysis Scheduling (only unanalyzed prompts)
+Schedule::command('brand:analyze-prompts --all')
+    ->dailyAt('03:00')
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->runInBackground();
