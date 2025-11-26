@@ -49,7 +49,7 @@ export function VisibilityChart({ data, entities, granularity = 'month' }: Visib
                                 height={visibilityData.length > 12 ? 80 : 30}
                             />
                             <YAxis 
-                                label={{ value: 'Mentions', angle: -90, position: 'insideLeft' }}
+                                label={{ value: 'Visibility %', angle: -90, position: 'insideLeft' }}
                                 tick={{ fontSize: 12 }}
                             />
                             <RechartsTooltip />
@@ -69,7 +69,7 @@ export function VisibilityChart({ data, entities, granularity = 'month' }: Visib
                 ) : (
                     <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                         <p className="text-center mb-2">No visibility data available yet.</p>
-                        <p className="text-sm text-center">Run competitive analysis on your prompts to see brand visibility trends.</p>
+                        <p className="text-sm text-center">Run competitive analysis to see brand visibility metrics.</p>
                     </div>
                 )}
             </div>

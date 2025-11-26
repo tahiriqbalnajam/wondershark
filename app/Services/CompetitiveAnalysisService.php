@@ -374,6 +374,65 @@ CRITICAL INSTRUCTIONS:
     }
 
     /**
+     * Get historical competitive stats for visibility chart (all dates)
+     */
+    public function getHistoricalStatsForChart(Brand $brand): array
+    {
+        // Get all competitive stats ordered by date
+        $stats = BrandCompetitiveStat::where('brand_id', $brand->id)
+            ->with(['competitor', 'brand'])
+            ->where(function($query) {
+                // Include brand stats (entity_type = 'brand')
+                $query->where('entity_type', 'brand')
+                      // OR competitor stats where the competitor is accepted
+                      ->orWhereHas('competitor', function($subQuery) {
+                          $subQuery->accepted();
+                      });
+            })
+            ->orderBy('analyzed_at')
+            ->get();
+
+        if ($stats->isEmpty()) {
+            return [];
+        }
+
+        // Group by date and entity
+        $groupedByDate = [];
+        
+        foreach ($stats as $stat) {
+            $date = $stat->analyzed_at->format('Y-m-d');
+            
+            if (!isset($groupedByDate[$date])) {
+                $groupedByDate[$date] = [];
+            }
+
+            // Use correct entity name from related tables
+            $entityName = $stat->entity_name;
+            $entityUrl = $stat->entity_url;
+            
+            if ($stat->entity_type === 'competitor' && $stat->competitor) {
+                $entityName = $stat->competitor->name;
+                $entityUrl = $stat->competitor->domain;
+            } elseif ($stat->entity_type === 'brand' && $stat->brand) {
+                $entityName = $stat->brand->name;
+                $entityUrl = $stat->brand->website ?? $stat->brand->domain ?? $entityUrl;
+            }
+
+            $cleanDomain = str_replace(['https://', 'http://', 'www.'], '', $entityUrl);
+            $cleanDomain = explode('/', $cleanDomain)[0];
+
+            $groupedByDate[$date][$cleanDomain] = [
+                'entity_name' => $entityName,
+                'visibility' => $stat->visibility,
+                'sentiment' => $stat->sentiment,
+                'position' => $stat->position,
+            ];
+        }
+
+        return $groupedByDate;
+    }
+
+    /**
      * Check if brand needs analysis (hasn't been analyzed recently)
      */
     public function brandNeedsAnalysis(Brand $brand, int $hoursThreshold = 24): bool

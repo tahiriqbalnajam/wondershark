@@ -641,6 +641,7 @@ class BrandController extends Controller
         // Get competitive stats with trends
         $competitiveAnalysisService = app(\App\Services\CompetitiveAnalysisService::class);
         $competitiveStats = $competitiveAnalysisService->getLatestStatsWithTrends($brand);
+        $historicalStats = $competitiveAnalysisService->getHistoricalStatsForChart($brand);
 
         // If no stats exist, create placeholder entries for brand and accepted competitors
         if (empty($competitiveStats)) {
@@ -698,6 +699,7 @@ class BrandController extends Controller
         return Inertia::render('brands/show', [
             'brand' => $brand,
             'competitiveStats' => $competitiveStats,
+            'historicalStats' => $historicalStats,
         ]);
     }
 
