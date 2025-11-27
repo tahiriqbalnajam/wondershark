@@ -34,6 +34,11 @@ export function VisibilityChart({ data, entities, granularity = 'month' }: Visib
     const visibilityData = data && data.length > 0 ? data : [];
     const chartEntities = entities && entities.length > 0 ? entities : [];
 
+    // Create a map from domain to entity name for tooltip
+    const domainToNameMap = new Map(
+        chartEntities.map(entity => [entity.domain, entity.name])
+    );
+
     return (
         <CardContent>
             <div className="h-80">
@@ -51,8 +56,25 @@ export function VisibilityChart({ data, entities, granularity = 'month' }: Visib
                             <YAxis 
                                 label={{ value: 'Visibility %', angle: -90, position: 'insideLeft' }}
                                 tick={{ fontSize: 12 }}
+                                domain={[0, 100]}
+                                tickFormatter={(value) => `${Math.round(Number(value))}%`}
                             />
-                            <RechartsTooltip />
+                            <RechartsTooltip 
+                                formatter={(value: any, name: any) => {
+                                    const displayName = domainToNameMap.get(name) || name;
+                                    const displayValue = isNaN(Number(value)) ? value : `${Math.round(Number(value))}%`;
+                                    return [displayValue, displayName];
+                                }}
+                                contentStyle={{ 
+                                    backgroundColor: 'white', 
+                                    border: '1px solid #ccc',
+                                    borderRadius: '4px',
+                                    padding: '8px',
+                                    zIndex: '1000000',
+                                    opacity: 1,
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                                } as React.CSSProperties}
+                            />
                             <Legend wrapperStyle={{ fontSize: '12px' }} />
                             {chartEntities.map((entity, index) => (
                                 <Line

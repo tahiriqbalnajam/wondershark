@@ -133,7 +133,7 @@ class BrandCompetitiveStat extends Model
         if ($pos == 1.0) return '1st';
         if ($pos == 2.0) return '2nd';
         if ($pos == 3.0) return '3rd';
-        return number_format($pos, 1) . 'th';
+        return number_format($pos, 1);
     }
 
     /**
