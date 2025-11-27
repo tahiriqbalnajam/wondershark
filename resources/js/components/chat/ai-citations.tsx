@@ -54,6 +54,11 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 p-4">
             {prompts.map((prompt) => {
+                // Debug: log AI model data
+                if (prompt.ai_model) {
+                    console.log('AI Model:', prompt.ai_model);
+                }
+                
                 // Get unique competitor logos from prompt_resources
                 const competitorLogos = prompt.prompt_resources
                     ?.filter(resource => resource.is_competitor_url)
@@ -84,15 +89,30 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
                             <div className="flex gap-3">
                                 {/* First Column: AI Model Logo */}
                                 <div className="flex-shrink-0">
-                                    {prompt.ai_model?.icon && (
-                                        <img 
-                                            src={`/storage/${prompt.ai_model.icon}`}
-                                            alt={prompt.ai_model.display_name}
-                                            className="w-10 h-10 object-contain rounded"
-                                            onError={(e) => {
-                                                e.currentTarget.style.display = 'none';
-                                            }}
-                                        />
+                                    {prompt.ai_model ? (
+                                        prompt.ai_model.icon ? (
+                                            <img 
+                                                src={`/storage/${prompt.ai_model.icon}`}
+                                                alt={prompt.ai_model.display_name}
+                                                className="w-10 h-10 object-contain rounded"
+                                                onError={(e) => {
+                                                    // Show fallback with first letter of AI model name
+                                                    const target = e.currentTarget;
+                                                    const fallbackDiv = document.createElement('div');
+                                                    fallbackDiv.className = 'w-4 h-8 bg-gray-200 rounded flex items-center justify-center text-gray-600 font-semibold text-lg';
+                                                    fallbackDiv.textContent = prompt.ai_model?.display_name?.charAt(0).toUpperCase() || 'AI';
+                                                    target.parentNode?.replaceChild(fallbackDiv, target);
+                                                }}
+                                            />
+                                        ) : (
+                                            <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-gray-600 font-semibold text-lg">
+                                                {prompt.ai_model.display_name?.charAt(0).toUpperCase() || 'AI'}
+                                            </div>
+                                        )
+                                    ) : (
+                                        <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-gray-600 font-semibold text-lg">
+                                            AI
+                                        </div>
                                     )}
                                 </div>
 
