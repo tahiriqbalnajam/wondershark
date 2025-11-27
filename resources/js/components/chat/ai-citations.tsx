@@ -94,7 +94,7 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
                                             <img 
                                                 src={`/storage/${prompt.ai_model.icon}`}
                                                 alt={prompt.ai_model.display_name}
-                                                className="w-10 h-10 object-contain rounded"
+                                                className="w-4 h-8 object-contain rounded"
                                                 onError={(e) => {
                                                     // Show fallback with first letter of AI model name
                                                     const target = e.currentTarget;
