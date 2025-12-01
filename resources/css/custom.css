@@ -889,14 +889,72 @@ textarea.form-control{
     border-color:#FF5B49;
 }
 
-@media(max-width:991px){
-    .add-prompt-lists button {
-        padding:10px 15px;
-    }
+/** Order Page **/
+.order-heading h3 {
+	font-size: 20px;
+	font-weight: 700;
+}
+.order-heading p{font-size:12px;}
+.order-top-link{display: inline-block;}
+.order-top-link a{
+    display: inline-block;
+	padding: 11px 15px;
+	background: var(--color-gray-100);
+	color: #747272;
+	border-radius: 5px;
+	font-size: 10px;
+	font-weight: 600;
+	cursor: pointer;
+    margin:5px;
+}
+.order-top-link a:hover{
+  background: var(--orange-1);
+  color: var(--color-white);
+}
+[data-no-drag] {
+  touch-action: none;
+}
+.range-slider .grow{
+    background:#FF5B49;
+}
+.range-slider .bg-primary{
+    background:#F4F4F4;
+}
+.range-slider span[role="slider"] {
+	background-color: #FF5B49;
+	border: none;
+    box-shadow:0 0 0 0 rgba(0,0,0,0.15);
+}
+[data-no-drag] {
+  touch-action: none !important;
+  overscroll-behavior: contain !important;
 }
 
 @media(max-width:991px){
     .add-prompt-lists button {
         padding:10px 15px;
+    }
+    .add-prompt-lists button {
+        padding:10px 15px;
+    }
+    .order-action .primary-btn {
+        min-width: 120px;
+        border: none;
+    }
+    .order-top-link {
+        display: block;
+        width: 100%;
+        padding: 0 10px 0 0;
+    }
+    .order-top-link a {
+        display: block;
+        width: 100%;
+    }
+    .default-table thead th {
+        padding: 10px;
+    }
+    .default-table th,
+    .default-table td {
+        font-size: 12px;
     }
 }
