@@ -134,12 +134,12 @@ export default function BrandEdit({ brand }: Props) {
   ];
 
   return (
-    <AppLayout breadcrumbs={breadcrumbs(brand)}>
+    <AppLayout>
       <Head title={`Edit ${brand.name}`} />
 
       <div className="mx-15 space-y-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          {/* <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" asChild>
               <a href={`/brands/${brand.id}`}>
                 <ArrowLeft className="h-4 w-4 mr-2" /> Back to Details
@@ -147,7 +147,7 @@ export default function BrandEdit({ brand }: Props) {
             </Button>
 
             <HeadingSmall title={`Edit ${brand.name}`} description="Update brand information and content strategy" />
-          </div>
+          </div> */}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

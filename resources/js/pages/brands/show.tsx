@@ -306,57 +306,6 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
 
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="sm" asChild>
-                            <Link href="/brands">
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                Back to Brands
-                            </Link>
-                        </Button>
-                        <div>
-                            <HeadingSmall 
-                                title={brand.name}
-                                description="Brand details and content strategy overview" 
-                            />
-                        </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                        <Button 
-                            variant="outline" 
-                            onClick={() => handleTriggerAnalysis(false)}
-                            disabled={triggeringAnalysis}
-                        >
-                            {triggeringAnalysis ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Analyzing...
-                                </>
-                            ) : (
-                                <>
-                                    <MessageSquare className="h-4 w-4 mr-2" />
-                                    Analyze Prompts
-                                </>
-                            )}
-                        </Button>
-                        <Button variant="outline" asChild>
-                            <Link href={route('competitors.index', { brand: brand.id })}>
-                                <Shield className="h-4 w-4 mr-2" />
-                                Competitors
-                            </Link>
-                        </Button>
-                        <Button variant="outline" asChild>
-                            <Link href={`/brands/${brand.id}/edit`}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit Brand
-                            </Link>
-                        </Button>
-                        <Badge variant={brand.status === 'active' ? 'default' : 'secondary'} className="px-3 py-1">
-                            {brand.status}
-                        </Badge>
-                    </div>
-                </div>
 
                 {/* Brand Overview */}
                 <div className="grid gap-6 lg:grid-cols-4">
