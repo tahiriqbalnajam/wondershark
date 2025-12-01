@@ -39,6 +39,36 @@ export function VisibilityChart({ data, entities, granularity = 'month' }: Visib
         chartEntities.map(entity => [entity.domain, entity.name])
     );
 
+    // Calculate dynamic Y-axis domain based on actual data values
+    let yAxisDomain: [number, number] = [0, 100];
+    
+    if (visibilityData.length > 0 && chartEntities.length > 0) {
+        const allValues: number[] = [];
+        
+        visibilityData.forEach(dataPoint => {
+            chartEntities.forEach(entity => {
+                const value = dataPoint[entity.domain];
+                if (typeof value === 'number' && !isNaN(value)) {
+                    allValues.push(value);
+                }
+            });
+        });
+        
+        if (allValues.length > 0) {
+            const minValue = Math.min(...allValues);
+            const maxValue = Math.max(...allValues);
+            const range = maxValue - minValue;
+            
+            // Add 10% padding, minimum 5 units
+            const padding = Math.max(5, range * 0.1);
+            
+            yAxisDomain = [
+                Math.max(0, Math.floor(minValue - padding)),
+                Math.min(100, Math.ceil(maxValue + padding))
+            ];
+        }
+    }
+
     return (
         <CardContent>
             <div className="h-80">
@@ -56,7 +86,7 @@ export function VisibilityChart({ data, entities, granularity = 'month' }: Visib
                             <YAxis 
                                 label={{ value: 'Visibility %', angle: -90, position: 'insideLeft' }}
                                 tick={{ fontSize: 12 }}
-                                domain={[0, 100]}
+                                domain={['dataMin - 5', 'dataMax + 5']}
                                 tickFormatter={(value) => `${Math.round(Number(value))}%`}
                             />
                             <RechartsTooltip 

@@ -157,7 +157,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick }: BrandVisi
                                                     <span>{Math.abs(stat.trends.visibility_change)}%</span>
                                                 )}
                                             </span>
-                                            <span className="text-xs">{stat.visibility_percentage || 'N/A'}</span>
+                                            <span className="text-xs font-bold">{stat.visibility_percentage || 'N/A'}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell className="border-r border-gray-200">
@@ -173,7 +173,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick }: BrandVisi
                                                     <span>{Math.abs(stat.trends.sentiment_change)}%</span>
                                                 )}
                                             </span>
-                                            <span className="text-xs">{stat.sentiment != null ? stat.sentiment : 'N/A'}</span>
+                                            <span className="text-xs font-bold">{stat.sentiment != null ? stat.sentiment : 'N/A'}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell className="border-r border-gray-200">
@@ -189,7 +189,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick }: BrandVisi
                                                     <span>{Math.abs(stat.trends.position_change)}%</span>
                                                 )}
                                             </span>
-                                            <span className="text-xs">{stat.position_formatted || 'N/A'}</span>
+                                            <span className="text-xs font-bold">{stat.position_formatted || 'N/A'}</span>
                                         </div>
                                     </TableCell>
                                 </TableRow>
