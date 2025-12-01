@@ -3,7 +3,7 @@ import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import HeadingSmall from '@/components/heading-small';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShoppingCart, SlidersHorizontal } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 
 import {
     Tabs,
@@ -35,7 +35,7 @@ import {
 
 const breadcrumbs = [
     { name: 'Dashboard', href: '/', title: 'Dashboard' },
-    { name: 'Paid PR', href: '', title: 'Paid PR' },
+    { name: 'Orders', href: '', title: 'Orders' },
 ];
 
 const tableData = [
@@ -163,15 +163,15 @@ export default function OrdersIndex() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Orders" />
             <div className="space-y-6">
-                <div className="grid lg:grid-flow-col grid-flow-row grid-rows-1 gap-4 items-center">
-                    <div className="order-heading lg:w-[80%] w-[100%]">
+                <div className="grid grid-flow-col grid-rows-1 gap-4 items-center">
+                    <div className="order-heading w-[80%]">
                         <HeadingSmall
                             title="Pricing"
                             description="Once we have published the article for you, any further edits may include an extra charge. Wondershark.ai will use reasonable good faith efforts to ensure that such article will remain publicly available for at least 12 months."
                         />
                     </div>
-                    <div className='flex justify-end'>
-                        <div className='order-top-link border rounded p-2'>
+                    <div>
+                        <div className='flex justify-end gap-2 flex-wrap order-top-link border rounded p-2'>
                             <a href="/">Video Tutorial</a>
                             <a href="/">How To</a>
                             <a href="/">Download PR Questionnaire</a>
@@ -182,9 +182,16 @@ export default function OrdersIndex() {
                 <Card>
                     <CardContent>
                         <Tabs defaultValue="publications" className="w-full">
-                            <button onClick={() => { setActiveItem(null); setOpenDrawer(true); }} className="mb-3 px-4 py-2 bg-primary text-white rounded flex gap-3 max-[130px]" >Search Filter <SlidersHorizontal className='w-4'/></button>
+                            <button onClick={() => { setActiveItem(null); setOpenDrawer(true); }} className="mb-3 px-4 py-2 bg-primary text-white rounded" > + Add New Publication </button>
+                            <TabsList className="add-prompt-lists border text-sm">
+                                <TabsTrigger value="publications">Publications</TabsTrigger>
+                                <TabsTrigger value="listicles">Listicles</TabsTrigger>
+                                <TabsTrigger value="digital-television">Digital Television</TabsTrigger>
+                                <TabsTrigger value="forums">Forums</TabsTrigger>
+                            </TabsList>
 
-                            <div className="overflow-x-auto mt-4">
+                            <TabsContent value="publications">
+                                <div className="overflow-x-auto mt-4">
                                     <table className="w-full text-sm border border-gray-300 default-table">
                                         <thead className="bg-gray-100">
                                             <tr>
@@ -195,14 +202,14 @@ export default function OrdersIndex() {
                                                         onChange={toggleSelectAll}
                                                     />
                                                 </th>
-                                                <th className="border p-3 h-12 align-middle font-medium text-muted-foreground text-left">Publications</th>
-                                                <th className="border p-3 h-12 align-middle font-medium text-muted-foreground text-left">Ai Citations Volume</th>
+                                                <th className="border p-3 h-12 align-middle font-medium text-muted-foreground text-left">Publisher</th>
+                                                <th className="border p-3 h-12 align-middle font-medium text-muted-foreground text-left">Rating</th>
                                                 <th className="border p-3 h-12 align-middle font-medium text-muted-foreground text-left">Price</th>
                                                 <th className="border p-3 h-12 align-middle font-medium text-muted-foreground text-left">DA</th>
                                                 <th className="border p-3 h-12 align-middle font-medium text-muted-foreground text-left">DR</th>
                                                 <th className="border p-3 h-12 align-middle font-medium text-muted-foreground text-left">Region</th>
-                                                <th className="border p-3 h-12 align-middle font-medium text-muted-foreground text-left">Sponsored</th>
-                                                <th className="border p-3 h-12 align-middle font-medium text-muted-foreground text-left">Do Follow</th>
+                                                <th className="border p-3 h-12 align-middle font-medium text-muted-foreground text-left">Link Insert</th>
+                                                <th className="border p-3 h-12 align-middle font-medium text-muted-foreground text-left">Do-Follow</th>
                                             </tr>
                                         </thead>
 
@@ -234,10 +241,40 @@ export default function OrdersIndex() {
                                         </tbody>
                                     </table>
                                 </div>
+                            </TabsContent> 
 
+                            <TabsContent value="listicles">
+                                 <CardContent>
+                                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                                        <ShoppingCart className="h-16 w-16 mb-4 opacity-20" />
+                                        <p className="text-lg font-medium">No orders yet</p>
+                                        <p className="text-sm">Your orders will appear here once you make a purchase.</p>
+                                    </div>
+                                </CardContent>
+                            </TabsContent>
+
+                            <TabsContent value="digital-television">
+                                 <CardContent>
+                                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                                        <ShoppingCart className="h-16 w-16 mb-4 opacity-20" />
+                                        <p className="text-lg font-medium">No orders yet</p>
+                                        <p className="text-sm">Your orders will appear here once you make a purchase.</p>
+                                    </div>
+                                </CardContent>
+                            </TabsContent>
+                            
+                            <TabsContent value="forums">
+                                 <CardContent>
+                                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                                        <ShoppingCart className="h-16 w-16 mb-4 opacity-20" />
+                                        <p className="text-lg font-medium">No orders yet</p>
+                                        <p className="text-sm">Your orders will appear here once you make a purchase.</p>
+                                    </div>
+                                </CardContent>
+                            </TabsContent>
                         </Tabs>
                         <Drawer open={openDrawer} data-no-drag onOpenChange={setOpenDrawer} direction="right">
-                            <DrawerContent className="lg:w-[400px] w-[300px] ml-auto h-full overflow-y-auto overflow-x-hidden">
+                            <DrawerContent className="w-[400px] ml-auto h-full overflow-y-auto overflow-x-hidden">
                                 <div className="mx-auto w-full max-w-sm p-5">
 
                                     <DrawerHeader className="p-0 mb-5">
@@ -320,7 +357,7 @@ export default function OrdersIndex() {
                                             <div className="space-y-2">
                                                 <Label>Niche</Label>
                                                 <div className="flex gap-2 flex-wrap">
-                                                    {["Discrete","Health","Crypto","Cbd","Gambling"].map((item,i)=>(
+                                                    {["Discrete","Health","Crypto, Cbd, Gambling"].map((item,i)=>(
                                                     <button
                                                         key={i}
                                                         type="button"
@@ -334,13 +371,15 @@ export default function OrdersIndex() {
 
                                         </form>
                                     </div>
-                                    <DrawerFooter className="flex my-5 p-0 flex-row order-action">
-                                        <Button className="bg-[#FF5B49] hover:bg-[#000000] hover:text-white w-[50%] min-[auto]: primary-btn">
+                                    <DrawerFooter className="flex  my-5 p-0">
+                                        <Button className="bg-[#FF5B49] hover:bg-[#FF5B49] w-[50%]">
                                             Save
                                         </Button>
-                                        <Button variant="outline" className="w-[50%] bg-[#D9D9D9] text-[#676767] min-[auto] primary-btn">
+                                        <DrawerClose asChild className='className="w-[50%]'>
+                                            <Button variant="outline" className="w-full text-gray-600">
                                             Reset all Filters
-                                        </Button>
+                                            </Button>
+                                        </DrawerClose>
                                     </DrawerFooter>
                                 </div>
                             </DrawerContent>
