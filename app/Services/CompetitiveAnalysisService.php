@@ -93,17 +93,17 @@ class CompetitiveAnalysisService
     {
         $competitorUrlsString = implode(', ', $competitorUrls);
         
-        return "You are an expert in competitive brand analysis for consumer health products like nasal rinses and sprays. Given the brand website [{$brandUrl}] and its competitors [{$competitorUrlsString}], analyze each (brand first, then competitors) using real data from web searches and page browsing. Calibrate metrics to match benchmark data for the niche: visibility 30-50% (market share estimate), sentiment 70-80 (0-100 scale from review averages), position 1.0-3.0 (decimal ranking, lower=better leader).
+        return "You are an expert in competitive brand analysis. Given the brand website [{$brandUrl}] and its competitors [{$competitorUrlsString}], analyze each (brand first, then competitors) using real data from web searches and page browsing. Calibrate metrics to match benchmark data for the industry: visibility 30-50% (market share estimate), sentiment 70-80 (0-100 scale from review averages), position 1.0-3.0 (decimal ranking, lower=better leader).
 
 Step 1: Gather Data
 Use web research and analysis to collect information for each entity:
-• Search for '{$brandName} reviews 2025' and similar queries to gather sentiment data from reviews (Amazon ratings, Reddit sentiment, review sites)
+• Search for reviews and ratings to gather sentiment data (Amazon ratings, Reddit sentiment, review sites, customer feedback)
 • Analyze each website URL to extract key features, user ratings, and competitive positioning
-• Research market share data and competitive comparisons in the nasal health/sinus care industry
+• Research market share data and competitive comparisons in the relevant industry
 • Look for ranking lists, 'best of' articles, and sales data mentions
 
 Step 2: Calculate Metrics
-For each brand/competitor, compute these specific metrics:
+For each brand/competitor, compute these specific metrics based on the actual company and industry:
 
 • Visibility (%): Market share estimate between 30-50% based on:
   - Percentage of top recommendations in comparison articles
@@ -124,10 +124,10 @@ For each brand/competitor, compute these specific metrics:
   - Customer loyalty and brand strength
 
 Step 3: Output Requirements
-Return results in this exact JSON format:
+Return results in this exact JSON format. USE THE EXACT BRAND AND COMPETITOR NAMES FROM THE URLS PROVIDED - DO NOT ADD OR MODIFY THE NAMES:
 {
   \"brand_analysis\": {
-    \"name\": \"Brand Name\",
+    \"name\": \"Exact Brand Name from Website\",
     \"url\": \"Brand URL\",
     \"visibility\": 42.5,
     \"sentiment\": 78,
@@ -140,7 +140,7 @@ Return results in this exact JSON format:
   },
   \"competitors_analysis\": [
     {
-      \"name\": \"Competitor Name\",
+      \"name\": \"Exact Competitor Name from Website\",
       \"url\": \"Competitor URL\",
       \"visibility\": 35.2,
       \"sentiment\": 72,
@@ -154,7 +154,10 @@ Return results in this exact JSON format:
   ]
 }
 
-Requirements:
+CRITICAL INSTRUCTIONS:
+- Extract the EXACT brand/company name from each website - do not add descriptive words or product categories
+- For example: if the website is for 'Tesla', use 'Tesla' not 'Tesla Nasal Rinse' or 'Tesla Motors'
+- Do not append product types or categories to company names
 - Provide realistic metrics based on actual market research
 - Ensure visibility scores are between 30-50%
 - Sentiment scores should reflect real review averages (70-85 typical range)
@@ -352,12 +355,81 @@ Requirements:
         return $stats->map(function ($stat) {
             $trends = $stat->getTrends();
             $statArray = $stat->toArray();
+            
+            // Use competitor name from competitors table if available, not from analysis table
+            if ($stat->entity_type === 'competitor' && $stat->competitor) {
+                $statArray['entity_name'] = $stat->competitor->name;
+                $statArray['entity_url'] = $stat->competitor->domain;
+            } elseif ($stat->entity_type === 'brand' && $stat->brand) {
+                $statArray['entity_name'] = $stat->brand->name;
+                $statArray['entity_url'] = $stat->brand->website ?? $stat->brand->domain ?? $statArray['entity_url'];
+            }
+            
             $statArray['trends'] = $trends;
             $statArray['visibility_percentage'] = $stat->visibility_percentage;
             $statArray['position_formatted'] = $stat->position_formatted;
             $statArray['sentiment_level'] = $stat->sentiment_level;
             return $statArray;
         })->toArray();
+    }
+
+    /**
+     * Get historical competitive stats for visibility chart (all dates)
+     */
+    public function getHistoricalStatsForChart(Brand $brand): array
+    {
+        // Get all competitive stats ordered by date
+        $stats = BrandCompetitiveStat::where('brand_id', $brand->id)
+            ->with(['competitor', 'brand'])
+            ->where(function($query) {
+                // Include brand stats (entity_type = 'brand')
+                $query->where('entity_type', 'brand')
+                      // OR competitor stats where the competitor is accepted
+                      ->orWhereHas('competitor', function($subQuery) {
+                          $subQuery->accepted();
+                      });
+            })
+            ->orderBy('analyzed_at')
+            ->get();
+
+        if ($stats->isEmpty()) {
+            return [];
+        }
+
+        // Group by date and entity
+        $groupedByDate = [];
+        
+        foreach ($stats as $stat) {
+            $date = $stat->analyzed_at->format('Y-m-d');
+            
+            if (!isset($groupedByDate[$date])) {
+                $groupedByDate[$date] = [];
+            }
+
+            // Use correct entity name from related tables
+            $entityName = $stat->entity_name;
+            $entityUrl = $stat->entity_url;
+            
+            if ($stat->entity_type === 'competitor' && $stat->competitor) {
+                $entityName = $stat->competitor->name;
+                $entityUrl = $stat->competitor->domain;
+            } elseif ($stat->entity_type === 'brand' && $stat->brand) {
+                $entityName = $stat->brand->name;
+                $entityUrl = $stat->brand->website ?? $stat->brand->domain ?? $entityUrl;
+            }
+
+            $cleanDomain = str_replace(['https://', 'http://', 'www.'], '', $entityUrl);
+            $cleanDomain = explode('/', $cleanDomain)[0];
+
+            $groupedByDate[$date][$cleanDomain] = [
+                'entity_name' => $entityName,
+                'visibility' => $stat->visibility,
+                'sentiment' => $stat->sentiment,
+                'position' => $stat->position,
+            ];
+        }
+
+        return $groupedByDate;
     }
 
     /**

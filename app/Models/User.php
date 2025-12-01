@@ -5,6 +5,8 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo as EloquentBelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
@@ -74,6 +76,67 @@ class User extends Authenticatable
     public function brands(): HasMany
     {
         return $this->hasMany(Brand::class, 'agency_id');
+    }
+
+    /**
+     * Get the agency this user belongs to (for agency members).
+     */
+    public function agency(): EloquentBelongsTo
+    {
+        return $this->belongsTo(User::class, 'id', 'agency_id')
+            ->join('agency_members', 'users.id', '=', 'agency_members.agency_id')
+            ->where('agency_members.user_id', $this->id);
+    }
+
+    /**
+     * Get agency member record if this user is an agency member.
+     */
+    public function agencyMembership()
+    {
+        return $this->hasOne(AgencyMember::class, 'user_id');
+    }
+
+    /**
+     * Check if user can access a brand (either as agency owner or agency member).
+     */
+    public function canAccessBrand(Brand $brand): bool
+    {
+        // Admin can access all brands
+        if ($this->hasRole('admin')) {
+            return true;
+        }
+
+        // Agency owner can access their own brands
+        if ($brand->agency_id === $this->id) {
+            return true;
+        }
+
+        // Agency member can access their agency's brands
+        $membership = $this->agencyMembership;
+        if ($membership && $membership->agency_id === $brand->agency_id) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Get all brands accessible to this user (owned or through agency membership).
+     */
+    public function getAccessibleBrands()
+    {
+        // If user is agency owner, return their brands
+        if ($this->hasRole('agency')) {
+            return Brand::where('agency_id', $this->id)->get();
+        }
+
+        // If user is agency member, return their agency's brands
+        $membership = $this->agencyMembership;
+        if ($membership) {
+            return Brand::where('agency_id', $membership->agency_id)->get();
+        }
+
+        return collect([]);
     }
 
     /**

@@ -19,6 +19,10 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
+// Agency Invitation Routes - Public routes (NO authentication required)
+Route::get('invitation/{token}', [\App\Http\Controllers\Agency\InvitationController::class, 'show'])->name('agency.invitation.accept');
+Route::post('invitation/accept', [\App\Http\Controllers\Agency\InvitationController::class, 'accept'])->name('agency.invitation.store');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     // Working import routes - using controllers to get proper data
     Route::get('posts/agency-import', [\App\Http\Controllers\PostImportController::class, 'index'])
@@ -253,6 +257,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // People Management
             Route::resource('people', \App\Http\Controllers\Agency\PeopleController::class)->only(['index', 'store', 'destroy']);
             Route::put('people/{member}/rights', [\App\Http\Controllers\Agency\PeopleController::class, 'updateRights'])->name('people.updateRights');
+            
+            // Invitation Management
+            Route::post('invitations/{invitation}/resend', [\App\Http\Controllers\Agency\InvitationController::class, 'resend'])->name('invitations.resend');
+            Route::delete('invitations/{invitation}', [\App\Http\Controllers\Agency\InvitationController::class, 'destroy'])->name('invitations.destroy');
             
             // Orders Management
             Route::get('orders', [\App\Http\Controllers\Agency\OrderController::class, 'index'])->name('orders.index');

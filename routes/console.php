@@ -8,9 +8,16 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Competitive Analysis Scheduling
+// Competitive Analysis Scheduling - Runs at 2 AM and 2 PM
 Schedule::command('brands:analyze-competitive-stats')
-    ->dailyAt('02:00')
+    ->twiceDaily(2, 14)
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->runInBackground();
+
+// Brand Prompt Analysis Scheduling (only unanalyzed prompts) - Runs at 2 AM and 2 PM
+Schedule::command('brand:analyze-prompts --all')
+    ->twiceDaily(2, 14)
     ->withoutOverlapping()
     ->onOneServer()
     ->runInBackground();

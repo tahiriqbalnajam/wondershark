@@ -58,20 +58,19 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick }: BrandVisi
                         <TableRow className="bg-gray-50 border-b border-gray-200">
                             <TableHead className="w-12 border-r border-gray-200 text-center">#</TableHead>
                             <TableHead className="border-r border-gray-200">Brand</TableHead>
-                            <TableHead className="border-r border-gray-200">
+                            <TableHead className="whitespace-nowrap border-r border-gray-200">
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                 <Button
                                     variant="outline"
                                     className="p-0 border-0 text-sm shadow-none bg-transparent hover:border-0"
                                 >
-                                    Position <Info className="h-3 w-3 inline-block" />
+                                    Visibility <Info className="h-3 w-3 inline-block" />
                                 </Button>
                                 </TooltipTrigger>
                                 <TooltipContent className="w-50">
                                 <p className="text-xs text-center">
-                                    The average position of the brand when mentioned in the
-                                    last 30 days
+                                    Percentage of chats mentioning the brand in the last 30 days
                                 </p>
                                 </TooltipContent>
                             </Tooltip>
@@ -94,19 +93,20 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick }: BrandVisi
                                 </TooltipContent>
                             </Tooltip>
                             </TableHead>
-                            <TableHead className="whitespace-nowrap border-gray-200">
+                            <TableHead className="border-gray-200">
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                 <Button
                                     variant="outline"
                                     className="p-0 border-0 text-sm shadow-none bg-transparent hover:border-0"
                                 >
-                                    Visibility <Info className="h-3 w-3 inline-block" />
+                                    Position <Info className="h-3 w-3 inline-block" />
                                 </Button>
                                 </TooltipTrigger>
                                 <TooltipContent className="w-50">
                                 <p className="text-xs text-center">
-                                    Percentage of chats mentioning the brand in the last 30 days
+                                    The average position of the brand when mentioned in the
+                                    last 30 days
                                 </p>
                                 </TooltipContent>
                             </Tooltip>
@@ -147,17 +147,17 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick }: BrandVisi
                                     <TableCell className="border-r border-gray-200">
                                         <div className="flex items-center gap-1 justify-between">
                                             <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                                {stat.trends.position_trend === "up" && (
+                                                {stat.trends.visibility_trend === "up" && (
                                                     <ArrowUpRight className="h-4 w-4 text-green-600" />
                                                 )}
-                                                {stat.trends.position_trend === "down" && (
+                                                {stat.trends.visibility_trend === "down" && (
                                                     <ArrowDownRight className="h-4 w-4 text-red-600" />
                                                 )}
-                                                {stat.trends.position_change !== 0 && stat.trends.position_trend !== 'stable' && stat.trends.position_trend !== 'new' && (
-                                                    <span>{Math.abs(stat.trends.position_change)}%</span>
+                                                {stat.trends.visibility_change !== 0 && stat.trends.visibility_trend !== 'stable' && stat.trends.visibility_trend !== 'new' && (
+                                                    <span>{Math.abs(stat.trends.visibility_change)}%</span>
                                                 )}
                                             </span>
-                                            <span className="text-xs">{stat.position_formatted || 'N/A'}</span>
+                                            <span className="text-xs">{stat.visibility_percentage || 'N/A'}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell className="border-r border-gray-200">
@@ -179,17 +179,17 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick }: BrandVisi
                                     <TableCell className="border-r border-gray-200">
                                         <div className="flex items-center gap-1 justify-between">
                                             <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                                {stat.trends.visibility_trend === "up" && (
+                                                {stat.trends.position_trend === "up" && (
                                                     <ArrowUpRight className="h-4 w-4 text-green-600" />
                                                 )}
-                                                {stat.trends.visibility_trend === "down" && (
+                                                {stat.trends.position_trend === "down" && (
                                                     <ArrowDownRight className="h-4 w-4 text-red-600" />
                                                 )}
-                                                {stat.trends.visibility_change !== 0 && stat.trends.visibility_trend !== 'stable' && stat.trends.visibility_trend !== 'new' && (
-                                                    <span>{Math.abs(stat.trends.visibility_change)}%</span>
+                                                {stat.trends.position_change !== 0 && stat.trends.position_trend !== 'stable' && stat.trends.position_trend !== 'new' && (
+                                                    <span>{Math.abs(stat.trends.position_change)}%</span>
                                                 )}
                                             </span>
-                                            <span className="text-xs">{stat.visibility_percentage || 'N/A'}</span>
+                                            <span className="text-xs">{stat.position_formatted || 'N/A'}</span>
                                         </div>
                                     </TableCell>
                                 </TableRow>

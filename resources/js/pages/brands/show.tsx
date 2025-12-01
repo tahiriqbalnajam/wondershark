@@ -88,6 +88,7 @@ interface Brand {
 interface Props {
     brand: Brand;
     competitiveStats: CompetitiveStat[];
+    historicalStats: Record<string, Record<string, { entity_name: string; visibility: number; sentiment: number; position: number }>>;
 }
 
 const breadcrumbs = (brand: Brand) => [
@@ -96,110 +97,101 @@ const breadcrumbs = (brand: Brand) => [
     { name: brand.name, href: '', title: brand.name },
 ];
 
-export default function BrandShow({ brand, competitiveStats }: Props) {
+export default function BrandShow({ brand, competitiveStats, historicalStats }: Props) {
     const [selectedCompetitorDomain, setSelectedCompetitorDomain] = useState<string | null>(null);
     const [triggeringAnalysis, setTriggeringAnalysis] = useState(false);
 
-    // Calculate visibility data from prompts
+    // Calculate visibility data from competitive stats - use historical data if available
     const visibilityChartData = useMemo(() => {
-        if (!brand.prompts || brand.prompts.length === 0) {
-            return { data: [], granularity: 'month' as 'month' | 'day', entities: [] };
-        }
-
-        // Only consider prompts that have been analyzed (have prompt_resources)
-        const analyzedPrompts = brand.prompts.filter(p => 
-            p.analysis_completed_at && p.prompt_resources && p.prompt_resources.length > 0
-        );
-
-        if (analyzedPrompts.length === 0) {
-            return { data: [], granularity: 'month' as 'month' | 'day', entities: [] };
-        }
-
-        // Get all dates from analyzed prompts
-        const dates = analyzedPrompts.map(p => new Date(p.analysis_completed_at!));
-
-        // Determine date range
-        const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
-        const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
-        const daysDiff = Math.ceil((maxDate.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24));
-
-        // Decide granularity: if less than 60 days, show daily; otherwise monthly
-        const granularity: 'month' | 'day' = daysDiff < 60 ? 'day' : 'month';
-
-        // Get all unique entities (brand + competitors from resources)
-        const entities = new Map<string, { name: string; domain: string }>();
-        
-        // Add brand
-        const brandDomain = (brand.domain || brand.website || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
-        if (brandDomain) {
-            entities.set(brandDomain, { name: brand.name, domain: brandDomain });
-        }
-
-        // Get accepted competitor domains for filtering (normalize them)
-        const acceptedCompetitors = new Map(
-            brand.competitors.map(c => {
-                const normalizedDomain = c.domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
-                return [normalizedDomain, { name: c.name, domain: normalizedDomain }];
-            })
-        );
-
-        // Add only accepted competitors from resources
-        analyzedPrompts.forEach(prompt => {
-            prompt.prompt_resources?.forEach(resource => {
-                if (resource.is_competitor_url) {
-                    const cleanDomain = resource.domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
-                    // Only add if it's an accepted competitor
-                    if (acceptedCompetitors.has(cleanDomain) && !entities.has(cleanDomain)) {
-                        entities.set(cleanDomain, acceptedCompetitors.get(cleanDomain)!);
+        // If we have historical stats, use them
+        if (historicalStats && Object.keys(historicalStats).length > 0) {
+            const dates = Object.keys(historicalStats).sort();
+            
+            // Get all unique entities across all dates
+            const entitiesMap = new Map<string, { name: string; domain: string }>();
+            
+            dates.forEach(date => {
+                const dayData = historicalStats[date];
+                Object.keys(dayData).forEach(domain => {
+                    if (!entitiesMap.has(domain)) {
+                        entitiesMap.set(domain, {
+                            name: dayData[domain].entity_name,
+                            domain: domain
+                        });
                     }
-                }
+                });
             });
-        });
 
-        // Group prompts by time period
-        const mentionsByPeriod = new Map<string, Map<string, number>>();
+            const entities = Array.from(entitiesMap.values());
 
-        analyzedPrompts.forEach(prompt => {
-            const date = new Date(prompt.analysis_completed_at!);
-            const periodKey = granularity === 'month'
-                ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-                : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
-            if (!mentionsByPeriod.has(periodKey)) {
-                mentionsByPeriod.set(periodKey, new Map());
-            }
-
-            const periodMentions = mentionsByPeriod.get(periodKey)!;
-
-            // Count mentions in resources - normalize domains the same way
-            prompt.prompt_resources?.forEach(resource => {
-                const cleanDomain = resource.domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
-                if (entities.has(cleanDomain)) {
-                    periodMentions.set(cleanDomain, (periodMentions.get(cleanDomain) || 0) + 1);
-                }
-            });
-        });
-
-        // Convert to chart data format
-        const chartData = Array.from(mentionsByPeriod.entries())
-            .sort((a, b) => a[0].localeCompare(b[0]))
-            .map(([period, mentions]) => {
+            // Build chart data
+            const chartData = dates.map(dateStr => {
+                const date = new Date(dateStr);
                 const dataPoint: Record<string, string | number> = {
-                    date: granularity === 'month'
-                        ? new Date(period + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-                        : new Date(period).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                 };
 
-                // Add mention counts for each entity
-                entities.forEach((entity, domain) => {
-                    dataPoint[domain] = mentions.get(domain) || 0;
+                // Add visibility for each entity
+                entities.forEach(entity => {
+                    const dayData = historicalStats[dateStr];
+                    dataPoint[entity.domain] = dayData[entity.domain]?.visibility || 0;
                 });
 
                 return dataPoint;
             });
 
-        return { data: chartData, granularity, entities: Array.from(entities.values()) };
-    }, [brand]);
+            return { 
+                data: chartData, 
+                granularity: 'day' as 'month' | 'day', 
+                entities 
+            };
+        }
+
+        // Fallback to current competitive stats if no historical data
+        if (!competitiveStats || competitiveStats.length === 0) {
+            return { data: [], granularity: 'month' as 'month' | 'day', entities: [] };
+        }
+
+        // Get all unique entities from competitive stats
+        const entities: Array<{ name: string; domain: string }> = [];
+        const entitiesMap = new Map<string, { name: string; domain: string }>();
+
+        competitiveStats.forEach(stat => {
+            const cleanDomain = stat.entity_url
+                .replace(/^https?:\/\//, '')
+                .replace(/^www\./, '')
+                .split('/')[0];
+            
+            if (!entitiesMap.has(cleanDomain)) {
+                const entity = { name: stat.entity_name, domain: cleanDomain };
+                entitiesMap.set(cleanDomain, entity);
+                entities.push(entity);
+            }
+        });
+
+        // For now, show current visibility as a single data point
+        const currentDate = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        
+        const dataPoint: Record<string, string | number> = {
+            date: currentDate
+        };
+
+        // Add visibility for each entity
+        competitiveStats.forEach(stat => {
+            const cleanDomain = stat.entity_url
+                .replace(/^https?:\/\//, '')
+                .replace(/^www\./, '')
+                .split('/')[0];
+            
+            dataPoint[cleanDomain] = stat.visibility;
+        });
+
+        return { 
+            data: [dataPoint], 
+            granularity: 'month' as 'month' | 'day', 
+            entities 
+        };
+    }, [competitiveStats, historicalStats]);
     const [selectedPrompt, setSelectedPrompt] = useState<Brand['prompts'][0] | null>(null);
     const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
 
