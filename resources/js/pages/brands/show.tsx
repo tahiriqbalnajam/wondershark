@@ -301,7 +301,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
     }
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs(brand)}>
+        <AppLayout>
             <Head title={`${brand.name} - Brand Details`} />
 
             <div className="space-y-6">
