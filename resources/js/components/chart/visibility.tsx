@@ -86,7 +86,7 @@ export function VisibilityChart({ data, entities, granularity = 'month' }: Visib
                             <YAxis 
                                 label={{ value: 'Visibility %', angle: -90, position: 'insideLeft' }}
                                 tick={{ fontSize: 12 }}
-                                domain={['dataMin - 5', 'dataMax + 5']}
+                                domain={[0, 'dataMax + 5']}
                                 tickFormatter={(value) => `${Math.round(Number(value))}%`}
                             />
                             <RechartsTooltip 

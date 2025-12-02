@@ -31,6 +31,15 @@ const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, sele
         });
     }
 
+    // Ranking - only show if brand is selected
+    if (selectedBrandId) {
+        items.push({
+            title: 'Ranking',
+            href: `/brands/${selectedBrandId}/ranking`,
+            icon: BarChart3,
+        });
+    }
+
     // Posts - only for agency users
     if (permissions.hasRole('agency')) {
         items.push({
