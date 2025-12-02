@@ -301,12 +301,10 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
     }
 
     return (
-        <AppLayout>
-            <Head title={`${brand.name} - Brand Details`} />
+        <AppLayout title={brand.name}>
+            <Head title={brand.name} />
 
             <div className="space-y-6">
-                {/* Header */}
-
                 {/* Brand Overview */}
                 <div className="grid gap-6 lg:grid-cols-4">
                     <Card className="lg:col-span-2">
