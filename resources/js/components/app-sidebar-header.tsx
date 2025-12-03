@@ -1,11 +1,11 @@
 import { Breadcrumbs } from '@/components/breadcrumbs';
-import { SidebarTrigger } from '@/components/ui/sidebar';
+import { useSidebar } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { type BreadcrumbItem as BreadcrumbItemType } from '@/types';
 import { usePage } from '@inertiajs/react';
 
 // Import all icons you might use
-import { UserCheck, LayoutDashboard, Settings, BarChart3, Users,FileDown,UnfoldHorizontal } from 'lucide-react';
+import { UserCheck, LayoutDashboard, Settings, BarChart3, Users,FileDown,Menu,UnfoldHorizontal } from 'lucide-react';
 import { JSX } from 'react';
 
 export function AppSidebarHeader({ breadcrumbs = [], title }: { breadcrumbs?: BreadcrumbItemType[], title?: string }) {
@@ -28,13 +28,21 @@ export function AppSidebarHeader({ breadcrumbs = [], title }: { breadcrumbs?: Br
     // Determine page title: use title prop if provided, otherwise use breadcrumbs
     const pageTitle = title || breadcrumbs[breadcrumbs.length - 1]?.title || 'Untitled Page';
 
+    const { toggleSidebar } = useSidebar();
     return (
-        <header className="border-b border-sidebar-border/50 px-6 pb-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4 mb-6">
-            <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                        <SidebarTrigger className=""/>
-                    <span className="heading-icon">{pageIcon}</span>
-                    <h2 className="pageheading font-semibold text-lg">
+        <header className="border-b border-sidebar-border/50 pb-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 mb-6">
+            <div className="block mb-2">
+                <div className="flex items-center gap-2 md:justify-start justify-between">
+                    {/* <SidebarTrigger className="order-1 md:order-0 block md:none"/>
+                    <SidebarTrigger className="order-1 md:order-0 none md:block">
+                        <Menu className="w-5 h-5" />
+                    </SidebarTrigger> */}
+                    <button onClick={toggleSidebar} className="order-1 md:order-0 p-2" >
+                        <UnfoldHorizontal className="w-5 h-5 hidden md:block"/>
+                        <span className='block md:hidden w-10 h-10 mobile-icon-btn'><Menu className="w-5 h-5"/></span>
+                    </button>
+                    <h2 className="pageheading font-semibold text-lg flex items-center gap-2">
+                        <span className="heading-icon">{pageIcon}</span>
                         {pageTitle}
                     </h2>
                 </div>

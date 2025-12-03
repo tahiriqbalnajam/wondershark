@@ -958,3 +958,15 @@ textarea.form-control{
         font-size: 12px;
     }
 }
+@media(max-width:768px){
+    .mobile-icon-btn{
+        background:var(--orange-1);
+        color:var(--color-white);
+        height:35px;
+        width:40px;
+        border-radius:5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
