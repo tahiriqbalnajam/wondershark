@@ -306,8 +306,8 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
 
             <div className="space-y-6">
                 {/* Brand Overview */}
-                <div className="grid gap-6 lg:grid-cols-4">
-                    <Card className="lg:col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-4">
+                    <Card className="flex-col">
                         <CardHeader className="pb-3">
                             <CardTitle className="flex items-center gap-2">
                                 <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><Building2/></span>
@@ -324,7 +324,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
                         />
                     </Card>
 
-                    <Card className="lg:col-span-2">
+                    <Card className="flex-col">
                         <CardHeader className="pb-3">
                             <CardTitle className="flex items-center gap-2">
                                 <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><Trophy/></span>
