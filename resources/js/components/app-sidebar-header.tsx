@@ -29,7 +29,6 @@ export function AppSidebarHeader({ breadcrumbs = [], title }: { breadcrumbs?: Br
     const pageTitle = title || breadcrumbs[breadcrumbs.length - 1]?.title || 'Untitled Page';
 
     const { toggleSidebar } = useSidebar();
-
     return (
         <header className="border-b border-sidebar-border/50 pb-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 mb-6">
             <div className="block mb-2">

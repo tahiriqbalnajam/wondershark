@@ -958,7 +958,6 @@ textarea.form-control{
         font-size: 12px;
     }
 }
-
 @media(max-width:768px){
     .mobile-icon-btn{
         background:var(--orange-1);

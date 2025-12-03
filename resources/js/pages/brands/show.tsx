@@ -299,7 +299,6 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
             </AppLayout>
         );
     }
-
     return (
         <AppLayout title={brand.name}>
             <Head title={brand.name} />
