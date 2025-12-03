@@ -33,7 +33,7 @@ interface Brand {
     id: number;
     name: string;
     trackedName: string;
-    allies: [''];
+    allies: [];
     website: string;
 }
 
@@ -115,28 +115,28 @@ const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, tot
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'Brands', href: '/brands' },
-                { title: brand.name, href: `/brands/${brand.id}` },
-                { title: 'Competitors', href: '' }
-            ]}
+                // { title: 'Brands', href: '/brands' },
+                // { title: brand.name, href: `/brands/${brand.id}` },
+                // { title: 'Competitors', href: '' }
+            ]} title="Competitors"
         >
             <Head title={`Competitors for ${brand.name}`} />
 
-            <div className="mx-auto py-6 space-y-6">
-                <div className="flex justify-between items-center">
-                    <div>
+            {/* <div className="mx-auto py-6 space-y-6"> */}
+                {/* <div className="flex justify-between items-center"> */}
+                    {/* <div>
                         <h2 className="text-2xl font-bold">Competitor Analysis</h2>
                         {totalCompetitors > 0 && (
                             <p className="text-sm text-muted-foreground mt-1">
                                 {competitors.filter(c => c.status === 'accepted').length} accepted • {competitors.filter(c => c.status === 'suggested').length} pending review
                             </p>
                         )}
-                    </div>
-                    <div className="flex gap-2">
+                    </div> */}
+                    {/* <div className="flex gap-2"> */}
                         <Drawer direction="right" open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-                            <DrawerTrigger asChild>
+                            {/* <DrawerTrigger asChild>
                                 <Button variant="outline" className='add-competitor-btn'>Add Competitor</Button>
-                            </DrawerTrigger>
+                            </DrawerTrigger> */}
                             <DrawerContent className="w-[25%] right-0 left-auto top-0 bottom-0 m-0 rounded-bl-md items-center Create-Competitor">
                                 <div className="mx-auto w-full max-w-sm">
                                     <DrawerHeader className='p-0 mb-5'>
@@ -173,9 +173,9 @@ const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, tot
                                             {/* ✅ Allies Dynamic Fields */}
                                             <div className="allies-section space-y-2">
                                             <div className="flex items-center justify-between">
-                                                <Label>Allies *</Label>
+                                                <Label>Alias *</Label>
                                                 <Button type="button" variant="outline" size="sm" onClick={addAllyField}>
-                                                + Add Ally
+                                                + Add Alias
                                                 </Button>
                                             </div>
 
@@ -242,8 +242,8 @@ const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, tot
                                 </div>
                             </DrawerContent>
                         </Drawer>
-                    </div>
-                </div>
+                    {/* </div> */}
+                {/* </div> */}
 
                 <CompetitorSelector
                     selectedBrand={brand}
@@ -253,7 +253,7 @@ const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, tot
                     refreshing={refreshing}
                     totalCompetitors={totalCompetitors}
                 />
-            </div>
+            {/* </div> */}
         </AppLayout>
     );
 };
