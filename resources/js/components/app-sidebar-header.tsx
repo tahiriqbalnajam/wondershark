@@ -8,7 +8,7 @@ import { usePage } from '@inertiajs/react';
 import { UserCheck, LayoutDashboard, Settings, BarChart3, Users,FileDown,UnfoldHorizontal } from 'lucide-react';
 import { JSX } from 'react';
 
-export function AppSidebarHeader({ breadcrumbs = [] }: { breadcrumbs?: BreadcrumbItemType[] }) {
+export function AppSidebarHeader({ breadcrumbs = [], title }: { breadcrumbs?: BreadcrumbItemType[], title?: string }) {
     const { url } = usePage(); // Current route path
 
     // Map route → icon
@@ -25,6 +25,9 @@ export function AppSidebarHeader({ breadcrumbs = [] }: { breadcrumbs?: Breadcrum
 
     const isDashboard = url === '/dashboard';
 
+    // Determine page title: use title prop if provided, otherwise use breadcrumbs
+    const pageTitle = title || breadcrumbs[breadcrumbs.length - 1]?.title || 'Untitled Page';
+
     return (
         <header className="border-b border-sidebar-border/50 px-6 pb-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4 mb-6">
             <div className="flex items-center justify-between mb-2">
@@ -32,7 +35,7 @@ export function AppSidebarHeader({ breadcrumbs = [] }: { breadcrumbs?: Breadcrum
                         <SidebarTrigger className=""/>
                     <span className="heading-icon">{pageIcon}</span>
                     <h2 className="pageheading font-semibold text-lg">
-                        {breadcrumbs[breadcrumbs.length - 1]?.title || 'Untitled Page'}
+                        {pageTitle}
                     </h2>
                 </div>
 

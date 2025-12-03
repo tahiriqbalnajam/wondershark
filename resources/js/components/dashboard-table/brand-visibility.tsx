@@ -1,4 +1,5 @@
 import { CardContent } from "@/components/ui/card";
+import { Link } from "@inertiajs/react";
 import {
   Table,
   TableBody,
@@ -44,11 +45,17 @@ interface CompetitiveStat {
 interface BrandVisibilityIndexProps {
     competitiveStats: CompetitiveStat[];
     onRowClick?: (domain: string) => void;
+    brandId?: number;
+    limit?: number;
 }
 
-export function BrandVisibilityIndex({ competitiveStats, onRowClick }: BrandVisibilityIndexProps) {
+export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, limit }: BrandVisibilityIndexProps) {
     // Sort by position (lower is better)
     const sortedStats = [...competitiveStats].sort((a, b) => a.position - b.position);
+    
+    // Apply limit if specified
+    const displayStats = limit ? sortedStats.slice(0, limit) : sortedStats;
+    const hasMore = limit && sortedStats.length > limit;
 
     return (
         <CardContent>
@@ -115,7 +122,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick }: BrandVisi
                     </TableHeader>
 
                     <TableBody>
-                        {sortedStats.map((stat, index) => {
+                        {displayStats.map((stat, index) => {
                             // Clean domain for display - remove protocol and www
                             const cleanDomain = stat.entity_url
                                 .replace(/^https?:\/\//, '')
@@ -131,7 +138,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick }: BrandVisi
                                     <TableCell className="font-medium border-r border-gray-200 text-center">
                                         {index + 1}
                                     </TableCell>
-                                    <TableCell className="font-medium border-r border-gray-200">
+                                    <TableCell className="font-medium border-r border-gray-200 w-80">
                                         <div className="flex items-center gap-2">
                                             <img
                                                 src={logoUrl}
@@ -144,7 +151,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick }: BrandVisi
                                             {stat.entity_name}
                                         </div>
                                     </TableCell>
-                                    <TableCell className="border-r border-gray-200">
+                                    <TableCell className="border-r border-gray-200 w-20">
                                         <div className="flex items-center gap-1 justify-between">
                                             <span className="text-xs text-muted-foreground flex items-center gap-1">
                                                 {stat.trends.visibility_trend === "up" && (
@@ -160,7 +167,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick }: BrandVisi
                                             <span className="text-xs font-bold">{stat.visibility_percentage || 'N/A'}</span>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="border-r border-gray-200">
+                                    <TableCell className="border-r border-gray-200 w-20">
                                         <div className="flex items-center gap-1 justify-between">
                                             <span className="text-xs text-muted-foreground flex items-center gap-1">
                                                 {stat.trends.sentiment_trend === "up" && (
@@ -197,6 +204,16 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick }: BrandVisi
                         })}
                     </TableBody>
                 </Table>
+                
+                {hasMore && brandId && (
+                    <div className="flex justify-end mt-4 px-4">
+                        <Link href={`/brands/${brandId}/ranking`}>
+                            <Button variant="outline" size="sm">
+                                Show All
+                            </Button>
+                        </Link>
+                    </div>
+                )}
             </div>
         </CardContent>
     );

@@ -704,6 +704,29 @@ class BrandController extends Controller
     }
 
     /**
+     * Display the ranking page with all competitor stats.
+     */
+    public function ranking(Brand $brand): Response
+    {
+        /** @var User $user */
+        $user = Auth::user();
+        
+        // Ensure the brand belongs to the authenticated agency or user is admin
+        if (!$user->canAccessBrand($brand)) {
+            abort(403);
+        }
+
+        // Get competitive stats with trends (all competitors)
+        $competitiveAnalysisService = app(\App\Services\CompetitiveAnalysisService::class);
+        $competitiveStats = $competitiveAnalysisService->getLatestStatsWithTrends($brand);
+
+        return Inertia::render('brands/ranking', [
+            'brand' => $brand,
+            'competitiveStats' => $competitiveStats,
+        ]);
+    }
+
+    /**
      * Display the brand-specific dashboard.
      */
     public function dashboard(Brand $brand): Response

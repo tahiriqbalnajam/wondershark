@@ -207,6 +207,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('brands/{brand}/prompts/save-bulk', [BrandController::class, 'saveBulkPrompts'])->name('brands.prompts.save-bulk');
         Route::patch('brands/{brand}/prompts/{prompt}/status', [BrandController::class, 'updatePromptStatus'])->name('brands.prompts.update-status');
         
+        // Brand Ranking Page
+        Route::get('brands/{brand}/ranking', [BrandController::class, 'ranking'])->name('brands.ranking');
+        
         // Competitive Analysis Routes
         Route::get('brands/{brand}/competitive-stats', [\App\Http\Controllers\Brand\CompetitiveStatsController::class, 'index'])->name('brands.competitive-stats.index');
         Route::post('brands/{brand}/competitive-stats/analyze', [\App\Http\Controllers\Brand\CompetitiveStatsController::class, 'runAnalysis'])->name('brands.competitive-stats.analyze');

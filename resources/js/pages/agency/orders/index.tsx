@@ -24,7 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
+// import { Slider } from "@/components/ui/slider"; // Component doesn't exist
 import {
   Select,
   SelectTrigger,
@@ -254,14 +254,22 @@ export default function OrdersIndex() {
                                             </div>
                                             <div className="space-y-3 mt-6" onPointerDown={(e) => e.stopPropagation()}>
                                                 <Label className='mb-3 block'>Price Range</Label>
-                                                  <Slider
-                                                    value={range}
-                                                    onValueChange={setRange}
-                                                    max={3000}
-                                                    step={10}
-                                                    minStepsBetweenThumbs={1}
-                                                    className="range-slider w-full h-2 bg-gray-200 rounded-full"
-                                                />
+                                                <div className="flex gap-3">
+                                                    <Input 
+                                                        type="number" 
+                                                        value={range[0]} 
+                                                        onChange={(e) => setRange([parseInt(e.target.value) || 0, range[1]])}
+                                                        placeholder="Min"
+                                                        className="form-control"
+                                                    />
+                                                    <Input 
+                                                        type="number" 
+                                                        value={range[1]} 
+                                                        onChange={(e) => setRange([range[0], parseInt(e.target.value) || 3000])}
+                                                        placeholder="Max"
+                                                        className="form-control"
+                                                    />
+                                                </div>
 
                                                 <div className="flex justify-between text-sm text-gray-600 mt-2">
                                                     <span>${range[0]}</span>

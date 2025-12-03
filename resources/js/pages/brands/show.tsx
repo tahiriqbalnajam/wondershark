@@ -301,12 +301,10 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
     }
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs(brand)}>
-            <Head title={`${brand.name} - Brand Details`} />
+        <AppLayout title={brand.name}>
+            <Head title={brand.name} />
 
             <div className="space-y-6">
-                {/* Header */}
-
                 {/* Brand Overview */}
                 <div className="grid gap-6 lg:grid-cols-4">
                     <Card className="lg:col-span-2">
@@ -336,6 +334,8 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
                         <BrandVisibilityIndex 
                             competitiveStats={competitiveStats} 
                             onRowClick={handleBrandRowClick}
+                            brandId={brand.id}
+                            limit={5}
                         />
                     </Card>
                 </div>
@@ -365,7 +365,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
                 </Card>
 
                 {/* Target Subreddits */}
-                <Card>
+                {/* <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><Users/></span>
@@ -396,7 +396,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
                             </div>
                         )}
                     </CardContent>
-                </Card>
+                </Card> */}
             </div>
 
             {/* Prompt Details Modal */}

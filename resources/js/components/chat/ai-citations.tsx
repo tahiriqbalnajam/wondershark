@@ -54,19 +54,28 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 p-4">
             {prompts.map((prompt) => {
-                // Debug: log AI model data
-                if (prompt.ai_model) {
-                    console.log('AI Model:', prompt.ai_model);
-                }
+                // Debug: log prompt data
+                console.log('Prompt ID:', prompt.id, {
+                    ai_model: prompt.ai_model,
+                    prompt_resources: prompt.prompt_resources,
+                    resources_count: prompt.prompt_resources?.length || 0
+                });
                 
-                // Get unique competitor logos from prompt_resources
-                const competitorLogos = prompt.prompt_resources
-                    ?.filter(resource => resource.is_competitor_url)
-                    .map(resource => {
-                        const cleanDomain = resource.domain.replace(/^www\./, '');
-                        return `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
+                // Get ALL resource logos (not just competitors)
+                const allLogos = prompt.prompt_resources
+                    ?.map(resource => {
+                        const cleanDomain = resource.domain?.replace(/^www\./, '') || '';
+                        if (!cleanDomain) return null;
+                        return {
+                            url: `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`,
+                            domain: cleanDomain,
+                            isCompetitor: resource.is_competitor_url
+                        };
                     })
-                    .slice(0, 4) || [];
+                    .filter(item => item !== null)
+                    .slice(0, 6) || [];
+
+                console.log('Logos for prompt', prompt.id, ':', allLogos);
 
                 // Format date
                 const daysAgo = prompt.analysis_completed_at
@@ -132,16 +141,18 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
                             <div className="flex items-center justify-between gap-1">
                                 {/* First Column: All Resource Logos */}
                                 <div className="flex items-center gap-2 flex-wrap ml-3">
-                                    {competitorLogos.map((logo, i) => (
-                                        <img
-                                            key={i}
-                                            src={logo}
-                                            alt={`competitor-${i}`}
-                                            className="w-6 h-6 rounded-md border object-cover"
-                                            onError={(e) => {
-                                                e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
-                                            }}
-                                        />
+                                    {allLogos.map((logoData, i) => (
+                                        <div key={i} className="relative">
+                                            <img
+                                                src={logoData.url}
+                                                alt={logoData.domain}
+                                                title={logoData.domain}
+                                                className={`w-6 h-6 rounded-md border object-cover ${logoData.isCompetitor ? 'ring-2 ring-blue-400' : ''}`}
+                                                onError={(e) => {
+                                                    e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
+                                                }}
+                                            />
+                                        </div>
                                     ))}
                                 </div>
 
