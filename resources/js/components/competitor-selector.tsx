@@ -11,6 +11,7 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
+  DrawerTrigger,
 } from "@/components/ui/drawer";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,8 @@ import { Input } from "@/components/ui/input";
 interface Brand {
     id: number;
     name: string;
+    trackedName: string;
+    allies: [];
     website: string;
 }
 
@@ -27,6 +30,8 @@ interface Competitor {
     id: number;
     name: string;
     domain: string;
+    trackedName: string;
+    allies: [];
     mentions?: number;
     status: string;
 }
@@ -88,9 +93,20 @@ export default function CompetitorSelector({
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         domain: '',
+        trackedName: '',
+        allies: [''],
         brand_id: selectedBrand?.id.toString() || '',
     });
+    // Add new empty ally field
+        const addAllyField = () => {
+        setData('allies', [...data.allies, '']);
+        };
 
+        // Remove ally by index
+        const removeAllyField = (index: number) => {
+        const updated = data.allies.filter((_, i) => i !== index);
+        setData('allies', updated.length ? updated : ['']);
+        };
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
@@ -116,8 +132,10 @@ export default function CompetitorSelector({
                                         {suggestedCompetitors.length > 0 ? `- ${suggestedCompetitors.length}` : ''}
                                     </span>
                                 </h2>
-                                
-                                {totalCompetitors > 0 && onRefreshCompetitors && (
+                                <DrawerTrigger asChild>
+                                    <Button variant="outline" className='add-competitor-btn'>Add Competitor</Button>
+                                </DrawerTrigger>
+                                {/* {totalCompetitors > 0 && onRefreshCompetitors && (
                                     <Button 
                                         className='refresh-ai-analysis-btn'
                                         variant="outline" 
@@ -136,17 +154,29 @@ export default function CompetitorSelector({
                                             </>
                                         )}
                                     </Button>
-                                )}
+                                )} */}
                             </div>
                         </CardHeader>
                         <CardContent>
                             {suggestedCompetitors.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    {suggestedCompetitors.map((competitor) => (
+                                    {suggestedCompetitors.map((competitor) => {
+                                        const cleanDomain = competitor.domain
+                                        .replace(/^https?:\/\//, '')
+                                        .replace(/^www\./, '');
+                                        const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
+                                        return (
                                         <Card key={competitor.id} className="hover:shadow-md transition-shadow pb-0 justify-between">
                                             <CardHeader>
                                                 <CardTitle className="text-lg flex items-center gap-2 competitor-title">
-                                                    <span><Building2 className="h-4 w-4" /></span>
+                                                    <img
+                                                        src={logoUrl}
+                                                        alt={competitor.name}
+                                                        className="w-6 h-6 rounded object-contain"
+                                                        onError={(e) => {
+                                                        e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
+                                                        }}
+                                                    />
                                                     {competitor.name}
                                                 </CardTitle>
                                             </CardHeader>
@@ -177,7 +207,8 @@ export default function CompetitorSelector({
                                                 </div>
                                             </CardContent>
                                         </Card>
-                                    ))}
+                                    );
+                                    })}
                                 </div>
                             ) : (
                                 <div className="text-center py-8">
@@ -188,11 +219,11 @@ export default function CompetitorSelector({
                                             asChild
                                             onClick={() => {
                                                 // Trigger AI competitor fetch
-                                                window.location.href = route('competitors.fetch-sync', selectedBrand.id);
+                                                window.location.href = route('competitors.index', selectedBrand.id);
                                             }}
                                         >
                                             <Link 
-                                                href={route('competitors.fetch-sync', selectedBrand.id)}
+                                                href={route('competitors.index', selectedBrand.id)}
                                                 method="post"
                                                 as="button"
                                                 className="fetch-ai-competitors"
@@ -221,11 +252,24 @@ export default function CompetitorSelector({
                         <CardContent>
                             {acceptedCompetitors.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    {acceptedCompetitors.map((competitor) => (
+                                    {acceptedCompetitors.map((competitor) => {
+                                        const cleanDomain = competitor.domain
+                                        .replace(/^https?:\/\//, '')
+                                        .replace(/^www\./, '');
+                                        const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
+                                        return (
+                                        
                                         <Card key={competitor.id} className="hover:shadow-md transition-shadow pb-0 justify-between">
                                             <CardHeader>
                                                 <CardTitle className="text-lg flex items-center gap-2 competitor-title">
-                                                    <span><Building2 className="h-4 w-4" /></span>
+                                                    <img
+                                                        src={logoUrl}
+                                                        alt={competitor.name}
+                                                        className="w-6 h-6 rounded object-contain"
+                                                        onError={(e) => {
+                                                        e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
+                                                        }}
+                                                    />
                                                     {competitor.name}
                                                 </CardTitle>
                                             </CardHeader>
@@ -247,7 +291,8 @@ export default function CompetitorSelector({
                                                 </div>
                                             </CardContent>
                                         </Card>
-                                    ))}
+                                    );
+                                    })}
                                 </div>
                             ) : (
                                 <div className="text-center py-8">
@@ -278,7 +323,56 @@ export default function CompetitorSelector({
                                         />
                                         {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
                                     </div>
-                                    
+                                    <div className="space-y-2">
+                                        <Label htmlFor="trackedName">Tracked Name *</Label>
+                                        <Input 
+                                            id="trackedName" 
+                                            className='form-control' 
+                                            type="text" 
+                                            placeholder="Tracked Name" 
+                                            value={data.trackedName}
+                                            onChange={(e) => setData('trackedName', e.target.value)}
+                                            required
+                                        />
+                                        {errors.trackedName && <p className="text-sm text-red-600">{errors.trackedName}</p>}
+                                    </div>
+                                    {/* ✅ Allies Dynamic Fields */}
+                                    <div className="allies-section space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <Label>Alias *</Label>
+                                        <Button type="button" variant="outline" size="sm" onClick={addAllyField}>
+                                        + Add Alias
+                                        </Button>
+                                    </div>
+
+                                    {data.allies.map((ally, index) => (
+                                        <div key={index} className="flex items-center gap-2">
+                                        <Input
+                                            type="text"
+                                            placeholder="Ally name"
+                                            value={ally}
+                                            onChange={(e) => {
+                                            const updated = [...data.allies];
+                                            updated[index] = e.target.value;
+                                            setData('allies', updated);
+                                            }}
+                                            className="form-control"
+                                            required
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => removeAllyField(index)}
+                                        >
+                                            ✕
+                                        </Button>
+                                        </div>
+                                    ))}
+
+                                    {errors.allies && <p className="text-sm text-red-600">{errors.allies}</p>}
+                                    </div>
+
                                     <div className="space-y-2">
                                         <Label htmlFor="domain">Website URL *</Label>
                                         <Input 
@@ -305,17 +399,11 @@ export default function CompetitorSelector({
                                     </div>
                                 </form>
                             </div>
-                            <DrawerFooter className='competitors-popup-btns p-0 mt-10'>
-                                <DrawerClose asChild>
-                                    <Button variant="outline" type="button" className='cancel-btn'>Cancel</Button>
+                            <DrawerFooter className='flex px-0 buttons-wrapp flex-row'>
+                                <DrawerClose asChild className='w-50 inline-block'>
+                                    <Button variant="outline" type="button" className='cancel-btn min-h-12'>Cancel</Button>
                                 </DrawerClose>
-                                <Button 
-                                    type='button' 
-                                    onClick={handleSubmit}
-                                    disabled={processing || !selectedBrand}
-                                >
-                                    {processing ? 'Adding...' : 'Add Competitor'}
-                                </Button>
+                                <Button type='button' className='df-btn w-50 min-h-12 inline-block' onClick={handleSubmit} disabled={processing} > {processing ? 'Adding...' : 'Add Competitor'} </Button>
                             </DrawerFooter>
                         </div>
                     </DrawerContent>

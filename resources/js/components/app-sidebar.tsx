@@ -47,6 +47,11 @@ const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, sele
             href: selectedBrandId ? `/brands/${selectedBrandId}/posts` : '/posts',
             icon: FileText,
         });
+        items.push({
+            title: 'Order',
+            href: selectedBrandId ? `/brands/${selectedBrandId}/orders` : '/orders',
+            icon: FileText,
+        });
     }
 
     // Search Analytics - for admin users

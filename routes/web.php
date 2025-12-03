@@ -7,6 +7,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\PostController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PostPromptController;
 use App\Http\Controllers\IndustryAnalysisController;
 use App\Http\Controllers\CompetitorController;
@@ -226,6 +227,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Post Management Routes
         Route::resource('posts', PostController::class);
         
+        // Brand-specific Order routes
+        Route::get('brands/{brand}/orders', [OrderController::class, 'index'])->name('agency.orders.index');
         // Brand-specific post routes
         Route::get('brands/{brand}/posts', [PostController::class, 'brandIndex'])->name('brands.posts.index');
         Route::get('brands/{brand}/posts/create', [PostController::class, 'brandCreate'])->name('brands.posts.create');

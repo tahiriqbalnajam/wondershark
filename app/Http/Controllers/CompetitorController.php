@@ -319,11 +319,15 @@ class CompetitorController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
+            'trackedName' => 'required|string|max:255',
+            'allies' => 'required|array',
             'domain' => 'required|string|max:255|url',
         ]);
 
         $brand->competitors()->create([
             'name' => $request->name,
+            'trackedName' => $request->trackedName,
+            'allies' => serialize($request->allies),
             'domain' => $request->domain,
             'status' => 'accepted',
             'source' => 'manual',
