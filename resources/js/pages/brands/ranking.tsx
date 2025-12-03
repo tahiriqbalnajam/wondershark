@@ -42,7 +42,7 @@ interface RankingProps {
 
 export default function Ranking({ brand, competitiveStats }: RankingProps) {
     return (
-        <AppLayout>
+        <AppLayout title={'Ranking'}>
             <Head title={`${brand.name} - Ranking`} />
             
             <div className="container mx-auto p-6">
