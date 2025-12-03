@@ -21,6 +21,8 @@ import { route } from 'ziggy-js';
 interface Competitor {
     id: number;
     name: string;
+    trackedName: string;
+    allies: [];
     domain: string;
     mentions: number;
     status: 'suggested' | 'accepted' | 'rejected';
@@ -30,6 +32,8 @@ interface Competitor {
 interface Brand {
     id: number;
     name: string;
+    trackedName: string;
+    allies: [''];
     website: string;
 }
 
@@ -51,9 +55,20 @@ const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, tot
 
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
+        trackedName: '',
+        allies: [''],
         domain: '',
     });
+    // Add new empty ally field
+    const addAllyField = () => {
+    setData('allies', [...data.allies, '']);
+    };
 
+    // Remove ally by index
+    const removeAllyField = (index: number) => {
+    const updated = data.allies.filter((_, i) => i !== index);
+    setData('allies', updated.length ? updated : ['']);
+    };
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
@@ -142,7 +157,56 @@ const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, tot
                                                 />
                                                 {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
                                             </div>
-                                            
+                                            <div className="space-y-2">
+                                                <Label htmlFor="trackedName">Tracked Name *</Label>
+                                                <Input 
+                                                    id="trackedName" 
+                                                    className='form-control' 
+                                                    type="text" 
+                                                    placeholder="Tracked Name" 
+                                                    value={data.trackedName}
+                                                    onChange={(e) => setData('trackedName', e.target.value)}
+                                                    required
+                                                />
+                                                {errors.trackedName && <p className="text-sm text-red-600">{errors.trackedName}</p>}
+                                            </div>
+                                            {/* ✅ Allies Dynamic Fields */}
+                                            <div className="allies-section space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <Label>Allies *</Label>
+                                                <Button type="button" variant="outline" size="sm" onClick={addAllyField}>
+                                                + Add Ally
+                                                </Button>
+                                            </div>
+
+                                            {data.allies.map((ally, index) => (
+                                                <div key={index} className="flex items-center gap-2">
+                                                <Input
+                                                    type="text"
+                                                    placeholder="Ally name"
+                                                    value={ally}
+                                                    onChange={(e) => {
+                                                    const updated = [...data.allies];
+                                                    updated[index] = e.target.value;
+                                                    setData('allies', updated);
+                                                    }}
+                                                    className="form-control"
+                                                    required
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    onClick={() => removeAllyField(index)}
+                                                >
+                                                    ✕
+                                                </Button>
+                                                </div>
+                                            ))}
+
+                                            {errors.allies && <p className="text-sm text-red-600">{errors.allies}</p>}
+                                            </div>
+
                                             <div className="space-y-2">
                                                 <Label htmlFor="domain">Website URL *</Label>
                                                 <Input 

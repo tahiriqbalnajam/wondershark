@@ -117,7 +117,7 @@ export default function CompetitorSelector({
                                     </span>
                                 </h2>
                                 
-                                {totalCompetitors > 0 && onRefreshCompetitors && (
+                                {/* {totalCompetitors > 0 && onRefreshCompetitors && (
                                     <Button 
                                         className='refresh-ai-analysis-btn'
                                         variant="outline" 
@@ -136,7 +136,7 @@ export default function CompetitorSelector({
                                             </>
                                         )}
                                     </Button>
-                                )}
+                                )} */}
                             </div>
                         </CardHeader>
                         <CardContent>
@@ -188,11 +188,11 @@ export default function CompetitorSelector({
                                             asChild
                                             onClick={() => {
                                                 // Trigger AI competitor fetch
-                                                window.location.href = route('competitors.fetch-sync', selectedBrand.id);
+                                                window.location.href = route('competitors.index', selectedBrand.id);
                                             }}
                                         >
                                             <Link 
-                                                href={route('competitors.fetch-sync', selectedBrand.id)}
+                                                href={route('competitors.index', selectedBrand.id)}
                                                 method="post"
                                                 as="button"
                                                 className="fetch-ai-competitors"
@@ -278,7 +278,7 @@ export default function CompetitorSelector({
                                         />
                                         {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
                                     </div>
-                                    
+
                                     <div className="space-y-2">
                                         <Label htmlFor="domain">Website URL *</Label>
                                         <Input 

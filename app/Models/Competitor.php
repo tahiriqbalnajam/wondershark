@@ -12,7 +12,9 @@ class Competitor extends Model
     protected $fillable = [
         'brand_id',
         'name',
+        'trackedName',
         'domain',
+        'allies',
         'mentions',
         'status',
         'source',
