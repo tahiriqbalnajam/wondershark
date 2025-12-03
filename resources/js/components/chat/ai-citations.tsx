@@ -54,13 +54,6 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 p-4">
             {prompts.map((prompt) => {
-                // Debug: log prompt data
-                console.log('Prompt ID:', prompt.id, {
-                    ai_model: prompt.ai_model,
-                    prompt_resources: prompt.prompt_resources,
-                    resources_count: prompt.prompt_resources?.length || 0
-                });
-                
                 // Get ALL resource logos (not just competitors)
                 const allLogos = prompt.prompt_resources
                     ?.map(resource => {
@@ -74,8 +67,6 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
                     })
                     .filter(item => item !== null)
                     .slice(0, 6) || [];
-
-                console.log('Logos for prompt', prompt.id, ':', allLogos);
 
                 // Format date
                 const daysAgo = prompt.analysis_completed_at

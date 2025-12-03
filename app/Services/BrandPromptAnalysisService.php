@@ -97,44 +97,43 @@ class BrandPromptAnalysisService
             
             // If a preferred model is specified, try to use it first
             if ($preferredModelName) {
+                // Try case-insensitive matching by name
                 $aiModel = AiModel::where('is_enabled', true)
-                    ->where('name', $preferredModelName)
-                    ->first();
+                    ->get()
+                    ->first(function($model) use ($preferredModelName) {
+                        return strcasecmp($model->name, $preferredModelName) === 0;
+                    });
                 
                 if ($aiModel) {
                     Log::info("Using preferred AI model", [
+                        'requested' => $preferredModelName,
                         'model_name' => $aiModel->name,
-                        'display_name' => $aiModel->display_name
+                        'display_name' => $aiModel->display_name,
+                        'model_id' => $aiModel->id
                     ]);
                 } else {
+                    $enabledModels = AiModel::where('is_enabled', true)->pluck('name')->toArray();
                     Log::warning("Preferred AI model not found or disabled", [
-                        'requested_model' => $preferredModelName
+                        'requested_model' => $preferredModelName,
+                        'enabled_models' => $enabledModels
                     ]);
                 }
             }
             
-            // If no preferred model or it wasn't found, use fallback logic
+            // If no preferred model or it wasn't found, use weighted selection based on order
             if (!$aiModel) {
-                // Try to get the preferred AI model in order of preference
-                $preferredProviders = [
-                    'openai', 'gemini', 'google', 'anthropic', 'claude', 
-                    'groq', 'mistral', 'xai', 'x-ai', 'grok', 
-                    'perplexity', 'deepseek', 'openrouter', 'ollama', 
-                    'google-ai', 'google-ai-overview', 'dataforseo'
-                ];
-            
-                foreach ($preferredProviders as $provider) {
-                    $aiModel = AiModel::where('is_enabled', true)
-                        ->where('name', $provider)
-                        ->first();
-                    if ($aiModel) {
-                        break;
-                    }
-                }
+                // Get the first enabled model ordered by 'order' field (respects weight/priority)
+                $aiModel = AiModel::where('is_enabled', true)
+                    ->orderBy('order', 'asc')
+                    ->orderBy('id', 'asc') // Secondary sort for consistent fallback
+                    ->first();
 
-                // If no preferred model found, get any enabled model
-                if (!$aiModel) {
-                    $aiModel = AiModel::where('is_enabled', true)->first();
+                if ($aiModel) {
+                    Log::info("Using fallback AI model (ordered by priority)", [
+                        'model_name' => $aiModel->name,
+                        'display_name' => $aiModel->display_name,
+                        'order' => $aiModel->order
+                    ]);
                 }
             }
 

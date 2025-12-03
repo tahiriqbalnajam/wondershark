@@ -119,9 +119,13 @@ class AiModelDistributionService
         
         Log::info('Weighted model selection', [
             'model' => $bestModel->name,
+            'model_id' => $bestModel->id,
             'weight' => $weights[$bestModel->id],
+            'order' => $bestModel->order,
             'current_usage' => $sessionUsage[$bestModel->id] ?? 0,
-            'utilization_gap' => $lowestRatio
+            'session_total_usage' => array_sum($sessionUsage),
+            'utilization_gap' => $lowestRatio,
+            'session_id_preview' => substr($sessionId ?? 'none', 0, 8)
         ]);
         
         return $bestModel;
