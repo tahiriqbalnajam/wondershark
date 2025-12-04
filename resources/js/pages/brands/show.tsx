@@ -126,9 +126,10 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
 
             // Build chart data
             const chartData = dates.map(dateStr => {
-                const date = new Date(dateStr);
+                // Parse as UTC date to match backend UTC formatting
+                const date = new Date(dateStr + 'T00:00:00Z');
                 const dataPoint: Record<string, string | number> = {
-                    date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
                 };
 
                 // Add visibility for each entity

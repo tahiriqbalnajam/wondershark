@@ -400,7 +400,8 @@ CRITICAL INSTRUCTIONS:
         $groupedByDate = [];
         
         foreach ($stats as $stat) {
-            $date = $stat->analyzed_at->format('Y-m-d');
+            // Use UTC timezone to ensure consistent date grouping across all timezones
+            $date = $stat->analyzed_at->copy()->setTimezone('UTC')->format('Y-m-d');
             
             if (!isset($groupedByDate[$date])) {
                 $groupedByDate[$date] = [];
