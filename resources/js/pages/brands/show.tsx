@@ -343,8 +343,8 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
                 {/* Recent chats */}
                 <Card id="recent-citations">
                     <CardHeader>
-                        <div className='flex items-center justify-between'>
-                            <div className='flex items-center'>
+                        <div className='md:flex block items-center justify-between'>
+                            <div className='flex items-center mb-5 md:mb-0'>
                                 <CardTitle className="flex items-center gap-2">
                                     <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><MessageSquare/></span>
                                    Recent AI Citations ({filteredPrompts?.length || 0})

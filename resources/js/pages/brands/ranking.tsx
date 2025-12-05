@@ -45,7 +45,7 @@ export default function Ranking({ brand, competitiveStats }: RankingProps) {
         <AppLayout title={'Ranking'}>
             <Head title={`${brand.name} - Ranking`} />
             
-            <div className="container mx-auto p-6">
+            <div className="container mx-auto">
                 <HeadingSmall>
                     {brand.name} - Brand Ranking
                 </HeadingSmall>
