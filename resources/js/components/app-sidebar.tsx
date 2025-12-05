@@ -47,11 +47,6 @@ const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, sele
             href: selectedBrandId ? `/brands/${selectedBrandId}/posts` : '/posts',
             icon: FileText,
         });
-        items.push({
-            title: 'Order',
-            href: selectedBrandId ? `/brands/${selectedBrandId}/orders` : '/orders',
-            icon: FileText,
-        });
     }
 
     // Search Analytics - for admin users
@@ -207,6 +202,17 @@ const getBrandSpecificNavItems = (brandId: number): NavItem[] => {
         },
     ];
 };
+const getOrderNavItems = (permissions: ReturnType<typeof usePermissions>, selectedBrandId?: number): NavItem[] => {
+    const items: NavItem[] = [];
+    if (permissions.hasRole('agency')) {
+        items.push({
+            title: 'Paid PR',
+            href: selectedBrandId ? `/brands/${selectedBrandId}/orders` : '/orders',
+            icon: FileText,
+        });
+    }
+    return items;
+};
 
 export function AppSidebar() {
     const permissions = usePermissions();
@@ -228,6 +234,7 @@ export function AppSidebar() {
     const generalNavItems = getGeneralNavItems(permissions, brandIdForMenu);
     const preferenceNavItems = getPreferenceNavItems(permissions, brandIdForMenu);
     const settingsNavItems = getSettingsNavItems(permissions, brandIdForMenu);
+    const orderNavItems = getOrderNavItems(permissions, brandIdForMenu);
     
     // Get brand-specific nav items if admin has selected a brand
     const brandNavItems = selectedBrand && permissions.hasRole('admin') 
@@ -270,6 +277,9 @@ export function AppSidebar() {
                 {/* Settings Section */}
                 {settingsNavItems.length > 0 && (
                     <NavMain items={settingsNavItems} label="Settings" />
+                )}
+                {orderNavItems.length > 0 && (
+                    <NavMain items={orderNavItems} label="Order" />
                 )}
                 
                 {/* Brand-specific menu for admin when brand is selected */}
