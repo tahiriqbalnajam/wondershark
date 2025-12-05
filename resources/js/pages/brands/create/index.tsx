@@ -408,8 +408,8 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
     }, [currentStep, data.website]);
 
     const acceptPrompt = (prompt: GeneratedPrompt) => {
-        if (data.prompts.length >= 25) {
-            toast.error('Maximum 25 prompts allowed');
+        if (data.prompts.length >= 10) {
+            toast.error('Maximum 10 prompts allowed');
             return;
         }
         setData('prompts', [...data.prompts, prompt.prompt]);
