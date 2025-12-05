@@ -23,7 +23,7 @@ export default function Step6AccountSetup({ data, setData, errors }: StepProps) 
                                 onCheckedChange={(checked) => setData('create_account', checked as boolean)}
                             />
                             <Label htmlFor="create_account" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                Create a brand account (recommended)
+                                Optionally, you may create a login for your client under the brand so they can access their dashboard.
                             </Label>
                         </div>
                         

@@ -521,7 +521,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                     <form onSubmit={handleSubmit} className="space-y-10 step-wrapp-card">
                         <Card className='bg-sidebar'>
                             <CardHeader>
-                                <CardTitle className="brand-heading"> <span><img src="../images/brand-wizard.png" alt="icon" /></span> Brand Setup Wizard</CardTitle>
+                                <CardTitle className="brand-heading"> <span><img src="/images/brand-wizard.png" alt="icon" /></span> Brand Setup Wizard</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-10">
                                 <StepNavigation
