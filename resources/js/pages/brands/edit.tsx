@@ -134,7 +134,7 @@ export default function BrandEdit({ brand }: Props) {
   ];
 
   return (
-    <AppLayout>
+    <AppLayout title={`Edit ${brand.name}`}>
       <Head title={`Edit ${brand.name}`} />
 
       <div className="mx-15 space-y-6">

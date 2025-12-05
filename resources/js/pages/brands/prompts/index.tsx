@@ -1,5 +1,5 @@
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 import { AddPromptDialog } from '@/components/brand/add-prompt-dialog';
@@ -65,6 +65,11 @@ type Props = {
 };
 
 export default function BrandPromptsIndex({ brand, prompts }: Props) {
+    const { auth } = usePage().props as any;
+    const userRoles = auth?.user?.roles || [];
+    const isAdmin = userRoles.includes('admin');
+    const isBrandOrAgency = userRoles.includes('brand') || userRoles.includes('agency');
+    
     const [selectedPrompts, setSelectedPrompts] = useState<number[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [currentTab, setCurrentTab] = useState<'suggested' | 'active' | 'inactive'>('active');
@@ -251,7 +256,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
     const allSelected = selectedPrompts.length === currentPrompts.length && currentPrompts.length > 0;
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayout title={`${brand.name} Prompts`}>
             <Head title={`${brand.name} - Prompts`} />
 
             <TooltipProvider>
@@ -261,22 +266,28 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                             <h3 className="text-xl font-semibold">{brand.name} Prompts <small className="text-gray-400 text-sm"> - {prompts.length} Total</small></h3>
                             <p className="text-gray-400 text-sm">Manage all prompts for {brand.name}</p>
                         </div>
-                        <Button asChild>
-                            <Link href={`/brands/${brand.id}`}>
-                                <Building2 className="h-4 w-4 mr-2" />
-                                Back to Brand
-                            </Link>
-                        </Button>
+                        {isAdmin && (
+                            <Button asChild>
+                                <Link href={`/brands/${brand.id}`}>
+                                    <Building2 className="h-4 w-4 mr-2" />
+                                    Back to Brand
+                                </Link>
+                            </Button>
+                        )}
                     </div>
 
                     <Tabs defaultValue="active" className="add-prompts-wrapp" onValueChange={(value) => setCurrentTab(value as 'suggested' | 'active' | 'inactive')}>
                         <div className="flex justify-between items-center mb-10">
                             <TabsList className="add-prompt-lists border">
                                 <TabsTrigger value="active">Active ({activePrompts.length})</TabsTrigger>
-                                <TabsTrigger value="suggested">Suggested ({suggestedPrompts.length})</TabsTrigger>
+                                {isAdmin && (
+                                    <TabsTrigger value="suggested">Suggested ({suggestedPrompts.length})</TabsTrigger>
+                                )}
                                 <TabsTrigger value="inactive">Inactive ({inactivePrompts.length})</TabsTrigger>
                             </TabsList>
-                            <AddPromptDialog brandId={brand.id} className="add-prompt-btn" onPromptAdd={handleManualPromptAdd} />
+                            {isAdmin && (
+                                <AddPromptDialog brandId={brand.id} className="add-prompt-btn" onPromptAdd={handleManualPromptAdd} />
+                            )}
                         </div>
 
                         <TabsContent value="active" className="active-table-prompt">
@@ -450,10 +461,11 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                             </Table>
                         </TabsContent>
 
-                        <TabsContent value="suggested" className="active-table-prompt">
-                            <div className="suggested-prompts-box flex justify-between items-center p-4 border rounded-sm mb-5">
-                                <p className='flex items-center gap-3 text-sm'><Sparkles className='text-orange-600'/><b>Suggested prompts.</b> Expand your brand's presence with suggested prompts.</p>
-                                <button 
+                        {isAdmin && (
+                            <TabsContent value="suggested" className="active-table-prompt">
+                                <div className="suggested-prompts-box flex justify-between items-center p-4 border rounded-sm mb-5">
+                                    <p className='flex items-center gap-3 text-sm'><Sparkles className='text-orange-600'/><b>Suggested prompts.</b> Expand your brand's presence with suggested prompts.</p>
+                                    <button 
                                     onClick={handleGeneratePrompts}
                                     disabled={isGeneratingPrompts}
                                     className='py-2 px-4 bg-gray-200 text-gray-950 rounded-sm text-sm hover:bg-orange-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed'
@@ -560,7 +572,8 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                     </TableBody>
                                 </Table>
                             )}
-                        </TabsContent>
+                            </TabsContent>
+                        )}
                     </Tabs>
 
                     <div className={`prompts-action ${selectedPrompts.length > 0 ? "active" : ""}`}>

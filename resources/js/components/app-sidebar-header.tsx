@@ -57,8 +57,6 @@ export function AppSidebarHeader({ breadcrumbs = [], title }: { breadcrumbs?: Br
                     </Button>
                 )}
             </div>
-
-            {!isDashboard && <Breadcrumbs breadcrumbs={breadcrumbs} />}
         </header>
     );
 }
