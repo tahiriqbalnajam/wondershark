@@ -224,15 +224,27 @@ export default function Step3Competitors({
                 body: JSON.stringify({ status: 'accepted' }),
             });
 
-            if (!response.ok) throw new Error('Failed to update competitor status');
+            // if (!response.ok) throw new Error('Failed to update competitor status');
 
-            await response.json();
-            
-            // Update local state
-            setCompetitors(competitors.map(c =>
-                c.id === competitorId ? { ...c, status: 'accepted' as const } : c
-            ));
-            toast.success('Competitor accepted!');
+            const data = await response.json(); // *** Read response body ***
+
+            // 👉 If backend sends success but message indicates limit
+            if (data.message === "Maximum 10 accepted competitors allowed") {
+                toast.error(data.message);
+                return;
+            }
+            // 👉 If backend sends success normally
+            if (response.ok) {
+                // update UI
+                setCompetitors(competitors.map(c =>
+                    c.id === competitorId ? { ...c, status: "accepted" } : c
+                ));
+                toast.success("Competitor accepted!");
+                return;
+            }
+                // 👉 Any other errors
+                toast.error(data.message || "Failed to accept competitor");
+
         } catch (error) {
             console.error('Error updating competitor status:', error);
             toast.error('Failed to accept competitor');

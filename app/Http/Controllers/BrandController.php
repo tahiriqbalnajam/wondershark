@@ -488,7 +488,15 @@ class BrandController extends Controller
         $request->validate([
             'status' => 'required|in:suggested,accepted,rejected',
         ]);
-
+        $countAccepted = \App\Models\Competitor::where('brand_id', $brand->id)
+            ->where('status', 'accepted')
+            ->count();
+        if($countAccepted >=10 && $request->status === 'accepted'){
+            return response()->json([
+                'success' => true,
+                'message' => 'Maximum 10 accepted competitors allowed'
+            ], 400);
+        }
         $competitor = \App\Models\Competitor::where('brand_id', $brand->id)
             ->where('id', $competitorId)
             ->firstOrFail();
@@ -576,7 +584,15 @@ class BrandController extends Controller
             'is_active' => 'sometimes|boolean',
             'status' => 'sometimes|in:suggested,active,inactive',
         ]);
-
+        $countAccepted = \App\Models\BrandPrompt::where('brand_id', $brand->id)
+            ->where('status', 'active')
+            ->count();
+        if($countAccepted >=10 && $request->status === 'active'){
+            return response()->json([
+                'success' => true,
+                'message' => 'Maximum 10 accepted prompts allowed'
+            ], 400);
+        }
         $prompt = \App\Models\BrandPrompt::where('brand_id', $brand->id)
             ->where('id', $promptId)
             ->firstOrFail();
