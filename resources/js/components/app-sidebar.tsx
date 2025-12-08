@@ -228,8 +228,9 @@ export function AppSidebar() {
     const currentBrandId = getCurrentBrandId();
     const selectedBrand = page.props.selectedBrand;
     
-    // Use selectedBrand from session if available, otherwise use currentBrandId from URL
-    const brandIdForMenu = selectedBrand?.id || currentBrandId;
+    // Prioritize currentBrandId from URL over selectedBrand from session
+    // This ensures menu links update immediately when switching brands
+    const brandIdForMenu = currentBrandId || selectedBrand?.id;
     
     const generalNavItems = getGeneralNavItems(permissions, brandIdForMenu);
     const preferenceNavItems = getPreferenceNavItems(permissions, brandIdForMenu);
