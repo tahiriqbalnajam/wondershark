@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
-import { ArrowLeft, FileText, ExternalLink, Filter, X } from 'lucide-react';
+import { ArrowLeft, FileText, ExternalLink } from 'lucide-react';
 
 type Brand = {
     id: number;
@@ -32,6 +32,8 @@ type Props = {
     adminEmail: string;
     userCanCreatePosts: boolean;
     userPostCreationNote?: string;
+    brand?: Brand;
+    selectedBrandId?: number;
 };
 
 type FormData = {
@@ -43,35 +45,47 @@ type FormData = {
     posted_at: string;
 };
 
-type FilterData = {
-    dateRange: '7days' | '14days' | '30days' | 'custom' | '';
-    dateFrom: string;
-    dateTo: string;
-    brandId: string;
-    aiModel: string;
-};
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Posts',
-        href: '/posts',
-    },
-    {
-        title: 'Create Post',
-        href: '/posts/create',
-    },
-];
-
 export default function PostsCreate({ 
     brands, 
     canCreatePosts, 
     adminEmail, 
     userCanCreatePosts, 
-    userPostCreationNote 
+    userPostCreationNote,
+    brand,
+    selectedBrandId
 }: Props) {
     const { url } = usePage();
     const urlParams = new URLSearchParams(url.split('?')[1] || '');
-    const brandIdFromUrl = urlParams.get('brand_id') || '';
+    const brandIdFromUrl = urlParams.get('brand_id') || selectedBrandId?.toString() || '';
+
+    // Dynamic breadcrumbs based on whether we're creating for a specific brand
+    const breadcrumbs: BreadcrumbItem[] = brand ? [
+        {
+            title: 'Brands',
+            href: '/brands',
+        },
+        {
+            title: brand.name,
+            href: `/brands/${brand.id}`,
+        },
+        {
+            title: 'Posts',
+            href: `/brands/${brand.id}/posts`,
+        },
+        {
+            title: 'Create Post',
+            href: `/brands/${brand.id}/posts/create`,
+        },
+    ] : [
+        {
+            title: 'Posts',
+            href: '/posts',
+        },
+        {
+            title: 'Create Post',
+            href: '/posts/create',
+        },
+    ];
 
     const { data, setData, post, processing, errors } = useForm<FormData>({
         title: '',
@@ -83,64 +97,12 @@ export default function PostsCreate({
     });
 
     const [urlPreview, setUrlPreview] = useState('');
-    const [filters, setFilters] = useState<FilterData>({
-        dateRange: '',
-        dateFrom: '',
-        dateTo: '',
-        brandId: '',
-        aiModel: '',
-    });
-    const [showFilters, setShowFilters] = useState(false);
-
-    // AI Models options
-    const aiModels = [
-        { value: 'openai', label: 'OpenAI' },
-        { value: 'gemini', label: 'Gemini' },
-        { value: 'perplexity', label: 'Perplexity' },
-    ];
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post('/posts');
-    };
-
-    const handleDateRangeChange = (range: string) => {
-        const today = new Date();
-        let from = '';
-        const to = today.toISOString().split('T')[0];
-
-        if (range === '7days') {
-            from = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-        } else if (range === '14days') {
-            from = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-        } else if (range === '30days') {
-            from = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-        }
-
-        setFilters(prev => ({
-            ...prev,
-            dateRange: range as FilterData['dateRange'],
-            dateFrom: from,
-            dateTo: to
-        }));
-    };
-
-    const clearFilters = () => {
-        setFilters({
-            dateRange: '',
-            dateFrom: '',
-            dateTo: '',
-            brandId: '',
-            aiModel: '',
-        });
-    };
-
-    const getActiveFiltersCount = () => {
-        let count = 0;
-        if (filters.dateRange) count++;
-        if (filters.brandId) count++;
-        if (filters.aiModel) count++;
-        return count;
+        // Use brand-specific route if brand is present, otherwise generic route
+        const submitRoute = brand ? `/brands/${brand.id}/posts` : '/posts';
+        post(submitRoute);
     };
 
     const handleUrlChange = (url: string) => {
@@ -251,7 +213,7 @@ export default function PostsCreate({
             <div className="space-y-6">
                 <div className="flex items-center gap-4">
                     <Button variant="outline" size="sm" asChild>
-                        <Link href="/posts">
+                        <Link href={brand ? `/brands/${brand.id}/posts` : '/posts'}>
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Back to Posts
                         </Link>
@@ -261,172 +223,7 @@ export default function PostsCreate({
                         title="Create New Post"
                         description="Add a new post to track AI citations"
                     />
-
-                    <div className="ml-auto">
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => setShowFilters(!showFilters)}
-                            className="relative"
-                        >
-                            <Filter className="h-4 w-4 mr-2" />
-                            Filters
-                            {getActiveFiltersCount() > 0 && (
-                                <Badge 
-                                    variant="secondary" 
-                                    className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
-                                >
-                                    {getActiveFiltersCount()}
-                                </Badge>
-                            )}
-                        </Button>
-                    </div>
                 </div>
-
-                {/* Filters Section */}
-                {showFilters && (
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="flex items-center gap-2">
-                                    <Filter className="h-5 w-5" />
-                                    Filters
-                                </CardTitle>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={clearFilters}
-                                    disabled={getActiveFiltersCount() === 0}
-                                >
-                                    <X className="h-4 w-4 mr-2" />
-                                    Clear All
-                                </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {/* Date Range Filter */}
-                                <div className="space-y-2">
-                                    <Label>Date Range</Label>
-                                    <Select 
-                                        value={filters.dateRange} 
-                                        onValueChange={handleDateRangeChange}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select date range" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="7days">Last 7 days</SelectItem>
-                                            <SelectItem value="14days">Last 14 days</SelectItem>
-                                            <SelectItem value="30days">Last 30 days</SelectItem>
-                                            <SelectItem value="custom">Custom range</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                {/* Brand Filter */}
-                                <div className="space-y-2">
-                                    <Label>Brand</Label>
-                                    <Select 
-                                        value={filters.brandId} 
-                                        onValueChange={(value) => setFilters(prev => ({ ...prev, brandId: value }))}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select brand" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="">All brands</SelectItem>
-                                            {brands.map((brand) => (
-                                                <SelectItem key={brand.id} value={brand.id.toString()}>
-                                                    {brand.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                {/* AI Model Filter */}
-                                <div className="space-y-2">
-                                    <Label>AI Model</Label>
-                                    <Select 
-                                        value={filters.aiModel} 
-                                        onValueChange={(value) => setFilters(prev => ({ ...prev, aiModel: value }))}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select AI model" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="">All models</SelectItem>
-                                            {aiModels.map((model) => (
-                                                <SelectItem key={model.value} value={model.value}>
-                                                    {model.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-
-                            {/* Custom Date Range */}
-                            {filters.dateRange === 'custom' && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                    <div className="space-y-2">
-                                        <Label>From Date</Label>
-                                        <Input
-                                            type="date"
-                                            value={filters.dateFrom}
-                                            onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>To Date</Label>
-                                        <Input
-                                            type="date"
-                                            value={filters.dateTo}
-                                            onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Active Filters Display */}
-                            {getActiveFiltersCount() > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
-                                    {filters.dateRange && (
-                                        <Badge variant="secondary" className="flex items-center gap-1">
-                                            {filters.dateRange === '7days' && 'Last 7 days'}
-                                            {filters.dateRange === '14days' && 'Last 14 days'}
-                                            {filters.dateRange === '30days' && 'Last 30 days'}
-                                            {filters.dateRange === 'custom' && 'Custom date range'}
-                                            <X 
-                                                className="h-3 w-3 cursor-pointer" 
-                                                onClick={() => setFilters(prev => ({ ...prev, dateRange: '', dateFrom: '', dateTo: '' }))}
-                                            />
-                                        </Badge>
-                                    )}
-                                    {filters.brandId && (
-                                        <Badge variant="secondary" className="flex items-center gap-1">
-                                            Brand: {brands.find(b => b.id.toString() === filters.brandId)?.name}
-                                            <X 
-                                                className="h-3 w-3 cursor-pointer" 
-                                                onClick={() => setFilters(prev => ({ ...prev, brandId: '' }))}
-                                            />
-                                        </Badge>
-                                    )}
-                                    {filters.aiModel && (
-                                        <Badge variant="secondary" className="flex items-center gap-1">
-                                            AI: {aiModels.find(m => m.value === filters.aiModel)?.label}
-                                            <X 
-                                                className="h-3 w-3 cursor-pointer" 
-                                                onClick={() => setFilters(prev => ({ ...prev, aiModel: '' }))}
-                                            />
-                                        </Badge>
-                                    )}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                )}
 
                 <div className="max-w-2xl">
                     <Card>
@@ -583,7 +380,7 @@ export default function PostsCreate({
                                         {processing ? 'Creating...' : 'Create Post'}
                                     </Button>
                                     <Button variant="outline" asChild>
-                                        <Link href="/posts">Cancel</Link>
+                                        <Link href={brand ? `/brands/${brand.id}/posts` : '/posts'}>Cancel</Link>
                                     </Button>
                                 </div>
                             </form>

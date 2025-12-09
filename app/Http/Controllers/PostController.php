@@ -144,6 +144,79 @@ class PostController extends Controller
     }
 
     /**
+     * Store a newly created post for a specific brand.
+     */
+    public function brandStore(Request $request, Brand $brand)
+    {
+        /** @var User $user */
+        $user = Auth::user();
+        
+        // Ensure the brand belongs to the authenticated agency
+        if ($brand->agency_id !== $user->id && !$user->hasRole('admin')) {
+            abort(403);
+        }
+
+        $request->validate([
+            'title' => 'nullable|string|max:255',
+            'url' => 'required|url|max:2000',
+            'description' => 'nullable|string|max:1000',
+            'status' => 'required|in:published,draft,archived',
+            'posted_at' => 'nullable|date',
+        ]);
+
+        // Check if user can create posts
+        if (!$user->can_create_posts) {
+            $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
+            return back()->withErrors([
+                'permission' => "You don't have permission to create posts. Please contact the administrator at {$adminEmail}. " . 
+                               ($user->post_creation_note ? "Note: {$user->post_creation_note}" : '')
+            ]);
+        }
+
+        // Check if brand can create posts
+        if (!$brand->can_create_posts) {
+            $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
+            return back()->withErrors([
+                'permission' => "The brand '{$brand->name}' doesn't have permission to create posts. Please contact the administrator at {$adminEmail}. " . 
+                               ($brand->post_creation_note ? "Note: {$brand->post_creation_note}" : '')
+            ]);
+        }
+
+        // Check brand post limit
+        $currentMonth = Carbon::now()->startOfMonth();
+        $postsThisMonth = Post::where('brand_id', $brand->id)
+            ->where('created_at', '>=', $currentMonth)
+            ->count();
+
+        if ($brand->monthly_posts && $postsThisMonth >= $brand->monthly_posts) {
+            return back()->withErrors([
+                'limit' => "Brand '{$brand->name}' has reached its monthly post limit of {$brand->monthly_posts} posts. Current count: {$postsThisMonth}."
+            ]);
+        }
+
+        $post = Post::create([
+            'brand_id' => $brand->id,
+            'user_id' => $user->id,
+            'title' => $request->title,
+            'url' => $request->url,
+            'description' => $request->description,
+            'status' => $request->status,
+            'posted_at' => $request->posted_at ?: now(),
+        ]);
+
+        // Automatically generate prompts for the post in background
+        $sessionId = session()->getId() ?: 'auto-' . uniqid();
+        
+        GeneratePostPrompts::dispatch(
+            $post, 
+            $sessionId, 
+            $request->description ?? ''
+        );
+
+        return redirect()->route('brands.posts.index', $brand)->with('success', 'Post created successfully. Prompts are being generated in the background.');
+    }
+
+    /**
      * Show the form for creating a new resource.
      */
     public function create()

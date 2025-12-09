@@ -232,6 +232,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Brand-specific post routes
         Route::get('brands/{brand}/posts', [PostController::class, 'brandIndex'])->name('brands.posts.index');
         Route::get('brands/{brand}/posts/create', [PostController::class, 'brandCreate'])->name('brands.posts.create');
+        Route::post('brands/{brand}/posts', [PostController::class, 'brandStore'])->name('brands.posts.store');
         
         Route::post('posts/{post}/citations', [PostController::class, 'storeCitation'])->name('posts.citations.store');
         Route::get('posts/{post}/prompts', [PostController::class, 'showPrompts'])->name('posts.prompts');

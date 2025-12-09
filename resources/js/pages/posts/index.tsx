@@ -64,22 +64,44 @@ type Props = {
         per_page: number;
         total: number;
     };
+    brand?: {
+        id: number;
+        name: string;
+    };
 };
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Posts',
-        href: '/posts',
-    },
-];
+const getBreadcrumbs = (brand?: { id: number; name: string }): BreadcrumbItem[] => {
+    if (brand) {
+        return [
+            {
+                title: 'Brands',
+                href: '/brands',
+            },
+            {
+                title: brand.name,
+                href: `/brands/${brand.id}`,
+            },
+            {
+                title: 'Posts',
+                href: `/brands/${brand.id}/posts`,
+            },
+        ];
+    }
+    return [
+        {
+            title: 'Posts',
+            href: '/posts',
+        },
+    ];
+};
 
-export default function PostsIndex({ posts }: Props) {
+export default function PostsIndex({ posts, brand }: Props) {
     const { url } = usePage();
     const urlParams = new URLSearchParams(url.split('?')[1] || '');
     const brandId = urlParams.get('brand_id');
     
-    // Construct the create post URL with brand_id if it exists
-    const createPostUrl = brandId ? `/posts/create?brand_id=${brandId}` : '/posts/create';
+    // Construct the create post URL - use brand-specific route if brand prop exists
+    const createPostUrl = brand ? `/brands/${brand.id}/posts/create` : (brandId ? `/posts/create?brand_id=${brandId}` : '/posts/create');
     
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -140,8 +162,8 @@ export default function PostsIndex({ posts }: Props) {
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Posts" />
+        <AppLayout breadcrumbs={getBreadcrumbs(brand)}>
+            <Head title={brand ? `${brand.name} - Posts` : "Posts"} />
 
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
