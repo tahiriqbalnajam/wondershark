@@ -50,6 +50,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('dashboard')
         ->middleware('role.permission:view-dashboard');
     
+    // Docs & Files Route
+    Route::get('docs-files', [\App\Http\Controllers\DocsFileController::class, 'index'])
+        ->name('docs-files.index');
+    
     // Brand-specific dashboard
     Route::get('brands/{brand}/dashboard', [\App\Http\Controllers\BrandController::class, 'dashboard'])
         ->name('brands.dashboard')

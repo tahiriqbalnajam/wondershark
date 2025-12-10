@@ -178,6 +178,19 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
     return items;
 };
 
+const getDocsFilesNavItems = (permissions: ReturnType<typeof usePermissions>): NavItem[] => {
+    const items: NavItem[] = [];
+
+    // Docs & Files - available to all authenticated users
+    items.push({
+        title: 'Docs & Files',
+        href: '/docs-files',
+        icon: FileText,
+    });
+
+    return items;
+};
+
 const getBrandSpecificNavItems = (brandId: number): NavItem[] => {
     return [
         {
@@ -236,6 +249,7 @@ export function AppSidebar() {
     const preferenceNavItems = getPreferenceNavItems(permissions, brandIdForMenu);
     const settingsNavItems = getSettingsNavItems(permissions, brandIdForMenu);
     const orderNavItems = getOrderNavItems(permissions, brandIdForMenu);
+    const docsFilesNavItems = getDocsFilesNavItems(permissions);
     
     // Get brand-specific nav items if admin has selected a brand
     const brandNavItems = selectedBrand && permissions.hasRole('admin') 
@@ -273,6 +287,11 @@ export function AppSidebar() {
                 {/* Preference Section */}
                 {preferenceNavItems.length > 0 && (
                     <NavMain items={preferenceNavItems} label="Preference" />
+                )}
+                
+                {/* Docs & Files Section */}
+                {docsFilesNavItems.length > 0 && (
+                    <NavMain items={docsFilesNavItems} label="Docs & Files" />
                 )}
                 
                 {/* Settings Section */}
