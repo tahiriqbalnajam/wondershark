@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('brands', function (Blueprint $table) {
-            $table->boolean('can_create_posts')->default(true)->after('completed_at');
+            $table->boolean('can_create_posts')->default(false)->after('completed_at');
             $table->text('post_creation_note')->nullable()->after('can_create_posts');
         });
     }

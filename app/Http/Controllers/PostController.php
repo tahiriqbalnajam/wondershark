@@ -126,14 +126,20 @@ class PostController extends Controller
         $canCreatePosts = $user->can_create_posts && $brand->can_create_posts;
         $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
 
-        return Inertia::render('posts/create', [
-            'brands' => collect([$brand])->map(fn($b) => [
+        // Get all brands for the agency user
+        $allBrands = Brand::where('agency_id', $user->id)
+            ->orderBy('name')
+            ->get()
+            ->map(fn($b) => [
                 'id' => $b->id,
                 'name' => $b->name,
                 'can_create_posts' => $b->can_create_posts,
                 'post_creation_note' => $b->post_creation_note,
                 'monthly_posts' => $b->monthly_posts,
-            ]),
+            ]);
+
+        return Inertia::render('posts/create', [
+            'brands' => $allBrands,
             'selectedBrandId' => $brand->id,
             'canCreatePosts' => $canCreatePosts,
             'adminEmail' => $adminEmail,

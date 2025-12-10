@@ -33,6 +33,10 @@ class Brand extends Model
         'can_create_posts' => 'boolean',
     ];
 
+    protected $attributes = [
+        'can_create_posts' => false,
+    ];
+
     /**
      * Get the current month's posts count for this brand.
      */
