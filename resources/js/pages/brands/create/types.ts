@@ -17,6 +17,8 @@ export type Competitor = {
     id: number;
     name: string;
     domain: string;
+    trackedName : string;
+    allies : string[];
     mentions: number;
     status: 'suggested' | 'accepted' | 'rejected';
     source: 'ai' | 'manual';

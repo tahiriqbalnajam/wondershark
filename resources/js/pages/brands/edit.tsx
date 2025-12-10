@@ -41,8 +41,8 @@ type Brand = {
   description: string;
   monthly_posts: number;
   status: 'active' | 'inactive' | 'pending';
-  prompts: Array<{ id: number; prompt: string; order: number; is_active: boolean }>;
-  subreddits: Array<{ id: number; subreddit_name: string; description?: string; status: string }>;
+  // prompts: Array<{ id: number; prompt: string; order: number; is_active: boolean }>;
+  // subreddits: Array<{ id: number; subreddit_name: string; description?: string; status: string }>;
 };
 
 type Props = { brand: Brand };
@@ -53,8 +53,8 @@ type BrandForm = {
   description: string;
   monthly_posts: number;
   status: 'active' | 'inactive' | 'pending';
-  prompts: string[];
-  subreddits: string[];
+  // prompts: string[];
+  // subreddits: string[];
 
   // toggles
   Verified: boolean;
@@ -81,8 +81,6 @@ export default function BrandEdit({ brand }: Props) {
     description: brand.description,
     monthly_posts: brand.monthly_posts,
     status: brand.status,
-    prompts: brand.prompts.map((p) => p.prompt),
-    subreddits: brand.subreddits.map((s) => s.subreddit_name),
     Verified: false,
     'GPT-4o Search': false,
     'OpenAI (GPT-4)': false,
@@ -90,36 +88,40 @@ export default function BrandEdit({ brand }: Props) {
     'AI Mode': false,
     Perplexity: false,
   });
+  
+    // prompts: brand.prompts.map((p) => p.prompt),
+    // subreddits: brand.subreddits.map((s) => s.subreddit_name), /////// this data will be in above array 
 
-  const addPrompt = () => {
-    if (newPrompt.trim() && data.prompts.length < 25) {
-      setData('prompts', [...data.prompts, newPrompt.trim()]);
-      setNewPrompt('');
-    }
-  };
+  // const addPrompt = () => {
+  //   if (newPrompt.trim() && data.prompts.length < 25) {
+  //     setData('prompts', [...data.prompts, newPrompt.trim()]);
+  //     setNewPrompt('');
+  //   }
+  // };
 
-  const removePrompt = (index: number) => setData('prompts', data.prompts.filter((_, i) => i !== index));
+  // const removePrompt = (index: number) => setData('prompts', data.prompts.filter((_, i) => i !== index));
 
-  const editPrompt = (index: number, val: string) => {
-    const copy = [...data.prompts];
-    copy[index] = val;
-    setData('prompts', copy);
-  };
+  // const editPrompt = (index: number, val: string) => {
+  //   const copy = [...data.prompts];
+  //   copy[index] = val;
+  //   setData('prompts', copy);
+  // };
 
-  const addSubreddit = () => {
-    if (newSubreddit.trim() && data.subreddits.length < 20) {
-      const name = newSubreddit.trim().replace(/^r\//, '');
-      setData('subreddits', [...data.subreddits, name]);
-      setNewSubreddit('');
-    }
-  };
+  // const addSubreddit = () => {
+  //   if (newSubreddit.trim() && data.subreddits.length < 20) {
+  //     const name = newSubreddit.trim().replace(/^r\//, '');
+  //     setData('subreddits', [...data.subreddits, name]);
+  //     setNewSubreddit('');
+  //   }
+  // };
 
-  const removeSubreddit = (index: number) => setData('subreddits', data.subreddits.filter((_, i) => i !== index));
+  // const removeSubreddit = (index: number) => setData('subreddits', data.subreddits.filter((_, i) => i !== index));
+  const { delete: destroy } = useForm();
 
-  const handleSubmit: FormEventHandler = (e) => {
-    e.preventDefault();
-    put(route('brands.update', brand.id));
-  };
+    const handleSubmit: FormEventHandler = (e) => {
+      e.preventDefault();
+      put(route('brands.update', brand.id));
+    };
 
   
   const toggles: {
@@ -238,7 +240,7 @@ export default function BrandEdit({ brand }: Props) {
           </Card>
 
           {/* Content Prompts */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -282,10 +284,10 @@ export default function BrandEdit({ brand }: Props) {
 
               <InputError message={errors.prompts} />
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* Target Subreddits */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" /> Target Subreddits ({data.subreddits.length}/20)
@@ -318,17 +320,32 @@ export default function BrandEdit({ brand }: Props) {
 
               <InputError message={errors.subreddits} />
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* Actions */}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" asChild>
-              <a href={`/brands/${brand.id}`}>Cancel</a>
-            </Button>
+          <div className="flex justify-between items-center w-full mt-6">
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  if (confirm("Are you sure you want to delete this brand? This action cannot be undone.")) {
+                    destroy(route('brands.destroy', brand.id));
+                    }
+                }}
+              >
+                Delete Brand
+              </Button>
 
-            <Button type="submit" disabled={processing}>
-              <Save className="h-4 w-4 mr-2" /> {processing ? 'Saving...' : 'Save Changes'}
-            </Button>
+            <div className="flex  gap-2">
+              <Button type="button" variant="outline" asChild>
+                <a href={`/brands/${brand.id}`}>Cancel</a>
+              </Button>
+
+              <Button type="submit" disabled={processing}>
+                <Save className="h-4 w-4 mr-2" /> {processing ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+
           </div>
         </form>
       </div>

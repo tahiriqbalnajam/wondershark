@@ -6,11 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 interface Competitor {
     id: number;
     name: string;
     domain: string;
+    trackedName : string;
+    allies : string[];
     mentions: number;
     status: 'suggested' | 'accepted' | 'rejected';
     source: 'ai' | 'manual';
@@ -20,6 +23,8 @@ interface CompetitorResponse {
     id?: number;
     name: string;
     domain: string;
+    trackedName : string;
+    allies : string[];
     mentions?: number;
 }
 
@@ -51,11 +56,16 @@ export default function Step3Competitors({
     const [progress, setProgress] = useState(0);
     const [progressText, setProgressText] = useState('');
     const [showForm, setShowForm] = useState(false);
-    const [formData, setFormData] = useState({ name: '', domain: '' });
+    const [formData, setFormData] = useState({ name: '', domain: '' , trackedName: '', allies: [] as string[]});
     
     // Track if we've already attempted to fetch automatically
     const autoFetchAttemptedRef = useRef<string | null>(null);
-
+    // Add new empty ally field
+    const addAllyField = () => setFormData(prev => ({ ...prev, allies: [...prev.allies, ''] }));
+    const removeAllyField = (index: number) => setFormData(prev => ({
+        ...prev,
+        allies: prev.allies.filter((_, i) => i !== index)
+    }));
     // Separate competitors by status
     const suggestedCompetitors = competitors.filter(c => c.status === 'suggested');
     const acceptedCompetitors = competitors.filter(c => c.status === 'accepted');
@@ -296,6 +306,8 @@ export default function Step3Competitors({
             id: Date.now(),
             name: formData.name.trim(),
             domain: formData.domain.trim(),
+            trackedName: formData.trackedName.trim(),
+            allies: formData.allies,
             mentions: 0,
             status: 'accepted',
             source: 'manual'
@@ -303,7 +315,7 @@ export default function Step3Competitors({
 
         setCompetitors([...competitors, newCompetitor]);
         setShowForm(false);
-        setFormData({ name: '', domain: '' });
+        setFormData({ name: '', domain: '' , trackedName: '', allies: [] });
         toast.success('Competitor added successfully');
     };
 
@@ -447,57 +459,47 @@ export default function Step3Competitors({
                 })}
             </div>
 
+            {/* Manual Add */}
             <div className="step-wrapp-card mt-[50px]">
-                <div className="block mb-5">
-                    <h3 className="text-xl font-semibold">Create Competitor</h3>
-                </div>
-
+                <h3 className="text-xl font-semibold mb-5">Create Competitor</h3>
                 {showForm ? (
-                    <form onSubmit={handleManualAdd} className="space-y-4">
+                    <div className="space-y-4">
                         <div className="grid gap-2">
                             <Label htmlFor="name">Name</Label>
-                            <Input
-                                id="name"
-                                value={formData.name}
-                                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                                placeholder="Brand or competitor Name"
-                                required
-                                className="form-control"
-                            />
+                            <Input id="name" value={formData.name} onChange={e => setFormData(prev => ({...prev, name: e.target.value}))}/>
                         </div>
-
                         <div className="grid gap-2">
                             <Label htmlFor="domain">Domain</Label>
-                            <Input
-                                id="domain"
-                                type="text"
-                                value={formData.domain}
-                                onChange={(e) => {
-                                    let value = e.target.value;
-                                    // Auto-add https:// if user starts typing and hasn't added it
-                                    if (value && !value.startsWith('http://') && !value.startsWith('https://')) {
-                                        value = 'https://' + value;
-                                    }
-                                    setFormData(prev => ({ ...prev, domain: value }));
-                                }}
-                                placeholder="https://competitor.com"
-                                className="form-control"
-                            />
+                            <Input id="domain" value={formData.domain} onChange={e => {
+                                let val = e.target.value;
+                                if (val && !val.startsWith('http://') && !val.startsWith('https://')) val = 'https://' + val;
+                                setFormData(prev => ({ ...prev, domain: val }));
+                            }}/>
                         </div>
-
                         <div className="flex gap-2">
-                            <button type="submit" className='flex py-4 justify-center gap-3 text-md border rounded-sm w-[200px] font-medium fetch-ai-btn'>
-                                <Check className='w-[20px]' /> Save
-                            </button>
-                            <button type="button" onClick={() => setShowForm(false)} className='flex py-4 justify-center gap-3 text-md border rounded-sm w-[200px] font-medium'>
-                                Cancel
-                            </button>
+                            <Label>Tracked Name</Label>
+                            <Input value={formData.trackedName} onChange={e => setFormData(prev => ({ ...prev, trackedName: e.target.value }))}/>
                         </div>
-                    </form>
+                        <div className="flex gap-2">
+                            <Label>Alias</Label>
+                            <Button type="button" variant="outline" size="sm" onClick={addAllyField}>+ Add Alias</Button>
+                            {formData.allies.map((a, i) => (
+                                <div key={i} className="flex gap-2">
+                                    <Input value={a} onChange={e => {
+                                        const updated = [...formData.allies]; updated[i] = e.target.value;
+                                        setFormData(prev => ({...prev, allies: updated}));
+                                    }}/>
+                                    <Button type="button" variant="destructive" size="sm" onClick={() => removeAllyField(i)}>✕</Button>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="flex gap-2">
+                            <Button type="button" onClick={handleManualAdd}><Check className='w-4'/> Save</Button>
+                            <Button type="button" onClick={() => setShowForm(false)}>Cancel</Button>
+                        </div>
+                    </div>
                 ) : (
-                    <button type="button" onClick={() => setShowForm(true)} className='flex py-4 justify-center gap-3 text-md border rounded-sm w-[200px] font-medium fetch-ai-btn'>
-                        <CirclePlus className='w-[20px]' /> Add Competitor
-                    </button>
+                    <Button type="button" onClick={() => setShowForm(true)}><CirclePlus className='w-4'/> Add Competitor</Button>
                 )}
             </div>
 
