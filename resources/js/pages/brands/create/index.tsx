@@ -38,9 +38,9 @@ const steps = [
     { id: 1, title: 'Basic Info', icon: FileText },
     { id: 2, title: 'Competitors', icon: Swords },
     { id: 3, title: 'Prompts', icon: MessagesSquare },
-    { id: 4, title: 'Monthly Posts', icon: CalendarDays },
+    // { id: 4, title: 'Monthly Posts', icon: CalendarDays },
     // { id: 5, title: 'Review', icon: CheckCircle },
-    { id: 5, title: 'Account Setup', icon: FileText },
+    { id: 4, title: 'Account Setup', icon: FileText },
 ];
 
 type Props = {
@@ -208,6 +208,8 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                         competitors: acceptedCompetitors.map(c => ({
                             name: c.name,
                             domain: c.domain,
+                            trackedName: c.trackedName,
+                            allies: c.allies,
                             source: c.source,
                         })),
                     }),
@@ -502,8 +504,6 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                     existingPrompts={existingData.prompts}
                 />;
             case 4:
-                return <Step4MonthlyPosts {...stepProps} />;
-            case 5:
                 return <Step6AccountSetup {...stepProps} />;
             default:
                 return null;

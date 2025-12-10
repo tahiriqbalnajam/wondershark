@@ -330,6 +330,8 @@ class BrandController extends Controller
                     'brand_id' => $brand->id,
                     'name' => $competitorData['name'],
                     'domain' => $competitorData['domain'],
+                    'trackedName' => $competitorData['trackedName'] ?? '',
+                    'allies' => isset($competitorData['allies']) ? serialize($competitorData['allies']) : serialize([]),
                     'source' => $competitorData['source'] ?? 'manual',
                     'status' => 'accepted',
                     'mentions' => 0,
@@ -845,24 +847,28 @@ class BrandController extends Controller
             ]);
 
             // Delete existing prompts and create new ones
-            $brand->prompts()->delete();
-            foreach ($request->prompts as $index => $promptText) {
-                BrandPrompt::create([
-                    'brand_id' => $brand->id,
-                    'prompt' => $promptText,
-                    'order' => $index + 1,
-                    'is_active' => true,
-                ]);
+            if($request->prompts !== null){
+                $brand->prompts()->delete();
+                foreach ($request->prompts as $index => $promptText) {
+                    BrandPrompt::create([
+                        'brand_id' => $brand->id,
+                        'prompt' => $promptText,
+                        'order' => $index + 1,
+                        'is_active' => true,
+                    ]);
+                }
             }
 
             // Delete existing subreddits and create new ones
-            $brand->subreddits()->delete();
-            foreach ($request->subreddits as $subredditName) {
-                BrandSubreddit::create([
-                    'brand_id' => $brand->id,
-                    'subreddit_name' => $subredditName,
-                    'status' => 'approved',
-                ]);
+            if($request->subreddits !== null){
+                $brand->subreddits()->delete();
+                foreach ($request->subreddits as $subredditName) {
+                    BrandSubreddit::create([
+                        'brand_id' => $brand->id,
+                        'subreddit_name' => $subredditName,
+                        'status' => 'approved',
+                    ]);
+                }
             }
         });
 
