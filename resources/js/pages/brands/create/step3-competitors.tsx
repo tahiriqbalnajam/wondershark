@@ -312,7 +312,10 @@ export default function Step3Competitors({
             status: 'accepted',
             source: 'manual'
         };
-
+        if (competitors.length >= 10) {
+            toast.error("Maximum 10 competitors allowed");
+            return; // ❗ Do NOT add more
+        }
         setCompetitors([...competitors, newCompetitor]);
         setShowForm(false);
         setFormData({ name: '', domain: '' , trackedName: '', allies: [] });
