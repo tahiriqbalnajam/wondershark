@@ -172,6 +172,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                         'Accept': 'application/json', 
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                     },
                     body: JSON.stringify({
@@ -181,6 +182,17 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                         country: data.country,
                     }),
                 });
+                if (!response.ok) {
+                    // If Laravel returned validation errors (422)
+                    if (response.status === 422) {
+                        const errorData = await response.json();
+                        const firstError = Object.values(errorData.errors)[0][0]; // get first error message
+                        toast.error(firstError);
+                        return;
+                    }
+
+                    throw new Error('Network error');
+                }
 
                 const result = await response.json();
                 

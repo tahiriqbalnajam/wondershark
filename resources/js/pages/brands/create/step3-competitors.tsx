@@ -395,9 +395,9 @@ export default function Step3Competitors({
                                         </span>
                                         <h4>{competitor.name}</h4>
                                     </div>
-                                    <button className="edit-btn">
+                                    {/* <button className="edit-btn">
                                         <Pencil className="w-[15px]"/>
-                                    </button>
+                                    </button> */}
                                 </div>
                                 <p className='text-gray-400'>{competitor.mentions} Mentions</p>
                                 <div className="competitor-btn-action">
