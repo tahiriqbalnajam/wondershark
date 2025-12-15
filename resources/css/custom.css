@@ -48,6 +48,15 @@ button{
     color: var(--primary);
     font-family: var(--inter-font);
 }
+.cancle-btn{
+    background: rgba(255, 0, 63, 0.15);
+    color: #FF003F;
+}
+
+.cancle-btn:hover{
+    background:#FF003F;
+    color: #fff;
+}
 
 .heading-icon img{
     filter:var(--filter-img-white);
@@ -472,6 +481,7 @@ textarea.form-control{
     border-radius:5px;
 }
 
+.add-prompt-lists .post-bsck-btn,
 .add-prompt-lists button{
     padding:11px 35px;
     background: var(--color-gray-100);
@@ -481,12 +491,12 @@ textarea.form-control{
     font-weight:600;
     cursor: pointer;
 }
-
 .add-prompt-lists button.active,
 .add-prompt-lists button:hover{
     background: var(--color-gray-200);
 }
 
+.add-prompt-lists .post-bsck-btn:hover,
 .add-prompt-lists button.active,
 .add-prompt-lists button[aria-selected="true"]{
     background:var(--orange-1);
@@ -954,6 +964,15 @@ textarea.form-control{
 [data-no-drag] {
   touch-action: none !important;
   overscroll-behavior: contain !important;
+}
+
+.default-table tbody tr td:last-child, 
+.default-table thead tr th:last-child {
+	width: 150px;
+}
+.default-table tbody tr td:nth-child(2) div, 
+.default-table thead tr th:nth-child(2) div{
+	min-width: 200px;
 }
 
 @media(max-width:991px){
