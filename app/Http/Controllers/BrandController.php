@@ -220,6 +220,8 @@ class BrandController extends Controller
             'name' => $request->name,
             'website' => $request->website,
             'description' => $request->description,
+            'trackedName' => $request->trackedName ?? '',
+            'allies' => $request->allies ? serialize($request->allies) : serialize([]),
             'country' => $request->country,
             'monthly_posts' => 10, // Default value
             'status' => 'pending',

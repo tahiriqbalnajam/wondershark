@@ -479,22 +479,24 @@ export default function Step3Competitors({
                                 setFormData(prev => ({ ...prev, domain: val }));
                             }}/>
                         </div>
-                        <div className="flex gap-2">
-                            <Label>Tracked Name</Label>
-                            <Input value={formData.trackedName} onChange={e => setFormData(prev => ({ ...prev, trackedName: e.target.value }))}/>
-                        </div>
-                        <div className="flex gap-2">
-                            <Label>Alias</Label>
-                            <Button type="button" variant="outline" size="sm" onClick={addAllyField}>+ Add Alias</Button>
-                            {formData.allies.map((a, i) => (
-                                <div key={i} className="flex gap-2">
-                                    <Input value={a} onChange={e => {
-                                        const updated = [...formData.allies]; updated[i] = e.target.value;
-                                        setFormData(prev => ({...prev, allies: updated}));
-                                    }}/>
-                                    <Button type="button" variant="destructive" size="sm" onClick={() => removeAllyField(i)}>✕</Button>
-                                </div>
-                            ))}
+                        <div className=" space-y-4 allies-card">
+                            <div className="grid gap-2">
+                                <Label>Tracked Name  <small className='text-xs font-normal text-muted-foreground'>( Optional )</small> </Label>
+                                <Input value={formData.trackedName} onChange={e => setFormData(prev => ({ ...prev, trackedName: e.target.value }))}/>
+                            </div>
+                            <div className="flex gap-2">
+                                <Label>Alias  <small className='text-xs font-normal text-muted-foreground'>( Optional )</small> </Label>
+                                <Button type="button" variant="outline" size="sm" onClick={addAllyField}>+ Add Alias</Button>
+                                {formData.allies.map((a, i) => (
+                                    <div key={i} className="grid gap-2">
+                                        <Input value={a} onChange={e => {
+                                            const updated = [...formData.allies]; updated[i] = e.target.value;
+                                            setFormData(prev => ({...prev, allies: updated}));
+                                        }}/>
+                                        <Button type="button" variant="destructive" size="sm" onClick={() => removeAllyField(i)}>✕</Button>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                         <div className="flex gap-2">
                             <Button type="button" onClick={handleManualAdd}><Check className='w-4'/> Save</Button>

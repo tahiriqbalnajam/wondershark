@@ -1,9 +1,11 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/input-error';
 import { StepProps } from './types';
+import { Button } from '@/components/ui/button';
 
 const countries = [
     'United States',
@@ -56,6 +58,15 @@ export default function Step1BasicInfo({ data, setData, errors }: StepProps) {
         
         setData('website', url);
     };
+    const addAllyField = () => {
+        setData('allies', [...data.allies, '']);
+        };
+
+        // Remove ally by index
+        const removeAllyField = (index: number) => {
+        const updated = data.allies.filter((_, i) => i !== index);
+        setData('allies', updated.length ? updated : ['']);
+        };
 
     return (
         <div className="space-y-6">
@@ -117,6 +128,42 @@ export default function Step1BasicInfo({ data, setData, errors }: StepProps) {
                         />
                         <InputError message={errors.description} />
                     </div>
+                    <CardContent className="space-y-4 allies-card">
+                        <div className="grid gap-2">
+                            <Label htmlFor="trackedName">Tracked Name  <small className='text-xs font-normal text-muted-foreground'>( Optional )</small></Label>
+                            <Input id ="trackedName" value={data.trackedName} onChange={(e) => setData('trackedName', e.target.value)}/>
+                        </div>
+                        <div className='grid'>
+                        <div className="flex gap-2">
+                            <Label htmlFor='allies'>Alias  <small className='text-xs font-normal text-muted-foreground'>( Optional )</small></Label>
+                            <Button id ="allies" type="button" variant="outline" size="sm" onClick={addAllyField}>+ Add Alias </Button>
+                            {data.allies.map((ally, index) => (
+                                <div key={index} className="grid items-center gap-2">
+                                <Input
+                                    type="text"
+                                    placeholder="Alia name"
+                                    value={ally}
+                                    onChange={(e) => {
+                                    const updated = [...data.allies];
+                                    updated[index] = e.target.value;
+                                    setData('allies', updated);
+                                    }}
+                                    className="form-control"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => removeAllyField(index)}
+                                >
+                                    ✕
+                                </Button>
+                                </div>
+                            ))}
+                        </div>
+
+                        </div>
+                    </CardContent>
                 </div>
             </div>
         </div>

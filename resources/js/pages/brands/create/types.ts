@@ -2,6 +2,8 @@ export type BrandForm = {
     name: string;
     website: string;
     description: string;
+    trackedName : string;
+    allies : string[];
     country: string;
     prompts: string[] | GeneratedPrompt[];
     subreddits: string[];

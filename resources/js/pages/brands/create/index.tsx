@@ -51,6 +51,8 @@ type Props = {
             name: string;
             website: string;
             description: string;
+            trackedName: string;
+            allies: string[];
             country: string;
             monthly_posts: number;
         } | null;
@@ -58,6 +60,8 @@ type Props = {
             id: number;
             name: string;
             domain: string;
+            trackedName: string;
+            allies: string[];
             source: string;
             status: string;
             mentions: number;
@@ -88,6 +92,8 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                 id: c.id,
                 name: c.name,
                 domain: c.domain,
+                trackedName: c.trackedName,
+                allies: c.allies,
                 mentions: c.mentions,
                 status: c.status as 'suggested' | 'accepted' | 'rejected',
                 source: c.source as 'ai' | 'manual'
@@ -104,6 +110,8 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
         name: existingData.brand?.name || '',
         website: existingData.brand?.website || '',
         description: existingData.brand?.description || '',
+        trackedName: existingData.brand?.trackedName || '',
+        allies: existingData.brand?.allies || [],
         country: existingData.brand?.country || '',
         prompts: [], // Don't load prompts here - they're passed separately to Step2Prompts
         subreddits: [],
@@ -179,6 +187,8 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                         name: data.name,
                         website: data.website,
                         description: data.description,
+                        trackedName: data.trackedName,
+                        allies: data.allies,
                         country: data.country,
                     }),
                 });
