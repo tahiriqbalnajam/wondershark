@@ -60,7 +60,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
     return (
         <CardContent>
             <div className="min-h-80 custom-scrollbar">
-                <Table className="text-sm w-full border border-gray-200">
+                <Table className="text-sm w-full border border-gray-200 default-table">
                     <TableHeader>
                         <TableRow className="bg-gray-50 border-b border-gray-200">
                             <TableHead className="w-12 border-r border-gray-200 text-center">#</TableHead>
