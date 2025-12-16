@@ -646,6 +646,11 @@ class BrandController extends Controller
         session(['selected_brand_id' => $brand->id]);
 
         $brand->load([
+            'prompts' => function ($query) {
+                $query->where('is_active', true)
+                    ->orderByDesc('analysis_completed_at')
+                    ->orderByDesc('updated_at');
+            },
             'prompts.promptResources',
             'prompts.aiModel',
             'subreddits', 
