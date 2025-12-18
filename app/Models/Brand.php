@@ -26,8 +26,6 @@ class Brand extends Model
         'completed_at',
         'can_create_posts',
         'post_creation_note',
-        'trackedName',
-        'allies',
     ];
 
     protected $casts = [

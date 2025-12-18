@@ -170,34 +170,37 @@ class PostController extends Controller
             'posted_at' => 'nullable|date',
         ]);
 
-        // Check if user can create posts
-        if (!$user->can_create_posts) {
-            $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
-            return back()->withErrors([
-                'permission' => "You don't have permission to create posts. Please contact the administrator at {$adminEmail}. " . 
-                               ($user->post_creation_note ? "Note: {$user->post_creation_note}" : '')
-            ]);
-        }
+        // Skip permission checks for admin users
+        if (!$user->hasRole('admin')) {
+            // Check if user can create posts
+            if (!$user->can_create_posts) {
+                $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
+                return back()->withErrors([
+                    'permission' => "You don't have permission to create posts. Please contact the administrator at {$adminEmail}. " . 
+                                   ($user->post_creation_note ? "Note: {$user->post_creation_note}" : '')
+                ]);
+            }
 
-        // Check if brand can create posts
-        if (!$brand->can_create_posts) {
-            $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
-            return back()->withErrors([
-                'permission' => "The brand '{$brand->name}' doesn't have permission to create posts. Please contact the administrator at {$adminEmail}. " . 
-                               ($brand->post_creation_note ? "Note: {$brand->post_creation_note}" : '')
-            ]);
-        }
+            // Check if brand can create posts
+            if (!$brand->can_create_posts) {
+                $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
+                return back()->withErrors([
+                    'permission' => "The brand '{$brand->name}' doesn't have permission to create posts. Please contact the administrator at {$adminEmail}. " . 
+                                   ($brand->post_creation_note ? "Note: {$brand->post_creation_note}" : '')
+                ]);
+            }
 
-        // Check brand post limit
-        $currentMonth = Carbon::now()->startOfMonth();
-        $postsThisMonth = Post::where('brand_id', $brand->id)
-            ->where('created_at', '>=', $currentMonth)
-            ->count();
+            // Check brand post limit
+            $currentMonth = Carbon::now()->startOfMonth();
+            $postsThisMonth = Post::where('brand_id', $brand->id)
+                ->where('created_at', '>=', $currentMonth)
+                ->count();
 
-        if ($brand->monthly_posts && $postsThisMonth >= $brand->monthly_posts) {
-            return back()->withErrors([
-                'limit' => "Brand '{$brand->name}' has reached its monthly post limit of {$brand->monthly_posts} posts. Current count: {$postsThisMonth}."
-            ]);
+            if ($brand->monthly_posts && $postsThisMonth >= $brand->monthly_posts) {
+                return back()->withErrors([
+                    'limit' => "Brand '{$brand->name}' has reached its monthly post limit of {$brand->monthly_posts} posts. Current count: {$postsThisMonth}."
+                ]);
+            }
         }
 
         $post = Post::create([
@@ -230,12 +233,21 @@ class PostController extends Controller
         $user = Auth::user();
         
         // Get brands the user has access to
-        $brands = Brand::where('agency_id', $user->id)
-            ->orderBy('name')
-            ->get(['id', 'name', 'can_create_posts', 'post_creation_note', 'monthly_posts']);
-
-        // Check if user or any of their brands can create posts
-        $canCreatePosts = $user->can_create_posts && $brands->where('can_create_posts', true)->count() > 0;
+        if ($user->hasRole('admin')) {
+            // Admin can access all brands
+            $brands = Brand::orderBy('name')
+                ->get(['id', 'name', 'can_create_posts', 'post_creation_note', 'monthly_posts']);
+            $canCreatePosts = true; // Admin can always create posts
+        } else {
+            // Agency users can only access their own brands
+            $brands = Brand::where('agency_id', $user->id)
+                ->orderBy('name')
+                ->get(['id', 'name', 'can_create_posts', 'post_creation_note', 'monthly_posts']);
+            
+            // Check if user or any of their brands can create posts
+            $canCreatePosts = $user->can_create_posts && $brands->where('can_create_posts', true)->count() > 0;
+        }
+        
         $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
 
         return Inertia::render('posts/create', [
@@ -264,38 +276,47 @@ class PostController extends Controller
         $user = Auth::user();
         
         // Verify user has access to the brand
-        $brand = Brand::where('id', $request->brand_id)
-            ->where('agency_id', $user->id)
-            ->firstOrFail();
-
-        // Check if user can create posts
-        if (!$user->can_create_posts) {
-            $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
-            return back()->withErrors([
-                'permission' => "You don't have permission to create posts. Please contact the administrator at {$adminEmail}. " . 
-                               ($user->post_creation_note ? "Note: {$user->post_creation_note}" : '')
-            ]);
+        if ($user->hasRole('admin')) {
+            // Admin can access any brand
+            $brand = Brand::findOrFail($request->brand_id);
+        } else {
+            // Agency users can only access their own brands
+            $brand = Brand::where('id', $request->brand_id)
+                ->where('agency_id', $user->id)
+                ->firstOrFail();
         }
 
-        // Check if brand can create posts
-        if (!$brand->can_create_posts) {
-            $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
-            return back()->withErrors([
-                'permission' => "The brand '{$brand->name}' doesn't have permission to create posts. Please contact the administrator at {$adminEmail}. " . 
-                               ($brand->post_creation_note ? "Note: {$brand->post_creation_note}" : '')
-            ]);
-        }
+        // Skip permission checks for admin users
+        if (!$user->hasRole('admin')) {
+            // Check if user can create posts
+            if (!$user->can_create_posts) {
+                $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
+                return back()->withErrors([
+                    'permission' => "You don't have permission to create posts. Please contact the administrator at {$adminEmail}. " . 
+                                   ($user->post_creation_note ? "Note: {$user->post_creation_note}" : '')
+                ]);
+            }
 
-        // Check brand post limit
-        $currentMonth = Carbon::now()->startOfMonth();
-        $postsThisMonth = Post::where('brand_id', $brand->id)
-            ->where('created_at', '>=', $currentMonth)
-            ->count();
+            // Check if brand can create posts
+            if (!$brand->can_create_posts) {
+                $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
+                return back()->withErrors([
+                    'permission' => "The brand '{$brand->name}' doesn't have permission to create posts. Please contact the administrator at {$adminEmail}. " . 
+                                   ($brand->post_creation_note ? "Note: {$brand->post_creation_note}" : '')
+                ]);
+            }
 
-        if ($brand->monthly_posts && $postsThisMonth >= $brand->monthly_posts) {
-            return back()->withErrors([
-                'limit' => "Brand '{$brand->name}' has reached its monthly post limit of {$brand->monthly_posts} posts. Current count: {$postsThisMonth}."
-            ]);
+            // Check brand post limit
+            $currentMonth = Carbon::now()->startOfMonth();
+            $postsThisMonth = Post::where('brand_id', $brand->id)
+                ->where('created_at', '>=', $currentMonth)
+                ->count();
+
+            if ($brand->monthly_posts && $postsThisMonth >= $brand->monthly_posts) {
+                return back()->withErrors([
+                    'limit' => "Brand '{$brand->name}' has reached its monthly post limit of {$brand->monthly_posts} posts. Current count: {$postsThisMonth}."
+                ]);
+            }
         }
 
         $post = Post::create([
@@ -317,7 +338,17 @@ class PostController extends Controller
             $request->description ?? ''
         );
 
-        return redirect()->route('posts.index')->with('success', 'Post created successfully. Prompts are being generated in the background.');
+        return back()->with([
+            'success' => 'Post created successfully. Prompts are being generated in the background.',
+            'post' => [
+                'id' => $post->id,
+                'title' => $post->title,
+                'url' => $post->url,
+                'description' => $post->description,
+                'status' => $post->status,
+                'posted_at' => $post->posted_at,
+            ]
+        ]);
     }
 
     /**

@@ -99,7 +99,7 @@ class PostController extends Controller
     /**
      * Show the form for creating a new post.
      */
-    public function create()
+    public function create(Request $request)
     {
         // Get all agencies and brands for admin
         $agencies = User::role('agency')->orderBy('name')->get(['id', 'name']);
@@ -107,11 +107,27 @@ class PostController extends Controller
 
         $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
 
-        return Inertia::render('admin/posts/create', [
+        $data = [
             'agencies' => $agencies,
             'brands' => $brands,
             'adminEmail' => $adminEmail,
-        ]);
+        ];
+
+        // If post_id is provided, load the post data
+        if ($request->has('post_id')) {
+            $post = Post::with('brand')->findOrFail($request->post_id);
+            $data['post'] = [
+                'id' => $post->id,
+                'title' => $post->title,
+                'url' => $post->url,
+                'description' => $post->description,
+                'status' => $post->status,
+                'posted_at' => $post->posted_at,
+                'brand_id' => $post->brand_id,
+            ];
+        }
+
+        return Inertia::render('admin/posts/create', $data);
     }
 
     /**
@@ -130,26 +146,7 @@ class PostController extends Controller
 
         $brand = Brand::findOrFail($request->brand_id);
 
-        // Check if brand can create posts (same logic as agency)
-        if (!$brand->can_create_posts) {
-            $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
-            return back()->withErrors([
-                'permission' => "The brand '{$brand->name}' doesn't have permission to create posts. " . 
-                               ($brand->post_creation_note ? "Note: {$brand->post_creation_note}" : '')
-            ]);
-        }
-
-        // Check brand post limit (same logic as agency)
-        $currentMonth = Carbon::now()->startOfMonth();
-        $postsThisMonth = Post::where('brand_id', $brand->id)
-            ->where('created_at', '>=', $currentMonth)
-            ->count();
-
-        if ($brand->monthly_posts && $postsThisMonth >= $brand->monthly_posts) {
-            return back()->withErrors([
-                'limit' => "Brand '{$brand->name}' has reached its monthly post limit of {$brand->monthly_posts} posts. Current count: {$postsThisMonth}."
-            ]);
-        }
+        // Admin has no restrictions - skip all permission and limit checks
 
         $post = Post::create([
             'brand_id' => $request->brand_id,
@@ -161,16 +158,10 @@ class PostController extends Controller
             'posted_at' => $request->posted_at ?: now(),
         ]);
 
-        // Automatically generate prompts for the post in background (same logic as agency)
-        $sessionId = session()->getId() ?: 'admin-auto-' . uniqid();
-        
-        GeneratePostPrompts::dispatch(
-            $post, 
-            $sessionId, 
-            $request->description ?? ''
-        );
-
-        return redirect()->route('admin.posts.index')->with('success', 'Post created successfully! Prompts are being generated in the background.');
+        // Redirect to the same create page with the post_id parameter
+        // Prompts will be generated via API call from frontend
+        return redirect()->route('admin.posts.create', ['post_id' => $post->id])
+            ->with('success', 'Post created successfully!');
     }
 
     /**
@@ -274,6 +265,7 @@ class PostController extends Controller
             'url' => 'required|url|max:2000',
             'description' => 'nullable|string|max:1000',
             'status' => 'required|in:published,draft,archived',
+            'posted_at' => 'nullable|date',
         ]);
 
         // Check if the brand can create posts (for admin override)
@@ -285,9 +277,11 @@ class PostController extends Controller
             'url' => $request->url,
             'description' => $request->description,
             'status' => $request->status,
+            'posted_at' => $request->posted_at,
         ]);
 
-        return redirect()->route('admin.posts.show', $post)->with('success', 'Post updated successfully!');
+        return redirect()->route('admin.posts.create', ['post_id' => $post->id])
+            ->with('success', 'Post updated successfully!');
     }
 
     /**
@@ -298,5 +292,157 @@ class PostController extends Controller
         $post->delete();
 
         return redirect()->route('admin.posts.index')->with('success', 'Post deleted successfully!');
+    }
+
+    /**
+     * Get prompts for a post (API endpoint).
+     * If no prompts exist, generate them automatically.
+     */
+    public function getPrompts(Post $post)
+    {
+        // Check if prompts already exist for this post
+        $existingPrompts = $post->prompts()->get();
+
+        if ($existingPrompts->isEmpty()) {
+            // No prompts exist, generate them
+            try {
+                $postPromptService = app(\App\Services\PostPromptService::class);
+                $sessionId = session()->getId() ?: 'admin-' . uniqid();
+                $description = $post->description ?? '';
+
+                // Generate prompts from all enabled AI models
+                $generatedPrompts = $postPromptService->generatePromptsFromMultipleModelsForPost(
+                    $post,
+                    $sessionId,
+                    $description
+                );
+
+                // Map the generated prompts for response
+                $prompts = collect($generatedPrompts)->map(function ($prompt) {
+                    return [
+                        'id' => $prompt->id,
+                        'prompt_text' => $prompt->prompt,
+                        'visibility' => $prompt->visibility ?? null,
+                        'sentiment' => $prompt->sentiment ?? null,
+                        'position' => $prompt->position ?? null,
+                        'location' => $prompt->location ?? null,
+                        'volume' => $prompt->volume ?? null,
+                        'status' => $prompt->status ?? 'suggested',
+                        'created_at' => $prompt->created_at,
+                    ];
+                });
+            } catch (\Exception $e) {
+                // If generation fails, return empty array
+                return response()->json([
+                    'prompts' => [],
+                    'error' => 'Failed to generate prompts: ' . $e->getMessage()
+                ]);
+            }
+        } else {
+            // Prompts exist, return them
+            $prompts = $existingPrompts->map(function ($prompt) {
+                return [
+                    'id' => $prompt->id,
+                    'prompt_text' => $prompt->prompt,
+                    'visibility' => $prompt->visibility ?? null,
+                    'sentiment' => $prompt->sentiment ?? null,
+                    'position' => $prompt->position ?? null,
+                    'location' => $prompt->location ?? null,
+                    'volume' => $prompt->volume ?? null,
+                    'status' => $prompt->status ?? 'suggested',
+                    'created_at' => $prompt->created_at,
+                ];
+            });
+        }
+
+        return response()->json([
+            'prompts' => $prompts
+        ]);
+    }
+
+    /**
+     * Generate prompts for a post synchronously (API endpoint).
+     */
+    public function generatePrompts(Request $request, Post $post)
+    {
+        try {
+            $postPromptService = app(\App\Services\PostPromptService::class);
+            $sessionId = session()->getId() ?: 'admin-' . uniqid();
+            $description = $request->input('description') ?? $post->description ?? '';
+
+            // Generate prompts from all enabled AI models
+            // Description is optional - the service will work with or without it
+            $prompts = $postPromptService->generatePromptsFromMultipleModelsForPost(
+                $post,
+                $sessionId,
+                $description
+            );
+
+            // Return the generated prompts
+            return response()->json([
+                'success' => true,
+                'prompts' => collect($prompts)->map(function ($prompt) {
+                    return [
+                        'id' => $prompt->id,
+                        'prompt_text' => $prompt->prompt,
+                        'visibility' => $prompt->visibility ?? null,
+                        'sentiment' => $prompt->sentiment ?? null,
+                        'position' => $prompt->position ?? null,
+                        'location' => $prompt->location ?? null,
+                        'volume' => $prompt->volume ?? null,
+                        'status' => $prompt->status ?? 'suggested',
+                        'created_at' => $prompt->created_at,
+                    ];
+                }),
+                'message' => 'Prompts generated successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate prompts: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Bulk update prompts status (API endpoint).
+     */
+    public function bulkUpdatePrompts(Request $request, Post $post)
+    {
+        $request->validate([
+            'prompt_ids' => 'required|array',
+            'prompt_ids.*' => 'exists:brand_prompts,id',
+            'action' => 'required|in:activate,reject,delete',
+        ]);
+
+        try {
+            $prompts = \App\Models\PostPrompt::whereIn('id', $request->prompt_ids)
+                ->where('post_id', $post->id)
+                ->get();
+
+            foreach ($prompts as $prompt) {
+                switch ($request->action) {
+                    case 'activate':
+                        $prompt->update(['status' => 'active']);
+                        break;
+                    case 'reject':
+                        $prompt->update(['status' => 'inactive']);
+                        break;
+                    case 'delete':
+                        $prompt->delete();
+                        break;
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Prompts updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update prompts: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

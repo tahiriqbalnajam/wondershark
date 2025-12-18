@@ -1,6 +1,7 @@
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 
 import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
-import { ArrowLeft, FileText, Users, Building2, AlertCircle, Save, X } from 'lucide-react';
+import { ArrowLeft, FileText, Users, Building2, AlertCircle, Save, X, CircleCheckBig, Power } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Tabs,
@@ -46,6 +47,15 @@ type Props = {
     agencies: Agency[];
     brands: Brand[];
     adminEmail: string;
+    post?: {
+        id: number;
+        title: string;
+        url: string;
+        description: string;
+        status: string;
+        posted_at: string;
+        brand_id: number;
+    };
 };
 
 type FormData = {
@@ -72,62 +82,209 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const tableData = [
-  {
-    prompt: "How do I find and partner with Amazon influencers for my products?",
-    visibility: "17%",
-    sentiment: 62,
-    position: 3.5,
-    Location: ["chatgpt", "up", "amazon"],
-    volume: "high",
-  },
-  {
-    prompt: "How do I find and partner with Amazon influencers for my products?",
-    visibility: "17%",
-    sentiment: 62,
-    position: 3.5,
-    Location: ["chatgpt", "up", "amazon"],
-    volume: "medium",
-  },
-  {
-    prompt: "How do I find and partner with Amazon influencers for my products?",
-    visibility: "17%",
-    sentiment: 62,
-    position: 3.5,
-    Location: ["chatgpt", "up", "amazon"],
-    volume: "low",
-  },
-  {
-    prompt: "How do I find and partner with Amazon influencers for my products?",
-    visibility: "17%",
-    sentiment: 62,
-    position: 3.5,
-    Location: ["chatgpt", "up", "amazon"],
-    volume: "high",
-  },
-  {
-    prompt: "How do I find and partner with Amazon influencers for my products?",
-    visibility: "17%",
-    sentiment: 62,
-    position: 3.5,
-    Location: ["chatgpt", "up", "amazon"],
-    volume: "medium",
-  },
-];
+type PromptData = {
+    id: number;
+    prompt_text: string;
+    visibility: string;
+    sentiment: number;
+    position: number;
+    location: string;
+    volume: string;
+    status: string;
+    created_at: string;
+};
 
 
-export default function AdminPostsCreate({ agencies, brands }: Props) {
-    const { data, setData, post, processing, errors } = useForm<FormData>({
-        title: '',
-        url: '',
-        description: '',
-        brand_id: '',
-        status: 'draft',
-        posted_at: new Date().toISOString().split('T')[0],
+export default function AdminPostsCreate({ agencies, brands, post: createdPost }: Props) {
+    const { data, setData, post, put, processing, errors } = useForm<FormData>({
+        title: createdPost?.title || '',
+        url: createdPost?.url || '',
+        description: createdPost?.description || '',
+        brand_id: createdPost?.brand_id?.toString() || '',
+        status: createdPost?.status || 'draft',
+        posted_at: createdPost?.posted_at ? new Date(createdPost.posted_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     });
 
     const [selectedAgency, setSelectedAgency] = useState('all');
     const [filteredBrands, setFilteredBrands] = useState<Brand[]>(brands);
+    const [activeMainTab, setActiveMainTab] = useState(createdPost?.id ? 'propmts' : 'create-post');
+    const [activePromptTab, setActivePromptTab] = useState('prompt-suggested');
+    const [createdPostId, setCreatedPostId] = useState<number | null>(createdPost?.id || null);
+    const [prompts, setPrompts] = useState<PromptData[]>([]);
+    const [loadingPrompts, setLoadingPrompts] = useState(false);
+    const [hasActivePrompts, setHasActivePrompts] = useState(false);
+    const [selectedPrompts, setSelectedPrompts] = useState<number[]>([]);
+    const [isUpdatingPrompts, setIsUpdatingPrompts] = useState(false);
+    
+    const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const pollingAttemptsRef = useRef(0);
+    const isPollingRef = useRef(false);
+    const polledPostIdRef = useRef<number | null>(null);
+
+    // Handle post from props (after creation or on page load)
+    useEffect(() => {
+        // Only start generating prompts if we have a post and haven't generated for this post ID yet
+        if (createdPost?.id && polledPostIdRef.current !== createdPost.id) {
+            console.log('Initializing for post:', createdPost.id);
+            polledPostIdRef.current = createdPost.id;
+            setCreatedPostId(createdPost.id);
+            setActiveMainTab('propmts');
+            
+            // First check if prompts already exist
+            checkExistingPrompts(createdPost.id);
+        }
+
+        // Cleanup on unmount
+        return () => {
+            if (pollingTimerRef.current) {
+                clearTimeout(pollingTimerRef.current);
+                pollingTimerRef.current = null;
+            }
+            isPollingRef.current = false;
+        };
+    }, [createdPost?.id]);
+
+    const checkExistingPrompts = async (postId: number) => {
+        try {
+            const response = await axios.get(`/admin/posts/${postId}/prompts`);
+            const promptsData = response.data.prompts || [];
+            
+            if (promptsData.length > 0) {
+                // Prompts already exist
+                console.log('Prompts already exist:', promptsData.length);
+                setPrompts(promptsData);
+                setLoadingPrompts(false);
+                
+                const activePromptsExist = promptsData.some((p: PromptData) => p.status === 'active');
+                setHasActivePrompts(activePromptsExist);
+                
+                if (activePromptsExist) {
+                    setActivePromptTab('prompt-active');
+                } else {
+                    setActivePromptTab('propmts-suggested');
+                }
+            } else {
+                // No prompts exist, generate them
+                console.log('No prompts found, generating...');
+                generatePrompts(postId);
+            }
+        } catch (error) {
+            console.error('Error checking prompts:', error);
+            // If error, try to generate anyway
+            generatePrompts(postId);
+        }
+    };
+
+    const generatePrompts = async (postId: number) => {
+        setLoadingPrompts(true);
+        console.log('Starting prompt generation for post:', postId);
+        
+        // Use description from createdPost if available, otherwise from form data
+        const description = createdPost?.description || data.description;
+        
+        if (!description) {
+            console.error('No description available to generate prompts');
+            setLoadingPrompts(false);
+            return;
+        }
+        
+        try {
+            const response = await axios.post(`/admin/posts/${postId}/prompts/generate`, {
+                description: description
+            });
+            
+            if (response.data.success) {
+                console.log('Prompts generated successfully:', response.data.prompts.length);
+                setPrompts(response.data.prompts);
+                
+                const activePromptsExist = response.data.prompts.some((p: PromptData) => p.status === 'active');
+                setHasActivePrompts(activePromptsExist);
+                
+                if (activePromptsExist) {
+                    setActivePromptTab('prompt-active');
+                } else {
+                    setActivePromptTab('propmts-suggested');
+                }
+            } else {
+                console.error('Prompt generation failed:', response.data.message);
+            }
+        } catch (error) {
+            console.error('Error generating prompts:', error);
+        } finally {
+            setLoadingPrompts(false);
+        }
+    };
+
+    const startPollingForPrompts = (postId: number) => {
+        // This function is no longer needed but kept for compatibility
+        console.log('Polling disabled, using direct API call');
+    };
+
+    const pollForPrompts = async (postId: number) => {
+        // This function is no longer needed but kept for compatibility
+    };
+
+    const handleSelectPrompt = (promptId: number, checked: boolean) => {
+        if (checked) {
+            setSelectedPrompts(prev => [...prev, promptId]);
+        } else {
+            setSelectedPrompts(prev => prev.filter(id => id !== promptId));
+        }
+    };
+
+    const handleBulkActivate = async () => {
+        if (selectedPrompts.length === 0 || !createdPostId) return;
+        setIsUpdatingPrompts(true);
+        try {
+            await axios.post(`/admin/posts/${createdPostId}/prompts/bulk-update`, {
+                prompt_ids: selectedPrompts,
+                action: 'activate',
+            });
+            // Refresh prompts
+            await checkExistingPrompts(createdPostId);
+            setSelectedPrompts([]);
+        } catch (error) {
+            console.error('Error activating prompts:', error);
+        } finally {
+            setIsUpdatingPrompts(false);
+        }
+    };
+
+    const handleBulkReject = async () => {
+        if (selectedPrompts.length === 0 || !createdPostId) return;
+        setIsUpdatingPrompts(true);
+        try {
+            await axios.post(`/admin/posts/${createdPostId}/prompts/bulk-update`, {
+                prompt_ids: selectedPrompts,
+                action: 'reject',
+            });
+            // Refresh prompts
+            await checkExistingPrompts(createdPostId);
+            setSelectedPrompts([]);
+        } catch (error) {
+            console.error('Error rejecting prompts:', error);
+        } finally {
+            setIsUpdatingPrompts(false);
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedPrompts.length === 0 || !createdPostId) return;
+        setIsUpdatingPrompts(true);
+        try {
+            await axios.post(`/admin/posts/${createdPostId}/prompts/bulk-update`, {
+                prompt_ids: selectedPrompts,
+                action: 'delete',
+            });
+            // Refresh prompts
+            await checkExistingPrompts(createdPostId);
+            setSelectedPrompts([]);
+        } catch (error) {
+            console.error('Error deleting prompts:', error);
+        } finally {
+            setIsUpdatingPrompts(false);
+        }
+    };
 
     // Type assertion for additional error fields
     const formErrors = errors as typeof errors & {
@@ -137,7 +294,37 @@ export default function AdminPostsCreate({ agencies, brands }: Props) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post('/admin/posts');
+        if (createdPost?.id) {
+            put(`/admin/posts/${createdPost.id}`, {
+                preserveScroll: true,
+            });
+        } else {
+            post('/admin/posts');
+        }
+    };
+
+    const fetchPrompts = async (postId: number) => {
+        setLoadingPrompts(true);
+        try {
+            const response = await axios.get(`/admin/posts/${postId}/prompts`);
+            const promptsData = response.data.prompts || [];
+            setPrompts(promptsData);
+            
+            // Check if there are any active prompts
+            const activePromptsExist = promptsData.some((p: PromptData) => p.status === 'active');
+            setHasActivePrompts(activePromptsExist);
+            
+            // Set default prompt tab based on active prompts
+            if (activePromptsExist) {
+                setActivePromptTab('prompt-active');
+            } else {
+                setActivePromptTab('propmts-suggested');
+            }
+        } catch (error) {
+            console.error('Error fetching prompts:', error);
+        } finally {
+            setLoadingPrompts(false);
+        }
     };
 
     const handleAgencyChange = (agencyId: string) => {
@@ -159,14 +346,14 @@ export default function AdminPostsCreate({ agencies, brands }: Props) {
             <Head title="Admin - Create Post" />
 
             <div className="space-y-6">
-                <Tabs defaultValue="propmts">
+                <Tabs value={activeMainTab} onValueChange={setActiveMainTab}>
                     <TabsList className='add-prompt-lists border inline-flex mb-3'>
                         <Link href="/admin/posts" className='post-bsck-btn flex items-center'>
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Back to Posts
                         </Link>
-                        <TabsTrigger value="create-post">Create Post</TabsTrigger>
-                        <TabsTrigger value="propmts">Propmts</TabsTrigger>
+                        <TabsTrigger value="create-post">{createdPost ? 'Edit Post' : 'Create Post'}</TabsTrigger>
+                        <TabsTrigger value="propmts" disabled={!createdPostId}>Propmts</TabsTrigger>
                     </TabsList>
                     <TabsContent value="create-post">
                         <div className="grid gap-6 lg:grid-cols-3">
@@ -175,8 +362,13 @@ export default function AdminPostsCreate({ agencies, brands }: Props) {
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2">
                                             <FileText className="h-5 w-5" />
-                                            Post Details
+                                            {createdPost ? 'Edit Post Details' : 'Post Details'}
                                         </CardTitle>
+                                        {createdPost && (
+                                            <p className="text-sm text-muted-foreground mt-2">
+                                                Edit post details and manage prompts in the Prompts tab.
+                                            </p>
+                                        )}
                                     </CardHeader>
                                     <CardContent>
                                         <form onSubmit={handleSubmit} className="space-y-6">
@@ -313,7 +505,7 @@ export default function AdminPostsCreate({ agencies, brands }: Props) {
 
                                             <div className="flex gap-2 pt-4">
                                                 <Button type="submit" disabled={processing} className='primary-btn'>
-                                                    <Save/> {processing ? 'Creating...' : 'Create Post'}
+                                                    <Save/> {processing ? (createdPost ? 'Updating...' : 'Creating...') : (createdPost ? 'Update Post' : 'Create Post')}
                                                 </Button>
                                                 <Link href="/admin/posts">
                                                     <Button type="button" variant="outline" className='cancle-btn primary-btn border-0'>
@@ -397,17 +589,35 @@ export default function AdminPostsCreate({ agencies, brands }: Props) {
                     <TabsContent value="propmts">
                         <Card>
                             <CardContent>
-                                <Tabs defaultValue="prompt-active">
+                                {loadingPrompts ? (
+                                    <div className="py-12 text-center">
+                                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+                                        <p className="text-lg font-medium">Generating prompts...</p>
+                                        <p className="text-sm text-muted-foreground mt-2">This may take a few moments</p>
+                                    </div>
+                                ) : prompts.length === 0 ? (
+                                    <div className="py-12 text-center">
+                                        <p className="text-muted-foreground">No prompts generated yet</p>
+                                    </div>
+                                ) : (
+                                <Tabs value={activePromptTab} onValueChange={setActivePromptTab}>
                                     <TabsList className='add-prompt-lists border inline-flex mb-3'>
                                         <TabsTrigger value="prompt-active">Active</TabsTrigger>
                                         <TabsTrigger value="propmts-suggested">Suggested</TabsTrigger>
-                                        <TabsTrigger value="propmts-rejected-posts">Rejected posts</TabsTrigger>
+                                        <TabsTrigger value="propmts-rejected-posts">Inactive</TabsTrigger>
                                     </TabsList>
                                     <TabsContent value="prompt-active">
                                         <Table className='default-table'>
                                             <TableHeader>
                                                 <TableRow>
-                                                <TableHead className="w-10"><Checkbox/></TableHead>
+                                                <TableHead className="w-10"><Checkbox onCheckedChange={(checked) => {
+                                                    const activePrompts = prompts.filter(p => p.status === 'active');
+                                                    if (checked) {
+                                                        setSelectedPrompts(activePrompts.map(p => p.id));
+                                                    } else {
+                                                        setSelectedPrompts([]);
+                                                    }
+                                                }}/></TableHead>
                                                 <TableHead>Prompt</TableHead>
                                                 <TableHead>Visibility</TableHead>
                                                 <TableHead>Sentiment</TableHead>
@@ -417,42 +627,55 @@ export default function AdminPostsCreate({ agencies, brands }: Props) {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {tableData.map((row, index) => (
-                                                    <TableRow key={index}>
-                                                        <TableCell>
-                                                            <Checkbox />
-                                                        </TableCell>
-                                                        <TableCell className="max-w-md">
-                                                            {row.prompt}
-                                                        </TableCell>
-                                                        <TableCell>{row.visibility}</TableCell>
-                                                        <TableCell>
-                                                            <Badge variant="secondary" className="bg-green-100 text-green-700">
-                                                                ● {row.sentiment}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell># {row.position}</TableCell>
-                                                        <TableCell>
-                                                            <div className="flex items-center gap-2"><span className="text-lg">🇺🇸</span><span className="text-sm">United States</span></div>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <div className="flex gap-1">
-                                                                {Array.from({ length: 4 }).map((_, i) => (
-                                                                <span
-                                                                    key={i}
-                                                                    className={`h-3 w-1 rounded ${
-                                                                    row.volume === "high"
-                                                                        ? "bg-green-500"
-                                                                        : row.volume === "medium"
-                                                                        ? "bg-yellow-500"
-                                                                        : "bg-red-500"
-                                                                    }`}
+                                                {prompts.filter(p => p.status === 'active').length > 0 ? (
+                                                    prompts.filter(p => p.status === 'active').map((row) => (
+                                                        <TableRow key={row.id}>
+                                                            <TableCell>
+                                                                <Checkbox 
+                                                                    checked={selectedPrompts.includes(row.id)}
+                                                                    onCheckedChange={(checked) => handleSelectPrompt(row.id, !!checked)}
                                                                 />
-                                                                ))}
-                                                            </div>
+                                                            </TableCell>
+                                                            <TableCell className="max-w-md">
+                                                                {row.prompt_text}
+                                                            </TableCell>
+                                                            <TableCell>{row.visibility || 'N/A'}</TableCell>
+                                                            <TableCell>
+                                                                <Badge variant="secondary" className="bg-green-100 text-green-700">
+                                                                    ● {row.sentiment || 0}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell># {row.position || 'N/A'}</TableCell>
+                                                            <TableCell>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-sm">{row.location || 'N/A'}</span>
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <div className="flex gap-1">
+                                                                    {Array.from({ length: 4 }).map((_, i) => (
+                                                                    <span
+                                                                        key={i}
+                                                                        className={`h-3 w-1 rounded ${
+                                                                        row.volume === "high"
+                                                                            ? "bg-green-500"
+                                                                            : row.volume === "medium"
+                                                                            ? "bg-yellow-500"
+                                                                            : "bg-red-500"
+                                                                        }`}
+                                                                    />
+                                                                    ))}
+                                                                </div>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                ) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                                            No active prompts found
                                                         </TableCell>
                                                     </TableRow>
-                                                ))}
+                                                )}
                                             </TableBody>
                                         </Table>
                                     </TabsContent>
@@ -460,27 +683,47 @@ export default function AdminPostsCreate({ agencies, brands }: Props) {
                                         <Table className='default-table'>
                                             <TableHeader>
                                                 <TableRow>
-                                                <TableHead className="w-10"><Checkbox/></TableHead>
+                                                <TableHead className="w-10"><Checkbox onCheckedChange={(checked) => {
+                                                    const suggestedPrompts = prompts.filter(p => p.status === 'suggested');
+                                                    if (checked) {
+                                                        setSelectedPrompts(suggestedPrompts.map(p => p.id));
+                                                    } else {
+                                                        setSelectedPrompts([]);
+                                                    }
+                                                }}/></TableHead>
                                                 <TableHead>Prompt</TableHead>
                                                 <TableHead>Location</TableHead>
                                                 <TableHead>Created</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {tableData.map((row, index) => (
-                                                    <TableRow key={index}>
-                                                        <TableCell>
-                                                            <Checkbox />
+                                                {prompts.filter(p => p.status === 'suggested').length > 0 ? (
+                                                    prompts.filter(p => p.status === 'suggested').map((row) => (
+                                                        <TableRow key={row.id}>
+                                                            <TableCell>
+                                                                <Checkbox 
+                                                                    checked={selectedPrompts.includes(row.id)}
+                                                                    onCheckedChange={(checked) => handleSelectPrompt(row.id, !!checked)}
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell className="max-w-md">
+                                                                {row.prompt_text}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-sm">{row.location || 'N/A'}</span>
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell>{new Date(row.created_at).toLocaleDateString()}</TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                ) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                                                            No suggested prompts found
                                                         </TableCell>
-                                                        <TableCell className="max-w-md">
-                                                            {row.prompt}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <div className="flex items-center gap-2"><span className="text-lg">🇺🇸</span><span className="text-sm">United States</span></div>
-                                                        </TableCell>
-                                                        <TableCell>12/13/2025</TableCell>
                                                     </TableRow>
-                                                ))}
+                                                )}
                                             </TableBody>
                                         </Table>
                                     </TabsContent>
@@ -488,31 +731,91 @@ export default function AdminPostsCreate({ agencies, brands }: Props) {
                                         <Table className='default-table'>
                                             <TableHeader>
                                                 <TableRow>
-                                                <TableHead className="w-10"><Checkbox/></TableHead>
+                                                <TableHead className="w-10"><Checkbox onCheckedChange={(checked) => {
+                                                    const inactivePrompts = prompts.filter(p => p.status === 'inactive');
+                                                    if (checked) {
+                                                        setSelectedPrompts(inactivePrompts.map(p => p.id));
+                                                    } else {
+                                                        setSelectedPrompts([]);
+                                                    }
+                                                }}/></TableHead>
                                                 <TableHead>Prompt</TableHead>
                                                 <TableHead>Location</TableHead>
                                                 <TableHead>Created</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {tableData.map((row, index) => (
-                                                    <TableRow key={index}>
-                                                        <TableCell>
-                                                            <Checkbox />
+                                                {prompts.filter(p => p.status === 'inactive').length > 0 ? (
+                                                    prompts.filter(p => p.status === 'inactive').map((row) => (
+                                                        <TableRow key={row.id}>
+                                                            <TableCell>
+                                                                <Checkbox 
+                                                                    checked={selectedPrompts.includes(row.id)}
+                                                                    onCheckedChange={(checked) => handleSelectPrompt(row.id, !!checked)}
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell className="max-w-md">
+                                                                {row.prompt_text}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-sm">{row.location || 'N/A'}</span>
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell>{new Date(row.created_at).toLocaleDateString()}</TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                ) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                                                            No rejected prompts found
                                                         </TableCell>
-                                                        <TableCell className="max-w-md">
-                                                            {row.prompt}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <div className="flex items-center gap-2"><span className="text-lg">🇺🇸</span><span className="text-sm">United States</span></div>
-                                                        </TableCell>
-                                                        <TableCell>12/13/2025</TableCell>
                                                     </TableRow>
-                                                ))}
+                                                )}
                                             </TableBody>
                                         </Table>
                                     </TabsContent>
                                 </Tabs>
+                                )}
+                                
+                                {/* Prompts Action Bar */}
+                                {prompts.length > 0 && (
+                                    <div className={`prompts-action ${selectedPrompts.length > 0 ? "active" : ""}`}>
+                                        <p>{selectedPrompts.length > 0
+                                        ? `${selectedPrompts.length} Selected`
+                                        : "0 Select"}</p>
+                                        <div className="prompts-action-btns">
+                                            {activePromptTab !== 'prompt-active' && (
+                                                <button 
+                                                    type="button"
+                                                    onClick={handleBulkActivate}
+                                                    disabled={isUpdatingPrompts || selectedPrompts.length === 0}
+                                                    className="active-ch"
+                                                >
+                                                    <CircleCheckBig/> {activePromptTab === 'propmts-suggested' ? 'Activate' : 'Active'}
+                                                </button>
+                                            )}
+                                            {activePromptTab === 'prompt-active' && (
+                                                <button 
+                                                    type="button"
+                                                    onClick={handleBulkReject}
+                                                    disabled={isUpdatingPrompts || selectedPrompts.length === 0}
+                                                    className="delete-ch"
+                                                >
+                                                    <Power/> Inactive
+                                                </button>
+                                            )}
+                                            <button 
+                                                type="button"
+                                                onClick={handleBulkDelete}
+                                                disabled={isUpdatingPrompts || selectedPrompts.length === 0}
+                                                className="delete-ch"
+                                            >
+                                                <Power/> Reject
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </TabsContent>

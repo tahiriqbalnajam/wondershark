@@ -18,7 +18,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { usePage } from '@inertiajs/react';
 import { type SharedData } from '@/types';
 
-const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, selectedBrandId?: number): NavItem[] => {
+const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, selectedBrandId?: number, isRankingPage?: boolean): NavItem[] => {
     const items: NavItem[] = [];
 
     // Dashboard - available to all authenticated users
@@ -28,17 +28,28 @@ const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, sele
             href: selectedBrandId ? `/brands/${selectedBrandId}` : '/dashboard',
             icon: LayoutGrid,
             permission: 'view-dashboard',
+            isActive: isRankingPage,
+            items: selectedBrandId && isRankingPage
+                ? [
+                    {
+                        title: 'Ranking',
+                        href: `/brands/${selectedBrandId}/ranking`,
+                        icon: BarChart3,
+                        isActive: isRankingPage,
+                    },
+                ]
+                : [],
         });
     }
 
     // Ranking - only show if brand is selected
-    if (selectedBrandId) {
-        items.push({
-            title: 'Ranking',
-            href: `/brands/${selectedBrandId}/ranking`,
-            icon: BarChart3,
-        });
-    }
+    // if (selectedBrandId) {
+    //     items.push({
+    //         title: 'Ranking',
+    //         href: `/brands/${selectedBrandId}/ranking`,
+    //         icon: BarChart3,
+    //     });
+    // }
 
     // Posts - only for agency users
     if (permissions.hasRole('agency')) {
@@ -230,7 +241,7 @@ const getOrderNavItems = (permissions: ReturnType<typeof usePermissions>, select
 export function AppSidebar() {
     const permissions = usePermissions();
     const page = usePage<SharedData>();
-    
+    const isRankingPage = page.url.includes('/ranking');
     // Extract brand ID from current URL path
     const getCurrentBrandId = (): number | undefined => {
         const path = page.url;
@@ -245,7 +256,7 @@ export function AppSidebar() {
     // This ensures menu links update immediately when switching brands
     const brandIdForMenu = currentBrandId || selectedBrand?.id;
     
-    const generalNavItems = getGeneralNavItems(permissions, brandIdForMenu);
+    const generalNavItems = getGeneralNavItems(permissions, brandIdForMenu, isRankingPage);
     const preferenceNavItems = getPreferenceNavItems(permissions, brandIdForMenu);
     const settingsNavItems = getSettingsNavItems(permissions, brandIdForMenu);
     const orderNavItems = getOrderNavItems(permissions, brandIdForMenu);

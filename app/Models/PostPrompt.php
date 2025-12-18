@@ -10,23 +10,71 @@ class PostPrompt extends Model
 {
     use HasFactory;
 
+    // Use unified brand_prompts table
+    protected $table = 'brand_prompts';
+
     protected $fillable = [
+        'brand_id',
         'post_id',
         'session_id',
         'prompt',
         'source',
         'ai_provider',
         'order',
+        'is_active',
         'is_selected',
+        'country_code',
+        'position',
+        'sentiment',
+        'visibility',
+        'volume',
+        'location',
+        'status',
+        'ai_response',
+        'resources',
+        'competitor_mentions',
+        'analysis_completed_at',
+        'analysis_failed_at',
+        'analysis_error',
+        'ai_model_id',
     ];
 
     protected $casts = [
+        'is_active' => 'boolean',
         'is_selected' => 'boolean',
+        'order' => 'integer',
+        'position' => 'integer',
+        'resources' => 'array',
+        'competitor_mentions' => 'array',
+        'analysis_completed_at' => 'datetime',
+        'analysis_failed_at' => 'datetime',
     ];
 
     public function post(): BelongsTo
     {
         return $this->belongsTo(Post::class);
+    }
+
+    public function brand(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class);
+    }
+
+    public function aiModel(): BelongsTo
+    {
+        return $this->belongsTo(AiModel::class);
+    }
+
+    // Scope to get only post prompts (not brand prompts)
+    public function scopePostPrompts($query)
+    {
+        return $query->whereNotNull('post_id');
+    }
+
+    // Scope to get only brand prompts (not post prompts)
+    public function scopeBrandPrompts($query)
+    {
+        return $query->whereNull('post_id');
     }
 
     public function scopeForPost($query, int $postId)
