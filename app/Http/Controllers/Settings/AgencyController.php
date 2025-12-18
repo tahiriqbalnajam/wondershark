@@ -140,4 +140,43 @@ class AgencyController extends Controller
             'status' => session('status'),
         ]);
     }
+
+    /**
+     * Show the agency settings page.
+     */
+    public function agency(): Response
+    {
+        /** @var User $user */
+        $user = Auth::user();
+        
+        return Inertia::render('settings/agency', [
+            'agency' => [
+                'name' => $user->name,
+                'url' => $user->email, // You might want to add a separate URL field to users table
+            ],
+        ]);
+    }
+
+    /**
+     * Update the agency settings.
+     */
+    public function updateAgency(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'url' => ['nullable', 'url', 'max:255'],
+        ]);
+
+        /** @var User $user */
+        $user = Auth::user();
+        
+        // Update agency name
+        $user->update([
+            'name' => $request->name,
+            // If you add a URL field to the users table, update it here:
+            // 'url' => $request->url,
+        ]);
+
+        return back()->with('status', 'Agency information updated successfully!');
+    }
 }

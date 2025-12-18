@@ -109,6 +109,12 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
             href: selectedBrandId ? `/brands/${selectedBrandId}/edit` : '/brands',
             icon: Package,
         });
+
+        items.push({
+            title: 'Agency',
+            href: '/settings/agency',
+            icon: Building2,
+        });
     }
 
     // User Management - only for admin users (skip for agency and brand)
