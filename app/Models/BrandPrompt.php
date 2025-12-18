@@ -13,13 +13,17 @@ class BrandPrompt extends Model
 
     protected $fillable = [
         'brand_id',
+        'post_id',
         'prompt',
+        'source',
+        'ai_provider',
         'country_code',
         'order',
         'position',
         'sentiment',
         'visibility',
         'is_active',
+        'is_selected',
         'status',
         'ai_response',
         'resources',
@@ -33,6 +37,7 @@ class BrandPrompt extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_selected' => 'boolean',
         'order' => 'integer',
         'position' => 'integer',
         'resources' => 'array',
@@ -44,6 +49,11 @@ class BrandPrompt extends Model
     public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class);
+    }
+
+    public function post(): BelongsTo
+    {
+        return $this->belongsTo(Post::class);
     }
 
     /**
@@ -68,5 +78,21 @@ class BrandPrompt extends Model
     public function competitorResources(): HasMany
     {
         return $this->hasMany(BrandPromptResource::class)->competitorUrls();
+    }
+
+    /**
+     * Scope to get only brand prompts (not post prompts)
+     */
+    public function scopeBrandPrompts($query)
+    {
+        return $query->whereNull('post_id');
+    }
+
+    /**
+     * Scope to get only post prompts (not brand prompts)
+     */
+    public function scopePostPrompts($query)
+    {
+        return $query->whereNotNull('post_id');
     }
 }

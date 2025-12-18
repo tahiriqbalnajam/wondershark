@@ -147,6 +147,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/', [\App\Http\Controllers\Admin\PostController::class, 'store'])->name('store');
             Route::get('/{post}', [\App\Http\Controllers\Admin\PostController::class, 'show'])->name('show');
             Route::get('/{post}/edit', [\App\Http\Controllers\Admin\PostController::class, 'edit'])->name('edit');
+            Route::get('/{post}/prompts', [\App\Http\Controllers\Admin\PostController::class, 'getPrompts'])->name('prompts');
+            Route::post('/{post}/prompts/generate', [\App\Http\Controllers\Admin\PostController::class, 'generatePrompts'])->name('prompts.generate');
+            Route::post('/{post}/prompts/bulk-update', [\App\Http\Controllers\Admin\PostController::class, 'bulkUpdatePrompts'])->name('prompts.bulk-update');
             Route::patch('/{post}', [\App\Http\Controllers\Admin\PostController::class, 'update'])->name('update');
             Route::delete('/{post}', [\App\Http\Controllers\Admin\PostController::class, 'destroy'])->name('destroy');
             

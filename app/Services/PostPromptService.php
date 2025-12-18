@@ -29,17 +29,33 @@ class PostPromptService extends AIPromptService
             $content = $response->text;
             $questions = $this->parseQuestions($content);
             
-            // Store generated prompts in database
+            // Store generated prompts in database with brand_id
             $generatedPrompts = [];
             foreach ($questions as $index => $question) {
+                // Get country code, ensure it's 2 characters max
+                $countryCode = $post->brand->country_code ?? null;
+                if ($countryCode && strlen($countryCode) > 2) {
+                    $countryCode = substr($countryCode, 0, 2);
+                }
+                
                 $generatedPrompt = PostPrompt::create([
+                    'brand_id' => $post->brand_id, // Add brand_id for unified table
                     'post_id' => $post->id,
                     'session_id' => $sessionId,
                     'prompt' => trim($question),
                     'source' => 'ai_generated',
                     'ai_provider' => $provider,
+                    'ai_model_id' => $aiModel->id, // Add AI model reference
                     'order' => $index + 1,
                     'is_selected' => true,
+                    'is_active' => true,
+                    'country_code' => $countryCode, // Use truncated country_code
+                    'position' => 0,
+                    'sentiment' => 0,
+                    'visibility' => 0,
+                    'volume' => 'low',
+                    'location' => $post->brand->country_code ?? null,
+                    'status' => 'suggested',
                 ]);
                 
                 $generatedPrompts[] = $generatedPrompt;
@@ -88,7 +104,130 @@ class PostPromptService extends AIPromptService
         // Remove duplicates and similar prompts
         $uniquePrompts = $this->removeDuplicatePostPrompts($allGeneratedPrompts);
         
-        return $uniquePrompts;
+        // Limit to maximum 10 prompts
+        $limitedPrompts = array_slice($uniquePrompts, 0, 10);
+        
+        // Delete any prompts beyond the limit
+        if (count($uniquePrompts) > 10) {
+            $promptsToDelete = array_slice($uniquePrompts, 10);
+            foreach ($promptsToDelete as $prompt) {
+                if (isset($prompt->id)) {
+                    PostPrompt::where('id', $prompt->id)->delete();
+                }
+            }
+        }
+        
+        // Note: Stats (visibility, sentiment, position, volume) will remain null initially
+        // They will be populated later when:
+        // 1. The post gets citations in AI responses
+        // 2. A background job analyzes the prompts
+        // 3. Manual analysis is triggered
+        
+        return $limitedPrompts;
+    }
+
+    /**
+     * Update prompt stats based on AI chat mentions
+     * - visibility: Percentage of chats mentioning the brand in the last 30 days
+     * - sentiment: Average sentiment score when mentioned in the last 30 days
+     * - position: Average position when mentioned in the last 30 days
+     * - volume: Search volume category
+     */
+    protected function updatePromptStats(array $prompts, Post $post): void
+    {
+        foreach ($prompts as $prompt) {
+            try {
+                // Calculate stats from AI citations in the last 30 days
+                $stats = $this->calculatePromptStatsFromCitations($prompt, $post);
+                
+                // Update the prompt with calculated stats
+                $prompt->update([
+                    'visibility' => $stats['visibility'],
+                    'sentiment' => $stats['sentiment'],
+                    'position' => $stats['position'],
+                    'volume' => $stats['volume'],
+                    'location' => $post->brand->country_code ?? 'US',
+                ]);
+                
+                Log::info("Updated prompt stats from citations", [
+                    'prompt_id' => $prompt->id,
+                    'visibility' => $stats['visibility'],
+                    'sentiment' => $stats['sentiment'],
+                    'position' => $stats['position'],
+                    'volume' => $stats['volume']
+                ]);
+            } catch (\Exception $e) {
+                Log::warning("Failed to calculate stats for prompt", [
+                    'prompt_id' => $prompt->id,
+                    'error' => $e->getMessage()
+                ]);
+                
+                // Set default values if calculation fails
+                $prompt->update([
+                    'visibility' => null,
+                    'sentiment' => 0,
+                    'position' => 0,
+                    'volume' => 'medium',
+                    'location' => $post->brand->country_code ?? 'US',
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Calculate prompt statistics from AI citations
+     * Returns visibility (%), sentiment (avg score), position (avg), and volume
+     */
+    protected function calculatePromptStatsFromCitations($prompt, Post $post): array
+    {
+        $thirtyDaysAgo = now()->subDays(30);
+        
+        // Get all citations for this post in the last 30 days
+        $citations = \App\Models\PostCitation::where('post_id', $post->id)
+            ->where('created_at', '>=', $thirtyDaysAgo)
+            ->get();
+        
+        $totalChats = $citations->count();
+        $mentionedChats = $citations->where('is_mentioned', true)->count();
+        
+        // Calculate visibility: percentage of chats mentioning the brand
+        $visibility = $totalChats > 0 ? round(($mentionedChats / $totalChats) * 100, 2) : null;
+        
+        // Calculate average sentiment score
+        $sentimentScores = $citations->where('is_mentioned', true)
+            ->pluck('sentiment_score')
+            ->filter(fn($score) => $score !== null);
+        $sentiment = $sentimentScores->isNotEmpty() ? round($sentimentScores->avg(), 2) : 0;
+        
+        // Calculate average position
+        $positions = $citations->where('is_mentioned', true)
+            ->pluck('position')
+            ->filter(fn($pos) => $pos !== null && $pos > 0);
+        $position = $positions->isNotEmpty() ? round($positions->avg(), 0) : 0;
+        
+        // Determine volume based on citation frequency
+        $volume = $this->calculateVolumeFromCitations($mentionedChats);
+        
+        return [
+            'visibility' => $visibility,
+            'sentiment' => $sentiment,
+            'position' => $position,
+            'volume' => $volume,
+        ];
+    }
+
+    /**
+     * Calculate volume category based on citation frequency
+     */
+    protected function calculateVolumeFromCitations(int $mentionCount): string
+    {
+        if ($mentionCount >= 20) {
+            return 'high';
+        } elseif ($mentionCount >= 5) {
+            return 'medium';
+        } else {
+            return 'low';
+        }
     }
 
     /**
@@ -204,7 +343,14 @@ class PostPromptService extends AIPromptService
         
         $generatedPrompts = [];
         foreach ($fallbackQuestions as $index => $question) {
+            // Get country code, ensure it's 2 characters max
+            $countryCode = $post->brand->country_code ?? null;
+            if ($countryCode && strlen($countryCode) > 2) {
+                $countryCode = substr($countryCode, 0, 2);
+            }
+            
             $generatedPrompt = PostPrompt::create([
+                'brand_id' => $post->brand_id, // Add brand_id for unified table
                 'post_id' => $post->id,
                 'session_id' => $sessionId,
                 'prompt' => $question,
@@ -212,6 +358,14 @@ class PostPromptService extends AIPromptService
                 'ai_provider' => 'fallback',
                 'order' => $index + 1,
                 'is_selected' => true,
+                'is_active' => true,
+                'country_code' => $countryCode, // Use truncated country_code
+                'position' => 0,
+                'sentiment' => 0,
+                'visibility' => 0,
+                'volume' => 'low',
+                'location' => $post->brand->country_code ?? null,
+                'status' => 'active',
             ]);
             
             $generatedPrompts[] = $generatedPrompt;
@@ -335,6 +489,7 @@ class PostPromptService extends AIPromptService
         $maxOrder = PostPrompt::forPost($post->id)->max('order') ?? 0;
         
         return PostPrompt::create([
+            'brand_id' => $post->brand_id, // Add brand_id for unified table
             'post_id' => $post->id,
             'session_id' => $sessionId,
             'prompt' => $promptText,
@@ -342,6 +497,12 @@ class PostPromptService extends AIPromptService
             'ai_provider' => null,
             'order' => $maxOrder + 1,
             'is_selected' => true,
+            'is_active' => true,
+            'country_code' => $post->brand->country ?? null, // Add country from brand
+            'position' => 0,
+            'sentiment' => 'neutral',
+            'visibility' => 'public',
+            'status' => 'active',
         ]);
     }
 

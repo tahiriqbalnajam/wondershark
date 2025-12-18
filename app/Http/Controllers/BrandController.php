@@ -208,8 +208,6 @@ class BrandController extends Controller
             'website' => 'nullable|url|max:255',
             'description' => 'nullable|string|max:1000',
             'country' => 'nullable|string|max:100',
-        ], [
-            'name.unique' => 'You already have a brand with this name. Please choose a different name.',
         ]);
 
         /** @var User $agency */
@@ -220,8 +218,6 @@ class BrandController extends Controller
             'name' => $request->name,
             'website' => $request->website,
             'description' => $request->description,
-            'trackedName' => $request->trackedName ?? '',
-            'allies' => $request->allies ? serialize($request->allies) : serialize([]),
             'country' => $request->country,
             'monthly_posts' => 10, // Default value
             'status' => 'pending',
@@ -923,7 +919,7 @@ class BrandController extends Controller
 
         $brand->delete();
 
-        return redirect()->route('dashboard')->with('success', 'Brand deleted successfully!');
+        return redirect()->route('brands.index')->with('success', 'Brand deleted successfully!');
     }
 
     /**
