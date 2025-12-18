@@ -42,6 +42,9 @@ Route::middleware('auth')->group(function () {
         Route::post('settings/brands', [AgencyController::class, 'storeBrand'])->name('settings.brands.store');
         Route::delete('settings/brands/{brand}', [AgencyController::class, 'deleteBrand'])->name('settings.brands.delete');
         
+        Route::get('settings/agency', [AgencyController::class, 'agency'])->name('settings.agency');
+        Route::post('settings/agency', [AgencyController::class, 'updateAgency'])->name('settings.agency.update');
+        
         Route::get('settings/integration', [AgencyController::class, 'integration'])->name('settings.integration');
         Route::get('settings/account', [AgencyController::class, 'account'])->name('settings.account');
     });
