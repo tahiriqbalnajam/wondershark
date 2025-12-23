@@ -118,7 +118,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
     const [calendarOpen, setCalendarOpen] = useState(false);
     const [customDateRange, setCustomDateRange] = useState<{ from?: Date; to?: Date }>({});
     const [selectedBrand, setSelectedBrand] = useState('all');
-    const [selectedAIModel, setSelectedAIModel] = useState('openai');
+    const [selectedAIModel, setSelectedAIModel] = useState('all');
     const handleDateRangeSelect = (days: string) => {
         setSelectedDateRange(days);
         if (days !== 'custom') {
@@ -133,14 +133,32 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
         { value: 'groq', label: 'Groq' },
         { value: 'deepseek', label: 'DeepSeek' },
     ];
-    const brands = [
-        { value: 'all', label: 'All Brands' },
-        { value: 'fiverr', label: 'Fiverr' },
-        { value: 'upwork', label: 'Upwork' },
-        { value: 'influencity', label: 'Influencity' },
-        { value: 'famebit', label: 'FameBit' },
-        { value: 'amazon', label: 'Amazon Creator Connections' },
-    ];
+    const brands = useMemo(() => {
+        const map = new Map<string, { value: string; label: string }>();
+
+        competitiveStats.forEach(stat => {
+            // if (stat.entity_type !== 'brand') return;
+            if (!['brand', 'competitor'].includes(stat.entity_type)) return;
+
+            const cleanDomain = stat.entity_url
+                .replace(/^https?:\/\//, '')
+                .replace(/^www\./, '')
+                .split('/')[0];
+
+            if (!map.has(cleanDomain)) {
+                map.set(cleanDomain, {
+                    value: cleanDomain,
+                    label: stat.entity_name,
+                });
+            }
+        });
+
+        return [
+            { value: 'all', label: 'All Brands' },
+            ...Array.from(map.values()),
+        ];
+    }, [competitiveStats]);
+
     const isWithinDateRange = (dateString: string) => {
         const date = new Date(dateString);
 
@@ -298,13 +316,15 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
     const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
 
     const handleBrandRowClick = (domain: string) => {
-        // Scroll to Recent AI Citations section
-        const citationsSection = document.getElementById('recent-citations');
-        if (citationsSection) {
-            citationsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-        // Set the competitor filter
-        setSelectedCompetitorDomain(domain);
+        // // Scroll to Recent AI Citations section
+        // const citationsSection = document.getElementById('recent-citations');
+        // if (citationsSection) {
+        //     citationsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // }
+        // // Set the competitor filter
+        // setSelectedCompetitorDomain(domain);
+            setSelectedBrand(domain);
+            setSelectedCompetitorDomain(domain);
     };
 
     // Helper function to render trend indicators (only for up/down changes)
