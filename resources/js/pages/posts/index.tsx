@@ -239,7 +239,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                 <TableHead>Status</TableHead>
                                                 <TableHead>AI Citations</TableHead>
                                                 <TableHead>Posted Date</TableHead>
-                                                <TableHead className="w-5"></TableHead>
+                                                {/* <TableHead className="w-5"></TableHead> */}
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -271,8 +271,20 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                     </TableCell> */}
                                                     <TableCell>
                                                         <div className="flex items-center gap-2">
-                                                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                                                            <span className="font-medium">{post.brand.name}</span>
+                                                            <div>
+                                                                <span className="font-medium">{post.title}</span>
+                                                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                                                    <ExternalLink className="h-3 w-3" />
+                                                                    <a 
+                                                                        href={post.url} 
+                                                                        target="_blank" 
+                                                                        rel="noopener noreferrer"
+                                                                        className="hover:text-primary truncate max-w-60"
+                                                                    >
+                                                                        {post.url}
+                                                                    </a>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
@@ -296,7 +308,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                             {formatDate(post.posted_at)}
                                                         </div>
                                                     </TableCell>
-                                                    <TableCell>
+                                                    {/* <TableCell>
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>
                                                                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -336,7 +348,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                                 </DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
-                                                    </TableCell>
+                                                    </TableCell> */}
                                                 </TableRow>
                                             ))}
                                         </TableBody>

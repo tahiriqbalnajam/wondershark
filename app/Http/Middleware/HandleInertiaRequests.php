@@ -106,7 +106,10 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => $user,
+                'user' => $user ? array_merge($user->toArray(), [
+                    'logo' => $user->logo ? asset('storage/' . $user->logo) : null,
+                    'logo_thumbnail' => $user->logo_thumbnail ? asset('storage/' . $user->logo_thumbnail) : null,
+                ]) : null,
                 'roles' => $userRoles,
                 'permissions' => $userPermissions,
                 'can' => $user ? [

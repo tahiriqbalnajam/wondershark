@@ -152,7 +152,8 @@ class AgencyController extends Controller
         return Inertia::render('settings/agency', [
             'agency' => [
                 'name' => $user->name,
-                'url' => $user->email, // You might want to add a separate URL field to users table
+                'url' => $user->url,
+                'logo' => $user->logo ? asset('storage/' . $user->logo) : null,
             ],
         ]);
     }
@@ -165,18 +166,119 @@ class AgencyController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'url' => ['nullable', 'url', 'max:255'],
+            'logo' => ['nullable', 'image', 'max:2048'], // 2MB max
         ]);
 
         /** @var User $user */
         $user = Auth::user();
         
-        // Update agency name
-        $user->update([
+        $updateData = [
             'name' => $request->name,
-            // If you add a URL field to the users table, update it here:
-            // 'url' => $request->url,
-        ]);
+            'url' => $request->url,
+        ];
+
+        // Handle logo upload
+        if ($request->hasFile('logo')) {
+            // Delete old logo and thumbnail if exists
+            if ($user->logo) {
+                Storage::disk('public')->delete($user->logo);
+            }
+            if ($user->logo_thumbnail) {
+                Storage::disk('public')->delete($user->logo_thumbnail);
+            }
+
+            $logo = $request->file('logo');
+            $extension = $logo->getClientOriginalExtension();
+            $filename = 'agency_' . $user->id . '_' . time();
+            
+            // Store original logo
+            $logoPath = $logo->storeAs('agency-logos', $filename . '.' . $extension, 'public');
+            $updateData['logo'] = $logoPath;
+            
+            // Create thumbnail (80x80)
+            $thumbnailPath = $this->createThumbnail($logo, $filename, $extension);
+            if ($thumbnailPath) {
+                $updateData['logo_thumbnail'] = $thumbnailPath;
+            }
+        }
+        
+        $user->update($updateData);
 
         return back()->with('status', 'Agency information updated successfully!');
+    }
+
+    /**
+     * Create a thumbnail version of the uploaded image.
+     */
+    private function createThumbnail($file, string $filename, string $extension): ?string
+    {
+        try {
+            $image = imagecreatefromstring(file_get_contents($file->getRealPath()));
+            
+            if (!$image) {
+                return null;
+            }
+
+            $originalWidth = imagesx($image);
+            $originalHeight = imagesy($image);
+            
+            // Create 80x80 thumbnail
+            $thumbnailSize = 80;
+            $thumbnail = imagecreatetruecolor($thumbnailSize, $thumbnailSize);
+            
+            // Preserve transparency for PNG and GIF
+            if ($extension === 'png' || $extension === 'gif') {
+                imagealphablending($thumbnail, false);
+                imagesavealpha($thumbnail, true);
+                $transparent = imagecolorallocatealpha($thumbnail, 255, 255, 255, 127);
+                imagefilledrectangle($thumbnail, 0, 0, $thumbnailSize, $thumbnailSize, $transparent);
+            }
+            
+            // Resize image
+            imagecopyresampled(
+                $thumbnail,
+                $image,
+                0, 0, 0, 0,
+                $thumbnailSize,
+                $thumbnailSize,
+                $originalWidth,
+                $originalHeight
+            );
+            
+            // Save thumbnail
+            $thumbnailFilename = $filename . '_thumb.' . $extension;
+            $thumbnailPath = storage_path('app/public/agency-logos/' . $thumbnailFilename);
+            
+            // Ensure directory exists
+            if (!file_exists(dirname($thumbnailPath))) {
+                mkdir(dirname($thumbnailPath), 0755, true);
+            }
+            
+            // Save based on extension
+            $saved = false;
+            switch (strtolower($extension)) {
+                case 'jpg':
+                case 'jpeg':
+                    $saved = imagejpeg($thumbnail, $thumbnailPath, 90);
+                    break;
+                case 'png':
+                    $saved = imagepng($thumbnail, $thumbnailPath, 9);
+                    break;
+                case 'gif':
+                    $saved = imagegif($thumbnail, $thumbnailPath);
+                    break;
+                case 'webp':
+                    $saved = imagewebp($thumbnail, $thumbnailPath, 90);
+                    break;
+            }
+            
+            imagedestroy($image);
+            imagedestroy($thumbnail);
+            
+            return $saved ? 'agency-logos/' . $thumbnailFilename : null;
+        } catch (\Exception $e) {
+            \Log::error('Failed to create thumbnail: ' . $e->getMessage());
+            return null;
+        }
     }
 }

@@ -28,6 +28,9 @@ class User extends Authenticatable
         'role',
         'can_create_posts',
         'post_creation_note',
+        'url',
+        'logo',
+        'logo_thumbnail',
     ];
 
     /**

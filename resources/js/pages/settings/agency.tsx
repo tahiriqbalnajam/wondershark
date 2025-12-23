@@ -25,7 +25,7 @@ type AgencyForm = {
     logo: File | null;
 };
 
-export default function Agency({ agency }: { agency: { name: string; url?: string } }) {
+export default function Agency({ agency }: { agency: { name: string; url?: string; logo?: string } }) {
 const { data, setData, post, errors, processing, recentlySuccessful } = useForm<AgencyForm>({
     name: agency.name || '',
     url: agency.url || '',
@@ -74,7 +74,7 @@ const submit: FormEventHandler = (e) => {
                                         <div className='relative flex items-center gap-4'>
                                             <input type="file" id="logo" accept="image/*" className="hidden" onChange={(e) => setData('logo', e.target.files ? e.target.files[0] : null) } />
                                             <label htmlFor="logo" className="cursor-pointer rounded-md border border-dashed border-gray-300 px-6 py-4 text-sm text-gray-600 transition hover:border-primary hover:bg-muted" > {data.logo ? data.logo.name : 'Click to upload logo'} </label>
-                                            {data.logo && ( <img src={URL.createObjectURL(data.logo)} alt="Logo Preview" className="h-14 w-14 rounded-md object-contain border" /> )}
+                                            {(data.logo || agency.logo) && ( <img src={data.logo ? URL.createObjectURL(data.logo) : agency.logo} alt="Logo Preview" className="h-14 w-14 rounded-md object-contain border" /> )}
                                         </div>
                                     </div>
                                     <InputError className="mt-2" message={errors.logo} />

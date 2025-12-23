@@ -21,11 +21,17 @@ export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: 
     // Show brand name if a brand is selected, otherwise show user name
     const displayName = selectedBrand ? selectedBrand.name : user.name;
     const displayInitials = getInitials(displayName);
+    
+    // Use thumbnail for sidebar (smaller), full logo for other places
+    // Priority: brand avatar > agency thumbnail > agency logo > avatar
+    const displayImage = selectedBrand 
+        ? user.avatar 
+        : (user.logo_thumbnail || user.logo || user.avatar);
 
     return (
         <>
             <Avatar className="h-[40px] w-[40px] overflow-hidden rounded-md user-img">
-                <AvatarImage src={user.avatar} alt={displayName} />
+                <AvatarImage src={displayImage} alt={displayName} />
                 <AvatarFallback className="rounded-md bg-neutral-200 text-black font-bold dark:bg-neutral-700 dark:text-white">
                     {displayInitials}
                 </AvatarFallback>
