@@ -58,6 +58,28 @@ class PostPromptService extends AIPromptService
                     'status' => 'suggested',
                 ]);
                 
+                // Analyze and save stats immediately using AI
+                try {
+                    $stats = $this->analyzePromptStatsWithAI($generatedPrompt, $post, $provider);
+                    $generatedPrompt->update([
+                        'visibility' => $stats['visibility'],
+                        'position' => $stats['position'],
+                        'sentiment' => $stats['sentiment'],
+                        'volume' => $stats['volume'],
+                    ]);
+                    
+                    Log::info('Prompt stats analyzed and saved', [
+                        'prompt_id' => $generatedPrompt->id,
+                        'prompt' => $generatedPrompt->prompt,
+                        'stats' => $stats
+                    ]);
+                } catch (\Exception $e) {
+                    Log::warning('Failed to analyze prompt stats during generation', [
+                        'prompt_id' => $generatedPrompt->id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+                
                 $generatedPrompts[] = $generatedPrompt;
             }
             
@@ -104,12 +126,12 @@ class PostPromptService extends AIPromptService
         // Remove duplicates and similar prompts
         $uniquePrompts = $this->removeDuplicatePostPrompts($allGeneratedPrompts);
         
-        // Limit to maximum 10 prompts
-        $limitedPrompts = array_slice($uniquePrompts, 0, 10);
+        // Limit to maximum 5 prompts
+        $limitedPrompts = array_slice($uniquePrompts, 0, 5);
         
         // Delete any prompts beyond the limit
-        if (count($uniquePrompts) > 10) {
-            $promptsToDelete = array_slice($uniquePrompts, 10);
+        if (count($uniquePrompts) > 5) {
+            $promptsToDelete = array_slice($uniquePrompts, 5);
             foreach ($promptsToDelete as $prompt) {
                 if (isset($prompt->id)) {
                     PostPrompt::where('id', $prompt->id)->delete();
@@ -517,5 +539,228 @@ class PostPromptService extends AIPromptService
             return true;
         }
         return false;
+    }
+
+    /**
+     * Analyze prompt stats using AI without checking citations
+     * Stats include:
+     * - visibility: How likely the post would be referenced when this prompt is asked to an AI
+     * - position: Expected URL position when prompt is asked to an AI (1-10, lower is better)
+     * - sentiment: Post URL sentiment/relevance against the prompt (positive/neutral/negative or 1-10 score)
+     * - volume: Estimated search volume for this prompt (low/medium/high)
+     */
+    public function analyzePromptStatsWithAI(PostPrompt $prompt, Post $post, string $provider = 'openai'): array
+    {
+        $aiModel = $this->getAiModelConfig($provider);
+        
+        if (!$aiModel) {
+            Log::warning('AI Model not found or disabled for prompt analysis', ['provider' => $provider]);
+            return $this->getDefaultStats();
+        }
+
+        $analysisPrompt = $this->buildPromptStatsAnalysisPrompt($prompt, $post);
+        
+        try {
+            $response = $this->callAiProvider($aiModel, $analysisPrompt);
+            $stats = $this->parsePromptStats($response->text);
+            
+            Log::info('AI Prompt Stats Analysis Completed', [
+                'prompt_id' => $prompt->id,
+                'post_url' => $post->url,
+                'stats' => $stats
+            ]);
+            
+            return $stats;
+            
+        } catch (\Exception $e) {
+            Log::error('AI Prompt Stats Analysis Failed', [
+                'prompt_id' => $prompt->id,
+                'post_url' => $post->url,
+                'provider' => $provider,
+                'error' => $e->getMessage()
+            ]);
+            
+            return $this->getDefaultStats();
+        }
+    }
+
+    /**
+     * Build AI prompt for analyzing prompt stats
+     */
+    protected function buildPromptStatsAnalysisPrompt(PostPrompt $prompt, Post $post): string
+    {
+        return "You are an SEO and AI visibility analyst. Analyze the following prompt/question and post URL to provide accurate statistics.
+
+Prompt/Question: \"{$prompt->prompt}\"
+Post URL: {$post->url}
+Post Title: {$post->title}
+
+Analyze and provide the following metrics:
+
+1. VISIBILITY (0-100): How likely is this post URL to be referenced/mentioned when someone asks this exact prompt to an AI assistant like ChatGPT, Claude, or Perplexity? 
+   - 0 = Will never be referenced
+   - 25 = Unlikely to be referenced
+   - 50 = Might be referenced
+   - 75 = Likely to be referenced
+   - 100 = Very likely to be referenced
+
+2. POSITION (1-10): If the post URL is referenced when this prompt is asked to an AI, what would be its expected position in the response?
+   - 1 = First/primary source mentioned
+   - 2-3 = Top supporting sources
+   - 4-6 = Secondary sources
+   - 7-10 = Tertiary or lesser sources
+
+3. SENTIMENT (1-10): How relevant and positively the post URL addresses this specific prompt?
+   - 1-3 = Not relevant or negative
+   - 4-6 = Somewhat relevant or neutral
+   - 7-8 = Relevant and positive
+   - 9-10 = Highly relevant and authoritative
+
+4. VOLUME: Estimated search volume for this type of prompt
+   - low = Niche or specific query (< 1000 searches/month)
+   - medium = Moderate interest (1000-10000 searches/month)
+   - high = Popular query (> 10000 searches/month)
+
+Respond ONLY with this exact JSON format (no additional text):
+{
+    \"visibility\": <number 0-100>,
+    \"position\": <number 1-10>,
+    \"sentiment\": <number 1-10>,
+    \"volume\": \"<low|medium|high>\"
+}";
+    }
+
+    /**
+     * Parse AI response to extract prompt stats
+     */
+    protected function parsePromptStats(string $response): array
+    {
+        try {
+            // Try to extract JSON from response
+            if (preg_match('/\{[^}]+\}/', $response, $matches)) {
+                $jsonStr = $matches[0];
+                $data = json_decode($jsonStr, true);
+                
+                if (json_last_error() === JSON_ERROR_NONE && isset($data['visibility'])) {
+                    return [
+                        'visibility' => (int) ($data['visibility'] ?? 0),
+                        'position' => (int) ($data['position'] ?? 5),
+                        'sentiment' => (int) ($data['sentiment'] ?? 5),
+                        'volume' => $data['volume'] ?? 'medium',
+                    ];
+                }
+            }
+            
+            // Fallback: try to extract values from text
+            $visibility = 0;
+            $position = 5;
+            $sentiment = 5;
+            $volume = 'medium';
+            
+            if (preg_match('/visibility["\s:]+(\d+)/i', $response, $matches)) {
+                $visibility = (int) $matches[1];
+            }
+            if (preg_match('/position["\s:]+(\d+)/i', $response, $matches)) {
+                $position = (int) $matches[1];
+            }
+            if (preg_match('/sentiment["\s:]+(\d+)/i', $response, $matches)) {
+                $sentiment = (int) $matches[1];
+            }
+            if (preg_match('/volume["\s:]+"?(low|medium|high)/i', $response, $matches)) {
+                $volume = strtolower($matches[1]);
+            }
+            
+            return [
+                'visibility' => $visibility,
+                'position' => $position,
+                'sentiment' => $sentiment,
+                'volume' => $volume,
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to parse prompt stats', [
+                'response' => $response,
+                'error' => $e->getMessage()
+            ]);
+            
+            return $this->getDefaultStats();
+        }
+    }
+
+    /**
+     * Get default stats when analysis fails
+     */
+    protected function getDefaultStats(): array
+    {
+        return [
+            'visibility' => 0,
+            'position' => 0,
+            'sentiment' => 0,
+            'volume' => 'low',
+        ];
+    }
+
+    /**
+     * Analyze and update stats for a single prompt
+     */
+    public function updatePromptStatsWithAI(PostPrompt $prompt, Post $post, string $provider = 'openai'): bool
+    {
+        try {
+            $stats = $this->analyzePromptStatsWithAI($prompt, $post, $provider);
+            
+            $prompt->update([
+                'visibility' => $stats['visibility'],
+                'position' => $stats['position'],
+                'sentiment' => $stats['sentiment'],
+                'volume' => $stats['volume'],
+            ]);
+            
+            Log::info('Updated prompt stats with AI analysis', [
+                'prompt_id' => $prompt->id,
+                'stats' => $stats
+            ]);
+            
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to update prompt stats with AI', [
+                'prompt_id' => $prompt->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return false;
+        }
+    }
+
+    /**
+     * Batch analyze prompts for a post using AI
+     */
+    public function batchAnalyzePromptsForPost(Post $post, string $provider = 'openai', ?int $limit = null): array
+    {
+        $query = PostPrompt::forPost($post->id)
+            ->where('is_active', true);
+        
+        if ($limit) {
+            $query->limit($limit);
+        }
+        
+        $prompts = $query->get();
+        $results = [];
+        
+        foreach ($prompts as $prompt) {
+            $success = $this->updatePromptStatsWithAI($prompt, $post, $provider);
+            $results[] = [
+                'prompt_id' => $prompt->id,
+                'prompt' => $prompt->prompt,
+                'success' => $success,
+                'stats' => $success ? [
+                    'visibility' => $prompt->visibility,
+                    'position' => $prompt->position,
+                    'sentiment' => $prompt->sentiment,
+                    'volume' => $prompt->volume,
+                ] : null,
+            ];
+        }
+        
+        return $results;
     }
 }

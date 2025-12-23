@@ -28,9 +28,14 @@ const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, sele
             href: selectedBrandId ? `/brands/${selectedBrandId}` : '/dashboard',
             icon: LayoutGrid,
             permission: 'view-dashboard',
-            isActive: isRankingPage,
             items: selectedBrandId && isRankingPage
                 ? [
+                    {
+                        title: 'Dashboard',
+                        href: selectedBrandId ? `/brands/${selectedBrandId}` : '/dashboard',
+                        icon: LayoutGrid,
+                        permission: 'view-dashboard',
+                    },
                     {
                         title: 'Ranking',
                         href: `/brands/${selectedBrandId}/ranking`,

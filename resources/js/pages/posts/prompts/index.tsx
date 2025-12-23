@@ -57,6 +57,8 @@ export default function PostPromptsIndex({ post, prompts, stats, availableProvid
     const [showAddDialog, setShowAddDialog] = useState(false);
     const [filterByProvider, setFilterByProvider] = useState<string>('all');
     const [showOnlySelected, setShowOnlySelected] = useState(false);
+    const [loadingMessage, setLoadingMessage] = useState('');
+    const [loadingProgress, setLoadingProgress] = useState(0);
 
     // Show flash messages
     React.useEffect(() => {
@@ -70,6 +72,29 @@ export default function PostPromptsIndex({ post, prompts, stats, availableProvid
 
     const handleGeneratePrompts = async () => {
         setLoading('generate');
+        setLoadingProgress(0);
+        
+        // Show engaging loading messages
+        const messages = [
+            'Analyzing post content...',
+            'Connecting to AI models...',
+            'Generating smart prompts...',
+            'Analyzing prompt quality...',
+            'Almost done...'
+        ];
+        
+        let messageIndex = 0;
+        setLoadingMessage(messages[0]);
+        
+        // Update message and progress every 2 seconds
+        const interval = setInterval(() => {
+            messageIndex++;
+            if (messageIndex < messages.length) {
+                setLoadingMessage(messages[messageIndex]);
+                setLoadingProgress((messageIndex / messages.length) * 100);
+            }
+        }, 2000);
+        
         try {
             const response = await fetch(`/posts/${post.id}/generate-prompts`, {
                 method: 'POST',
@@ -84,17 +109,26 @@ export default function PostPromptsIndex({ post, prompts, stats, availableProvid
 
             const result = await response.json();
 
+            clearInterval(interval);
+            setLoadingProgress(100);
+            setLoadingMessage('Complete!');
+
             if (result.success) {
                 toast.success(result.cached ? 'Loaded existing prompts' : 'Prompts generated successfully');
-                router.reload();
+                setTimeout(() => router.reload(), 500);
             } else {
                 toast.error(result.message || result.error || 'Failed to generate prompts');
             }
         } catch (error) {
+            clearInterval(interval);
             toast.error('Failed to generate prompts');
             console.error('Generate prompts error:', error);
         } finally {
-            setLoading(null);
+            setTimeout(() => {
+                setLoading(null);
+                setLoadingMessage('');
+                setLoadingProgress(0);
+            }, 500);
         }
     };
 
@@ -176,6 +210,38 @@ export default function PostPromptsIndex({ post, prompts, stats, availableProvid
         <AppLayout>
             <Head title={`Manage Prompts - ${post.title}`} />
             
+            {/* Loading Overlay */}
+            {loading === 'generate' && (
+                <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                    <Card className="w-full max-w-md">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <RefreshCw className="w-5 h-5 animate-spin" />
+                                Generating Prompts
+                            </CardTitle>
+                            <CardDescription>Please wait while we create intelligent prompts for your post</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">{loadingMessage}</span>
+                                    <span className="font-medium">{Math.round(loadingProgress)}%</span>
+                                </div>
+                                <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-primary transition-all duration-500 ease-out"
+                                        style={{ width: `${loadingProgress}%` }}
+                                    />
+                                </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground text-center">
+                                This may take a few moments as we analyze your content and generate up to 5 high-quality prompts.
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">

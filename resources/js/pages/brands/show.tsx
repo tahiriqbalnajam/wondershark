@@ -6,11 +6,25 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
 import HeadingSmall from '@/components/heading-small';
-import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Trophy, TrendingUp, TrendingDown, Bot, User } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Calendar, Trophy, TrendingUp, TrendingDown, Bot, User } from 'lucide-react';
 import { VisibilityChart } from '@/components/chart/visibility';
 import { BrandVisibilityIndex } from '@/components/dashboard-table/brand-visibility';
 import { AiCitations } from '@/components/chat/ai-citations';
-
+import { 
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
+import { DayPicker } from 'react-day-picker';
+import { format, addDays, subDays } from 'date-fns';
 interface CompetitiveStat {
     id: number;
     entity_type: 'brand' | 'competitor';
@@ -100,6 +114,87 @@ const breadcrumbs = (brand: Brand) => [
 export default function BrandShow({ brand, competitiveStats, historicalStats }: Props) {
     const [selectedCompetitorDomain, setSelectedCompetitorDomain] = useState<string | null>(null);
     const [triggeringAnalysis, setTriggeringAnalysis] = useState(false);
+    const [selectedDateRange, setSelectedDateRange] = useState('30');
+    const [calendarOpen, setCalendarOpen] = useState(false);
+    const [customDateRange, setCustomDateRange] = useState<{ from?: Date; to?: Date }>({});
+    const [selectedBrand, setSelectedBrand] = useState('all');
+    const [selectedAIModel, setSelectedAIModel] = useState('all');
+    const handleDateRangeSelect = (days: string) => {
+        setSelectedDateRange(days);
+        if (days !== 'custom') {
+            setCustomDateRange({});
+        }
+    };
+    const aiModels = [
+        { value: 'all', label: 'All AI Models' },
+        { value: 'openai', label: 'OpenAI (GPT-4)' },
+        { value: 'claude', label: 'Claude (Anthropic)' },
+        { value: 'gemini', label: 'Google Gemini' },
+        { value: 'groq', label: 'Groq' },
+        { value: 'deepseek', label: 'DeepSeek' },
+    ];
+    const brands = useMemo(() => {
+        const map = new Map<string, { value: string; label: string }>();
+
+        competitiveStats.forEach(stat => {
+            // if (stat.entity_type !== 'brand') return;
+            if (!['brand', 'competitor'].includes(stat.entity_type)) return;
+
+            const cleanDomain = stat.entity_url
+                .replace(/^https?:\/\//, '')
+                .replace(/^www\./, '')
+                .split('/')[0];
+
+            if (!map.has(cleanDomain)) {
+                map.set(cleanDomain, {
+                    value: cleanDomain,
+                    label: stat.entity_name,
+                });
+            }
+        });
+
+        return [
+            { value: 'all', label: 'All Brands' },
+            ...Array.from(map.values()),
+        ];
+    }, [competitiveStats]);
+
+    const isWithinDateRange = (dateString: string) => {
+        const date = new Date(dateString);
+
+        if (selectedDateRange === 'custom') {
+            if (!customDateRange.from || !customDateRange.to) return true;
+            return date >= customDateRange.from && date <= customDateRange.to;
+        }
+
+        const days = parseInt(selectedDateRange);
+        const fromDate = subDays(new Date(), days);
+        return date >= fromDate;
+    };
+    const filteredCompetitiveStats = useMemo(() => {
+        return competitiveStats.filter(stat => {
+            // Date filter
+            if (!isWithinDateRange(stat.analyzed_at)) return false;
+
+            // Brand filter
+            if (selectedBrand !== 'all') {
+                const domain = stat.entity_url
+                    .replace(/^https?:\/\//, '')
+                    .replace(/^www\./, '')
+                    .split('/')[0];
+
+                if (!domain.includes(selectedBrand)) return false;
+            }
+
+            // AI model filter (if your stat has model info later)
+            if (selectedAIModel !== 'all' && stat.entity_type !== 'brand') {
+                return false;
+            }
+
+            return true;
+        });
+    }, [competitiveStats, selectedDateRange, customDateRange, selectedBrand, selectedAIModel]);
+
 
     // Calculate visibility data from competitive stats - use historical data if available
     const visibilityChartData = useMemo(() => {
@@ -193,17 +288,43 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
             entities 
         };
     }, [competitiveStats, historicalStats]);
+    const filteredVisibilityChartData = useMemo(() => {
+    if (!historicalStats) return visibilityChartData;
+
+    const filteredDates = Object.keys(historicalStats).filter(date =>
+        isWithinDateRange(date)
+    );
+
+    const data = filteredDates.map(date => {
+        const row: any = { date };
+
+        Object.entries(historicalStats[date]).forEach(([domain, stats]) => {
+            if (selectedBrand !== 'all' && !domain.includes(selectedBrand)) return;
+            row[domain] = stats.visibility;
+        });
+
+        return row;
+    });
+
+    return {
+        ...visibilityChartData,
+        data,
+    };
+}, [historicalStats, selectedDateRange, customDateRange, selectedBrand]);
+
     const [selectedPrompt, setSelectedPrompt] = useState<Brand['prompts'][0] | null>(null);
     const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
 
     const handleBrandRowClick = (domain: string) => {
-        // Scroll to Recent AI Citations section
-        const citationsSection = document.getElementById('recent-citations');
-        if (citationsSection) {
-            citationsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-        // Set the competitor filter
-        setSelectedCompetitorDomain(domain);
+        // // Scroll to Recent AI Citations section
+        // const citationsSection = document.getElementById('recent-citations');
+        // if (citationsSection) {
+        //     citationsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // }
+        // // Set the competitor filter
+        // setSelectedCompetitorDomain(domain);
+            setSelectedBrand(domain);
+            setSelectedCompetitorDomain(domain);
     };
 
     // Helper function to render trend indicators (only for up/down changes)
@@ -231,25 +352,58 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
         );
     };
 
-    const filteredPrompts = useMemo(() => {
-        // Only show active prompts (status = 'active' or is_active = true)
-        const activePrompts = (brand.prompts || []).filter(prompt => 
-            prompt.is_active === true
-        );
+    // const filteredPrompts = useMemo(() => {
+    //     // Only show active prompts (status = 'active' or is_active = true)
+    //     const activePrompts = (brand.prompts || []).filter(prompt => 
+    //         prompt.is_active === true
+    //     );
 
-        if (!selectedCompetitorDomain) {
-            return activePrompts;
+    //     if (!selectedCompetitorDomain) {
+    //         return activePrompts;
+    //     }
+
+    //     return activePrompts.filter(prompt => {
+    //         if (!prompt.prompt_resources) return false;
+            
+    //         return prompt.prompt_resources.some((resource: { url: string; type: string; title: string; description: string; domain: string; is_competitor_url: boolean; }) => {
+    //             const resourceDomain = resource.domain ? resource.domain.replace(/^www\./, '') : '';
+    //             return resourceDomain === selectedCompetitorDomain;
+    //         });
+    //     });
+    // }, [brand.prompts, selectedCompetitorDomain]);
+const filteredPrompts = useMemo(() => {
+    return (brand.prompts || []).filter(prompt => {
+        if (!prompt.is_active) return false;
+
+        // Date filter
+        if (prompt.analysis_completed_at && !isWithinDateRange(prompt.analysis_completed_at)) {
+            return false;
         }
 
-        return activePrompts.filter(prompt => {
-            if (!prompt.prompt_resources) return false;
-            
-            return prompt.prompt_resources.some((resource: { url: string; type: string; title: string; description: string; domain: string; is_competitor_url: boolean; }) => {
-                const resourceDomain = resource.domain ? resource.domain.replace(/^www\./, '') : '';
-                return resourceDomain === selectedCompetitorDomain;
-            });
-        });
-    }, [brand.prompts, selectedCompetitorDomain]);
+        // AI Model filter
+        if (
+            selectedAIModel !== 'all' &&
+            prompt.ai_model?.provider !== selectedAIModel
+        ) {
+            return false;
+        }
+
+        // Competitor filter
+        if (selectedCompetitorDomain) {
+            return prompt.prompt_resources?.some(resource =>
+                resource.domain.replace(/^www\./, '') === selectedCompetitorDomain
+            );
+        }
+
+        return true;
+    });
+}, [
+    brand.prompts,
+    selectedCompetitorDomain,
+    selectedDateRange,
+    customDateRange,
+    selectedAIModel,
+]);
 
     const handlePromptClick = (prompt: Brand['prompts'][0]) => {
         setSelectedPrompt(prompt);
@@ -303,7 +457,89 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
     return (
         <AppLayout title={brand.name}>
             <Head title={brand.name} />
+                {/* Filters Section */}
+                        <div className="flex flex-wrap gap-4 items-end">
+                            {/* Date Range Filter */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Date Range</label>
+                                <div className="flex gap-2">
+                                    <Select value={selectedDateRange} onValueChange={handleDateRangeSelect}>
+                                        <SelectTrigger className="w-32">
+                                            <SelectValue placeholder="Select range" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="7">7 days</SelectItem>
+                                            <SelectItem value="14">14 days</SelectItem>
+                                            <SelectItem value="30">30 days</SelectItem>
+                                            <SelectItem value="custom">Custom</SelectItem>
+                                        </SelectContent>
+                                    </Select>
 
+                                    {selectedDateRange === 'custom' && (
+                                        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="outline" className="w-fit">
+                                                    <Calendar className="h-4 w-4 mr-2" />
+                                                    {customDateRange.from ? (
+                                                        customDateRange.to ? (
+                                                            `${format(customDateRange.from, 'MMM dd')} - ${format(customDateRange.to, 'MMM dd')}`
+                                                        ) : (
+                                                            format(customDateRange.from, 'MMM dd, yyyy')
+                                                        )
+                                                    ) : (
+                                                        'Pick a date'
+                                                    )}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <DayPicker
+                                                    mode="range"
+                                                    selected={{ from: customDateRange.from, to: customDateRange.to }}
+                                                    onSelect={(range) => setCustomDateRange(range || {})}
+                                                    numberOfMonths={2}
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Brand Filter */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Brand</label>
+                                <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                                    <SelectTrigger className="w-48">
+                                        <SelectValue placeholder="Select brand" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {brands.map((brand) => (
+                                            <SelectItem key={brand.value} value={brand.value}>
+                                                {brand.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* AI Model Filter */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">AI Model</label>
+                                <Select value={selectedAIModel} onValueChange={setSelectedAIModel}>
+                                    <SelectTrigger className="w-48">
+                                        <SelectValue placeholder="Select AI model" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {aiModels.map((model) => (
+                                            <SelectItem key={model.value} value={model.value}>
+                                                {model.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                <Separator />
             <div className="space-y-6">
                 {/* Brand Overview */}
                 <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-4">
@@ -318,10 +554,15 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
                             </CardTitle>
                         </CardHeader>
                         <VisibilityChart
+                            data={filteredVisibilityChartData.data}
+                            entities={filteredVisibilityChartData.entities}
+                            granularity={filteredVisibilityChartData.granularity}
+                        />
+                        {/* <VisibilityChart
                             data={visibilityChartData.data}
                             entities={visibilityChartData.entities}
                             granularity={visibilityChartData.granularity}
-                        />
+                        /> */}
                     </Card>
 
                     <Card className="flex-col">
@@ -332,7 +573,8 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
                             </CardTitle>
                         </CardHeader>
                         <BrandVisibilityIndex 
-                            competitiveStats={competitiveStats} 
+                            // competitiveStats={competitiveStats} 
+                            competitiveStats={filteredCompetitiveStats} 
                             onRowClick={handleBrandRowClick}
                             brandId={brand.id}
                             limit={5}
