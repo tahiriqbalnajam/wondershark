@@ -43,6 +43,7 @@ type FormData = {
     brand_id: string;
     status: string;
     posted_at: string;
+    post_type: string;
 };
 
 export default function PostsCreate({ 
@@ -94,6 +95,7 @@ export default function PostsCreate({
         brand_id: brandIdFromUrl,
         status: 'draft',
         posted_at: new Date().toISOString().split('T')[0],
+        post_type: 'blog',
     });
 
     const [urlPreview, setUrlPreview] = useState('');
@@ -270,6 +272,28 @@ export default function PostsCreate({
                                                 Preview URL
                                             </a>
                                         </div>
+                                    )}
+                                </div>
+
+                                {/* Post Type Field */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="post_type" className="text-sm font-medium">
+                                        Post Type *
+                                    </Label>
+                                    <Select 
+                                        value={data.post_type} 
+                                        onValueChange={(value) => setData('post_type', value)}
+                                    >
+                                        <SelectTrigger className={errors.post_type ? 'border-destructive' : ''}>
+                                            <SelectValue placeholder="Select post type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="blog">Blog</SelectItem>
+                                            <SelectItem value="forum">Forum</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.post_type && (
+                                        <p className="text-sm text-destructive">{errors.post_type}</p>
                                     )}
                                 </div>
 

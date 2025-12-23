@@ -65,6 +65,7 @@ type FormData = {
     brand_id: string;
     status: string;
     posted_at: string;
+    post_type: string;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -103,6 +104,7 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
         brand_id: createdPost?.brand_id?.toString() || '',
         status: createdPost?.status || 'draft',
         posted_at: createdPost?.posted_at ? new Date(createdPost.posted_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        post_type: 'blog',
     });
 
     const [selectedAgency, setSelectedAgency] = useState('all');
@@ -429,6 +431,22 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
                                                 />
                                                 {errors.url && (
                                                     <p className="text-sm text-red-500">{errors.url}</p>
+                                                )}
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="post_type">Post Type *</Label>
+                                                <Select value={data.post_type} onValueChange={(value) => setData('post_type', value)}>
+                                                    <SelectTrigger className='form-control'>
+                                                        <SelectValue placeholder="Select post type" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="blog">Blog</SelectItem>
+                                                        <SelectItem value="forum">Forum</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                {errors.post_type && (
+                                                    <p className="text-sm text-red-500">{errors.post_type}</p>
                                                 )}
                                             </div>
 

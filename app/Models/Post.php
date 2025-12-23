@@ -19,6 +19,7 @@ class Post extends Model
         'description',
         'status',
         'posted_at',
+        'post_type',
     ];
 
     protected $casts = [

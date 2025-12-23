@@ -156,6 +156,7 @@ class PostController extends Controller
             'description' => $request->description,
             'status' => $request->status,
             'posted_at' => $request->posted_at ?: now(),
+            'post_type' => $request->post_type,
         ]);
 
         // Redirect to the same create page with the post_id parameter

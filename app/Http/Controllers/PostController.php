@@ -168,6 +168,7 @@ class PostController extends Controller
             'description' => 'nullable|string|max:1000',
             'status' => 'required|in:published,draft,archived',
             'posted_at' => 'nullable|date',
+            'post_type' => 'required|in:blog,forum',
         ]);
 
         // Skip permission checks for admin users
@@ -211,6 +212,7 @@ class PostController extends Controller
             'description' => $request->description,
             'status' => $request->status,
             'posted_at' => $request->posted_at ?: now(),
+            'post_type' => $request->post_type,
         ]);
 
         // Automatically generate prompts for the post in background
@@ -271,6 +273,7 @@ class PostController extends Controller
             'description' => 'nullable|string|max:1000',
             'status' => 'required|in:published,draft,archived',
             'posted_at' => 'nullable|date',
+            'post_type' => 'required|in:blog,forum',
         ]);
 
         $user = Auth::user();
@@ -327,10 +330,8 @@ class PostController extends Controller
             'description' => $request->description,
             'status' => $request->status,
             'posted_at' => $request->posted_at ?: now(),
+            'post_type' => $request->post_type,
         ]);
-
-        // Automatically generate prompts for the post in background
-        $sessionId = session()->getId() ?: 'auto-' . uniqid();
         
         GeneratePostPrompts::dispatch(
             $post, 
