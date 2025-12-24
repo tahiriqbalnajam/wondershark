@@ -40,43 +40,39 @@ export function NavMain({ items = [], label = 'General' }: { items: NavItem[], l
                     
                     const isActive = isExactMatch || isBrandDashboard || isBrandsListPage || isStartsWithMatch;
                     
-                    if (item.items && item.items.length > 0) {
+                    if (item.items && item.items.length > 0 && item.alwaysOpenSubmenu) {
                         return (
-                            <Collapsible key={item.title} asChild defaultOpen={isActive}>
-                                <SidebarMenuItem>
-                                    <CollapsibleTrigger asChild>
-                                        <SidebarMenuButton tooltip={{ children: item.title }}  className='menu-link'>
-                                            <span className='menu-icon'>{item.icon && <item.icon />}</span>
-                                            <span>{item.title}</span>
-                                            <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                                        </SidebarMenuButton>
-                                    </CollapsibleTrigger>
-                                    <CollapsibleContent>
-                                        <SidebarMenuSub>
-                                            {item.items.map((subItem) => {
-                                                const subCurrentUrl = page.url;
-                                                const subItemHref = subItem.href;
-                                                const subIsExactMatch = subCurrentUrl === subItemHref;
-                                                const subIsStartsWithMatch = subCurrentUrl.startsWith(subItemHref);
-                                                const subIsActive = subIsExactMatch || subIsStartsWithMatch;
-                                                
-                                                return (
-                                                    <SidebarMenuSubItem key={subItem.title}>
-                                                        <SidebarMenuSubButton asChild isActive={subIsActive}>
-                                                            <Link href={subItem.href} prefetch className='menu-link'>
-                                                                <span className='menu-icon'>{subItem.icon && <subItem.icon />}</span>
-                                                                <span>{subItem.title}</span>
-                                                            </Link>
-                                                        </SidebarMenuSubButton>
-                                                    </SidebarMenuSubItem>
-                                                );
-                                            })}
-                                        </SidebarMenuSub>
-                                    </CollapsibleContent>
-                                </SidebarMenuItem>
-                            </Collapsible>
+                            <SidebarMenuItem key={item.title}>
+                                <SidebarMenuButton asChild isActive={isActive}>
+                                    <Link href={item.href} className="menu-link">
+                                        <span className="menu-icon">{item.icon && <item.icon />}</span>
+                                        <span>{item.title}</span>
+                                    </Link>
+                                </SidebarMenuButton>
+
+                                {/* Static submenu (NO collapsible) */}
+                                <SidebarMenuSub className="ml-5 mt-1">
+                                    {item.items.map((subItem) => {
+                                        const subIsActive = page.url.startsWith(subItem.href);
+
+                                        return (
+                                            <SidebarMenuSubItem key={subItem.title}>
+                                                <SidebarMenuSubButton asChild isActive={subIsActive}>
+                                                    <Link href={subItem.href} className="menu-link">
+                                                        <span className="menu-icon">
+                                                            {subItem.icon && <subItem.icon />}
+                                                        </span>
+                                                        <span>{subItem.title}</span>
+                                                    </Link>
+                                                </SidebarMenuSubButton>
+                                            </SidebarMenuSubItem>
+                                        );
+                                    })}
+                                </SidebarMenuSub>
+                            </SidebarMenuItem>
                         );
                     }
+
                     
                     return (
                         <SidebarMenuItem key={item.title}>

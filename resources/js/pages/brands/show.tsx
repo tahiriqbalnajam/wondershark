@@ -126,13 +126,73 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
         }
     };
     const aiModels = [
-        { value: 'all', label: 'All AI Models' },
-        { value: 'openai', label: 'OpenAI (GPT-4)' },
-        { value: 'claude', label: 'Claude (Anthropic)' },
-        { value: 'gemini', label: 'Google Gemini' },
-        { value: 'groq', label: 'Groq' },
-        { value: 'deepseek', label: 'DeepSeek' },
-    ];
+    {
+        value: 'all',
+        label: 'All AI Models',
+        logo: null,
+    },
+    {
+        value: 'chatgpt',
+        label: 'ChatGPT',
+        logo: '/images/chatgpt_.svg',
+    },
+    {
+        value: 'ai-overview',
+        label: 'AI Overview',
+        logo: '/images/google.svg',
+    },
+    {
+        value: 'gpt-4o-search',
+        label: 'GPT-4o Search',
+        logo: '/images/openai.svg',
+    },
+    {
+        value: 'google-ai-mode',
+        label: 'AI Mode (Google)',
+        logo: '/images/google.svg',
+    },
+    {
+        value: 'gemini',
+        label: 'Gemini',
+        logo: '/images/gemini.svg',
+    },
+    {
+        value: 'claude-sonnet-4',
+        label: 'Claude Sonnet 4',
+        logo: '/images/claude.svg',
+    },
+    {
+        value: 'grok',
+        label: 'Grok',
+        logo: '/images/grok.svg',
+    },
+    {
+        value: 'llama-4',
+        label: 'Llama 4',
+        logo: '/images/llama.svg',
+    },
+    {
+        value: 'deepseek',
+        label: 'DeepSeek',
+        logo: '/images/deepseek.svg',
+    },
+    {
+        value: 'copilot',
+        label: 'Microsoft Copilot',
+        logo: '/images/copilot.svg',
+    },
+    {
+        value: 'mistral',
+        label: 'mistral.ai',
+        logo: '/images/mistral.svg',
+    },
+    {
+        value: 'ollama',
+        label: 'Ollama',
+        logo: '/images/ollama.svg',
+    },
+];
+
     const brands = useMemo(() => {
         const map = new Map<string, { value: string; label: string }>();
 
@@ -160,40 +220,58 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
     }, [competitiveStats]);
 
     const isWithinDateRange = (dateString: string) => {
-        const date = new Date(dateString);
+    const date = new Date(dateString);
 
-        if (selectedDateRange === 'custom') {
-            if (!customDateRange.from || !customDateRange.to) return true;
-            return date >= customDateRange.from && date <= customDateRange.to;
+    if (selectedDateRange === 'custom') {
+        if (!customDateRange.from || !customDateRange.to) return true;
+
+        const from = new Date(customDateRange.from);
+        from.setHours(0, 0, 0, 0);
+
+        const to = new Date(customDateRange.to);
+        to.setHours(23, 59, 59, 999);
+
+        return date >= from && date <= to;
+    }
+
+    const days = parseInt(selectedDateRange);
+    const fromDate = subDays(new Date(), days);
+    return date >= fromDate;
+};
+
+    const aiProviderMap: Record<string, string[]> = {
+        chatgpt: ['openai'],
+        'gpt-4o-search': ['openai'],
+        'ai-overview': ['google'],
+        'google-ai-mode': ['google'],
+        gemini: ['google'],
+        'claude-sonnet-4': ['anthropic'],
+        grok: ['xai'],
+        'llama-4': ['meta'],
+        deepseek: ['deepseek'],
+        copilot: ['microsoft'],
+        mistral: ['mistral'],
+        ollama: ['ollama'],
+    };
+const filteredCompetitiveStats = useMemo(() => {
+    return competitiveStats.filter(stat => {
+        // Date filter
+        if (!isWithinDateRange(stat.analyzed_at)) return false;
+
+        // Brand filter
+        if (selectedBrand !== 'all') {
+            const domain = stat.entity_url
+                .replace(/^https?:\/\//, '')
+                .replace(/^www\./, '')
+                .split('/')[0];
+
+            if (!domain.includes(selectedBrand)) return false;
         }
 
-        const days = parseInt(selectedDateRange);
-        const fromDate = subDays(new Date(), days);
-        return date >= fromDate;
-    };
-    const filteredCompetitiveStats = useMemo(() => {
-        return competitiveStats.filter(stat => {
-            // Date filter
-            if (!isWithinDateRange(stat.analyzed_at)) return false;
+        return true;
+    });
+}, [competitiveStats, selectedDateRange, customDateRange, selectedBrand]);
 
-            // Brand filter
-            if (selectedBrand !== 'all') {
-                const domain = stat.entity_url
-                    .replace(/^https?:\/\//, '')
-                    .replace(/^www\./, '')
-                    .split('/')[0];
-
-                if (!domain.includes(selectedBrand)) return false;
-            }
-
-            // AI model filter (if your stat has model info later)
-            if (selectedAIModel !== 'all' && stat.entity_type !== 'brand') {
-                return false;
-            }
-
-            return true;
-        });
-    }, [competitiveStats, selectedDateRange, customDateRange, selectedBrand, selectedAIModel]);
 
 
     // Calculate visibility data from competitive stats - use historical data if available
@@ -372,25 +450,29 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
     //     });
     // }, [brand.prompts, selectedCompetitorDomain]);
 const filteredPrompts = useMemo(() => {
-    return (brand.prompts || []).filter(prompt => {
-        if (!prompt.is_active) return false;
+    return (brand.prompts || []).filter(item => {
+        if (!item.is_active) return false;
 
         // Date filter
-        if (prompt.analysis_completed_at && !isWithinDateRange(prompt.analysis_completed_at)) {
-            return false;
-        }
-
-        // AI Model filter
         if (
-            selectedAIModel !== 'all' &&
-            prompt.ai_model?.provider !== selectedAIModel
+            item.analysis_completed_at &&
+            !isWithinDateRange(item.analysis_completed_at)
         ) {
             return false;
         }
 
+        // AI model filter
+        if (selectedAIModel !== 'all') {
+            const allowedProviders = aiProviderMap[selectedAIModel] || [];
+            const provider = item.ai_model?.provider?.toLowerCase() || '';
+            if (!allowedProviders.map(p => p.toLowerCase()).includes(provider)) {
+                return false;
+            }
+        }
+
         // Competitor filter
         if (selectedCompetitorDomain) {
-            return prompt.prompt_resources?.some(resource =>
+            return item.prompt_resources?.some(resource =>
                 resource.domain.replace(/^www\./, '') === selectedCompetitorDomain
             );
         }
@@ -404,6 +486,7 @@ const filteredPrompts = useMemo(() => {
     customDateRange,
     selectedAIModel,
 ]);
+
 
     const handlePromptClick = (prompt: Brand['prompts'][0]) => {
         setSelectedPrompt(prompt);
@@ -458,7 +541,7 @@ const filteredPrompts = useMemo(() => {
         <AppLayout title={brand.name}>
             <Head title={brand.name} />
                 {/* Filters Section */}
-                        <div className="flex flex-wrap gap-4 items-end">
+                        <div className="flex flex-wrap gap-4 items-end mb-5">
                             {/* Date Range Filter */}
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Date Range</label>
@@ -525,21 +608,50 @@ const filteredPrompts = useMemo(() => {
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">AI Model</label>
                                 <Select value={selectedAIModel} onValueChange={setSelectedAIModel}>
-                                    <SelectTrigger className="w-48">
-                                        <SelectValue placeholder="Select AI model" />
+                                    <SelectTrigger className="w-56">
+                                        <SelectValue>
+                                            {(() => {
+                                                const model = aiModels.find(m => m.value === selectedAIModel);
+                                                if (!model) return 'Select AI model';
+
+                                                return (
+                                                    <div className="flex items-center gap-2">
+                                                        {model.logo && (
+                                                            <img
+                                                                src={model.logo}
+                                                                alt={model.label}
+                                                                className="w-4 h-4 object-contain"
+                                                            />
+                                                        )}
+                                                        <span>{model.label}</span>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </SelectValue>
                                     </SelectTrigger>
+
                                     <SelectContent>
-                                        {aiModels.map((model) => (
+                                        {aiModels.map(model => (
                                             <SelectItem key={model.value} value={model.value}>
-                                                {model.label}
+                                                <div className="flex items-center gap-2">
+                                                    {model.logo && (
+                                                        <img
+                                                            src={model.logo}
+                                                            alt={model.label}
+                                                            className="w-4 h-4 object-contain"
+                                                        />
+                                                    )}
+                                                    <span>{model.label}</span>
+                                                </div>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
+
                             </div>
                         </div>
 
-                <Separator />
+                {/* <Separator /> */}
             <div className="space-y-6">
                 {/* Brand Overview */}
                 <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-4">
