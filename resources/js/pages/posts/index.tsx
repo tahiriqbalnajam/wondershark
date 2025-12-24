@@ -63,6 +63,7 @@ type Post = {
     };
     citations_count: number;
     mentioned_in_ai: number;
+    citation_urls: string[];
 };
 
 type Props = {
@@ -111,6 +112,16 @@ export default function PostsIndex({ posts, brand }: Props) {
     
     // Construct the create post URL - use brand-specific route if brand prop exists
     const createPostUrl = brand ? `/brands/${brand.id}/posts/create` : (brandId ? `/posts/create?brand_id=${brandId}` : '/posts/create');
+    
+    // Helper to get favicon URL from citation URL
+    const getFaviconUrl = (citationUrl: string) => {
+        try {
+            const urlObj = new URL(citationUrl);
+            return `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=16`;
+        } catch (e) {
+            return '';
+        }
+    };
     
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -293,13 +304,35 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <div className="space-y-1">
-                                                            <div className="text-sm font-medium">
-                                                                {post.mentioned_in_ai} / {post.citations_count}
-                                                            </div>
-                                                            <div className="text-xs text-muted-foreground">
-                                                                Mentioned / Total
-                                                            </div>
+                                                        <div className="flex items-center gap-1 flex-wrap">
+                                                            {post.citation_urls && post.citation_urls.length > 0 ? (
+                                                                <>
+                                                                    {post.citation_urls.slice(0, 8).map((citationUrl, index) => (
+                                                                        <a
+                                                                            key={index}
+                                                                            href={citationUrl}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            title={citationUrl}
+                                                                            className="hover:opacity-70 transition-opacity"
+                                                                        >
+                                                                            <img
+                                                                                src={getFaviconUrl(citationUrl)}
+                                                                                alt={`Citation ${index + 1}`}
+                                                                                className="h-4 w-4"
+                                                                                onError={(e) => {
+                                                                                    e.currentTarget.style.display = 'none';
+                                                                                }}
+                                                                            />
+                                                                        </a>
+                                                                    ))}
+                                                                    {post.citation_urls.length > 8 && (
+                                                                        <span className="text-xs text-muted-foreground">...</span>
+                                                                    )}
+                                                                </>
+                                                            ) : (
+                                                                <span className="text-xs text-muted-foreground">No citations</span>
+                                                            )}
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
@@ -406,13 +439,35 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <div className="space-y-1">
-                                                            <div className="text-sm font-medium">
-                                                                {post.mentioned_in_ai} / {post.citations_count}
-                                                            </div>
-                                                            <div className="text-xs text-muted-foreground">
-                                                                Mentioned / Total
-                                                            </div>
+                                                        <div className="flex items-center gap-1 flex-wrap">
+                                                            {post.citation_urls && post.citation_urls.length > 0 ? (
+                                                                <>
+                                                                    {post.citation_urls.slice(0, 8).map((citationUrl, index) => (
+                                                                        <a
+                                                                            key={index}
+                                                                            href={citationUrl}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            title={citationUrl}
+                                                                            className="hover:opacity-70 transition-opacity"
+                                                                        >
+                                                                            <img
+                                                                                src={getFaviconUrl(citationUrl)}
+                                                                                alt={`Citation ${index + 1}`}
+                                                                                className="h-4 w-4"
+                                                                                onError={(e) => {
+                                                                                    e.currentTarget.style.display = 'none';
+                                                                                }}
+                                                                            />
+                                                                        </a>
+                                                                    ))}
+                                                                    {post.citation_urls.length > 8 && (
+                                                                        <span className="text-xs text-muted-foreground">...</span>
+                                                                    )}
+                                                                </>
+                                                            ) : (
+                                                                <span className="text-xs text-muted-foreground">No citations</span>
+                                                            )}
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
@@ -519,13 +574,34 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <div className="space-y-1">
-                                                            <div className="text-sm font-medium">
-                                                                {post.mentioned_in_ai} / {post.citations_count}
-                                                            </div>
-                                                            <div className="text-xs text-muted-foreground">
-                                                                Mentioned / Total
-                                                            </div>
+                                                        <div className="flex items-center gap-1 flex-wrap">
+                                                            {post.citation_urls && post.citation_urls.length > 0 ? (
+                                                                <>
+                                                                    {post.citation_urls.slice(0, 8).map((citationUrl, index) => (
+                                                                        <a
+                                                                            key={index}
+                                                                            href={citationUrl}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            title={citationUrl}
+                                                                            className="hover:opacity-70 transition-opacity"
+                                                                        >
+                                                                            <img
+                                                                                src={getFaviconUrl(citationUrl)}
+                                                                                alt={`Citation ${index + 1}`}
+                                                                                className="h-4 w-4"
+                                                                                onError={(e) => {
+                                                                                    e.currentTarget.style.display = 'none';
+                                                                                }}
+                                                                            />
+                                                                        </a>
+                                                                    ))}
+                                                                    {post.citation_urls.length > 8 && (
+                                                                        <span className="text-xs text-muted-foreground">...</span>
+                                                                    )}\n                                                                </>
+                                                            ) : (
+                                                                <span className="text-xs text-muted-foreground">No citations</span>
+                                                            )}
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>

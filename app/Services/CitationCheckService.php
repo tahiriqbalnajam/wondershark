@@ -2,18 +2,18 @@
 
 namespace App\Services;
 
+use App\Models\AiModel;
 use App\Models\Post;
 use App\Models\PostCitation;
-use App\Models\AiModel;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class CitationCheckService
 {
     protected array $aiProviders = [
         'openai' => 'OpenAI',
         'gemini' => 'Gemini',
-        'perplexity' => 'Perplexity'
+        'perplexity' => 'Perplexity',
     ];
 
     /**
@@ -24,11 +24,11 @@ class CitationCheckService
         $aiModel = AiModel::where('name', $provider)
             ->where('is_enabled', true)
             ->first();
-            
-        if (!$aiModel || empty($aiModel->api_config['api_key'])) {
+
+        if (! $aiModel || empty($aiModel->api_config['api_key'])) {
             return null;
         }
-        
+
         return $aiModel->api_config['api_key'];
     }
 
@@ -47,13 +47,13 @@ class CitationCheckService
         $results = [];
         $combinedPrompts = $this->getCombinedPrompts($post);
         $promptSelectionInfo = $this->getPromptSelectionInfo($post);
-        
+
         if (empty($combinedPrompts)) {
             return [
                 'success' => false,
                 'message' => 'No prompts found for the brand associated with this post',
                 'results' => [],
-                'prompt_selection_info' => $promptSelectionInfo
+                'prompt_selection_info' => $promptSelectionInfo,
             ];
         }
 
@@ -61,21 +61,21 @@ class CitationCheckService
             try {
                 $result = $this->checkCitationWithProvider($post, $combinedPrompts, $provider);
                 $results[$provider] = $result;
-                
+
                 // Store the result in database
                 $this->storeCitationResult($post, $provider, $result);
-                
+
             } catch (\Exception $e) {
                 Log::error("Citation check failed for {$provider}", [
                     'post_id' => $post->id,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
-                
+
                 $results[$provider] = [
                     'success' => false,
                     'error' => $e->getMessage(),
                     'is_mentioned' => false,
-                    'position' => null
+                    'position' => null,
                 ];
             }
         }
@@ -86,7 +86,7 @@ class CitationCheckService
             'post_url' => $post->url,
             'combined_prompts' => $combinedPrompts,
             'prompt_selection_info' => $promptSelectionInfo,
-            'results' => $results
+            'results' => $results,
         ];
     }
 
@@ -103,7 +103,7 @@ class CitationCheckService
         }
 
         $selectedPrompts = [];
-        $totalPrompts = $promptsByProvider->sum(fn($prompts) => $prompts->count());
+        $totalPrompts = $promptsByProvider->sum(fn ($prompts) => $prompts->count());
         $maxPrompts = 25;
 
         // If total prompts is less than or equal to 25, take all
@@ -116,18 +116,18 @@ class CitationCheckService
         } else {
             // Calculate proportional distribution
             $selectedPerProvider = [];
-            
+
             foreach ($promptsByProvider as $provider => $prompts) {
                 $providerCount = $prompts->count();
                 $proportion = $providerCount / $totalPrompts;
                 $allocatedCount = floor($proportion * $maxPrompts);
                 $selectedPerProvider[$provider] = $allocatedCount;
             }
-            
+
             // Handle remainder to reach exactly 25 prompts
             $totalAllocated = array_sum($selectedPerProvider);
             $remainder = $maxPrompts - $totalAllocated;
-            
+
             // Distribute remainder to providers with the highest fractional part
             if ($remainder > 0) {
                 $fractionalParts = [];
@@ -137,18 +137,20 @@ class CitationCheckService
                     $exactAllocation = $proportion * $maxPrompts;
                     $fractionalParts[$provider] = $exactAllocation - floor($exactAllocation);
                 }
-                
+
                 // Sort by fractional part (descending) to give remainder to those who "deserve" it most
                 arsort($fractionalParts);
-                
+
                 $remainderCount = 0;
                 foreach ($fractionalParts as $provider => $fractional) {
-                    if ($remainderCount >= $remainder) break;
+                    if ($remainderCount >= $remainder) {
+                        break;
+                    }
                     $selectedPerProvider[$provider]++;
                     $remainderCount++;
                 }
             }
-            
+
             // Select prompts from each provider
             foreach ($promptsByProvider as $provider => $prompts) {
                 $countToTake = $selectedPerProvider[$provider];
@@ -175,7 +177,7 @@ class CitationCheckService
             ->get()
             ->groupBy('ai_provider');
 
-        $totalPrompts = $promptsByProvider->sum(fn($prompts) => $prompts->count());
+        $totalPrompts = $promptsByProvider->sum(fn ($prompts) => $prompts->count());
         $maxPrompts = 25;
         $selectionInfo = [];
 
@@ -184,25 +186,25 @@ class CitationCheckService
             foreach ($promptsByProvider as $provider => $prompts) {
                 $selectionInfo[$provider] = [
                     'total_prompts' => $prompts->count(),
-                    'proportion' => round(($prompts->count() / $totalPrompts) * 100, 2) . '%',
+                    'proportion' => round(($prompts->count() / $totalPrompts) * 100, 2).'%',
                     'selected_count' => $prompts->count(),
                 ];
             }
         } else {
             // Calculate proportional distribution
             $selectedPerProvider = [];
-            
+
             foreach ($promptsByProvider as $provider => $prompts) {
                 $providerCount = $prompts->count();
                 $proportion = $providerCount / $totalPrompts;
                 $allocatedCount = floor($proportion * $maxPrompts);
                 $selectedPerProvider[$provider] = $allocatedCount;
             }
-            
+
             // Handle remainder distribution
             $totalAllocated = array_sum($selectedPerProvider);
             $remainder = $maxPrompts - $totalAllocated;
-            
+
             if ($remainder > 0) {
                 $fractionalParts = [];
                 foreach ($promptsByProvider as $provider => $prompts) {
@@ -211,24 +213,26 @@ class CitationCheckService
                     $exactAllocation = $proportion * $maxPrompts;
                     $fractionalParts[$provider] = $exactAllocation - floor($exactAllocation);
                 }
-                
+
                 arsort($fractionalParts);
-                
+
                 $remainderCount = 0;
                 foreach ($fractionalParts as $provider => $fractional) {
-                    if ($remainderCount >= $remainder) break;
+                    if ($remainderCount >= $remainder) {
+                        break;
+                    }
                     $selectedPerProvider[$provider]++;
                     $remainderCount++;
                 }
             }
-            
+
             foreach ($promptsByProvider as $provider => $prompts) {
                 $providerCount = $prompts->count();
                 $proportion = $providerCount / $totalPrompts;
-                
+
                 $selectionInfo[$provider] = [
                     'total_prompts' => $providerCount,
-                    'proportion' => round($proportion * 100, 2) . '%',
+                    'proportion' => round($proportion * 100, 2).'%',
                     'selected_count' => $selectedPerProvider[$provider],
                 ];
             }
@@ -244,7 +248,7 @@ class CitationCheckService
     protected function checkCitationWithProvider(Post $post, string $combinedPrompts, string $provider): array
     {
         $prompt = $this->buildCitationCheckPrompt($post->url, $combinedPrompts);
-        
+
         switch ($provider) {
             case 'openai':
                 return $this->checkWithOpenAI($prompt);
@@ -267,6 +271,7 @@ class CitationCheckService
         - 'is_mentioned': boolean (true if the URL is mentioned/cited)
         - 'position': integer or null (the position/rank of the citation, 1 being first, null if not mentioned)
         - 'citation_text': string or null (the exact text where the URL is mentioned)
+        - 'referrer_url': string or null (the URL/page where you found this citation or would reference it - the page that cites/mentions '{$url}')
         - 'confidence': float (confidence level between 0 and 1)
         - 'source_url': string (the URL being checked: '{$url}')
         - 'prompts_analyzed': integer (total number of prompts/questions analyzed)
@@ -279,8 +284,8 @@ class CitationCheckService
     protected function checkWithOpenAI(string $prompt): array
     {
         $aiModel = $this->getProviderConfig('openai');
-        
-        if (!$aiModel || empty($aiModel->api_config['api_key'])) {
+
+        if (! $aiModel || empty($aiModel->api_config['api_key'])) {
             throw new \Exception('OpenAI API key not configured');
         }
 
@@ -294,32 +299,32 @@ class CitationCheckService
             'messages' => [
                 [
                     'role' => 'system',
-                    'content' => 'You are a citation verification assistant. Provide accurate JSON responses only.'
+                    'content' => 'You are a citation verification assistant. Provide accurate JSON responses only.',
                 ],
                 [
                     'role' => 'user',
-                    'content' => $prompt
-                ]
+                    'content' => $prompt,
+                ],
             ],
             'max_tokens' => 500,
-            'temperature' => 0.3
+            'temperature' => 0.3,
         ]);
 
-        if (!$response->successful()) {
-            throw new \Exception("OpenAI API error: " . $response->body());
+        if (! $response->successful()) {
+            throw new \Exception('OpenAI API error: '.$response->body());
         }
 
         $result = $response->json();
         $content = $result['choices'][0]['message']['content'] ?? '';
-        
+
         return $this->parseAIResponse($content, 'openai');
     }
 
     protected function checkWithGemini(string $prompt): array
     {
         $aiModel = $this->getProviderConfig('gemini');
-        
-        if (!$aiModel || empty($aiModel->api_config['api_key'])) {
+
+        if (! $aiModel || empty($aiModel->api_config['api_key'])) {
             throw new \Exception('Gemini API key not configured');
         }
 
@@ -331,32 +336,32 @@ class CitationCheckService
                 [
                     'parts' => [
                         [
-                            'text' => $prompt
-                        ]
-                    ]
-                ]
+                            'text' => $prompt,
+                        ],
+                    ],
+                ],
             ],
             'generationConfig' => [
                 'temperature' => 0.3,
                 'maxOutputTokens' => 500,
-            ]
+            ],
         ]);
 
-        if (!$response->successful()) {
-            throw new \Exception("Gemini API error: " . $response->body());
+        if (! $response->successful()) {
+            throw new \Exception('Gemini API error: '.$response->body());
         }
 
         $result = $response->json();
         $content = $result['candidates'][0]['content']['parts'][0]['text'] ?? '';
-        
+
         return $this->parseAIResponse($content, 'gemini');
     }
 
     protected function checkWithPerplexity(string $prompt): array
     {
         $aiModel = $this->getProviderConfig('perplexity');
-        
-        if (!$aiModel || empty($aiModel->api_config['api_key'])) {
+
+        if (! $aiModel || empty($aiModel->api_config['api_key'])) {
             throw new \Exception('Perplexity API key not configured');
         }
 
@@ -371,24 +376,24 @@ class CitationCheckService
             'messages' => [
                 [
                     'role' => 'system',
-                    'content' => 'You are a citation verification assistant. Provide accurate JSON responses only.'
+                    'content' => 'You are a citation verification assistant. Provide accurate JSON responses only.',
                 ],
                 [
                     'role' => 'user',
-                    'content' => $prompt
-                ]
+                    'content' => $prompt,
+                ],
             ],
             'max_tokens' => 500,
-            'temperature' => 0.3
+            'temperature' => 0.3,
         ]);
 
-        if (!$response->successful()) {
-            throw new \Exception("Perplexity API error: " . $response->body());
+        if (! $response->successful()) {
+            throw new \Exception('Perplexity API error: '.$response->body());
         }
 
         $result = $response->json();
         $content = $result['choices'][0]['message']['content'] ?? '';
-        
+
         return $this->parseAIResponse($content, 'perplexity');
     }
 
@@ -398,7 +403,7 @@ class CitationCheckService
         $jsonMatch = [];
         if (preg_match('/\{.*\}/s', $content, $jsonMatch)) {
             $jsonData = json_decode($jsonMatch[0], true);
-            
+
             if (json_last_error() === JSON_ERROR_NONE) {
                 return [
                     'success' => true,
@@ -406,12 +411,13 @@ class CitationCheckService
                     'is_mentioned' => $jsonData['is_mentioned'] ?? false,
                     'position' => $jsonData['position'] ?? null,
                     'citation_text' => $jsonData['citation_text'] ?? null,
+                    'referrer_url' => $jsonData['referrer_url'] ?? null,
                     'confidence' => $jsonData['confidence'] ?? 0.5,
                     'source_url' => $jsonData['source_url'] ?? null,
                     'prompts_analyzed' => $jsonData['prompts_analyzed'] ?? 0,
                     'prompts_mentioning_url' => $jsonData['prompts_mentioning_url'] ?? 0,
                     'search_context' => $jsonData['search_context'] ?? null,
-                    'raw_response' => $content
+                    'raw_response' => $content,
                 ];
             }
         }
@@ -423,13 +429,14 @@ class CitationCheckService
             'is_mentioned' => false,
             'position' => null,
             'citation_text' => null,
+            'referrer_url' => null,
             'confidence' => 0.0,
             'source_url' => null,
             'prompts_analyzed' => 0,
             'prompts_mentioning_url' => 0,
             'search_context' => 'Failed to parse AI response',
             'raw_response' => $content,
-            'parse_error' => 'Failed to parse JSON response'
+            'parse_error' => 'Failed to parse JSON response',
         ];
     }
 
@@ -438,11 +445,11 @@ class CitationCheckService
         PostCitation::updateOrCreate(
             [
                 'post_id' => $post->id,
-                'ai_model' => $provider
+                'ai_model' => $provider,
             ],
             [
                 'citation_text' => $result['citation_text'],
-                'citation_url' => $post->url,
+                'citation_url' => $result['referrer_url'] ?? null, // Save referrer URL where the citation was found
                 'position' => $result['position'],
                 'is_mentioned' => $result['is_mentioned'] ?? false,
                 'metadata' => [
@@ -450,12 +457,13 @@ class CitationCheckService
                     'raw_response' => $result['raw_response'] ?? '',
                     'provider' => $provider,
                     'success' => $result['success'] ?? false,
-                    'source_url' => $result['source_url'] ?? $post->url,
+                    'source_url' => $result['source_url'] ?? $post->url, // The post URL being checked
+                    'referrer_url' => $result['referrer_url'] ?? null, // Also keep in metadata for reference
                     'prompts_analyzed' => $result['prompts_analyzed'] ?? 0,
                     'prompts_mentioning_url' => $result['prompts_mentioning_url'] ?? 0,
-                    'search_context' => $result['search_context'] ?? null
+                    'search_context' => $result['search_context'] ?? null,
                 ],
-                'checked_at' => now()
+                'checked_at' => now(),
             ]
         );
     }
@@ -463,7 +471,7 @@ class CitationCheckService
     public function getBatchCitationResults(array $postIds): array
     {
         $results = [];
-        
+
         foreach ($postIds as $postId) {
             $post = Post::find($postId);
             if ($post) {

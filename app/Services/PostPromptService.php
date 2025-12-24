@@ -2,10 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\PostPrompt;
-use App\Models\Post;
 use App\Models\AiModel;
-use Prism\Prism\Prism;
+use App\Models\Post;
+use App\Models\PostPrompt;
 use Illuminate\Support\Facades\Log;
 
 class PostPromptService extends AIPromptService
@@ -13,22 +12,23 @@ class PostPromptService extends AIPromptService
     /**
      * Generate prompts for a specific post
      */
-    public function generatePromptsForPost(Post $post, string $sessionId, string $provider = 'openai', string $description = '', int $promptCount = null): array
+    public function generatePromptsForPost(Post $post, string $sessionId, string $provider = 'openai', string $description = '', ?int $promptCount = null): array
     {
         $aiModel = $this->getAiModelConfig($provider);
-        
-        if (!$aiModel) {
+
+        if (! $aiModel) {
             Log::warning('AI Model not found or disabled', ['provider' => $provider]);
+
             return []; // Don't create fallback prompts
         }
 
         $prompt = $this->buildPostPrompt($post, $description, $promptCount ?? $aiModel->prompts_per_brand);
-        
+
         try {
             $response = $this->callAiProvider($aiModel, $prompt);
             $content = $response->text;
             $questions = $this->parseQuestions($content);
-            
+
             // Store generated prompts in database with brand_id
             $generatedPrompts = [];
             foreach ($questions as $index => $question) {
@@ -37,7 +37,7 @@ class PostPromptService extends AIPromptService
                 if ($countryCode && strlen($countryCode) > 2) {
                     $countryCode = substr($countryCode, 0, 2);
                 }
-                
+
                 $generatedPrompt = PostPrompt::create([
                     'brand_id' => $post->brand_id, // Add brand_id for unified table
                     'post_id' => $post->id,
@@ -57,7 +57,7 @@ class PostPromptService extends AIPromptService
                     'location' => $post->brand->country_code ?? null,
                     'status' => 'suggested',
                 ]);
-                
+
                 // Analyze and save stats immediately using AI
                 try {
                     $stats = $this->analyzePromptStatsWithAI($generatedPrompt, $post, $provider);
@@ -67,33 +67,38 @@ class PostPromptService extends AIPromptService
                         'sentiment' => $stats['sentiment'],
                         'volume' => $stats['volume'],
                     ]);
-                    
+
+                    // Save referrers as potential citations
+                    if (! empty($stats['referrers'])) {
+                        $this->saveReferrersAsCitations($post, $generatedPrompt, $stats['referrers'], $provider);
+                    }
+
                     Log::info('Prompt stats analyzed and saved', [
                         'prompt_id' => $generatedPrompt->id,
                         'prompt' => $generatedPrompt->prompt,
-                        'stats' => $stats
+                        'stats' => $stats,
                     ]);
                 } catch (\Exception $e) {
                     Log::warning('Failed to analyze prompt stats during generation', [
                         'prompt_id' => $generatedPrompt->id,
-                        'error' => $e->getMessage()
+                        'error' => $e->getMessage(),
                     ]);
                 }
-                
+
                 $generatedPrompts[] = $generatedPrompt;
             }
-            
+
             return $generatedPrompts;
-            
+
         } catch (\Exception $e) {
             Log::error('AI Prompt Generation Failed for Post', [
                 'post_id' => $post->id,
                 'post_url' => $post->url,
                 'provider' => $provider,
                 'model' => $aiModel->display_name,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             // Don't return fallback prompts, just return empty array
             return [];
         }
@@ -106,7 +111,7 @@ class PostPromptService extends AIPromptService
     {
         $aiModels = $this->getEnabledAiModels();
         $allGeneratedPrompts = [];
-        
+
         foreach ($aiModels as $aiModel) {
             try {
                 // Generate based on AI model configuration
@@ -118,17 +123,17 @@ class PostPromptService extends AIPromptService
                     'error' => $e->getMessage(),
                     'post_id' => $post->id,
                     'post_url' => $post->url,
-                    'model' => $aiModel->name
+                    'model' => $aiModel->name,
                 ]);
             }
         }
-        
+
         // Remove duplicates and similar prompts
         $uniquePrompts = $this->removeDuplicatePostPrompts($allGeneratedPrompts);
-        
+
         // Limit to maximum 5 prompts
         $limitedPrompts = array_slice($uniquePrompts, 0, 5);
-        
+
         // Delete any prompts beyond the limit
         if (count($uniquePrompts) > 5) {
             $promptsToDelete = array_slice($uniquePrompts, 5);
@@ -138,13 +143,13 @@ class PostPromptService extends AIPromptService
                 }
             }
         }
-        
+
         // Note: Stats (visibility, sentiment, position, volume) will remain null initially
         // They will be populated later when:
         // 1. The post gets citations in AI responses
         // 2. A background job analyzes the prompts
         // 3. Manual analysis is triggered
-        
+
         return $limitedPrompts;
     }
 
@@ -161,7 +166,7 @@ class PostPromptService extends AIPromptService
             try {
                 // Calculate stats from AI citations in the last 30 days
                 $stats = $this->calculatePromptStatsFromCitations($prompt, $post);
-                
+
                 // Update the prompt with calculated stats
                 $prompt->update([
                     'visibility' => $stats['visibility'],
@@ -170,20 +175,20 @@ class PostPromptService extends AIPromptService
                     'volume' => $stats['volume'],
                     'location' => $post->brand->country_code ?? 'US',
                 ]);
-                
-                Log::info("Updated prompt stats from citations", [
+
+                Log::info('Updated prompt stats from citations', [
                     'prompt_id' => $prompt->id,
                     'visibility' => $stats['visibility'],
                     'sentiment' => $stats['sentiment'],
                     'position' => $stats['position'],
-                    'volume' => $stats['volume']
+                    'volume' => $stats['volume'],
                 ]);
             } catch (\Exception $e) {
-                Log::warning("Failed to calculate stats for prompt", [
+                Log::warning('Failed to calculate stats for prompt', [
                     'prompt_id' => $prompt->id,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
-                
+
                 // Set default values if calculation fails
                 $prompt->update([
                     'visibility' => null,
@@ -203,33 +208,33 @@ class PostPromptService extends AIPromptService
     protected function calculatePromptStatsFromCitations($prompt, Post $post): array
     {
         $thirtyDaysAgo = now()->subDays(30);
-        
+
         // Get all citations for this post in the last 30 days
         $citations = \App\Models\PostCitation::where('post_id', $post->id)
             ->where('created_at', '>=', $thirtyDaysAgo)
             ->get();
-        
+
         $totalChats = $citations->count();
         $mentionedChats = $citations->where('is_mentioned', true)->count();
-        
+
         // Calculate visibility: percentage of chats mentioning the brand
         $visibility = $totalChats > 0 ? round(($mentionedChats / $totalChats) * 100, 2) : null;
-        
+
         // Calculate average sentiment score
         $sentimentScores = $citations->where('is_mentioned', true)
             ->pluck('sentiment_score')
-            ->filter(fn($score) => $score !== null);
+            ->filter(fn ($score) => $score !== null);
         $sentiment = $sentimentScores->isNotEmpty() ? round($sentimentScores->avg(), 2) : 0;
-        
+
         // Calculate average position
         $positions = $citations->where('is_mentioned', true)
             ->pluck('position')
-            ->filter(fn($pos) => $pos !== null && $pos > 0);
+            ->filter(fn ($pos) => $pos !== null && $pos > 0);
         $position = $positions->isNotEmpty() ? round($positions->avg(), 0) : 0;
-        
+
         // Determine volume based on citation frequency
         $volume = $this->calculateVolumeFromCitations($mentionedChats);
-        
+
         return [
             'visibility' => $visibility,
             'sentiment' => $sentiment,
@@ -259,11 +264,11 @@ class PostPromptService extends AIPromptService
     {
         $results = [];
         $aiModels = $this->getEnabledAiModels();
-        
+
         foreach ($aiModels as $aiModel) {
             $results[$aiModel->name] = $this->testAiModelConnection($aiModel);
         }
-        
+
         return $results;
     }
 
@@ -273,35 +278,35 @@ class PostPromptService extends AIPromptService
     public function testPostPromptGeneration(string $provider = 'openai'): array
     {
         $aiModel = $this->getAiModelConfig($provider);
-        
-        if (!$aiModel) {
+
+        if (! $aiModel) {
             return [
                 'success' => false,
                 'message' => 'AI Model not found or disabled',
-                'provider' => $provider
+                'provider' => $provider,
             ];
         }
 
         try {
-            $testPrompt = "Generate 3 sample questions that someone might ask about a website that provides online courses. Return only the questions, one per line, no formatting.";
-            
+            $testPrompt = 'Generate 3 sample questions that someone might ask about a website that provides online courses. Return only the questions, one per line, no formatting.';
+
             $response = $this->callAiProvider($aiModel, $testPrompt);
             $questions = $this->parseQuestions($response->text);
-            
+
             return [
                 'success' => true,
                 'provider' => $provider,
                 'model' => $aiModel->display_name,
                 'questions_generated' => count($questions),
                 'sample_questions' => array_slice($questions, 0, 3),
-                'raw_response' => $response->text
+                'raw_response' => $response->text,
             ];
         } catch (\Exception $e) {
             return [
                 'success' => false,
                 'provider' => $provider,
                 'model' => $aiModel->display_name,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ];
         }
     }
@@ -313,11 +318,11 @@ class PostPromptService extends AIPromptService
     {
         // Check if this is one of the main AI models (OpenAI, Gemini, Perplexity)
         $mainAiModels = ['openai', 'gemini', 'perplexity'];
-        
+
         if (in_array(strtolower($aiModel->name), $mainAiModels)) {
             return 25;
         }
-        
+
         return 5; // For other AI models
     }
 
@@ -327,7 +332,7 @@ class PostPromptService extends AIPromptService
     protected function buildPostPrompt(Post $post, string $description = '', int $promptCount = 25): string
     {
         $postContext = $description ? "\n\nAdditional context about this post: {$description}" : '';
-        
+
         return "Analyze the post URL {$post->url} and the post title '{$post->title}' and generate {$promptCount} questions that people would search for where this specific post/article would be a valuable and relevant source or reference.{$postContext}
 
                 Requirements:
@@ -362,7 +367,7 @@ class PostPromptService extends AIPromptService
             "How current is the information in {$post->url}?",
             "What methodology is used in {$post->title}?",
         ];
-        
+
         $generatedPrompts = [];
         foreach ($fallbackQuestions as $index => $question) {
             // Get country code, ensure it's 2 characters max
@@ -370,7 +375,7 @@ class PostPromptService extends AIPromptService
             if ($countryCode && strlen($countryCode) > 2) {
                 $countryCode = substr($countryCode, 0, 2);
             }
-            
+
             $generatedPrompt = PostPrompt::create([
                 'brand_id' => $post->brand_id, // Add brand_id for unified table
                 'post_id' => $post->id,
@@ -389,10 +394,10 @@ class PostPromptService extends AIPromptService
                 'location' => $post->brand->country_code ?? null,
                 'status' => 'active',
             ]);
-            
+
             $generatedPrompts[] = $generatedPrompt;
         }
-        
+
         return $generatedPrompts;
     }
 
@@ -403,7 +408,7 @@ class PostPromptService extends AIPromptService
     {
         // Get active AI model names
         $activeAiModels = $this->getEnabledAiModels()->pluck('name')->toArray();
-        
+
         if (empty($activeAiModels)) {
             return [];
         }
@@ -433,7 +438,7 @@ class PostPromptService extends AIPromptService
     {
         // Get active AI model names
         $activeAiModels = $this->getEnabledAiModels()->pluck('name')->toArray();
-        
+
         if (empty($activeAiModels)) {
             return 0;
         }
@@ -449,6 +454,7 @@ class PostPromptService extends AIPromptService
         }
 
         $uniquePrompts = $this->removeDuplicatePostPrompts($allPrompts->toArray());
+
         return count($uniquePrompts);
     }
 
@@ -464,7 +470,7 @@ class PostPromptService extends AIPromptService
         foreach ($prompts as $prompt) {
             $promptText = strtolower(trim($prompt->prompt ?? $prompt['prompt']));
             $words = array_unique(str_word_count($promptText, 1));
-            
+
             // Check for exact duplicates
             if (in_array($promptText, $seenPrompts)) {
                 continue;
@@ -475,14 +481,14 @@ class PostPromptService extends AIPromptService
             foreach ($seenWords as $existingWords) {
                 $intersection = array_intersect($words, $existingWords);
                 $similarity = count($intersection) / max(count($words), count($existingWords));
-                
+
                 if ($similarity >= 0.8) {
                     $isSimilar = true;
                     break;
                 }
             }
 
-            if (!$isSimilar) {
+            if (! $isSimilar) {
                 $uniquePrompts[] = $prompt;
                 $seenPrompts[] = $promptText;
                 $seenWords[] = $words;
@@ -509,7 +515,7 @@ class PostPromptService extends AIPromptService
     public function addCustomPromptForPost(Post $post, string $sessionId, string $promptText): PostPrompt
     {
         $maxOrder = PostPrompt::forPost($post->id)->max('order') ?? 0;
-        
+
         return PostPrompt::create([
             'brand_id' => $post->brand_id, // Add brand_id for unified table
             'post_id' => $post->id,
@@ -536,8 +542,10 @@ class PostPromptService extends AIPromptService
         $prompt = PostPrompt::find($promptId);
         if ($prompt) {
             $prompt->update(['is_selected' => $isSelected]);
+
             return true;
         }
+
         return false;
     }
 
@@ -552,34 +560,36 @@ class PostPromptService extends AIPromptService
     public function analyzePromptStatsWithAI(PostPrompt $prompt, Post $post, string $provider = 'openai'): array
     {
         $aiModel = $this->getAiModelConfig($provider);
-        
-        if (!$aiModel) {
+
+        if (! $aiModel) {
             Log::warning('AI Model not found or disabled for prompt analysis', ['provider' => $provider]);
+
             return $this->getDefaultStats();
         }
 
         $analysisPrompt = $this->buildPromptStatsAnalysisPrompt($prompt, $post);
-        
+
         try {
             $response = $this->callAiProvider($aiModel, $analysisPrompt);
             $stats = $this->parsePromptStats($response->text);
-            
+
             Log::info('AI Prompt Stats Analysis Completed', [
                 'prompt_id' => $prompt->id,
                 'post_url' => $post->url,
-                'stats' => $stats
+                'stats' => $stats,
+                'referrers_count' => count($stats['referrers'] ?? []),
             ]);
-            
+
             return $stats;
-            
+
         } catch (\Exception $e) {
             Log::error('AI Prompt Stats Analysis Failed', [
                 'prompt_id' => $prompt->id,
                 'post_url' => $post->url,
                 'provider' => $provider,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return $this->getDefaultStats();
         }
     }
@@ -621,12 +631,19 @@ Analyze and provide the following metrics:
    - medium = Moderate interest (1000-10000 searches/month)
    - high = Popular query (> 10000 searches/month)
 
+5. REFERRERS: List up to 3 example URLs where this post might be cited or referenced when answering this prompt. These should be:
+   - Authoritative websites, blogs, forums, or knowledge bases
+   - Relevant to the topic and industry
+   - Places where people discuss or reference similar content
+   - Real or realistic URLs (not hypothetical)
+
 Respond ONLY with this exact JSON format (no additional text):
 {
     \"visibility\": <number 0-100>,
     \"position\": <number 1-10>,
     \"sentiment\": <number 1-10>,
-    \"volume\": \"<low|medium|high>\"
+    \"volume\": \"<low|medium|high>\",
+    \"referrers\": [\"https://example1.com/path\", \"https://example2.com/path\", \"https://example3.com/path\"]
 }";
     }
 
@@ -636,27 +653,29 @@ Respond ONLY with this exact JSON format (no additional text):
     protected function parsePromptStats(string $response): array
     {
         try {
-            // Try to extract JSON from response
-            if (preg_match('/\{[^}]+\}/', $response, $matches)) {
+            // Try to extract JSON from response (handle potential nested objects/arrays)
+            if (preg_match('/\{(?:[^{}]|(?R))*\}/x', $response, $matches)) {
                 $jsonStr = $matches[0];
                 $data = json_decode($jsonStr, true);
-                
+
                 if (json_last_error() === JSON_ERROR_NONE && isset($data['visibility'])) {
                     return [
                         'visibility' => (int) ($data['visibility'] ?? 0),
                         'position' => (int) ($data['position'] ?? 5),
                         'sentiment' => (int) ($data['sentiment'] ?? 5),
                         'volume' => $data['volume'] ?? 'medium',
+                        'referrers' => $data['referrers'] ?? [],
                     ];
                 }
             }
-            
+
             // Fallback: try to extract values from text
             $visibility = 0;
             $position = 5;
             $sentiment = 5;
             $volume = 'medium';
-            
+            $referrers = [];
+
             if (preg_match('/visibility["\s:]+(\d+)/i', $response, $matches)) {
                 $visibility = (int) $matches[1];
             }
@@ -669,20 +688,25 @@ Respond ONLY with this exact JSON format (no additional text):
             if (preg_match('/volume["\s:]+"?(low|medium|high)/i', $response, $matches)) {
                 $volume = strtolower($matches[1]);
             }
-            
+            // Try to extract URLs for referrers
+            if (preg_match_all('/(https?:\/\/[^\s"\]]+)/i', $response, $matches)) {
+                $referrers = array_slice($matches[1], 0, 3); // Limit to 3 referrers
+            }
+
             return [
                 'visibility' => $visibility,
                 'position' => $position,
                 'sentiment' => $sentiment,
                 'volume' => $volume,
+                'referrers' => $referrers,
             ];
-            
+
         } catch (\Exception $e) {
             Log::error('Failed to parse prompt stats', [
                 'response' => $response,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return $this->getDefaultStats();
         }
     }
@@ -697,6 +721,7 @@ Respond ONLY with this exact JSON format (no additional text):
             'position' => 0,
             'sentiment' => 0,
             'volume' => 'low',
+            'referrers' => [],
         ];
     }
 
@@ -707,27 +732,78 @@ Respond ONLY with this exact JSON format (no additional text):
     {
         try {
             $stats = $this->analyzePromptStatsWithAI($prompt, $post, $provider);
-            
+
             $prompt->update([
                 'visibility' => $stats['visibility'],
                 'position' => $stats['position'],
                 'sentiment' => $stats['sentiment'],
                 'volume' => $stats['volume'],
             ]);
-            
+
+            // Save referrers as potential citations
+            if (! empty($stats['referrers'])) {
+                $this->saveReferrersAsCitations($post, $prompt, $stats['referrers'], $provider);
+            }
+
             Log::info('Updated prompt stats with AI analysis', [
                 'prompt_id' => $prompt->id,
-                'stats' => $stats
+                'stats' => $stats,
             ]);
-            
+
             return true;
         } catch (\Exception $e) {
             Log::error('Failed to update prompt stats with AI', [
                 'prompt_id' => $prompt->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return false;
+        }
+    }
+
+    /**
+     * Save referrers as potential citations in post_citations table
+     */
+    protected function saveReferrersAsCitations(Post $post, PostPrompt $prompt, array $referrers, string $provider): void
+    {
+        foreach ($referrers as $index => $referrerUrl) {
+            try {
+                // Check if citation already exists for this URL
+                $existingCitation = \App\Models\PostCitation::where('post_id', $post->id)
+                    ->where('citation_url', $referrerUrl)
+                    ->first();
+
+                if (! $existingCitation) {
+                    \App\Models\PostCitation::create([
+                        'post_id' => $post->id,
+                        'ai_model' => $provider,
+                        'citation_text' => "Potential referrer for prompt: {$prompt->prompt}",
+                        'citation_url' => $referrerUrl,
+                        'position' => $index + 1,
+                        'is_mentioned' => false, // Not verified yet
+                        'metadata' => [
+                            'source' => 'ai_analysis',
+                            'prompt_id' => $prompt->id,
+                            'prompt_text' => $prompt->prompt,
+                            'analysis_type' => 'referrer_prediction',
+                        ],
+                        'checked_at' => now(),
+                    ]);
+
+                    Log::info('Saved referrer as potential citation', [
+                        'post_id' => $post->id,
+                        'prompt_id' => $prompt->id,
+                        'referrer_url' => $referrerUrl,
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::warning('Failed to save referrer as citation', [
+                    'post_id' => $post->id,
+                    'prompt_id' => $prompt->id,
+                    'referrer_url' => $referrerUrl,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
     }
 
@@ -738,14 +814,14 @@ Respond ONLY with this exact JSON format (no additional text):
     {
         $query = PostPrompt::forPost($post->id)
             ->where('is_active', true);
-        
+
         if ($limit) {
             $query->limit($limit);
         }
-        
+
         $prompts = $query->get();
         $results = [];
-        
+
         foreach ($prompts as $prompt) {
             $success = $this->updatePromptStatsWithAI($prompt, $post, $provider);
             $results[] = [
@@ -760,7 +836,7 @@ Respond ONLY with this exact JSON format (no additional text):
                 ] : null,
             ];
         }
-        
+
         return $results;
     }
 }

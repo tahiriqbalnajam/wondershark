@@ -54,6 +54,7 @@ class PostController extends Controller
                     ],
                     'citations_count' => $post->citations->count(),
                     'mentioned_in_ai' => $post->citations->where('is_mentioned', true)->count(),
+                    'citation_urls' => $post->citations->pluck('citation_url')->filter()->unique()->values()->toArray(),
                 ];
             }),
         ]);
@@ -100,6 +101,7 @@ class PostController extends Controller
                     ],
                     'citations_count' => $post->citations->count(),
                     'mentioned_in_ai' => $post->citations->where('is_mentioned', true)->count(),
+                    'citation_urls' => $post->citations->pluck('citation_url')->filter()->unique()->values()->toArray(),
                 ];
             }),
             'brand' => $brand,
