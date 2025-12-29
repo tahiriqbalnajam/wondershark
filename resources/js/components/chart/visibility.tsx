@@ -91,7 +91,6 @@ export function VisibilityChart({ data, entities, granularity = 'month', hovered
                                 height={visibilityData.length > 12 ? 80 : 30}
                             />
                             <YAxis 
-                                label={{ value: 'Visibility %', angle: -90, position: 'insideLeft' }}
                                 tick={{ fontSize: 12 }}
                                 domain={[0, 'dataMax + 5']}
                                 tickFormatter={(value) => `${Math.round(Number(value))}%`}
@@ -112,7 +111,6 @@ export function VisibilityChart({ data, entities, granularity = 'month', hovered
                                     boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
                                 } as React.CSSProperties}
                             />
-                            <Legend wrapperStyle={{ fontSize: '12px' }} />
                             {chartEntities.map((entity, index) => {
                                 const isHovered = hoveredDomain === entity.domain;
                                 const isOtherHovered = hoveredDomain && hoveredDomain !== entity.domain;
