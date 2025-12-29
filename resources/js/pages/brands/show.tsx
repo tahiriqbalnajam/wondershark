@@ -119,6 +119,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
     const [customDateRange, setCustomDateRange] = useState<{ from?: Date; to?: Date }>({});
     const [selectedBrand, setSelectedBrand] = useState('all');
     const [selectedAIModel, setSelectedAIModel] = useState('all');
+    const [hoveredDomain, setHoveredDomain] = useState<string | null>(null);
     const handleDateRangeSelect = (days: string) => {
         setSelectedDateRange(days);
         if (days !== 'custom') {
@@ -371,12 +372,15 @@ const filteredCompetitiveStats = useMemo(() => {
 
     const filteredDates = Object.keys(historicalStats).filter(date =>
         isWithinDateRange(date)
-    );
+    ).sort();
 
-    const data = filteredDates.map(date => {
-        const row: any = { date };
+    const data = filteredDates.map(dateStr => {
+        const date = new Date(dateStr + 'T00:00:00Z');
+        const row: any = { 
+            date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+        };
 
-        Object.entries(historicalStats[date]).forEach(([domain, stats]) => {
+        Object.entries(historicalStats[dateStr]).forEach(([domain, stats]) => {
             if (selectedBrand !== 'all' && !domain.includes(selectedBrand)) return;
             row[domain] = stats.visibility;
         });
@@ -669,6 +673,7 @@ const filteredPrompts = useMemo(() => {
                             data={filteredVisibilityChartData.data}
                             entities={filteredVisibilityChartData.entities}
                             granularity={filteredVisibilityChartData.granularity}
+                            hoveredDomain={hoveredDomain}
                         />
                         {/* <VisibilityChart
                             data={visibilityChartData.data}
@@ -690,6 +695,8 @@ const filteredPrompts = useMemo(() => {
                             onRowClick={handleBrandRowClick}
                             brandId={brand.id}
                             limit={5}
+                            hoveredDomain={hoveredDomain}
+                            onDomainHover={setHoveredDomain}
                         />
                     </Card>
                 </div>

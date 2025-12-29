@@ -14,9 +14,10 @@ interface VisibilityChartProps {
     data?: Array<Record<string, string | number>>;
     entities?: Array<{ name: string; domain: string }>;
     granularity?: 'month' | 'day';
+    hoveredDomain?: string | null;
 }
 
-const CHART_COLORS = [
+export const CHART_COLORS = [
     '#00c851', // Green
     '#0099cc', // Blue
     '#ff6900', // Orange
@@ -29,7 +30,7 @@ const CHART_COLORS = [
     '#CC0000', // Dark Red
 ];
 
-export function VisibilityChart({ data, entities, granularity = 'month' }: VisibilityChartProps) {
+export function VisibilityChart({ data, entities, granularity = 'month', hoveredDomain }: VisibilityChartProps) {
     // Use provided data or show empty state
     const visibilityData = data && data.length > 0 ? data : [];
     const chartEntities = entities && entities.length > 0 ? entities : [];
@@ -38,6 +39,11 @@ export function VisibilityChart({ data, entities, granularity = 'month' }: Visib
     const domainToNameMap = new Map(
         chartEntities.map(entity => [entity.domain, entity.name])
     );
+
+    // Get the color for the hovered domain
+    const hoveredColor = hoveredDomain 
+        ? CHART_COLORS[chartEntities.findIndex(e => e.domain === hoveredDomain) % CHART_COLORS.length]
+        : null;
 
     // Calculate dynamic Y-axis domain based on actual data values
     let yAxisDomain: [number, number] = [0, 100];
@@ -78,7 +84,8 @@ export function VisibilityChart({ data, entities, granularity = 'month' }: Visib
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis 
                                 dataKey="date" 
-                                tick={{ fontSize: 12 }}
+                                tick={{ fontSize: 12, fill: hoveredColor || '#666' }}
+                                stroke={hoveredColor || '#ccc'}
                                 angle={visibilityData.length > 12 ? -45 : 0}
                                 textAnchor={visibilityData.length > 12 ? 'end' : 'middle'}
                                 height={visibilityData.length > 12 ? 80 : 30}
@@ -106,16 +113,22 @@ export function VisibilityChart({ data, entities, granularity = 'month' }: Visib
                                 } as React.CSSProperties}
                             />
                             <Legend wrapperStyle={{ fontSize: '12px' }} />
-                            {chartEntities.map((entity, index) => (
-                                <Line
-                                    key={entity.domain}
-                                    type="monotone"
-                                    dataKey={entity.domain}
-                                    stroke={CHART_COLORS[index % CHART_COLORS.length]}
-                                    strokeWidth={2}
-                                    name={entity.name}
-                                />
-                            ))}
+                            {chartEntities.map((entity, index) => {
+                                const isHovered = hoveredDomain === entity.domain;
+                                const isOtherHovered = hoveredDomain && hoveredDomain !== entity.domain;
+                                
+                                return (
+                                    <Line
+                                        key={entity.domain}
+                                        type="monotone"
+                                        dataKey={entity.domain}
+                                        stroke={CHART_COLORS[index % CHART_COLORS.length]}
+                                        strokeWidth={isHovered ? 4 : 2}
+                                        strokeOpacity={isOtherHovered ? 0.2 : 1}
+                                        name={entity.name}
+                                    />
+                                );
+                            })}
                         </LineChart>
                     </ResponsiveContainer>
                 ) : (

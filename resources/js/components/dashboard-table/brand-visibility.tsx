@@ -19,6 +19,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
+import { CHART_COLORS } from "@/components/chart/visibility";
 
 interface CompetitiveStat {
     id: number;
@@ -47,15 +48,28 @@ interface BrandVisibilityIndexProps {
     onRowClick?: (domain: string) => void;
     brandId?: number;
     limit?: number;
+    hoveredDomain?: string | null;
+    onDomainHover?: (domain: string | null) => void;
 }
 
-export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, limit }: BrandVisibilityIndexProps) {
+export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, limit, hoveredDomain, onDomainHover }: BrandVisibilityIndexProps) {
     // Sort by position (lower is better)
     const sortedStats = [...competitiveStats].sort((a, b) => a.position - b.position);
     
     // Apply limit if specified
     const displayStats = limit ? sortedStats.slice(0, limit) : sortedStats;
     const hasMore = limit && sortedStats.length > limit;
+
+    // Helper function to get the color for a domain based on its index in sortedStats
+    const getColorForDomain = (domain: string) => {
+        const index = sortedStats.findIndex(stat => {
+            const cleanDomain = stat.entity_url
+                .replace(/^https?:\/\//, '')
+                .replace(/^www\./, '');
+            return cleanDomain === domain;
+        });
+        return index !== -1 ? CHART_COLORS[index % CHART_COLORS.length] : '#666';
+    };
 
     return (
         <CardContent>
@@ -133,10 +147,21 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                 <TableRow 
                                     key={stat.id}
                                     onClick={() => onRowClick?.(cleanDomain)}
+                                    onMouseEnter={() => onDomainHover?.(cleanDomain)}
+                                    onMouseLeave={() => onDomainHover?.(null)}
                                     className="cursor-pointer hover:bg-muted/50 transition-colors"
                                 >
                                     <TableCell className="font-medium border-r border-gray-200 text-center">
-                                        {index + 1}
+                                        <div className="flex items-center justify-center">
+                                            {hoveredDomain === cleanDomain ? (
+                                                <div 
+                                                    className="w-3 h-3 rounded-full" 
+                                                    style={{ backgroundColor: getColorForDomain(cleanDomain) }}
+                                                />
+                                            ) : (
+                                                <span>{index + 1}</span>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="font-medium border-r border-gray-200 w-80">
                                         <div className="flex items-center gap-2">
