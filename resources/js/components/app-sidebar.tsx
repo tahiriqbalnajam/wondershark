@@ -152,6 +152,7 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
             href: '/admin',
             icon: Settings,
             permission: 'view-admin-panel',
+            alwaysOpenSubmenu: true,
             items: [
                 {
                     title: 'AI Models',
