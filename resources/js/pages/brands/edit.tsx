@@ -41,6 +41,7 @@ type Brand = {
   description: string;
   monthly_posts: number;
   status: 'active' | 'inactive' | 'pending';
+  logo?: string | null;
   // prompts: Array<{ id: number; prompt: string; order: number; is_active: boolean }>;
   // subreddits: Array<{ id: number; subreddit_name: string; description?: string; status: string }>;
 };
@@ -53,6 +54,7 @@ type BrandForm = {
   description: string;
   monthly_posts: number;
   status: 'active' | 'inactive' | 'pending';
+  logo: File | null;
   // prompts: string[];
   // subreddits: string[];
 
@@ -75,12 +77,14 @@ export default function BrandEdit({ brand }: Props) {
   const [newPrompt, setNewPrompt] = useState('');
   const [newSubreddit, setNewSubreddit] = useState('');
 
-  const { data, setData, put, processing, errors } = useForm<BrandForm>({
+  const { data, setData, post, processing, errors } = useForm<BrandForm & { _method: string }>({
+    _method: 'PUT',
     name: brand.name,
     website: brand.website || '',
     description: brand.description,
     monthly_posts: brand.monthly_posts,
     status: brand.status,
+    logo: null,
     Verified: false,
     'GPT-4o Search': false,
     'OpenAI (GPT-4)': false,
@@ -88,6 +92,7 @@ export default function BrandEdit({ brand }: Props) {
     'AI Mode': false,
     Perplexity: false,
   });
+
   
     // prompts: brand.prompts.map((p) => p.prompt),
     // subreddits: brand.subreddits.map((s) => s.subreddit_name), /////// this data will be in above array 
@@ -120,7 +125,9 @@ export default function BrandEdit({ brand }: Props) {
 
     const handleSubmit: FormEventHandler = (e) => {
       e.preventDefault();
-      put(route('brands.update', brand.id));
+      post(route('brands.update', brand.id), {
+        forceFormData: true,
+      });
     };
 
   
@@ -217,6 +224,75 @@ export default function BrandEdit({ brand }: Props) {
                 </Select>
                 <InputError message={errors.status} />
               </div>
+              <div className="grid gap-2">
+                <Label>Brand Logo</Label>
+
+                <div className="flex items-center gap-4">
+                  {/* Logo preview */}
+                  <div className="w-16 h-16 rounded-lg border flex items-center justify-center bg-gray-50 overflow-hidden">
+                    {/* 1️⃣ New selected logo */}
+                    {data.logo ? (
+                      <img
+                        src={URL.createObjectURL(data.logo)}
+                        alt="Brand logo preview"
+                        className="w-full h-full object-contain"
+                      />
+                    ) : brand.logo ? (
+                      /* 2️⃣ Logo from DB */
+                      <img
+                        src={`/storage/${brand.logo}`}
+                        alt={brand.logo}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      /* 3️⃣ Fallback from logo.dev API */
+                      <img
+                        src={`https://img.logo.dev/${data.website?.replace(/^https?:\/\//, '').replace(/^www\./, '')
+                        }?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`}
+                        alt={brand.website}
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          e.currentTarget.src =
+                            `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="%233b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Hidden file input */}
+                  <input
+                    id="brand-logo-upload"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        setData('logo', e.target.files[0]);
+                      }
+                    }}
+                  />
+
+                  {/* Upload button */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      document.getElementById('brand-logo-upload')?.click()
+                    }
+                  >
+                    Change Logo
+                  </Button>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  PNG, JPG, WEBP or SVG. Max 2MB.
+                </p>
+
+                <InputError message={errors.logo} />
+              </div>
+
+
+
 
               <div className="grid">
                 <div className="bg-white border rounded-lg px-4 py-7">
