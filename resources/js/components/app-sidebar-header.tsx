@@ -8,8 +8,11 @@ import { usePage } from '@inertiajs/react';
 import { UserCheck, LayoutDashboard, Settings, BarChart3, Users,FileDown,Menu,UnfoldHorizontal } from 'lucide-react';
 import { JSX } from 'react';
 
-export function AppSidebarHeader({ breadcrumbs = [], title }: { breadcrumbs?: BreadcrumbItemType[], title?: string }) {
-    const { url } = usePage(); // Current route path
+export function AppSidebarHeader({ breadcrumbs = [], title, logo, website }: { breadcrumbs?: BreadcrumbItemType[], title?: string, logo?: string, website?: string }) {
+    const { url, props } = usePage(); // Current route path and page props
+
+    // Get brand from page props if available
+    const brand = (props as any).brand;
 
     // Map route → icon
     const iconMap: Record<string, JSX.Element> = {
@@ -20,8 +23,29 @@ export function AppSidebarHeader({ breadcrumbs = [], title }: { breadcrumbs?: Br
         '/profile': <UserCheck className="w-5 h-5" />,
     };
 
+    // Generate logo.dev URL if no logo but website provided
+    const generateApiLogoUrl = (site: string) => 
+        `https://img.logo.dev/${site.replace(/^https?:\/\//, '').replace(/^www\./, '')}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
+
+    // Determine logo and website - prioritize props, then brand from page props
+    const finalLogo = logo || brand?.logo;
+    const finalWebsite = website || brand?.website;
+
     // Pick icon based on current URL, fallback to a default
-    const pageIcon = iconMap[url] || <UserCheck className="w-5 h-5 text-muted-foreground" />;
+    const pageIcon = finalLogo ? (
+        <img src={`/storage/${finalLogo}`} alt="Brand logo" className="w-5 h-5 rounded object-contain" />
+    ) : finalWebsite ? (
+        <img 
+            src={generateApiLogoUrl(finalWebsite)} 
+            alt="Brand logo from API" 
+            className="w-5 h-5 rounded object-contain"
+            onError={(e) => {
+                e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%233b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
+            }}
+        />
+    ) : (
+        iconMap[url] || <UserCheck className="w-5 h-5 text-muted-foreground" />
+    );
 
     const isDashboard = url === '/dashboard';
 

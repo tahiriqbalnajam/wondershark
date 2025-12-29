@@ -838,8 +838,43 @@ class BrandController extends Controller
             'prompts.*' => 'required|string|max:500',
             'subreddits' => 'array|max:20',
             'subreddits.*' => 'required|string|max:100',
+            'logo' => 'nullable|image|max:2048',
         ]);
+        if ($request->hasFile('logo') && $request->file('logo')->isValid()) {
+            // Delete old logo and thumbnail if exists
+            if ($brand->logo) {
+                $oldLogoPath = public_path('storage/' . $brand->logo);
+                if (file_exists($oldLogoPath)) {
+                    unlink($oldLogoPath);
+                }
+            }
+            if ($brand->logo_thumbnail) {
+                $oldThumbPath = public_path('storage/' . $brand->logo_thumbnail);
+                if (file_exists($oldThumbPath)) {
+                    unlink($oldThumbPath);
+                }
+            }
 
+            $file = $request->file('logo');
+
+            // generate safe unique name
+            $filename = uniqid('brand_') . '.' . $file->getClientOriginalExtension();
+
+            // move instead of store (Windows-safe)
+            $file->move(public_path('storage/brands/logos'), $filename);
+
+            // save relative path in DB
+            $brand->logo = 'brands/logos/' . $filename;
+
+            // Create thumbnail
+            $thumbnailPath = $this->createThumbnail(public_path('storage/brands/logos/' . $filename), $filename, $file->getClientOriginalExtension());
+            if ($thumbnailPath) {
+                $brand->logo_thumbnail = $thumbnailPath;
+            }
+        }
+
+
+        // $brand->update($request->except('logo'));
         DB::transaction(function () use ($request, $brand) {
             // Update brand basic info and status
             $brand->update([
@@ -1406,6 +1441,81 @@ class BrandController extends Controller
     private function generateMockVolume(): int
     {
         return rand(100, 10000);
+    }
+
+    /**
+     * Create a thumbnail for the uploaded logo
+     */
+    private function createThumbnail(string $filePath, string $filename, string $extension): ?string
+    {
+        try {
+            $image = imagecreatefromstring(file_get_contents($filePath));
+            
+            if (!$image) {
+                return null;
+            }
+
+            $originalWidth = imagesx($image);
+            $originalHeight = imagesy($image);
+            
+            // Create 80x80 thumbnail
+            $thumbnailSize = 80;
+            $thumbnail = imagecreatetruecolor($thumbnailSize, $thumbnailSize);
+            
+            // Preserve transparency for PNG and GIF
+            if ($extension === 'png' || $extension === 'gif') {
+                imagealphablending($thumbnail, false);
+                imagesavealpha($thumbnail, true);
+                $transparent = imagecolorallocatealpha($thumbnail, 255, 255, 255, 127);
+                imagefilledrectangle($thumbnail, 0, 0, $thumbnailSize, $thumbnailSize, $transparent);
+            }
+            
+            // Resize image
+            imagecopyresampled(
+                $thumbnail,
+                $image,
+                0, 0, 0, 0,
+                $thumbnailSize,
+                $thumbnailSize,
+                $originalWidth,
+                $originalHeight
+            );
+            
+            // Save thumbnail
+            $thumbnailFilename = $filename . '_thumb.' . $extension;
+            $thumbnailPath = public_path('storage/brands/thumbnails/' . $thumbnailFilename);
+            
+            // Ensure directory exists
+            if (!file_exists(dirname($thumbnailPath))) {
+                mkdir(dirname($thumbnailPath), 0755, true);
+            }
+            
+            // Save based on extension
+            $saved = false;
+            switch (strtolower($extension)) {
+                case 'jpg':
+                case 'jpeg':
+                    $saved = imagejpeg($thumbnail, $thumbnailPath, 90);
+                    break;
+                case 'png':
+                    $saved = imagepng($thumbnail, $thumbnailPath, 9);
+                    break;
+                case 'gif':
+                    $saved = imagegif($thumbnail, $thumbnailPath);
+                    break;
+                case 'webp':
+                    $saved = imagewebp($thumbnail, $thumbnailPath, 90);
+                    break;
+            }
+            
+            imagedestroy($image);
+            imagedestroy($thumbnail);
+            
+            return $saved ? 'brands/thumbnails/' . $thumbnailFilename : null;
+        } catch (\Exception $e) {
+            \Log::error('Failed to create thumbnail: ' . $e->getMessage());
+            return null;
+        }
     }
 }
 

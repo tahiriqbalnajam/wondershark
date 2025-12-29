@@ -41,7 +41,7 @@ const submit: FormEventHandler = (e) => {
 };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayout title="Agency Settings" breadcrumbs={breadcrumbs} logo={agency.logo} website={agency.url}>
             <Head title="Agency settings" />
             <div className="px-4 py-6">
                 <div className="space-y-6">
