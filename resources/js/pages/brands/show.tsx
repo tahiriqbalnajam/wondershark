@@ -697,6 +697,7 @@ const filteredPrompts = useMemo(() => {
                             limit={5}
                             hoveredDomain={hoveredDomain}
                             onDomainHover={setHoveredDomain}
+                            entities={filteredVisibilityChartData.entities}
                         />
                     </Card>
                 </div>

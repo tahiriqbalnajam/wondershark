@@ -50,9 +50,10 @@ interface BrandVisibilityIndexProps {
     limit?: number;
     hoveredDomain?: string | null;
     onDomainHover?: (domain: string | null) => void;
+    entities?: Array<{ name: string; domain: string }>;
 }
 
-export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, limit, hoveredDomain, onDomainHover }: BrandVisibilityIndexProps) {
+export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, limit, hoveredDomain, onDomainHover, entities }: BrandVisibilityIndexProps) {
     // Sort by position (lower is better)
     const sortedStats = [...competitiveStats].sort((a, b) => a.position - b.position);
     
@@ -60,14 +61,10 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
     const displayStats = limit ? sortedStats.slice(0, limit) : sortedStats;
     const hasMore = limit && sortedStats.length > limit;
 
-    // Helper function to get the color for a domain based on its index in sortedStats
+    // Helper function to get the color for a domain based on its index in entities array (same as chart)
     const getColorForDomain = (domain: string) => {
-        const index = sortedStats.findIndex(stat => {
-            const cleanDomain = stat.entity_url
-                .replace(/^https?:\/\//, '')
-                .replace(/^www\./, '');
-            return cleanDomain === domain;
-        });
+        if (!entities) return '#666';
+        const index = entities.findIndex(entity => entity.domain === domain);
         return index !== -1 ? CHART_COLORS[index % CHART_COLORS.length] : '#666';
     };
 
