@@ -719,10 +719,14 @@ class BrandController extends Controller
             }
         }
 
+        // Get enabled AI models for filtering
+        $aiModels = AiModel::enabled()->ordered()->get();
+
         return Inertia::render('brands/show', [
             'brand' => $brand,
             'competitiveStats' => $competitiveStats,
             'historicalStats' => $historicalStats,
+            'aiModels' => $aiModels,
         ]);
     }
 

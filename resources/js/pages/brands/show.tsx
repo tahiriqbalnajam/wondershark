@@ -103,6 +103,13 @@ interface Props {
     brand: Brand;
     competitiveStats: CompetitiveStat[];
     historicalStats: Record<string, Record<string, { entity_name: string; visibility: number; sentiment: number; position: number }>>;
+    aiModels: Array<{
+        id: number;
+        name: string;
+        display_name: string;
+        icon?: string;
+        provider?: string;
+    }>;
 }
 
 const breadcrumbs = (brand: Brand) => [
@@ -111,7 +118,7 @@ const breadcrumbs = (brand: Brand) => [
     { name: brand.name, href: '', title: brand.name },
 ];
 
-export default function BrandShow({ brand, competitiveStats, historicalStats }: Props) {
+export default function BrandShow({ brand, competitiveStats, historicalStats, aiModels }: Props) {
     const [selectedCompetitorDomain, setSelectedCompetitorDomain] = useState<string | null>(null);
     const [triggeringAnalysis, setTriggeringAnalysis] = useState(false);
     const [selectedDateRange, setSelectedDateRange] = useState('30');
@@ -126,73 +133,30 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
             setCustomDateRange({});
         }
     };
-    const aiModels = [
-    {
-        value: 'all',
-        label: 'All AI Models',
-        logo: null,
-    },
-    {
-        value: 'chatgpt',
-        label: 'ChatGPT',
-        logo: '/images/chatgpt_.svg',
-    },
-    {
-        value: 'ai-overview',
-        label: 'AI Overview',
-        logo: '/images/google.svg',
-    },
-    {
-        value: 'gpt-4o-search',
-        label: 'GPT-4o Search',
-        logo: '/images/openai.svg',
-    },
-    {
-        value: 'google-ai-mode',
-        label: 'AI Mode (Google)',
-        logo: '/images/google.svg',
-    },
-    {
-        value: 'gemini',
-        label: 'Gemini',
-        logo: '/images/gemini.svg',
-    },
-    {
-        value: 'claude-sonnet-4',
-        label: 'Claude Sonnet 4',
-        logo: '/images/claude.svg',
-    },
-    {
-        value: 'grok',
-        label: 'Grok',
-        logo: '/images/grok.svg',
-    },
-    {
-        value: 'llama-4',
-        label: 'Llama 4',
-        logo: '/images/llama.svg',
-    },
-    {
-        value: 'deepseek',
-        label: 'DeepSeek',
-        logo: '/images/deepseek.svg',
-    },
-    {
-        value: 'copilot',
-        label: 'Microsoft Copilot',
-        logo: '/images/copilot.svg',
-    },
-    {
-        value: 'mistral',
-        label: 'mistral.ai',
-        logo: '/images/mistral.svg',
-    },
-    {
-        value: 'ollama',
-        label: 'Ollama',
-        logo: '/images/ollama.svg',
-    },
-];
+    const aiModelOptions = useMemo(() => {
+        const models: Array<{
+            value: string;
+            label: string;
+            logo: string | null;
+        }> = [
+            {
+                value: 'all',
+                label: 'All AI Models',
+                logo: null,
+            },
+        ];
+
+        // Add dynamic models from database
+        aiModels.forEach(model => {
+            models.push({
+                value: model.name,
+                label: model.display_name,
+                logo: model.icon ? `/storage/${model.icon}` : null,
+            });
+        });
+
+        return models;
+    }, [aiModels]);
 
     const brands = useMemo(() => {
         const map = new Map<string, { value: string; label: string }>();
@@ -240,20 +204,17 @@ export default function BrandShow({ brand, competitiveStats, historicalStats }: 
     return date >= fromDate;
 };
 
-    const aiProviderMap: Record<string, string[]> = {
-        chatgpt: ['openai'],
-        'gpt-4o-search': ['openai'],
-        'ai-overview': ['google'],
-        'google-ai-mode': ['google'],
-        gemini: ['google'],
-        'claude-sonnet-4': ['anthropic'],
-        grok: ['xai'],
-        'llama-4': ['meta'],
-        deepseek: ['deepseek'],
-        copilot: ['microsoft'],
-        mistral: ['mistral'],
-        ollama: ['ollama'],
-    };
+    const aiProviderMap = useMemo(() => {
+        const map: Record<string, string[]> = {};
+        
+        aiModels.forEach(model => {
+            if (model.provider) {
+                map[model.name] = [model.provider.toLowerCase()];
+            }
+        });
+        
+        return map;
+    }, [aiModels]);
 const filteredCompetitiveStats = useMemo(() => {
     return competitiveStats.filter(stat => {
         // Date filter
@@ -467,9 +428,12 @@ const filteredPrompts = useMemo(() => {
 
         // AI model filter
         if (selectedAIModel !== 'all') {
-            const allowedProviders = aiProviderMap[selectedAIModel] || [];
-            const provider = item.ai_model?.provider?.toLowerCase() || '';
-            if (!allowedProviders.map(p => p.toLowerCase()).includes(provider)) {
+            // const allowedProviders = aiProviderMap[selectedAIModel] || [];
+            // const provider = item.ai_model?.provider?.toLowerCase() || '';
+            // if (!allowedProviders.map(p => p.toLowerCase()).includes(provider)) {
+            //     return false;
+            // }
+            if (item.ai_model?.name !== selectedAIModel) {
                 return false;
             }
         }
@@ -615,7 +579,7 @@ const filteredPrompts = useMemo(() => {
                                     <SelectTrigger className="w-56">
                                         <SelectValue>
                                             {(() => {
-                                                const model = aiModels.find(m => m.value === selectedAIModel);
+                                                const model = aiModelOptions.find(m => m.value === selectedAIModel);
                                                 if (!model) return 'Select AI model';
 
                                                 return (
@@ -635,7 +599,7 @@ const filteredPrompts = useMemo(() => {
                                     </SelectTrigger>
 
                                     <SelectContent>
-                                        {aiModels.map(model => (
+                                        {aiModelOptions.map(model => (
                                             <SelectItem key={model.value} value={model.value}>
                                                 <div className="flex items-center gap-2">
                                                     {model.logo && (

@@ -54,8 +54,14 @@ class AiModelController extends Controller
 
         // Handle icon upload
         if ($request->hasFile('icon')) {
-            $iconPath = $request->file('icon')->store('ai-model-icons', 'public');
-            $validated['icon'] = $iconPath;
+            $file = $request->file('icon');
+            if ($file && $file->isValid()) {
+                $iconPath = 'ai-model-icons/' . uniqid() . '_' . $file->getClientOriginalName();
+                $file->move(public_path('storage/ai-model-icons'), basename($iconPath));
+                $validated['icon'] = $iconPath;
+            } else {
+                return back()->withErrors(['icon' => 'Invalid icon file uploaded.']);
+            }
         } else {
             unset($validated['icon']);
         }
@@ -105,12 +111,18 @@ class AiModelController extends Controller
 
         // Handle icon upload
         if ($request->hasFile('icon')) {
-            // Delete old icon if exists
-            if ($aiModel->icon && \Storage::disk('public')->exists($aiModel->icon)) {
-                \Storage::disk('public')->delete($aiModel->icon);
+            $file = $request->file('icon');
+            if ($file && $file->isValid()) {
+                // Delete old icon if exists
+                if ($aiModel->icon && !empty($aiModel->icon) && \Storage::disk('public')->exists($aiModel->icon)) {
+                    \Storage::disk('public')->delete($aiModel->icon);
+                }
+                $iconPath = 'ai-model-icons/' . uniqid() . '_' . $file->getClientOriginalName();
+                $file->move(public_path('storage/ai-model-icons'), basename($iconPath));
+                $validated['icon'] = $iconPath;
+            } else {
+                return back()->withErrors(['icon' => 'Invalid icon file uploaded.']);
             }
-            $iconPath = $request->file('icon')->store('ai-model-icons', 'public');
-            $validated['icon'] = $iconPath;
         } else {
             unset($validated['icon']);
         }
