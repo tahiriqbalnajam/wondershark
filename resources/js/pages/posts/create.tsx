@@ -1,7 +1,6 @@
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-
 import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,7 +15,9 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
-import { ArrowLeft, FileText, ExternalLink } from 'lucide-react';
+import { ArrowLeft, FileText, ExternalLink, Check } from 'lucide-react';
+
+import { Calendar } from "@/components/ui/calendar";
 
 type Brand = {
     id: number;
@@ -135,6 +136,11 @@ export default function PostsCreate({
             return false;
         }
     };
+    
+    const [date, setDate] = useState<Date | undefined>(new Date());
+    const handleDateSelect = (selectedDate: Date | undefined) => {
+        setDate(selectedDate);
+    };
 
     // Check if user or brand can create posts
     if (!userCanCreatePosts || !canCreatePosts) {
@@ -210,7 +216,8 @@ export default function PostsCreate({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Create Post" />
+            {/* <Head title="Create Post" /> */}
+            
 
             <div className="space-y-6">
                 <div className="flex items-center gap-4">
@@ -410,6 +417,26 @@ export default function PostsCreate({
                             </form>
                         </CardContent>
                     </Card>
+                </div>
+            </div>
+            
+            <div className="anwser-ai">
+                <h2>Unlock visibility in AI answers for your brand/agency with wondershark.ai​</h2>
+                <div className="ai-answer-img">
+                    <img src="/images/graph1.png" alt="" />
+                </div>
+                <h3>Turn AI search into a predictable source of customers with done-for-you  prompts, content, and optimization tailored to your brand.​ </h3>
+                <ul>
+                    <li><span><Check/></span> Wondershark.ai researches the exact prompts your ideal customers are asking tools like ChatGPT and Gemini, then builds content that positions your brand as  the default answer.​ </li>
+                    <li><span><Check/></span> You get performance-focused posts every month, with a dedicated creative  strategist, scriptwriting, and full transparency on content and  creators.​</li>
+                    <li><span><Check/></span> Campaign performance is tracked and optimized, and you can receive updates and scheduling notifications by SMS if enabled in your account.​ </li>
+                </ul>
+                <div className="ai-answer-heading">
+                    <h4>Ready to see what AI visibility could do for your brand?</h4>
+                </div>
+                <h5>“Pick a time on the calendar below and our team will walk you through how  Wondershark.ai can grow your brand with AI-driven visibility and  content.” </h5>
+                <div className="anwser-ai-calendar">
+                    <Calendar mode="single" selected={date} onSelect={handleDateSelect} />
                 </div>
             </div>
         </AppLayout>
