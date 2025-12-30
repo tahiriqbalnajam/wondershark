@@ -982,6 +982,131 @@ textarea.form-control{
 	min-width: 200px;
 }
 
+/** Ai Answer **/
+.anwser-ai{
+    background:#FFFAFA;
+    padding:30px;
+    border-radius:10px;
+}
+.anwser-ai h3,
+.anwser-ai h5,
+.anwser-ai h2{
+    font-size:8vh;
+    color:#FF5B49;
+    font-weight:800;
+    max-width:80%;
+    text-shadow:0 4px 4px rgba(0,0,0,0.25);
+}
+.anwser-ai h3{
+    font-size:5vh;
+    text-align: center;
+    margin:0 auto;
+    font-weight:700;
+}
+.anwser-ai h5{
+    font-size:5vh;
+    text-align: center;
+    margin:0 auto;
+}
+.ai-answer-img img {
+	width: 100%;
+    margin-top:-250px;
+}
+.anwser-ai ul{margin-top:50px;}
+.anwser-ai ul li{display: flex;align-items: flex-start; font-size:20px; font-weight:500; margin-bottom:30px;}
+.anwser-ai ul li span {
+	background: #FF5B49;
+	color: #fff;
+	flex: 0 0 18px;
+	max-width: 18px;
+	width: 100%;
+	height: 18px;
+	border-radius: 3px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: bold;
+	position: relative;
+	top: 7px;
+	margin-right: 15px;
+}
+.anwser-ai ul li span svg{width:12px;}
+.ai-answer-heading{
+    background:#FF5B49;
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center center;
+    position: relative;
+    margin:50px 0;
+}
+.ai-answer-heading::after,
+.ai-answer-heading::before{
+    content:"";
+    height:100%;
+    width:100%;
+    top:0;
+    left:0;
+    position: absolute;
+}
+.ai-answer-heading::after {
+	background: rgba(255, 91, 93, 0.30);
+	top: -10px;
+	height: calc(100% + 20px);
+    z-index:1;
+}
+.ai-answer-heading::before {
+	background: rgba(255, 91, 93, 0.10);
+	top: -20px;
+	height: calc(100% + 40px);
+	z-index: 0;
+}
+.ai-answer-heading h4{
+    font-size:6vh;
+    text-align: center;
+    font-weight:700;
+    color:#fff;
+    text-shadow:0 4px 4px rgba(0,0,0,0.25);
+    padding:30px;
+    margin:0 auto;
+    position: relative;
+    z-index:2;
+    max-width:70%;
+}
+.anwser-ai-calendar .rdp-root {
+	max-width: 500px;
+	width: 100%;
+	box-shadow: 0 0 35px 0 rgba(0, 0, 0, 0.15);
+	overflow: hidden;
+	border-radius: 15px;
+	margin: 70px auto 0 auto;
+	padding: 40px;
+}
+.anwser-ai-calendar .rdp-root .rdp-caption_label {
+	color:#FF5B49;
+	font-size: 20px;
+	font-weight: 700;
+}
+.anwser-ai-calendar .rdp-root .flex {
+	width: 100% !important;
+	max-width: 100% !important;
+}
+.anwser-ai-calendar .rdp-root .rdp-weekday {
+	font-weight: 700;
+	font-size: 16px;
+	color: #000;
+	text-transform: uppercase;
+}
+.anwser-ai-calendar .rdp-root .rdp-day {
+    width:100%;
+    height:100%;
+    border-radius:10px !important;
+}
+.anwser-ai-calendar .rdp-root .rdp-selected .rdp-day_button{
+	background: #FF5B49 ;
+	border: none;
+    color: #fff;
+}
+
 @media(max-width:991px){
     .add-prompt-lists button {
         padding:10px 15px;
