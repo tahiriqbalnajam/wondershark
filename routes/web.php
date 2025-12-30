@@ -89,9 +89,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Admin Panel Routes - Protected by admin role or permission
     Route::middleware('role.permission:view-admin-panel')->group(function () {
         Route::get('admin', [AdminController::class, 'index'])->name('admin.index');
-        Route::get('admin/agencies', [AdminController::class, 'agencies'])->name('admin.agencies');
         Route::get('admin/brands', [AdminController::class, 'brands'])->name('admin.brands');
         Route::post('admin/select-brand', [AdminController::class, 'selectBrand'])->name('admin.select-brand');
+        
+        // Agency Management - Admin only
+        Route::resource('admin/agencies', \App\Http\Controllers\Admin\AgencyController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy'])->names([
+            'index' => 'admin.agencies.index',
+            'create' => 'admin.agencies.create',
+            'store' => 'admin.agencies.store',
+            'edit' => 'admin.agencies.edit',
+            'update' => 'admin.agencies.update',
+            'destroy' => 'admin.agencies.destroy',
+        ]);
         
         // AI Models Management - Admin only
         Route::resource('admin/ai-models', \App\Http\Controllers\Admin\AiModelController::class)->names([
