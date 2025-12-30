@@ -190,21 +190,24 @@ export default function PostsCreate({
                             )}
 
                             {!canCreatePosts && (
-                                <div className="p-4 bg-orange-50 border border-orange-200 rounded-md">
-                                    <h3 className="font-semibold text-orange-800 mb-2">Brand Permission Required</h3>
-                                    <p className="text-orange-700 mb-2">
-                                        Your brand doesn't have permission to create posts.
-                                    </p>
-                                    <p className="text-orange-700">
-                                        Please contact the administrator at{' '}
-                                        <a 
-                                            href={`mailto:${adminEmail}`} 
-                                            className="text-blue-600 hover:underline"
-                                        >
-                                            {adminEmail}
-                                        </a>
-                                        {' '}to request post creation permissions for your brand.
-                                    </p>
+                                <div className="anwser-ai">
+                                    <h2>Unlock visibility in AI answers for your brand/agency with wondershark.ai​</h2>
+                                    <div className="ai-answer-img">
+                                        <img src="/images/graph1.png" alt="" />
+                                    </div>
+                                    <h3>Turn AI search into a predictable source of customers with done-for-you  prompts, content, and optimization tailored to your brand.​ </h3>
+                                    <ul>
+                                        <li><span><Check/></span> Wondershark.ai researches the exact prompts your ideal customers are asking tools like ChatGPT and Gemini, then builds content that positions your brand as  the default answer.​ </li>
+                                        <li><span><Check/></span> You get performance-focused posts every month, with a dedicated creative  strategist, scriptwriting, and full transparency on content and  creators.​</li>
+                                        <li><span><Check/></span> Campaign performance is tracked and optimized, and you can receive updates and scheduling notifications by SMS if enabled in your account.​ </li>
+                                    </ul>
+                                    <div className="ai-answer-heading">
+                                        <h4>Ready to see what AI visibility could do for your brand?</h4>
+                                    </div>
+                                    <h5>“Pick a time on the calendar below and our team will walk you through how  Wondershark.ai can grow your brand with AI-driven visibility and  content.” </h5>
+                                    <div className="anwser-ai-calendar">
+                                        <Calendar mode="single" selected={date} onSelect={handleDateSelect} />
+                                    </div>
                                 </div>
                             )}
                         </CardContent>
@@ -417,26 +420,6 @@ export default function PostsCreate({
                             </form>
                         </CardContent>
                     </Card>
-                </div>
-            </div>
-            
-            <div className="anwser-ai">
-                <h2>Unlock visibility in AI answers for your brand/agency with wondershark.ai​</h2>
-                <div className="ai-answer-img">
-                    <img src="/images/graph1.png" alt="" />
-                </div>
-                <h3>Turn AI search into a predictable source of customers with done-for-you  prompts, content, and optimization tailored to your brand.​ </h3>
-                <ul>
-                    <li><span><Check/></span> Wondershark.ai researches the exact prompts your ideal customers are asking tools like ChatGPT and Gemini, then builds content that positions your brand as  the default answer.​ </li>
-                    <li><span><Check/></span> You get performance-focused posts every month, with a dedicated creative  strategist, scriptwriting, and full transparency on content and  creators.​</li>
-                    <li><span><Check/></span> Campaign performance is tracked and optimized, and you can receive updates and scheduling notifications by SMS if enabled in your account.​ </li>
-                </ul>
-                <div className="ai-answer-heading">
-                    <h4>Ready to see what AI visibility could do for your brand?</h4>
-                </div>
-                <h5>“Pick a time on the calendar below and our team will walk you through how  Wondershark.ai can grow your brand with AI-driven visibility and  content.” </h5>
-                <div className="anwser-ai-calendar">
-                    <Calendar mode="single" selected={date} onSelect={handleDateSelect} />
                 </div>
             </div>
         </AppLayout>
