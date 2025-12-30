@@ -156,7 +156,7 @@ export default function AgenciesEdit({ agency }: Props) {
 
                                 {/* Submit Buttons */}
                                 <div className="flex items-center gap-3 pt-4">
-                                    <Button type="submit" disabled={processing}>
+                                    <Button type="submit" disabled={processing} style={{ backgroundColor: 'var(--orange-1)' }} className="hover:opacity-90">
                                         {processing ? 'Updating...' : 'Update Agency'}
                                     </Button>
                                     <Button variant="outline" asChild>

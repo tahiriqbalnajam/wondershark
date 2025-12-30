@@ -54,7 +54,7 @@ export default function AgenciesIndex({ agencies }: Props) {
                         title="Agencies" 
                         description="Manage all agency accounts"
                     />
-                    <Button asChild>
+                    <Button asChild style={{ backgroundColor: 'var(--orange-1)' }} className="hover:opacity-90">
                         <Link href="/admin/agencies/create">
                             <Plus className="h-4 w-4 mr-2" />
                             Add New Agency
@@ -71,7 +71,7 @@ export default function AgenciesIndex({ agencies }: Props) {
                     </CardHeader>
                     <CardContent>
                         {agencies.length > 0 ? (
-                            <Table>
+                            <Table className="default-table">
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Name</TableHead>
@@ -103,6 +103,8 @@ export default function AgenciesIndex({ agencies }: Props) {
                                                         variant="ghost"
                                                         size="sm"
                                                         asChild
+                                                        style={{ backgroundColor: 'var(--orange-1)' }}
+                                                        className="hover:opacity-90 text-white"
                                                     >
                                                         <Link href={`/admin/agencies/${agency.id}/edit`}>
                                                             <Pencil className="h-4 w-4" />
@@ -113,8 +115,10 @@ export default function AgenciesIndex({ agencies }: Props) {
                                                         size="sm"
                                                         onClick={() => handleDelete(agency.id)}
                                                         disabled={deletingId === agency.id}
+                                                        style={{ backgroundColor: 'var(--orange-1)' }}
+                                                        className="hover:opacity-90 text-white"
                                                     >
-                                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                                        <Trash2 className="h-4 w-4" />
                                                     </Button>
                                                 </div>
                                             </TableCell>
@@ -126,7 +130,7 @@ export default function AgenciesIndex({ agencies }: Props) {
                             <div className="text-center py-12">
                                 <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                                 <p className="text-muted-foreground">No agencies found</p>
-                                <Button asChild className="mt-4">
+                                <Button asChild className="mt-4" style={{ backgroundColor: 'var(--orange-1)' }}>
                                     <Link href="/admin/agencies/create">
                                         <Plus className="h-4 w-4 mr-2" />
                                         Create Your First Agency

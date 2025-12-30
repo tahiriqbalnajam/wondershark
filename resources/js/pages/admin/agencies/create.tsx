@@ -74,7 +74,7 @@ export default function AgenciesCreate() {
                                         placeholder="Enter agency name"
                                         value={data.name}
                                         onChange={(e) => setData('name', e.target.value)}
-                                        className={errors.name ? 'border-destructive' : ''}
+                                        className={`form-control ${errors.name ? 'border-destructive' : ''}`}
                                         required
                                     />
                                     {errors.name && (
@@ -93,7 +93,7 @@ export default function AgenciesCreate() {
                                         placeholder="agency@example.com"
                                         value={data.email}
                                         onChange={(e) => setData('email', e.target.value)}
-                                        className={errors.email ? 'border-destructive' : ''}
+                                        className={`form-control ${errors.email ? 'border-destructive' : ''}`}
                                         required
                                     />
                                     {errors.email && (
@@ -112,7 +112,7 @@ export default function AgenciesCreate() {
                                         placeholder="Enter password"
                                         value={data.password}
                                         onChange={(e) => setData('password', e.target.value)}
-                                        className={errors.password ? 'border-destructive' : ''}
+                                        className={`form-control ${errors.password ? 'border-destructive' : ''}`}
                                         required
                                     />
                                     {errors.password && (
@@ -131,7 +131,7 @@ export default function AgenciesCreate() {
                                         placeholder="Confirm password"
                                         value={data.password_confirmation}
                                         onChange={(e) => setData('password_confirmation', e.target.value)}
-                                        className={errors.password_confirmation ? 'border-destructive' : ''}
+                                        className={`form-control ${errors.password_confirmation ? 'border-destructive' : ''}`}
                                         required
                                     />
                                     {errors.password_confirmation && (
@@ -141,7 +141,7 @@ export default function AgenciesCreate() {
 
                                 {/* Submit Buttons */}
                                 <div className="flex items-center gap-3 pt-4">
-                                    <Button type="submit" disabled={processing}>
+                                    <Button type="submit" disabled={processing} style={{ backgroundColor: 'var(--orange-1)' }} className="hover:opacity-90">
                                         {processing ? 'Creating...' : 'Create Agency'}
                                     </Button>
                                     <Button variant="outline" asChild>
