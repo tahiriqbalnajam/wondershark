@@ -70,13 +70,13 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
 
     return (
         <CardContent>
-            <div className="min-h-80 custom-scrollbar">
-                <Table className="text-sm w-full border border-gray-200 default-table">
+            <div className="min-h-80 overflow-x-auto">
+                <Table className="text-sm w-full border border-gray-200 default-table table-fixed min-w-[600px]">
                     <TableHeader>
                         <TableRow className="bg-gray-50 border-b border-gray-200">
                             <TableHead className="w-12 border-r border-gray-200 text-center">#</TableHead>
-                            <TableHead className="border-r border-gray-200">Brand</TableHead>
-                            <TableHead className="whitespace-nowrap border-r border-gray-200">
+                            <TableHead className="w-48 border-r border-gray-200">Brand</TableHead>
+                            <TableHead className="w-32 border-r border-gray-200">
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                 <Button
@@ -93,7 +93,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                 </TooltipContent>
                             </Tooltip>
                             </TableHead>
-                            <TableHead className="border-r border-gray-200">
+                            <TableHead className="w-28 border-r border-gray-200">
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                 <Button
@@ -111,7 +111,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                 </TooltipContent>
                             </Tooltip>
                             </TableHead>
-                            <TableHead className="border-gray-200">
+                            <TableHead className="w-28">
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                 <Button
@@ -160,22 +160,22 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                             )}
                                         </div>
                                     </TableCell>
-                                    <TableCell className="font-medium border-r border-gray-200 w-80">
-                                        <div className="flex items-center gap-2">
+                                    <TableCell className="font-medium border-r border-gray-200 w-48">
+                                        <div className="flex items-center gap-2 min-w-0">
                                             <img
                                                 src={logoUrl}
                                                 alt={stat.entity_name}
-                                                className="w-6 h-6 rounded object-contain"
+                                                className="w-6 h-6 rounded object-contain flex-shrink-0"
                                                 onError={(e) => {
                                                     e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
                                                 }}
                                             />
-                                            {stat.entity_name}
+                                            <span className="truncate text-sm">{stat.entity_name}</span>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="border-r border-gray-200 w-20">
-                                        <div className="flex items-center gap-1 justify-between">
-                                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <TableCell className="border-r border-gray-200 w-32">
+                                        <div className="flex items-center justify-between gap-1">
+                                            <span className="text-xs text-muted-foreground flex items-center gap-1 flex-shrink-0">
                                                 {stat.trends.visibility_trend === "up" && (
                                                     <ArrowUpRight className="h-4 w-4 text-green-600" />
                                                 )}
@@ -183,15 +183,15 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                                     <ArrowDownRight className="h-4 w-4 text-red-600" />
                                                 )}
                                                 {stat.trends.visibility_change !== 0 && stat.trends.visibility_trend !== 'stable' && stat.trends.visibility_trend !== 'new' && (
-                                                    <span>{Math.abs(stat.trends.visibility_change)}%</span>
+                                                    <span className="whitespace-nowrap">{Math.abs(stat.trends.visibility_change)}%</span>
                                                 )}
                                             </span>
-                                            <span className="text-xs font-bold">{stat.visibility_percentage || 'N/A'}</span>
+                                            <span className="text-xs font-bold flex-shrink-0">{stat.visibility != null ? `${Math.round(stat.visibility)}%` : 'N/A'}</span>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="border-r border-gray-200 w-20">
-                                        <div className="flex items-center gap-1 justify-between">
-                                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <TableCell className="border-r border-gray-200 w-28">
+                                        <div className="flex items-center justify-between gap-1">
+                                            <span className="text-xs text-muted-foreground flex items-center gap-1 flex-shrink-0">
                                                 {stat.trends.sentiment_trend === "up" && (
                                                     <ArrowUpRight className="h-4 w-4 text-green-600" />
                                                 )}
@@ -199,15 +199,15 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                                     <ArrowDownRight className="h-4 w-4 text-red-600" />
                                                 )}
                                                 {stat.trends.sentiment_change !== 0 && stat.trends.sentiment_trend !== 'stable' && stat.trends.sentiment_trend !== 'new' && (
-                                                    <span>{Math.abs(stat.trends.sentiment_change)}%</span>
+                                                    <span className="whitespace-nowrap">{Math.abs(stat.trends.sentiment_change)}%</span>
                                                 )}
                                             </span>
-                                            <span className="text-xs font-bold">{stat.sentiment != null ? stat.sentiment : 'N/A'}</span>
+                                            <span className="text-xs font-bold flex-shrink-0">{stat.sentiment != null ? stat.sentiment : 'N/A'}</span>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="border-r border-gray-200">
-                                        <div className="flex items-center gap-1 justify-between">
-                                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <TableCell className="border-r border-gray-200 w-28">
+                                        <div className="flex items-center justify-between gap-1">
+                                            <span className="text-xs text-muted-foreground flex items-center gap-1 flex-shrink-0">
                                                 {stat.trends.position_trend === "up" && (
                                                     <ArrowUpRight className="h-4 w-4 text-green-600" />
                                                 )}
@@ -215,10 +215,10 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                                     <ArrowDownRight className="h-4 w-4 text-red-600" />
                                                 )}
                                                 {stat.trends.position_change !== 0 && stat.trends.position_trend !== 'stable' && stat.trends.position_trend !== 'new' && (
-                                                    <span>{Math.abs(stat.trends.position_change)}%</span>
+                                                    <span className="whitespace-nowrap">{Math.abs(stat.trends.position_change)}%</span>
                                                 )}
                                             </span>
-                                            <span className="text-xs font-bold">{stat.position_formatted || 'N/A'}</span>
+                                            <span className="text-xs font-bold flex-shrink-0">{stat.position_formatted || 'N/A'}</span>
                                         </div>
                                     </TableCell>
                                 </TableRow>

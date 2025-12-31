@@ -96,20 +96,47 @@ export function VisibilityChart({ data, entities, granularity = 'month', hovered
                                 tickFormatter={(value) => `${Math.round(Number(value))}%`}
                             />
                             <RechartsTooltip 
-                                formatter={(value: any, name: any) => {
-                                    const displayName = domainToNameMap.get(name) || name;
-                                    const displayValue = isNaN(Number(value)) ? value : `${Math.round(Number(value))}%`;
-                                    return [displayValue, displayName];
+                                content={({ active, payload, label }) => {
+                                    if (active && payload && payload.length) {
+                                        // Sort payload by value (high to low)
+                                        const sortedPayload = [...payload].sort((a, b) => {
+                                            const aValue = Number(a.value) || 0;
+                                            const bValue = Number(b.value) || 0;
+                                            return bValue - aValue;
+                                        });
+
+                                        return (
+                                            <div style={{ 
+                                                backgroundColor: 'white', 
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                padding: '8px',
+                                                zIndex: '1000000',
+                                                opacity: 1,
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                                            }}>
+                                                <p style={{ margin: '0 0 8px 0', fontWeight: 'bold' }}>{label}</p>
+                                                {sortedPayload.map((entry, index) => {
+                                                    const displayName = domainToNameMap.get(entry.dataKey as string) || entry.dataKey;
+                                                    const displayValue = typeof entry.value === 'number' && !isNaN(entry.value) 
+                                                        ? `${entry.value}%` 
+                                                        : `${entry.value}%`;
+                                                    
+                                                    return (
+                                                        <p key={index} style={{ 
+                                                            margin: '4px 0', 
+                                                            color: entry.color,
+                                                            fontSize: '14px'
+                                                        }}>
+                                                            {displayName}: {displayValue}
+                                                        </p>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    }
+                                    return null;
                                 }}
-                                contentStyle={{ 
-                                    backgroundColor: 'white', 
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    padding: '8px',
-                                    zIndex: '1000000',
-                                    opacity: 1,
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-                                } as React.CSSProperties}
                             />
                             {chartEntities.map((entity, index) => {
                                 const isHovered = hoveredDomain === entity.domain;

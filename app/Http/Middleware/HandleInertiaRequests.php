@@ -69,7 +69,7 @@ class HandleInertiaRequests extends Middleware
                 ->limit(10);
             }
             
-            $brands = $query->select('id', 'name', 'website')->get();
+            $brands = $query->select('id', 'name', 'website', 'logo')->get();
         }
 
         // Get selected brand from session
@@ -90,7 +90,7 @@ class HandleInertiaRequests extends Middleware
                     });
                 }
                 
-                $selectedBrand = $query->select('id', 'name', 'website')->first();
+                $selectedBrand = $query->select('id', 'name', 'website', 'logo')->first();
             } catch (\Exception $e) {
                 Log::error('Error loading selected brand', [
                     'brand_id' => $selectedBrandId,

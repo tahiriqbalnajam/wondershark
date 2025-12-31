@@ -28,12 +28,35 @@ export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: 
         ? user.avatar 
         : (user.logo_thumbnail || user.logo || user.avatar);
 
+    // For brand logo, use stored logo if available, otherwise use the logo.dev API
+    const brandLogoUrl = selectedBrand?.logo 
+        ? `/storage/${selectedBrand.logo}`
+        : (selectedBrand?.website ? 
+            `https://img.logo.dev/${selectedBrand.website.replace(/^https?:\/\//, '').replace(/^www\./, '')}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA` 
+            : null);
+
     return (
         <>
             <Avatar className="h-[40px] w-[40px] overflow-hidden rounded-md user-img">
                 <AvatarImage src={displayImage} alt={displayName} />
                 <AvatarFallback className="rounded-md bg-neutral-200 text-black font-bold dark:bg-neutral-700 dark:text-white">
-                    {displayInitials}
+                    {selectedBrand && brandLogoUrl ? (
+                        <img
+                            src={brandLogoUrl}
+                            alt={selectedBrand.logo}
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                // Fallback to initials if logo fails
+                                const fallback = e.currentTarget.parentElement;
+                                if (fallback) {
+                                    fallback.textContent = displayInitials;
+                                }
+                            }}
+                        />
+                    ) : (
+                        displayInitials
+                    )}
                 </AvatarFallback>
             </Avatar>
             <div className="grid text-left text-sm leading-tight">
