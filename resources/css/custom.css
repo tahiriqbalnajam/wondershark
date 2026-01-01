@@ -388,7 +388,7 @@ span.img-avatar img{
 
 .default-table thead th{
     color:var(--gray-text-color);
-    padding: 20px 15px;
+    padding:5px 10px;
     background: #f8f8f8;
     font-weight:700;
 }
@@ -396,6 +396,7 @@ span.img-avatar img{
 .default-table th,
 .default-table td{
     border:1px solid var(--border);
+    padding:15px 10px;
 }
 
 .default-table th button[aria-checked="true"],
@@ -403,7 +404,11 @@ span.img-avatar img{
     background: var(--orange-1);
     border-color: var(--orange-1);
 }
-
+.default-table thead th button {
+	padding: 0;
+	justify-content: space-between;
+	width: 100%;
+}
 .sentiment-td {
 	background: rgba(109,195,35,0.20);
 	border-radius:5px;
@@ -973,14 +978,14 @@ textarea.form-control{
   overscroll-behavior: contain !important;
 }
 
-.default-table tbody tr td:last-child, 
+/* .default-table tbody tr td:last-child, 
 .default-table thead tr th:last-child {
 	width: 150px;
 }
 .default-table tbody tr td:nth-child(2) div, 
 .default-table thead tr th:nth-child(2) div{
 	min-width: 200px;
-}
+} */
 
 /** Ai Answer **/
 .anwser-ai{
@@ -1128,7 +1133,7 @@ textarea.form-control{
         width: 100%;
     }
     .default-table thead th {
-        padding: 10px;
+        padding:5px;
     }
     .default-table th,
     .default-table td {

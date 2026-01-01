@@ -624,7 +624,7 @@ const filteredPrompts = useMemo(() => {
                 {/* Brand Overview */}
                 <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-4">
                     <Card className="flex-col">
-                        <CardHeader className="pb-3">
+                        <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><Building2/></span>
                                 <div>
@@ -647,7 +647,7 @@ const filteredPrompts = useMemo(() => {
                     </Card>
 
                     <Card className="flex-col">
-                        <CardHeader className="pb-3">
+                        <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><Trophy/></span>
                                 Brand Visibility Index
