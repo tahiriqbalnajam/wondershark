@@ -28,6 +28,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import { PromptGenerationLoader } from '@/components/loaders/prompt-generation-loader';
 
 type Agency = {
     id: number;
@@ -131,6 +132,7 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
             polledPostIdRef.current = createdPost.id;
             setCreatedPostId(createdPost.id);
             setActiveMainTab('propmts');
+            setLoadingPrompts(true); // Start loading immediately
             
             // First check if prompts already exist
             checkExistingPrompts(createdPost.id);
@@ -340,6 +342,19 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
         }
     };
 
+    const handleUrlChange = (url: string) => {
+        // Auto-add https:// if user starts typing without protocol
+        let processedUrl = url.trim();
+        if (processedUrl && !processedUrl.match(/^https?:\/\//i)) {
+            // Check if user is typing a domain-like string (contains a dot or starts with www)
+            if (processedUrl.includes('.') || processedUrl.toLowerCase().startsWith('www')) {
+                processedUrl = 'https://' + processedUrl;
+            }
+        }
+        
+        setData('url', processedUrl);
+    };
+
     const selectedBrand = brands.find(brand => brand.id.toString() === data.brand_id);
     const selectedBrandAgency = selectedBrand ? agencies.find(agency => agency.id === selectedBrand.agency_id) : null;
 
@@ -425,7 +440,7 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
                                                     id="url"
                                                     type="url"
                                                     value={data.url}
-                                                    onChange={(e) => setData('url', e.target.value)}
+                                                    onChange={(e) => handleUrlChange(e.target.value)}
                                                     placeholder="https://example.com/post"
                                                     className={errors.url ? 'border-red-500 form-control' : 'form-control'}
                                                 />
@@ -608,11 +623,7 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
                         <Card>
                             <CardContent>
                                 {loadingPrompts ? (
-                                    <div className="py-12 text-center">
-                                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
-                                        <p className="text-lg font-medium">Generating prompts...</p>
-                                        <p className="text-sm text-muted-foreground mt-2">This may take a few moments</p>
-                                    </div>
+                                    <PromptGenerationLoader />
                                 ) : prompts.length === 0 ? (
                                     <div className="py-12 text-center">
                                         <p className="text-muted-foreground">No prompts generated yet</p>

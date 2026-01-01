@@ -109,13 +109,22 @@ export default function PostsCreate({
     };
 
     const handleUrlChange = (url: string) => {
-        setData('url', url);
-        setUrlPreview(url);
+        // Auto-add https:// if user starts typing without protocol
+        let processedUrl = url.trim();
+        if (processedUrl && !processedUrl.match(/^https?:\/\//i)) {
+            // Check if user is typing a domain-like string (contains a dot or starts with www)
+            if (processedUrl.includes('.') || processedUrl.toLowerCase().startsWith('www')) {
+                processedUrl = 'https://' + processedUrl;
+            }
+        }
+        
+        setData('url', processedUrl);
+        setUrlPreview(processedUrl);
         
         // Auto-generate title from URL if title is empty
-        if (!data.title && url) {
+        if (!data.title && processedUrl) {
             try {
-                const urlObj = new URL(url);
+                const urlObj = new URL(processedUrl);
                 const pathParts = urlObj.pathname.split('/').filter(Boolean);
                 const lastPart = pathParts[pathParts.length - 1] || urlObj.hostname;
                 const title = lastPart
