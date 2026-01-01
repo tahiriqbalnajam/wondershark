@@ -71,17 +71,17 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
     return (
         <CardContent>
             <div className="min-h-80 overflow-x-auto">
-                <Table className="text-sm w-full border border-gray-200 default-table table-fixed min-w-[600px]">
+                <Table className="text-xs w-full border border-gray-200 default-table table-fixed">
                     <TableHeader>
                         <TableRow className="bg-gray-50 border-b border-gray-200">
                             <TableHead className="w-12 border-r border-gray-200 text-center">#</TableHead>
                             <TableHead className="w-48 border-r border-gray-200">Brand</TableHead>
-                            <TableHead className="w-32 border-r border-gray-200">
+                            <TableHead className="border-r border-gray-200">
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                 <Button
                                     variant="outline"
-                                    className="p-0 border-0 text-sm shadow-none bg-transparent hover:border-0"
+                                    className="p-0 border-0 text-xs shadow-none bg-transparent hover:border-0"
                                 >
                                     Visibility <Info className="h-3 w-3 inline-block" />
                                 </Button>
@@ -98,7 +98,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                 <TooltipTrigger asChild>
                                 <Button
                                     variant="outline"
-                                    className="p-0 border-0 text-sm shadow-none bg-transparent hover:border-0"
+                                    className="p-0 border-0 text-xs shadow-none bg-transparent hover:border-0"
                                 >
                                     Sentiment <Info className="h-3 w-3 inline-block" />
                                 </Button>
@@ -116,7 +116,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                 <TooltipTrigger asChild>
                                 <Button
                                     variant="outline"
-                                    className="p-0 border-0 text-sm shadow-none bg-transparent hover:border-0"
+                                    className="p-0 border-0 text-xs shadow-none bg-transparent hover:border-0"
                                 >
                                     Position <Info className="h-3 w-3 inline-block" />
                                 </Button>
@@ -160,17 +160,17 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                             )}
                                         </div>
                                     </TableCell>
-                                    <TableCell className="font-medium border-r border-gray-200 w-48">
+                                    <TableCell className="font-medium border-r border-gray-200">
                                         <div className="flex items-center gap-2 min-w-0">
                                             <img
                                                 src={logoUrl}
                                                 alt={stat.entity_name}
-                                                className="w-6 h-6 rounded object-contain flex-shrink-0"
+                                                className="w-4 h-4 rounded object-contain flex-shrink-0"
                                                 onError={(e) => {
                                                     e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
                                                 }}
                                             />
-                                            <span className="truncate text-sm">{stat.entity_name}</span>
+                                            <span className="truncate text-xs">{stat.entity_name}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell className="border-r border-gray-200 w-32">
