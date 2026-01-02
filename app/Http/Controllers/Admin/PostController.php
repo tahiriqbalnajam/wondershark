@@ -309,7 +309,14 @@ class PostController extends Controller
             try {
                 $postPromptService = app(\App\Services\PostPromptService::class);
                 $sessionId = session()->getId() ?: 'admin-' . uniqid();
-                $description = $post->description ?? '';
+                $description = $post->description ?? $post->url ?? '';
+
+                // Log for debugging
+                \Log::info('Generating prompts for post', [
+                    'post_id' => $post->id,
+                    'description' => $description,
+                    'url' => $post->url,
+                ]);
 
                 // Generate prompts from all enabled AI models
                 $generatedPrompts = $postPromptService->generatePromptsFromMultipleModelsForPost(
@@ -317,6 +324,12 @@ class PostController extends Controller
                     $sessionId,
                     $description
                 );
+
+                // Log the result
+                \Log::info('Prompts generation completed', [
+                    'post_id' => $post->id,
+                    'prompts_count' => count($generatedPrompts),
+                ]);
 
                 // Map the generated prompts for response
                 $prompts = collect($generatedPrompts)->map(function ($prompt) {
@@ -333,10 +346,17 @@ class PostController extends Controller
                     ];
                 });
             } catch (\Exception $e) {
-                // If generation fails, return empty array
+                // If generation fails, return empty array with error
+                \Log::error('Failed to generate prompts', [
+                    'post_id' => $post->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                
                 return response()->json([
                     'prompts' => [],
-                    'error' => 'Failed to generate prompts: ' . $e->getMessage()
+                    'error' => 'Failed to generate prompts: ' . $e->getMessage(),
+                    'debug' => config('app.debug') ? $e->getTraceAsString() : null,
                 ]);
             }
         } else {

@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AiModel;
 use App\Models\Brand;
 use App\Models\BrandPrompt;
 use App\Models\BrandSubreddit;
 use App\Models\User;
-use App\Models\AiModel;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -25,7 +25,7 @@ class BrandController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         $brands = Brand::where('agency_id', $user->id)
             ->with(['posts'])
             ->orderBy('created_at', 'desc')
@@ -57,7 +57,7 @@ class BrandController extends Controller
     {
         // Get enabled AI models for automatic prompt generation
         $aiModels = AiModel::enabled()->ordered()->get();
-        
+
         return Inertia::render('brands/create/index', [
             'currentStep' => 1,
             'existingData' => [
@@ -79,8 +79,8 @@ class BrandController extends Controller
         if ($request->filled('website')) {
             $website = trim($request->website);
             // Add https:// if no protocol is present
-            if (!preg_match('/^https?:\/\//', $website)) {
-                $website = 'https://' . $website;
+            if (! preg_match('/^https?:\/\//', $website)) {
+                $website = 'https://'.$website;
             }
             $request->merge(['website' => $website]);
         }
@@ -119,7 +119,7 @@ class BrandController extends Controller
             // Create brand user account only if requested
             if ($request->boolean('create_account')) {
                 $brandUser = User::create([
-                    'name' => $request->name . ' User',
+                    'name' => $request->name.' User',
                     'email' => $request->brand_email,
                     'password' => Hash::make($request->brand_password),
                     'email_verified_at' => now(),
@@ -141,7 +141,7 @@ class BrandController extends Controller
             ]);
 
             // Create prompts if provided
-            if ($request->has('prompts') && !empty($request->prompts)) {
+            if ($request->has('prompts') && ! empty($request->prompts)) {
                 foreach ($request->prompts as $index => $prompt) {
                     BrandPrompt::create([
                         'brand_id' => $brand->id,
@@ -153,7 +153,7 @@ class BrandController extends Controller
             }
 
             // Create subreddits if provided
-            if ($request->has('subreddits') && !empty($request->subreddits)) {
+            if ($request->has('subreddits') && ! empty($request->subreddits)) {
                 foreach ($request->subreddits as $subreddit) {
                     BrandSubreddit::create([
                         'brand_id' => $brand->id,
@@ -164,7 +164,7 @@ class BrandController extends Controller
             }
 
             // Create competitors if provided
-            if ($request->has('competitors') && !empty($request->competitors)) {
+            if ($request->has('competitors') && ! empty($request->competitors)) {
                 foreach ($request->competitors as $index => $competitorData) {
                     \App\Models\Competitor::create([
                         'brand_id' => $brand->id,
@@ -197,8 +197,8 @@ class BrandController extends Controller
         // Normalize website URL if provided
         if ($request->filled('website')) {
             $website = trim($request->website);
-            if (!preg_match('/^https?:\/\//', $website)) {
-                $website = 'https://' . $website;
+            if (! preg_match('/^https?:\/\//', $website)) {
+                $website = 'https://'.$website;
             }
             $request->merge(['website' => $website]);
         }
@@ -227,7 +227,7 @@ class BrandController extends Controller
             'success' => true,
             'brand_id' => $brand->id,
             'redirect_url' => route('brands.create.step', ['brand' => $brand->id, 'step' => 2]),
-            'message' => 'Brand draft created successfully'
+            'message' => 'Brand draft created successfully',
         ]);
     }
 
@@ -238,9 +238,9 @@ class BrandController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Ensure the brand belongs to the authenticated agency or user is an agency member
-        if (!$user->canAccessBrand($brand)) {
+        if (! $user->canAccessBrand($brand)) {
             abort(403);
         }
 
@@ -324,7 +324,7 @@ class BrandController extends Controller
         $brand->competitors()->delete();
 
         // Create new competitors
-        if ($request->has('competitors') && !empty($request->competitors)) {
+        if ($request->has('competitors') && ! empty($request->competitors)) {
             foreach ($request->competitors as $index => $competitorData) {
                 \App\Models\Competitor::create([
                     'brand_id' => $brand->id,
@@ -345,7 +345,7 @@ class BrandController extends Controller
         return response()->json([
             'success' => true,
             'redirect_url' => route('brands.create.step', ['brand' => $brand->id, 'step' => 3]),
-            'message' => 'Competitors updated successfully'
+            'message' => 'Competitors updated successfully',
         ]);
     }
 
@@ -356,11 +356,11 @@ class BrandController extends Controller
     {
         // Prompts are now managed via saveBulkPrompts and updatePromptStatus APIs
         // This method only handles navigation to the next step
-        
+
         return response()->json([
             'success' => true,
             'redirect_url' => route('brands.create.step', ['brand' => $brand->id, 'step' => 4]),
-            'message' => 'Moving to next step'
+            'message' => 'Moving to next step',
         ]);
     }
 
@@ -380,7 +380,7 @@ class BrandController extends Controller
         return response()->json([
             'success' => true,
             'redirect_url' => route('brands.create.step', ['brand' => $brand->id, 'step' => 5]),
-            'message' => 'Monthly posts updated successfully'
+            'message' => 'Monthly posts updated successfully',
         ]);
     }
 
@@ -405,13 +405,13 @@ class BrandController extends Controller
             // Create brand user account only if requested
             if ($request->boolean('create_account')) {
                 $brandUser = User::create([
-                    'name' => $brand->name . ' User',
+                    'name' => $brand->name.' User',
                     'email' => $request->brand_email,
                     'password' => Hash::make($request->brand_password),
                     'email_verified_at' => now(),
                 ]);
                 $brandUser->assignRole('brand');
-                
+
                 $brand->update(['user_id' => $brandUser->id]);
             }
 
@@ -426,7 +426,7 @@ class BrandController extends Controller
             'success' => true,
             'brand_id' => $brand->id,
             'redirect_url' => route('brands.dashboard', $brand),
-            'message' => 'Brand created successfully!'
+            'message' => 'Brand created successfully!',
         ]);
     }
 
@@ -444,14 +444,14 @@ class BrandController extends Controller
         ]);
 
         $savedCompetitors = [];
-        
+
         foreach ($request->competitors as $index => $competitorData) {
             // Check if competitor already exists for this brand
             $existing = \App\Models\Competitor::where('brand_id', $brand->id)
                 ->where('domain', $competitorData['domain'])
                 ->first();
-            
-            if (!$existing) {
+
+            if (! $existing) {
                 $competitor = \App\Models\Competitor::create([
                     'brand_id' => $brand->id,
                     'name' => $competitorData['name'],
@@ -463,7 +463,7 @@ class BrandController extends Controller
                     'sentiment' => 0.6,
                     'visibility' => 0.7,
                 ]);
-                
+
                 $savedCompetitors[] = [
                     'id' => $competitor->id,
                     'name' => $competitor->name,
@@ -478,7 +478,7 @@ class BrandController extends Controller
         return response()->json([
             'success' => true,
             'competitors' => $savedCompetitors,
-            'message' => 'Competitors saved successfully'
+            'message' => 'Competitors saved successfully',
         ]);
     }
 
@@ -493,10 +493,10 @@ class BrandController extends Controller
         $countAccepted = \App\Models\Competitor::where('brand_id', $brand->id)
             ->where('status', 'accepted')
             ->count();
-        if($countAccepted >=10 && $request->status === 'accepted'){
+        if ($countAccepted >= 10 && $request->status === 'accepted') {
             return response()->json([
                 'success' => true,
-                'message' => 'Maximum 10 accepted competitors allowed'
+                'message' => 'Maximum 10 accepted competitors allowed',
             ], 400);
         }
         $competitor = \App\Models\Competitor::where('brand_id', $brand->id)
@@ -511,7 +511,7 @@ class BrandController extends Controller
                 'id' => $competitor->id,
                 'status' => $competitor->status,
             ],
-            'message' => 'Competitor status updated'
+            'message' => 'Competitor status updated',
         ]);
     }
 
@@ -532,23 +532,23 @@ class BrandController extends Controller
         ]);
 
         $savedPrompts = [];
-        
+
         foreach ($request->prompts as $index => $promptData) {
             $promptText = is_array($promptData) ? $promptData['prompt'] : $promptData;
-            
+
             // Check if prompt already exists for this brand
             $existing = \App\Models\BrandPrompt::where('brand_id', $brand->id)
                 ->where('prompt', $promptText)
                 ->first();
-            
-            if (!$existing) {
+
+            if (! $existing) {
                 // Find AI model by name if source is provided
                 $aiModelId = null;
                 if (is_array($promptData) && isset($promptData['source'])) {
                     $aiModel = \App\Models\AiModel::where('name', $promptData['source'])->first();
                     $aiModelId = $aiModel?->id;
                 }
-                
+
                 $prompt = \App\Models\BrandPrompt::create([
                     'brand_id' => $brand->id,
                     'prompt' => $promptText,
@@ -560,7 +560,7 @@ class BrandController extends Controller
                     'sentiment' => is_array($promptData) ? ($promptData['sentiment'] ?? null) : null,
                     'position' => is_array($promptData) ? ($promptData['position'] ?? null) : null,
                 ]);
-                
+
                 $savedPrompts[] = [
                     'id' => $prompt->id,
                     'prompt' => $prompt->prompt,
@@ -573,7 +573,7 @@ class BrandController extends Controller
         return response()->json([
             'success' => true,
             'prompts' => $savedPrompts,
-            'message' => 'Prompts saved successfully'
+            'message' => 'Prompts saved successfully',
         ]);
     }
 
@@ -589,10 +589,10 @@ class BrandController extends Controller
         $countAccepted = \App\Models\BrandPrompt::where('brand_id', $brand->id)
             ->where('status', 'active')
             ->count();
-        if($countAccepted >=10 && $request->status === 'active'){
+        if ($countAccepted >= 10 && $request->status === 'active') {
             return response()->json([
                 'success' => true,
-                'message' => 'Maximum 10 accepted prompts allowed'
+                'message' => 'Maximum 10 accepted prompts allowed',
             ], 400);
         }
         $prompt = \App\Models\BrandPrompt::where('brand_id', $brand->id)
@@ -600,7 +600,7 @@ class BrandController extends Controller
             ->firstOrFail();
 
         $updateData = [];
-        
+
         // Handle status update
         if ($request->has('status')) {
             $updateData['status'] = $request->status;
@@ -611,7 +611,7 @@ class BrandController extends Controller
             $updateData['is_active'] = $request->is_active;
             $updateData['status'] = $request->is_active ? 'active' : 'suggested';
         }
-        
+
         $prompt->update($updateData);
 
         return response()->json([
@@ -621,7 +621,7 @@ class BrandController extends Controller
                 'is_active' => $prompt->is_active,
                 'status' => $prompt->status,
             ],
-            'message' => 'Prompt status updated'
+            'message' => 'Prompt status updated',
         ]);
     }
 
@@ -632,9 +632,9 @@ class BrandController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Ensure the brand belongs to the authenticated agency or user is admin
-        if (!$user->canAccessBrand($brand)) {
+        if (! $user->canAccessBrand($brand)) {
             abort(403);
         }
 
@@ -649,16 +649,16 @@ class BrandController extends Controller
             },
             'prompts.promptResources',
             'prompts.aiModel',
-            'subreddits', 
-            'user', 
-            'competitors' => function($query) {
+            'subreddits',
+            'user',
+            'competitors' => function ($query) {
                 // Only show accepted competitors
                 $query->where('status', 'accepted')
                       // Prioritize competitors added during brand creation (ai/manual) over seeded ones
-                      ->orderByRaw("CASE WHEN source IN ('ai', 'manual') THEN 0 ELSE 1 END")
-                      ->orderBy('rank')
-                      ->take(10);
-            }
+                    ->orderByRaw("CASE WHEN source IN ('ai', 'manual') THEN 0 ELSE 1 END")
+                    ->orderBy('rank')
+                    ->take(10);
+            },
         ]);
 
         // Get competitive stats with trends
@@ -669,7 +669,7 @@ class BrandController extends Controller
         // If no stats exist, create placeholder entries for brand and accepted competitors
         if (empty($competitiveStats)) {
             $competitiveStats = [];
-            
+
             // Add brand placeholder
             $competitiveStats[] = [
                 'id' => 0,
@@ -722,11 +722,30 @@ class BrandController extends Controller
         // Get enabled AI models for filtering
         $aiModels = AiModel::enabled()->ordered()->get();
 
+        // Get all brands with their agency information for the overview
+        $allBrands = Brand::with('agency:id,name,email')
+            ->select('id', 'name', 'website', 'agency_id', 'status', 'created_at')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($b) {
+                return [
+                    'id' => $b->id,
+                    'name' => $b->name,
+                    'website' => $b->website,
+                    'agency_name' => $b->agency?->name,
+                    'agency_email' => $b->agency?->email,
+                    'has_agency' => ! is_null($b->agency_id),
+                    'status' => $b->status,
+                    'created_at' => $b->created_at?->format('M d, Y'),
+                ];
+            });
+
         return Inertia::render('brands/show', [
             'brand' => $brand,
             'competitiveStats' => $competitiveStats,
             'historicalStats' => $historicalStats,
             'aiModels' => $aiModels,
+            'allBrands' => $allBrands,
         ]);
     }
 
@@ -737,9 +756,9 @@ class BrandController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Ensure the brand belongs to the authenticated agency or user is admin
-        if (!$user->canAccessBrand($brand)) {
+        if (! $user->canAccessBrand($brand)) {
             abort(403);
         }
 
@@ -760,9 +779,9 @@ class BrandController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Ensure the brand belongs to the authenticated agency or user is admin
-        if (!$user->canAccessBrand($brand)) {
+        if (! $user->canAccessBrand($brand)) {
             abort(403);
         }
 
@@ -783,9 +802,9 @@ class BrandController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Ensure the brand belongs to the authenticated agency or user is admin
-        if (!$user->canAccessBrand($brand)) {
+        if (! $user->canAccessBrand($brand)) {
             abort(403);
         }
 
@@ -815,9 +834,9 @@ class BrandController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Ensure the brand belongs to the authenticated agency or user is admin
-        if (!$user->canAccessBrand($brand)) {
+        if (! $user->canAccessBrand($brand)) {
             abort(403);
         }
 
@@ -825,14 +844,14 @@ class BrandController extends Controller
         if ($request->filled('website')) {
             $website = trim($request->website);
             // Add https:// if no protocol is present
-            if (!preg_match('/^https?:\/\//', $website)) {
-                $website = 'https://' . $website;
+            if (! preg_match('/^https?:\/\//', $website)) {
+                $website = 'https://'.$website;
             }
             $request->merge(['website' => $website]);
         }
 
         $request->validate([
-            'name' => 'required|string|max:255|unique:brands,name,' . $brand->id,
+            'name' => 'required|string|max:255|unique:brands,name,'.$brand->id,
             'website' => 'nullable|url|max:255',
             'description' => 'nullable|string|max:1000',
             'country' => 'nullable|string|max:100',
@@ -847,13 +866,13 @@ class BrandController extends Controller
         if ($request->hasFile('logo') && $request->file('logo')->isValid()) {
             // Delete old logo and thumbnail if exists
             if ($brand->logo) {
-                $oldLogoPath = public_path('storage/' . $brand->logo);
+                $oldLogoPath = public_path('storage/'.$brand->logo);
                 if (file_exists($oldLogoPath)) {
                     unlink($oldLogoPath);
                 }
             }
             if ($brand->logo_thumbnail) {
-                $oldThumbPath = public_path('storage/' . $brand->logo_thumbnail);
+                $oldThumbPath = public_path('storage/'.$brand->logo_thumbnail);
                 if (file_exists($oldThumbPath)) {
                     unlink($oldThumbPath);
                 }
@@ -862,21 +881,20 @@ class BrandController extends Controller
             $file = $request->file('logo');
 
             // generate safe unique name
-            $filename = uniqid('brand_') . '.' . $file->getClientOriginalExtension();
+            $filename = uniqid('brand_').'.'.$file->getClientOriginalExtension();
 
             // move instead of store (Windows-safe)
             $file->move(public_path('storage/brands/logos'), $filename);
 
             // save relative path in DB
-            $brand->logo = 'brands/logos/' . $filename;
+            $brand->logo = 'brands/logos/'.$filename;
 
             // Create thumbnail
-            $thumbnailPath = $this->createThumbnail(public_path('storage/brands/logos/' . $filename), $filename, $file->getClientOriginalExtension());
+            $thumbnailPath = $this->createThumbnail(public_path('storage/brands/logos/'.$filename), $filename, $file->getClientOriginalExtension());
             if ($thumbnailPath) {
                 $brand->logo_thumbnail = $thumbnailPath;
             }
         }
-
 
         // $brand->update($request->except('logo'));
         DB::transaction(function () use ($request, $brand) {
@@ -891,7 +909,7 @@ class BrandController extends Controller
             ]);
 
             // Delete existing prompts and create new ones
-            if($request->prompts !== null){
+            if ($request->prompts !== null) {
                 $brand->prompts()->delete();
                 foreach ($request->prompts as $index => $promptText) {
                     BrandPrompt::create([
@@ -904,7 +922,7 @@ class BrandController extends Controller
             }
 
             // Delete existing subreddits and create new ones
-            if($request->subreddits !== null){
+            if ($request->subreddits !== null) {
                 $brand->subreddits()->delete();
                 foreach ($request->subreddits as $subredditName) {
                     BrandSubreddit::create([
@@ -926,9 +944,9 @@ class BrandController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Ensure the brand belongs to the authenticated agency or user is admin
-        if (!$user->canAccessBrand($brand)) {
+        if (! $user->canAccessBrand($brand)) {
             abort(403);
         }
 
@@ -950,9 +968,9 @@ class BrandController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Ensure the brand belongs to the authenticated agency or user is admin
-        if (!$user->canAccessBrand($brand)) {
+        if (! $user->canAccessBrand($brand)) {
             abort(403);
         }
 
@@ -975,8 +993,8 @@ class BrandController extends Controller
         if ($request->filled('website')) {
             $website = trim($request->website);
             // Add https:// if no protocol is present
-            if (!preg_match('/^https?:\/\//', $website)) {
-                $website = 'https://' . $website;
+            if (! preg_match('/^https?:\/\//', $website)) {
+                $website = 'https://'.$website;
             }
             $request->merge(['website' => $website]);
         }
@@ -991,13 +1009,13 @@ class BrandController extends Controller
             $aiService = app(\App\Services\AIPromptService::class);
             $limit = $request->get('limit', 25);
             $offset = $request->get('offset', 0);
-            
+
             // Get prompts with ratio-based selection from active AI models only
             $selectedPrompts = $aiService->getPromptsWithRatio($request->website, $limit, $offset);
-            
+
             // Get total count for pagination
             $totalCount = $aiService->getTotalPromptsCount($request->website);
-            
+
             $formattedPrompts = array_map(function ($prompt) {
                 return [
                     'id' => $prompt['id'],
@@ -1040,15 +1058,15 @@ class BrandController extends Controller
             'method' => $request->method(),
             'url' => $request->url(),
             'user_id' => Auth::id(),
-            'data' => $request->all()
+            'data' => $request->all(),
         ]);
 
         // Normalize website URL if provided
         if ($request->filled('website')) {
             $website = trim($request->website);
             // Add https:// if no protocol is present
-            if (!preg_match('/^https?:\/\//', $website)) {
-                $website = 'https://' . $website;
+            if (! preg_match('/^https?:\/\//', $website)) {
+                $website = 'https://'.$website;
             }
             $request->merge(['website' => $website]);
         }
@@ -1060,10 +1078,10 @@ class BrandController extends Controller
 
         try {
             $aiService = app(\App\Services\AIPromptService::class);
-            
+
             // Get enabled AI models
             $enabledModels = \App\Models\AiModel::where('is_enabled', true)->get();
-            
+
             if ($enabledModels->isEmpty()) {
                 return response()->json([
                     'success' => false,
@@ -1073,8 +1091,8 @@ class BrandController extends Controller
 
             $allPrompts = [];
             $order = 1;
-            $tempSessionId = 'temp_' . uniqid(); // Temporary session to avoid conflicts
-            
+            $tempSessionId = 'temp_'.uniqid(); // Temporary session to avoid conflicts
+
             // Generate prompts from each enabled model
             foreach ($enabledModels as $aiModel) {
                 try {
@@ -1086,11 +1104,11 @@ class BrandController extends Controller
                         $request->description ?? '',
                         $aiModel->prompts_per_brand
                     );
-                    
-                    if (!empty($generatedPrompts)) {
+
+                    if (! empty($generatedPrompts)) {
                         foreach ($generatedPrompts as $generated) {
                             $allPrompts[] = [
-                                'id' => 'temp_' . uniqid(), // Temporary ID until saved to brand_prompts
+                                'id' => 'temp_'.uniqid(), // Temporary ID until saved to brand_prompts
                                 'prompt' => $generated->prompt,
                                 'source' => $aiModel->name,
                                 'ai_provider' => $aiModel->display_name,
@@ -1115,31 +1133,31 @@ class BrandController extends Controller
                     // Continue with other models even if one fails
                 }
             }
-            
+
             // Clean up temporary GeneratedPrompt records
             \App\Models\GeneratedPrompt::where('session_id', $tempSessionId)->delete();
 
             if (empty($allPrompts)) {
-                $modelInfo = $enabledModels->map(function($model) {
+                $modelInfo = $enabledModels->map(function ($model) {
                     return [
                         'name' => $model->name,
                         'display_name' => $model->display_name,
-                        'has_api_key' => !empty($model->api_config['api_key'] ?? null),
+                        'has_api_key' => ! empty($model->api_config['api_key'] ?? null),
                     ];
                 });
 
                 Log::warning('No AI prompts generated during brand creation', [
                     'website' => $request->website,
                     'enabled_models_count' => $enabledModels->count(),
-                    'models' => $modelInfo
+                    'models' => $modelInfo,
                 ]);
 
                 return response()->json([
                     'success' => false,
                     'message' => 'No prompts were generated from AI models. Please ensure at least one AI model is properly configured with a valid API key.',
                     'debug_info' => [
-                        'enabled_models' => $modelInfo->toArray()
-                    ]
+                        'enabled_models' => $modelInfo->toArray(),
+                    ],
                 ]);
             }
 
@@ -1168,35 +1186,35 @@ class BrandController extends Controller
     {
         $aiService = app(\App\Services\AIPromptService::class);
         $availableProviders = array_keys($aiService->getAvailableProviders());
-        
+
         // Normalize website URL if provided
         if ($request->filled('website')) {
             $website = trim($request->website);
             // Add https:// if no protocol is present
-            if (!preg_match('/^https?:\/\//', $website)) {
-                $website = 'https://' . $website;
+            if (! preg_match('/^https?:\/\//', $website)) {
+                $website = 'https://'.$website;
             }
             $request->merge(['website' => $website]);
         }
-        
+
         $request->validate([
             'website' => 'required|url',
             'description' => 'required|string|max:1000',
-            'ai_provider' => 'required|string|in:' . implode(',', $availableProviders),
+            'ai_provider' => 'required|string|in:'.implode(',', $availableProviders),
         ]);
 
         try {
             $sessionId = session()->getId();
-            
+
             // Check if we already have prompts for this website
             $existingPrompts = $aiService->getPromptsForWebsite($request->website);
-            
+
             if (count($existingPrompts) > 0) {
                 // Return existing prompts but mark them as for current session
                 foreach ($existingPrompts as $prompt) {
                     $prompt->update(['session_id' => $sessionId]);
                 }
-                
+
                 return response()->json([
                     'success' => true,
                     'prompts' => $existingPrompts->map(function ($prompt) {
@@ -1212,7 +1230,7 @@ class BrandController extends Controller
                     'cached' => true,
                 ]);
             }
-            
+
             // Generate new prompts
             $generatedPrompts = $aiService->generatePromptsForWebsite(
                 $request->website,
@@ -1238,7 +1256,7 @@ class BrandController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'error' => 'Failed to generate prompts: ' . $e->getMessage(),
+                'error' => 'Failed to generate prompts: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1252,12 +1270,12 @@ class BrandController extends Controller
         if ($request->filled('website')) {
             $website = trim($request->website);
             // Add https:// if no protocol is present
-            if (!preg_match('/^https?:\/\//', $website)) {
-                $website = 'https://' . $website;
+            if (! preg_match('/^https?:\/\//', $website)) {
+                $website = 'https://'.$website;
             }
             $request->merge(['website' => $website]);
         }
-        
+
         $request->validate([
             'website' => 'required|url',
         ]);
@@ -1265,7 +1283,7 @@ class BrandController extends Controller
         try {
             $aiService = app(\App\Services\AIPromptService::class);
             $existingPrompts = $aiService->getPromptsForWebsite($request->website);
-            
+
             return response()->json([
                 'success' => true,
                 'prompts' => $existingPrompts->map(function ($prompt) {
@@ -1283,7 +1301,7 @@ class BrandController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'error' => 'Failed to get existing prompts: ' . $e->getMessage(),
+                'error' => 'Failed to get existing prompts: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1294,33 +1312,33 @@ class BrandController extends Controller
     public function getPromptsWithCompetitorUrls(Brand $brand, Request $request)
     {
         $request->validate([
-            'competitor_domain' => 'required|string'
+            'competitor_domain' => 'required|string',
         ]);
 
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Ensure the brand belongs to the authenticated agency or user is admin
-        if (!$user->canAccessBrand($brand)) {
+        if (! $user->canAccessBrand($brand)) {
             abort(403);
         }
 
         $competitorDomain = $request->competitor_domain;
-        
+
         // Get prompts that have resources containing the competitor domain using the new resources table
         $prompts = BrandPrompt::where('brand_id', $brand->id)
             ->whereNotNull('analysis_completed_at')
             ->whereHas('promptResources', function ($query) use ($competitorDomain) {
                 $query->where('domain', 'like', "%{$competitorDomain}%")
-                      ->orWhere('url', 'like', "%{$competitorDomain}%");
+                    ->orWhere('url', 'like', "%{$competitorDomain}%");
             })
             ->with(['promptResources' => function ($query) use ($competitorDomain) {
                 $query->where('domain', 'like', "%{$competitorDomain}%")
-                      ->orWhere('url', 'like', "%{$competitorDomain}%");
+                    ->orWhere('url', 'like', "%{$competitorDomain}%");
             }])
             ->orderBy('analysis_completed_at', 'desc')
             ->get()
-            ->map(function ($prompt) use ($competitorDomain) {
+            ->map(function ($prompt) {
                 // Get all competitor resources for this prompt
                 $competitorResources = $prompt->promptResources->map(function ($resource) {
                     return [
@@ -1329,10 +1347,10 @@ class BrandController extends Controller
                         'title' => $resource->title,
                         'description' => $resource->description,
                         'domain' => $resource->domain,
-                        'is_competitor_url' => $resource->is_competitor_url
+                        'is_competitor_url' => $resource->is_competitor_url,
                     ];
                 })->toArray();
-                
+
                 return [
                     'id' => $prompt->id,
                     'prompt' => $prompt->prompt,
@@ -1351,7 +1369,7 @@ class BrandController extends Controller
             'success' => true,
             'prompts' => $prompts,
             'competitor_domain' => $competitorDomain,
-            'total_count' => $prompts->count()
+            'total_count' => $prompts->count(),
         ]);
     }
 
@@ -1362,9 +1380,9 @@ class BrandController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Ensure the brand belongs to the authenticated agency or user is admin
-        if (!$user->canAccessBrand($brand)) {
+        if (! $user->canAccessBrand($brand)) {
             abort(403);
         }
 
@@ -1379,22 +1397,22 @@ class BrandController extends Controller
         if ($prompts->isEmpty()) {
             return response()->json([
                 'success' => false,
-                'error' => 'No active prompts found for this brand'
+                'error' => 'No active prompts found for this brand',
             ], 404);
         }
 
         $jobsQueued = 0;
         foreach ($prompts as $prompt) {
             // Skip if already analyzed and not forcing regeneration
-            if (!$forceRegenerate && 
-                $prompt->analysis_completed_at && 
+            if (! $forceRegenerate &&
+                $prompt->analysis_completed_at &&
                 $prompt->ai_response) {
                 continue;
             }
 
             \App\Jobs\ProcessBrandPromptAnalysis::dispatch($prompt, $sessionId, $forceRegenerate)
                 ->onQueue('default');
-            
+
             $jobsQueued++;
         }
 
@@ -1403,7 +1421,7 @@ class BrandController extends Controller
             'message' => "Queued {$jobsQueued} analysis jobs",
             'session_id' => $sessionId,
             'total_prompts' => $prompts->count(),
-            'jobs_queued' => $jobsQueued
+            'jobs_queued' => $jobsQueued,
         ]);
     }
 
@@ -1412,7 +1430,7 @@ class BrandController extends Controller
      */
     private function generateMockVisibility(): string
     {
-        return rand(10, 90) . '%';
+        return rand(10, 90).'%';
     }
 
     /**
@@ -1454,18 +1472,18 @@ class BrandController extends Controller
     {
         try {
             $image = imagecreatefromstring(file_get_contents($filePath));
-            
-            if (!$image) {
+
+            if (! $image) {
                 return null;
             }
 
             $originalWidth = imagesx($image);
             $originalHeight = imagesy($image);
-            
+
             // Create 80x80 thumbnail
             $thumbnailSize = 80;
             $thumbnail = imagecreatetruecolor($thumbnailSize, $thumbnailSize);
-            
+
             // Preserve transparency for PNG and GIF
             if ($extension === 'png' || $extension === 'gif') {
                 imagealphablending($thumbnail, false);
@@ -1473,7 +1491,7 @@ class BrandController extends Controller
                 $transparent = imagecolorallocatealpha($thumbnail, 255, 255, 255, 127);
                 imagefilledrectangle($thumbnail, 0, 0, $thumbnailSize, $thumbnailSize, $transparent);
             }
-            
+
             // Resize image
             imagecopyresampled(
                 $thumbnail,
@@ -1484,16 +1502,16 @@ class BrandController extends Controller
                 $originalWidth,
                 $originalHeight
             );
-            
+
             // Save thumbnail
-            $thumbnailFilename = $filename . '_thumb.' . $extension;
-            $thumbnailPath = public_path('storage/brands/thumbnails/' . $thumbnailFilename);
-            
+            $thumbnailFilename = $filename.'_thumb.'.$extension;
+            $thumbnailPath = public_path('storage/brands/thumbnails/'.$thumbnailFilename);
+
             // Ensure directory exists
-            if (!file_exists(dirname($thumbnailPath))) {
+            if (! file_exists(dirname($thumbnailPath))) {
                 mkdir(dirname($thumbnailPath), 0755, true);
             }
-            
+
             // Save based on extension
             $saved = false;
             switch (strtolower($extension)) {
@@ -1511,15 +1529,15 @@ class BrandController extends Controller
                     $saved = imagewebp($thumbnail, $thumbnailPath, 90);
                     break;
             }
-            
+
             imagedestroy($image);
             imagedestroy($thumbnail);
-            
-            return $saved ? 'brands/thumbnails/' . $thumbnailFilename : null;
+
+            return $saved ? 'brands/thumbnails/'.$thumbnailFilename : null;
         } catch (\Exception $e) {
-            \Log::error('Failed to create thumbnail: ' . $e->getMessage());
+            \Log::error('Failed to create thumbnail: '.$e->getMessage());
+
             return null;
         }
     }
 }
-

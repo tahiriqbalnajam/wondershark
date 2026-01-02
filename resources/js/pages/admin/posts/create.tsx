@@ -184,10 +184,10 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
         console.log('Starting prompt generation for post:', postId);
         
         // Use description from createdPost if available, otherwise from form data
-        const description = createdPost?.description || data.description;
+        const description = createdPost?.description || data.description || data.url;
         
         if (!description) {
-            console.error('No description available to generate prompts');
+            console.error('No description or URL available to generate prompts');
             setLoadingPrompts(false);
             return;
         }
@@ -197,7 +197,7 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
                 description: description
             });
             
-            if (response.data.success) {
+            if (response.data.success && response.data.prompts) {
                 console.log('Prompts generated successfully:', response.data.prompts.length);
                 setPrompts(response.data.prompts);
                 
@@ -210,10 +210,14 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
                     setActivePromptTab('propmts-suggested');
                 }
             } else {
-                console.error('Prompt generation failed:', response.data.message);
+                console.error('Prompt generation failed:', response.data.message || 'No prompts returned');
+                // Keep prompts empty but stop loading
+                setPrompts([]);
             }
         } catch (error) {
             console.error('Error generating prompts:', error);
+            // Keep prompts empty but stop loading
+            setPrompts([]);
         } finally {
             setLoadingPrompts(false);
         }
@@ -625,8 +629,15 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
                                 {loadingPrompts ? (
                                     <PromptGenerationLoader />
                                 ) : prompts.length === 0 ? (
-                                    <div className="py-12 text-center">
+                                    <div className="py-12 text-center space-y-4">
                                         <p className="text-muted-foreground">No prompts generated yet</p>
+                                        {(!createdPost?.description && !data.description) && (
+                                            <div className="max-w-md mx-auto p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                                <p className="text-sm text-blue-800">
+                                                    <strong>Tip:</strong> Add a description to the post in the "Create Post" tab to automatically generate AI prompts.
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                 <Tabs value={activePromptTab} onValueChange={setActivePromptTab}>
