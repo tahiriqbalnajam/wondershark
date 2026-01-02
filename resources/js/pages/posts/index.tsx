@@ -199,12 +199,12 @@ export default function PostsIndex({ posts, brand }: Props) {
                                 Import CSV
                             </Link>
                         </Button> */}
-                        <Button asChild>
+                        {/* <Button asChild>
                             <Link href={createPostUrl} className='primary-btn'>
                                 <CirclePlus className="h-4 w-4 mr-2" />
                                 Add Post
                             </Link>
-                        </Button>
+                        </Button> */}
                     </div>
                 </div>
 

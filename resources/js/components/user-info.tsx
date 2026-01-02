@@ -35,34 +35,36 @@ export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: 
             `https://img.logo.dev/${selectedBrand.website.replace(/^https?:\/\//, '').replace(/^www\./, '')}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA` 
             : null);
 
+    // Use agency logo (user.logo or user.logo_thumbnail) for the avatar fallback
+    const agencyLogoUrl = user.logo ? `${user.logo}` : (user.logo_thumbnail ? `${user.logo_thumbnail}` : null);
+
     return (
         <>
-            <Avatar className="h-[40px] w-[40px] overflow-hidden rounded-md user-img">
+            <Avatar className="h-[40px] w-[40px] overflow-hidden rounded-md flex-1 user-img">
                 <AvatarImage src={displayImage} alt={displayName} />
                 <AvatarFallback className="rounded-md bg-neutral-200 text-black font-bold dark:bg-neutral-700 dark:text-white">
-                    {selectedBrand && brandLogoUrl ? (
+                    {agencyLogoUrl ? (
                         <img
-                            src={brandLogoUrl}
-                            alt={selectedBrand.logo}
-                            className="w-full h-full object-contain"
+                            src={agencyLogoUrl}
+                            alt={user.name}
+                            className="vvv w-full h-full object-contain"
                             onError={(e) => {
                                 e.currentTarget.style.display = 'none';
-                                // Fallback to initials if logo fails
                                 const fallback = e.currentTarget.parentElement;
                                 if (fallback) {
                                     fallback.textContent = displayInitials;
                                 }
                             }}
                         />
-                    ) : (
+                     ) : (
                         displayInitials
                     )}
                 </AvatarFallback>
             </Avatar>
-            <div className="grid text-left text-sm leading-tight">
+            {/* <div className="grid text-left text-sm leading-tight">
                 <span className="truncate user-name font-medium">{displayName}</span>
                 {showEmail && <span className="truncate text-xs text-muted-foreground">{user.email}</span>}
-            </div>
+            </div> */}
         </>
     );
 }

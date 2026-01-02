@@ -134,12 +134,12 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
 
                     <TableBody>
                         {displayStats.map((stat, index) => {
-                            // Clean domain for display - remove protocol and www
-                            const cleanDomain = stat.entity_url
-                                .replace(/^https?:\/\//, '')
-                                .replace(/^www\./, '');
-                            const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
-                            
+                            // Clean domain for display - remove protocol, www and any path
+                                const cleanDomain = stat.entity_url
+                                    .replace(/^https?:\/\//, '')
+                                    .replace(/^www\./, '')
+                                    .split('/')[0];
+                                const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
                             return (
                                 <TableRow 
                                     key={stat.id}
