@@ -392,13 +392,13 @@ span.img-avatar img{
     background: #f8f8f8;
     font-weight:700;
 }
-
-.default-table th,
-.default-table td{
-    border:1px solid var(--border);
-    padding:15px 10px;
+.default-table th, .default-table td {
+	border: 1px solid var(--border);
+	padding: 15px 10px;
+	width: 120px;
 }
-
+.default-table th:first-child,
+.default-table td:first-child{max-width:40px;min-width:40px;}
 .default-table th button[aria-checked="true"],
 .default-table td button[aria-checked="true"]{
     background: var(--orange-1);
