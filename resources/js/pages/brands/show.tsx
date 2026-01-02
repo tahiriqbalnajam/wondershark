@@ -769,7 +769,7 @@ const filteredPrompts = useMemo(() => {
                     <CardContent>
                         {allBrands && allBrands.length > 0 ? (
                             <div className="overflow-x-auto">
-                                <table className="w-full">
+                                <table className="w-full default-table">
                                     <thead>
                                         <tr className="border-b">
                                             <th className="text-left py-3 px-4 font-semibold">Brand</th>
@@ -828,11 +828,14 @@ const filteredPrompts = useMemo(() => {
                                                                 )}
                                                             </div>
                                                         ) : (
-                                                            <Badge variant="outline">No Agency</Badge>
+                                                            <Badge variant="outline" style={{ borderColor: 'var(--orange-1)', color: 'var(--orange-1)' }}>No Agency</Badge>
                                                         )}
                                                     </td>
                                                     <td className="py-3 px-4">
-                                                        <Badge variant={b.status === 'active' ? 'default' : 'secondary'}>
+                                                        <Badge 
+                                                            variant={b.status === 'active' ? 'default' : 'secondary'}
+                                                            style={b.status === 'active' ? { backgroundColor: 'var(--orange-1)', borderColor: 'var(--orange-1)' } : {}}
+                                                        >
                                                             {b.status}
                                                         </Badge>
                                                     </td>
@@ -844,6 +847,8 @@ const filteredPrompts = useMemo(() => {
                                                             variant="outline" 
                                                             size="sm"
                                                             asChild
+                                                            style={{ borderColor: 'var(--orange-1)', color: 'var(--orange-1)' }}
+                                                            className="hover:bg-[var(--orange-1)] hover:text-white"
                                                         >
                                                             <Link href={`/brands/${b.id}`}>
                                                                 View

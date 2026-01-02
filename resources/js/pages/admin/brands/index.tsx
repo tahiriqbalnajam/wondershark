@@ -80,7 +80,7 @@ export default function AdminBrands({ brands }: Props) {
                     <CardContent>
                         {filteredBrands.length > 0 ? (
                             <div className="overflow-x-auto">
-                                <table className="w-full">
+                                <table className="w-full default-table">
                                     <thead>
                                         <tr className="border-b">
                                             <th className="text-left py-3 px-4 font-semibold">Brand</th>
@@ -133,11 +133,14 @@ export default function AdminBrands({ brands }: Props) {
                                                             )}
                                                         </div>
                                                     ) : (
-                                                        <Badge variant="outline">No Agency</Badge>
+                                                        <Badge variant="outline" style={{ borderColor: 'var(--orange-1)', color: 'var(--orange-1)' }}>No Agency</Badge>
                                                     )}
                                                 </td>
                                                 <td className="py-3 px-4">
-                                                    <Badge variant={brand.status === 'active' ? 'default' : 'secondary'}>
+                                                    <Badge 
+                                                        variant={brand.status === 'active' ? 'default' : 'secondary'}
+                                                        style={brand.status === 'active' ? { backgroundColor: 'var(--orange-1)', borderColor: 'var(--orange-1)' } : {}}
+                                                    >
                                                         {brand.status}
                                                     </Badge>
                                                 </td>
@@ -149,6 +152,8 @@ export default function AdminBrands({ brands }: Props) {
                                                         variant="outline" 
                                                         size="sm"
                                                         asChild
+                                                        style={{ borderColor: 'var(--orange-1)', color: 'var(--orange-1)' }}
+                                                        className="hover:bg-[var(--orange-1)] hover:text-white"
                                                     >
                                                         <Link href={`/brands/${brand.id}`}>
                                                             View
