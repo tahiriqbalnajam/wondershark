@@ -21,3 +21,10 @@ Schedule::command('brand:analyze-prompts --all')
     ->withoutOverlapping()
     ->onOneServer()
     ->runInBackground();
+
+// Post Prompt Stats Fetching - Runs daily at 3 AM
+Schedule::command('posts:fetch-prompts-stats')
+    ->dailyAt('03:00')
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->runInBackground();
