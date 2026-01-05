@@ -42,7 +42,7 @@ export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: 
         <>
             <Avatar className="h-[40px] w-[40px] overflow-hidden rounded-md flex-1 user-img">
                 <AvatarImage src={displayImage} alt={displayName} />
-                <AvatarFallback className="rounded-md bg-neutral-200 text-black font-bold dark:bg-neutral-700 dark:text-white">
+                <AvatarFallback className="rounded-md bg-transparent text-black font-bold dark:bg-transparent dark:text-white">
                     {agencyLogoUrl ? (
                         <img
                             src={agencyLogoUrl}
