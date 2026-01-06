@@ -56,7 +56,7 @@ export default function Ranking({ brand, competitiveStats }: RankingProps) {
                             <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'>
                                 <Trophy/>
                             </span>
-                            Brand Visibility Index - All Competitors
+                            Brand Visibility Index - All Competitors {competitiveStats.length > 0 && `(${competitiveStats.length} / 10)`}
                         </CardTitle>
                     </CardHeader>
                     <BrandVisibilityIndex 
