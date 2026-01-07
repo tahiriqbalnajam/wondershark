@@ -291,7 +291,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                         </div>
 
                         <TabsContent value="active" className="active-table-prompt">
-                            <Table className="default-table">
+                            <Table className="table-fixed default-table">
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-[70px] text-center p-0">
@@ -385,7 +385,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                         </TabsContent>
 
                         <TabsContent value="inactive" className="active-table-prompt">
-                            <Table className="default-table">
+                            <Table className="table-fixed default-table">
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-[70px] text-center p-0">
@@ -487,7 +487,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                     <p className="text-gray-400 text-sm">Click "Suggest More" to generate AI-powered prompts</p>
                                 </div>
                             ) : (
-                                <Table className="default-table">
+                                <Table className="table-fixed default-table">
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead className="w-[70px] text-center p-0">

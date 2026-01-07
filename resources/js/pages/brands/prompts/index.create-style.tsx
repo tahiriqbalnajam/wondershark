@@ -305,7 +305,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                 </p>
                             </div>
                         ) : (
-                            <Table>
+                            <Table className='table-fixed default-table'>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-12">
