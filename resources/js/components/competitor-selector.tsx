@@ -125,9 +125,9 @@ export default function CompetitorSelector({
                     {/* Suggested Competitors Section */}
                     <Card>
                         <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-2xl font-bold">
-                                    Suggested Competitors 
+                            <div className="lg:flex items-center justify-between block">
+                                <h2 className="text-2xl font-bold lg:mb-0 mb-5">
+                                    Suggested Competitors
                                     <span className='text-gray-400 font-normal text-sm'>
                                         {suggestedCompetitors.length > 0 ? `- ${suggestedCompetitors.length}` : ''}
                                     </span>

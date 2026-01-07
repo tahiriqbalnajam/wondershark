@@ -241,7 +241,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                 </TabsList>
                                 
                                 <TabsContent value="all-posts">
-                                    <Table className="default-table">
+                                    <Table className="default-table table-fixed">
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead className='text-center'>#</TableHead>
@@ -388,7 +388,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                     </Table>
                                 </TabsContent>
                                 <TabsContent value="blogs">
-                                    <Table className="default-table">
+                                    <Table className="default-table table-fixed">
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead className='text-center'>#</TableHead>
@@ -523,7 +523,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                     </Table>
                                 </TabsContent>
                                 <TabsContent value="forums">
-                                    <Table className="default-table">
+                                    <Table className="default-table table-fixed">
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead className='text-center'>#</TableHead>

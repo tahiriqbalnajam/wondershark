@@ -76,7 +76,7 @@ export function VisibilityChart({ data, entities, granularity = 'month', hovered
     }
 
     return (
-        <CardContent>
+        <CardContent className='p-0 pr-4'>
             <div className="h-80">
                 {visibilityData.length > 0 && chartEntities.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">

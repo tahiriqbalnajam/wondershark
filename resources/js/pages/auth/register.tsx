@@ -40,7 +40,7 @@ export default function Register() {
             <form className="flex flex-col gap-6" onSubmit={submit}>
 
                 <div className="grid gap-3">
-                    <RadioGroup value={data.role} onValueChange={(value: string) => setData('role', value)} className="grid grid-cols-2 gap-3" >
+                    <RadioGroup value={data.role} onValueChange={(value: string) => setData('role', value)} className="grid grid-cols-1 lg:grid-cols-2 gap-3" >
                         <div className="rounded-lg border p-5 shadow-xl hover:shadow-2xl account-type">
                             <Label htmlFor="brand" className="flex-1 cursor-pointer">
                                 <div className="font-bold text-orange-600 flex items-center justify-between text-2xl mb-5"><RadioGroupItem value="brand" id="brand" className='radio-btn'/> Brand</div>

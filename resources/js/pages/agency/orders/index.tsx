@@ -185,7 +185,7 @@ export default function OrdersIndex() {
                             <button onClick={() => { setActiveItem(null); setOpenDrawer(true); }} className="mb-3 px-4 py-2 bg-primary text-white rounded flex gap-3 max-[130px]" >Search Filter <SlidersHorizontal className='w-4'/></button>
 
                             <div className="overflow-x-auto mt-4">
-                                    <table className="w-full text-sm border border-gray-300 default-table">
+                                    <table className="w-full text-sm border border-gray-300 default-table table-fixed">
                                         <thead className="bg-gray-100">
                                             <tr>
                                                 <th className="border p-3 h-12 align-middle font-medium text-muted-foreground text-left w-10">

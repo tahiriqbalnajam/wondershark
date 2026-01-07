@@ -536,7 +536,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Create Brand" />
 
-            <div className="p-6">
+            <div className="lg:p-6 p-0">
                 <div className="step-wrapp">
                     {/* <HeadingSmall title="Create New Brand" /> */}
 
