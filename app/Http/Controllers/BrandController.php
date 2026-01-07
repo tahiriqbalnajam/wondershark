@@ -661,63 +661,10 @@ class BrandController extends Controller
             },
         ]);
 
-        // Get competitive stats with trends
+        // Get competitive stats with trends (service now handles empty stats with placeholders)
         $competitiveAnalysisService = app(\App\Services\CompetitiveAnalysisService::class);
         $competitiveStats = $competitiveAnalysisService->getLatestStatsWithTrends($brand);
         $historicalStats = $competitiveAnalysisService->getHistoricalStatsForChart($brand);
-
-        // If no stats exist, create placeholder entries for brand and accepted competitors
-        if (empty($competitiveStats)) {
-            $competitiveStats = [];
-
-            // Add brand placeholder
-            $competitiveStats[] = [
-                'id' => 0,
-                'entity_type' => 'brand',
-                'entity_name' => $brand->name,
-                'entity_url' => $brand->website ?? $brand->domain ?? '',
-                'visibility' => 0,
-                'sentiment' => 0,
-                'position' => 0,
-                'analyzed_at' => null,
-                'trends' => [
-                    'visibility_trend' => 'new',
-                    'sentiment_trend' => 'new',
-                    'position_trend' => 'new',
-                    'visibility_change' => 0,
-                    'sentiment_change' => 0,
-                    'position_change' => 0,
-                ],
-                'visibility_percentage' => 'N/A',
-                'position_formatted' => 'N/A',
-                'sentiment_level' => 'N/A',
-            ];
-
-            // Add accepted competitors as placeholders
-            foreach ($brand->competitors as $competitor) {
-                $competitiveStats[] = [
-                    'id' => 0,
-                    'entity_type' => 'competitor',
-                    'entity_name' => $competitor->name,
-                    'entity_url' => $competitor->domain,
-                    'visibility' => 0,
-                    'sentiment' => 0,
-                    'position' => 0,
-                    'analyzed_at' => null,
-                    'trends' => [
-                        'visibility_trend' => 'new',
-                        'sentiment_trend' => 'new',
-                        'position_trend' => 'new',
-                        'visibility_change' => 0,
-                        'sentiment_change' => 0,
-                        'position_change' => 0,
-                    ],
-                    'visibility_percentage' => 'N/A',
-                    'position_formatted' => 'N/A',
-                    'sentiment_level' => 'N/A',
-                ];
-            }
-        }
 
         // Get enabled AI models for filtering
         $aiModels = AiModel::enabled()->ordered()->get();

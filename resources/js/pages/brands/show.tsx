@@ -140,6 +140,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
     const [selectedAIModel, setSelectedAIModel] = useState('all');
     const [hoveredDomain, setHoveredDomain] = useState<string | null>(null);
     const [brandFilter, setBrandFilter] = useState<'all' | 'with-agency' | 'without-agency'>('all');
+    const [currentPage, setCurrentPage] = useState(1);
     const handleDateRangeSelect = (days: string) => {
         setSelectedDateRange(days);
         if (days !== 'custom') {
@@ -453,6 +454,7 @@ const filteredPrompts = useMemo(() => {
     selectedAIModel,
 ]);
 
+const visiblePrompts = filteredPrompts.slice((currentPage - 1) * 9, currentPage * 9);
 
     const handlePromptClick = (prompt: Brand['prompts'][0]) => {
         setSelectedPrompt(prompt);
@@ -671,7 +673,7 @@ const filteredPrompts = useMemo(() => {
                             <div className='flex items-center mb-5 md:mb-0'>
                                 <CardTitle className="flex items-center gap-2">
                                     <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><MessageSquare/></span>
-                                   Recent AI Citations ({filteredPrompts?.length || 0})
+                                   Recent AI Citations ({visiblePrompts.length} of {filteredPrompts?.length || 0})
                                 </CardTitle>
                                 {selectedCompetitorDomain && (
                                     <Button variant="outline" size="sm" className="ml-2" onClick={() => setSelectedCompetitorDomain(null)}>
@@ -679,13 +681,15 @@ const filteredPrompts = useMemo(() => {
                                     </Button>
                                 )}
                             </div>
-                            <a href="/" className='primary-btn'> View all AI Citations</a>
+                            {currentPage * 9 < filteredPrompts.length && <a href="/" className='primary-btn' onClick={(e) => { e.preventDefault(); setCurrentPage(prev => prev + 1); }}> Load More Citations</a>}
                         </div>
                     </CardHeader>
-                    <AiCitations 
-                        prompts={filteredPrompts} 
-                        onPromptClick={handlePromptClick}
-                    />
+                    <CardContent>
+                        <AiCitations 
+                            prompts={visiblePrompts} 
+                            onPromptClick={handlePromptClick}
+                        />
+                    </CardContent>
                 </Card>
 
                 {/* Target Subreddits */}

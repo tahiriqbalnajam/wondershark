@@ -246,6 +246,7 @@ export default function CompetitorSelector({
                                     <span className='text-gray-400 font-normal text-sm'>
                                         {acceptedCompetitors.length > 0 ? `- ${acceptedCompetitors.length}` : ''}+
                                     </span>
+                                    {acceptedCompetitors.length > 0 ? `( ${acceptedCompetitors.length}/10)` : ''}
                                 </h2>
                             </div>
                         </CardHeader>

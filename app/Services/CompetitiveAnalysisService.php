@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\AiModel;
 use App\Models\Brand;
 use App\Models\BrandCompetitiveStat;
-use App\Models\AiModel;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -20,7 +20,7 @@ class CompetitiveAnalysisService
     /**
      * Analyze brand and its competitors for competitive metrics
      */
-    public function analyzeBrandCompetitiveStats(Brand $brand, string $sessionId = null): array
+    public function analyzeBrandCompetitiveStats(Brand $brand, ?string $sessionId = null): array
     {
         $sessionId = $sessionId ?? Str::uuid();
         $results = [];
@@ -29,29 +29,31 @@ class CompetitiveAnalysisService
             // Check if brand has a website
             if (empty($brand->website)) {
                 Log::warning("Brand {$brand->name} has no website - cannot perform competitive analysis");
+
                 return [];
             }
 
             // Get accepted competitors with domains
             $competitors = $brand->competitors()->accepted()->whereNotNull('domain')->get();
-            
+
             if ($competitors->isEmpty()) {
                 Log::warning("No competitors with websites found for brand: {$brand->name}");
+
                 return [];
             }
 
             // Create competitor URLs list for the prompt (add https:// to domains)
-            $competitorUrls = $competitors->pluck('domain')->map(function($domain) {
-                return str_starts_with($domain, 'http') ? $domain : 'https://' . $domain;
+            $competitorUrls = $competitors->pluck('domain')->map(function ($domain) {
+                return str_starts_with($domain, 'http') ? $domain : 'https://'.$domain;
             })->toArray();
-            
+
             // Generate analysis prompt
             $prompt = $this->buildCompetitiveAnalysisPrompt($brand->website, $competitorUrls, $brand->name);
-            
+
             // Get AI analysis
             $analysis = $this->callAIForAnalysis($prompt);
-            
-            if (!$analysis) {
+
+            if (! $analysis) {
                 throw new \Exception('Failed to get AI analysis');
             }
 
@@ -71,7 +73,7 @@ class CompetitiveAnalysisService
 
             Log::info("Competitive analysis completed for brand: {$brand->name}", [
                 'session_id' => $sessionId,
-                'results_count' => count($results)
+                'results_count' => count($results),
             ]);
 
             return $results;
@@ -79,9 +81,9 @@ class CompetitiveAnalysisService
         } catch (\Exception $e) {
             Log::error("Competitive analysis failed for brand: {$brand->name}", [
                 'error' => $e->getMessage(),
-                'session_id' => $sessionId
+                'session_id' => $sessionId,
             ]);
-            
+
             return [];
         }
     }
@@ -92,7 +94,7 @@ class CompetitiveAnalysisService
     protected function buildCompetitiveAnalysisPrompt(string $brandUrl, array $competitorUrls, string $brandName): string
     {
         $competitorUrlsString = implode(', ', $competitorUrls);
-        
+
         return "You are an expert in competitive brand analysis. Given the brand website [{$brandUrl}] and its competitors [{$competitorUrlsString}], analyze each (brand first, then competitors) using real data from web searches and page browsing. Calibrate metrics to match benchmark data for the industry: visibility 30-50% (market share estimate), sentiment 70-80 (0-100 scale from review averages), position 1.0-3.0 (decimal ranking, lower=better leader).
 
 Step 1: Gather Data
@@ -174,8 +176,8 @@ CRITICAL INSTRUCTIONS:
         try {
             // Get the first available AI model
             $aiModel = AiModel::where('is_enabled', true)->first();
-            
-            if (!$aiModel) {
+
+            if (! $aiModel) {
                 throw new \Exception('No enabled AI model found');
             }
 
@@ -183,7 +185,7 @@ CRITICAL INSTRUCTIONS:
             $config = $aiModel->api_config;
             $apiKey = trim($config['api_key']);
             $model = $config['model'] ?? 'gpt-3.5-turbo';
-            
+
             // Make direct API call for competitive analysis
             if ($aiModel->name === 'openai') {
                 $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
@@ -191,16 +193,16 @@ CRITICAL INSTRUCTIONS:
                     ->post('https://api.openai.com/v1/chat/completions', [
                         'model' => $model,
                         'messages' => [
-                            ['role' => 'user', 'content' => $prompt]
+                            ['role' => 'user', 'content' => $prompt],
                         ],
                         'temperature' => 0.7,
                         'max_tokens' => 4000, // More tokens for detailed analysis
                     ]);
-                
-                if (!$response->successful()) {
-                    throw new \Exception("OpenAI API error: " . $response->status() . " - " . $response->body());
+
+                if (! $response->successful()) {
+                    throw new \Exception('OpenAI API error: '.$response->status().' - '.$response->body());
                 }
-                
+
                 $data = $response->json();
                 $content = $data['choices'][0]['message']['content'] ?? '';
             } else {
@@ -213,14 +215,14 @@ CRITICAL INSTRUCTIONS:
                 $jsonMatch = $matches[0];
             }
 
-            if (!$jsonMatch) {
+            if (! $jsonMatch) {
                 // Try alternative JSON extraction patterns
                 $patterns = [
                     '/```json\s*(\{.*?\})\s*```/s',
                     '/```\s*(\{.*?\})\s*```/s',
-                    '/(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/s'
+                    '/(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/s',
                 ];
-                
+
                 foreach ($patterns as $pattern) {
                     if (preg_match($pattern, $content, $matches)) {
                         $jsonMatch = $matches[1];
@@ -229,19 +231,19 @@ CRITICAL INSTRUCTIONS:
                 }
             }
 
-            if (!$jsonMatch) {
+            if (! $jsonMatch) {
                 Log::error('No JSON found in AI response', ['response' => substr($content, 0, 500)]);
                 throw new \Exception('No JSON found in AI response');
             }
 
             $analysis = json_decode($jsonMatch, true);
-            
+
             if (json_last_error() !== JSON_ERROR_NONE) {
                 Log::error('Invalid JSON in AI response', [
                     'error' => json_last_error_msg(),
-                    'json' => substr($jsonMatch, 0, 500)
+                    'json' => substr($jsonMatch, 0, 500),
                 ]);
-                throw new \Exception('Invalid JSON in AI response: ' . json_last_error_msg());
+                throw new \Exception('Invalid JSON in AI response: '.json_last_error_msg());
             }
 
             return $analysis;
@@ -249,9 +251,9 @@ CRITICAL INSTRUCTIONS:
         } catch (\Exception $e) {
             Log::error('AI competitive analysis failed', [
                 'error' => $e->getMessage(),
-                'prompt_length' => strlen($prompt)
+                'prompt_length' => strlen($prompt),
             ]);
-            
+
             return null;
         }
     }
@@ -261,13 +263,14 @@ CRITICAL INSTRUCTIONS:
      */
     protected function parseBrandStats(array $analysis, Brand $brand, string $sessionId): ?BrandCompetitiveStat
     {
-        if (!isset($analysis['brand_analysis'])) {
+        if (! isset($analysis['brand_analysis'])) {
             Log::warning('Brand analysis not found in AI response');
+
             return null;
         }
 
         $brandData = $analysis['brand_analysis'];
-        
+
         return BrandCompetitiveStat::create([
             'brand_id' => $brand->id,
             'entity_type' => 'brand',
@@ -288,17 +291,18 @@ CRITICAL INSTRUCTIONS:
      */
     protected function parseCompetitorStats(array $analysis, Brand $brand, $competitor, string $sessionId): ?BrandCompetitiveStat
     {
-        if (!isset($analysis['competitors_analysis']) || !is_array($analysis['competitors_analysis'])) {
+        if (! isset($analysis['competitors_analysis']) || ! is_array($analysis['competitors_analysis'])) {
             Log::warning('Competitors analysis not found in AI response');
+
             return null;
         }
 
         // Find matching competitor in analysis by URL matching
         foreach ($analysis['competitors_analysis'] as $competitorData) {
             $competitorUrl = $competitorData['url'] ?? '';
-            $competitorDomain = str_starts_with($competitor->domain, 'http') ? $competitor->domain : 'https://' . $competitor->domain;
+            $competitorDomain = str_starts_with($competitor->domain, 'http') ? $competitor->domain : 'https://'.$competitor->domain;
             $competitorHost = parse_url($competitorDomain, PHP_URL_HOST);
-            
+
             if ($competitorHost && str_contains($competitorUrl, $competitorHost)) {
                 return BrandCompetitiveStat::create([
                     'brand_id' => $brand->id,
@@ -316,9 +320,9 @@ CRITICAL INSTRUCTIONS:
             }
         }
 
-        Log::warning("No matching competitor found in AI analysis", [
+        Log::warning('No matching competitor found in AI analysis', [
             'competitor_name' => $competitor->name,
-            'competitor_domain' => $competitor->domain
+            'competitor_domain' => $competitor->domain,
         ]);
 
         return null;
@@ -330,6 +334,7 @@ CRITICAL INSTRUCTIONS:
     protected function validateMetric($value, $min, $max): float
     {
         $numericValue = is_numeric($value) ? (float) $value : 0;
+
         return max($min, min($max, $numericValue));
     }
 
@@ -340,22 +345,22 @@ CRITICAL INSTRUCTIONS:
     {
         $stats = BrandCompetitiveStat::latestForBrand($brand->id)
             ->with(['competitor'])
-            ->where(function($query) {
+            ->where(function ($query) {
                 // Include brand stats (entity_type = 'brand')
                 $query->where('entity_type', 'brand')
                       // OR competitor stats where the competitor is accepted
-                      ->orWhereHas('competitor', function($subQuery) {
-                          $subQuery->accepted();
-                      });
+                    ->orWhereHas('competitor', function ($subQuery) {
+                        $subQuery->accepted();
+                    });
             })
             ->orderBy('entity_type')
             ->orderBy('entity_name')
             ->get();
 
-        return $stats->map(function ($stat) {
+        $statsArray = $stats->map(function ($stat) {
             $trends = $stat->getTrends();
             $statArray = $stat->toArray();
-            
+
             // Use competitor name from competitors table if available, not from analysis table
             if ($stat->entity_type === 'competitor' && $stat->competitor) {
                 $statArray['entity_name'] = $stat->competitor->name;
@@ -364,13 +369,72 @@ CRITICAL INSTRUCTIONS:
                 $statArray['entity_name'] = $stat->brand->name;
                 $statArray['entity_url'] = $stat->brand->website ?? $stat->brand->domain ?? $statArray['entity_url'];
             }
-            
+
             $statArray['trends'] = $trends;
             $statArray['visibility_percentage'] = $stat->visibility_percentage;
             $statArray['position_formatted'] = $stat->position_formatted;
             $statArray['sentiment_level'] = $stat->sentiment_level;
+
             return $statArray;
         })->toArray();
+
+        // If no stats exist, create placeholders for brand and accepted competitors
+        if (empty($statsArray)) {
+            $placeholders = [];
+
+            // Add brand placeholder
+            $placeholders[] = [
+                'id' => 0,
+                'entity_type' => 'brand',
+                'entity_name' => $brand->name,
+                'entity_url' => $brand->website ?? $brand->domain ?? '',
+                'visibility' => 0,
+                'sentiment' => 0,
+                'position' => 0,
+                'analyzed_at' => null,
+                'trends' => [
+                    'visibility_trend' => 'new',
+                    'sentiment_trend' => 'new',
+                    'position_trend' => 'new',
+                    'visibility_change' => 0,
+                    'sentiment_change' => 0,
+                    'position_change' => 0,
+                ],
+                'visibility_percentage' => '0%',
+                'position_formatted' => '0',
+                'sentiment_level' => 'Neutral',
+            ];
+
+            // Add accepted competitors as placeholders
+            $competitors = $brand->competitors()->accepted()->get();
+            foreach ($competitors as $index => $competitor) {
+                $placeholders[] = [
+                    'id' => 0,
+                    'entity_type' => 'competitor',
+                    'entity_name' => $competitor->name,
+                    'entity_url' => $competitor->domain,
+                    'visibility' => 0,
+                    'sentiment' => 0,
+                    'position' => 0,
+                    'analyzed_at' => null,
+                    'trends' => [
+                        'visibility_trend' => 'new',
+                        'sentiment_trend' => 'new',
+                        'position_trend' => 'new',
+                        'visibility_change' => 0,
+                        'sentiment_change' => 0,
+                        'position_change' => 0,
+                    ],
+                    'visibility_percentage' => '0%',
+                    'position_formatted' => '0',
+                    'sentiment_level' => 'Neutral',
+                ];
+            }
+
+            return $placeholders;
+        }
+
+        return $statsArray;
     }
 
     /**
@@ -381,36 +445,67 @@ CRITICAL INSTRUCTIONS:
         // Get all competitive stats ordered by date
         $stats = BrandCompetitiveStat::where('brand_id', $brand->id)
             ->with(['competitor', 'brand'])
-            ->where(function($query) {
+            ->where(function ($query) {
                 // Include brand stats (entity_type = 'brand')
                 $query->where('entity_type', 'brand')
                       // OR competitor stats where the competitor is accepted
-                      ->orWhereHas('competitor', function($subQuery) {
-                          $subQuery->accepted();
-                      });
+                    ->orWhereHas('competitor', function ($subQuery) {
+                        $subQuery->accepted();
+                    });
             })
             ->orderBy('analyzed_at')
             ->get();
 
         if ($stats->isEmpty()) {
-            return [];
+            // Return a single data point with 0 values for all entities
+            $currentDate = now()->format('Y-m-d');
+            $groupedByDate = [$currentDate => []];
+
+            // Add brand with 0 values
+            $brandDomain = str_replace(['https://', 'http://', 'www.'], '', $brand->website ?? $brand->domain ?? '');
+            $brandDomain = explode('/', $brandDomain)[0];
+            if ($brandDomain) {
+                $groupedByDate[$currentDate][$brandDomain] = [
+                    'entity_name' => $brand->name,
+                    'visibility' => 0,
+                    'sentiment' => 0,
+                    'position' => 0,
+                ];
+            }
+
+            // Add accepted competitors with 0 values
+            $competitors = $brand->competitors()->accepted()->get();
+            foreach ($competitors as $competitor) {
+                $competitorDomain = str_replace(['https://', 'http://', 'www.'], '', $competitor->domain);
+                $competitorDomain = explode('/', $competitorDomain)[0];
+                if ($competitorDomain) {
+                    $groupedByDate[$currentDate][$competitorDomain] = [
+                        'entity_name' => $competitor->name,
+                        'visibility' => 0,
+                        'sentiment' => 0,
+                        'position' => 0,
+                    ];
+                }
+            }
+
+            return $groupedByDate;
         }
 
         // Group by date and entity
         $groupedByDate = [];
-        
+
         foreach ($stats as $stat) {
             // Use UTC timezone to ensure consistent date grouping across all timezones
             $date = $stat->analyzed_at->copy()->setTimezone('UTC')->format('Y-m-d');
-            
-            if (!isset($groupedByDate[$date])) {
+
+            if (! isset($groupedByDate[$date])) {
                 $groupedByDate[$date] = [];
             }
 
             // Use correct entity name from related tables
             $entityName = $stat->entity_name;
             $entityUrl = $stat->entity_url;
-            
+
             if ($stat->entity_type === 'competitor' && $stat->competitor) {
                 $entityName = $stat->competitor->name;
                 $entityUrl = $stat->competitor->domain;
@@ -442,7 +537,7 @@ CRITICAL INSTRUCTIONS:
             ->where('analyzed_at', '>', now()->subHours($hoursThreshold))
             ->exists();
 
-        return !$recentAnalysis;
+        return ! $recentAnalysis;
     }
 
     /**
@@ -451,12 +546,12 @@ CRITICAL INSTRUCTIONS:
     public function getBrandsNeedingAnalysis(int $hoursThreshold = 24): \Illuminate\Database\Eloquent\Collection
     {
         // Get brands that have accepted competitors with domains
-        $brandsWithCompetitors = Brand::whereHas('competitors', function($query) {
+        $brandsWithCompetitors = Brand::whereHas('competitors', function ($query) {
             $query->accepted()->whereNotNull('domain');
         });
 
         // Filter out brands that have been analyzed recently
-        $brandsNeedingAnalysis = $brandsWithCompetitors->whereDoesntHave('competitiveStats', function($query) use ($hoursThreshold) {
+        $brandsNeedingAnalysis = $brandsWithCompetitors->whereDoesntHave('competitiveStats', function ($query) use ($hoursThreshold) {
             $query->where('analyzed_at', '>', now()->subHours($hoursThreshold));
         });
 
