@@ -86,12 +86,12 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                         New Brand
                     </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild className='btn-default'>
+                {/* <DropdownMenuItem asChild className='btn-default'>
                     <Link className="block w-full btn-default" href={route('profile.edit')} as="button" prefetch onClick={cleanup}>
                         <Settings className="mr-2" />
                         Settings
                     </Link>
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
                 <DropdownMenuItem asChild className='btn-logout'>
                     <Link className="block w-full btn-logout" method="post" href={route('logout')} as="button" onClick={handleLogout}>
                         <LogOut className="mr-2" />

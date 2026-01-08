@@ -10,7 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import { Building2, } from 'lucide-react';
+import { Building2, LogOut, } from 'lucide-react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -25,6 +27,11 @@ type AgencyForm = {
     // can be a File when selected, or a string URL/path returned from the server
     logo: File | string | null;
 };
+type PasswordForm = {
+    current_password: string;
+    password: string;
+    password_confirmation: string;
+};
 
 export default function Agency({ agency }: { agency: { name: string; url?: string; logo?: string } }) {
 const { data, setData, post, errors, processing, recentlySuccessful } = useForm<AgencyForm>({
@@ -32,7 +39,11 @@ const { data, setData, post, errors, processing, recentlySuccessful } = useForm<
     url: agency.url || '',
     logo: agency.logo || null,
 });
-
+const cleanup = useMobileNavigation();
+const handleLogout = () => {
+        cleanup();
+        router.flushAll();
+    };
 const [logoPreview, setLogoPreview] = useState<string | undefined>(() => agency.logo || undefined);
 
 useEffect(() => {
@@ -55,6 +66,27 @@ const submit: FormEventHandler = (e) => {
         preserveScroll: true,
     });
 };
+// Password form
+    const { 
+        data: passwordData, 
+        setData: setPasswordData, 
+        put: putPassword, 
+        errors: passwordErrors, 
+        processing: passwordProcessing, 
+        recentlySuccessful: passwordRecentlySuccessful,
+        reset: resetPassword
+    } = useForm<Required<PasswordForm>>({
+        current_password: '',
+        password: '',
+        password_confirmation: '',
+    });
+const submitPassword: FormEventHandler = (e) => {
+        e.preventDefault();
+        putPassword(route('password.update'), {
+            preserveScroll: true,
+            onSuccess: () => resetPassword(),
+        });
+    };
 
     return (
         <AppLayout title="Agency Settings" breadcrumbs={breadcrumbs} logo={agency.logo} website={agency.url}>
@@ -104,17 +136,96 @@ const submit: FormEventHandler = (e) => {
                                     </div>
                                     <InputError className="mt-2" message={errors.logo} />
                                 </div>
-                                <div className="flex items-center gap-4">
-                                    <Button type="submit" disabled={processing} className='primary-btn'>
-                                        Save Changes
-                                    </Button>
-                                    <Transition show={recentlySuccessful} enter="transition ease-in-out" enterFrom="opacity-0" leave="transition ease-in-out" leaveTo="opacity-0" >
-                                        <p className="text-sm text-muted-foreground">Saved.</p>
-                                    </Transition>
+                                <div className="flex items-center justify-end">
+                                    <div className="flex items-center gap-4">
+                                        <Button variant="outline" onClick={() => router.visit('/')}>
+                                            Cancel
+                                        </Button>
+                                        <Button type="submit" disabled={processing} className='primary-btn'>
+                                            Save Changes
+                                        </Button>
+                                        <Transition show={recentlySuccessful} enter="transition ease-in-out" enterFrom="opacity-0" leave="transition ease-in-out" leaveTo="opacity-0" >
+                                            <p className="text-sm text-muted-foreground">Saved.</p>
+                                        </Transition>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
                     </form>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Password</CardTitle>
+                            <CardDescription>Change your password to keep your account secure</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={submitPassword} className="space-y-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="current_password">Current Password</Label>
+                                    <Input
+                                        id="current_password"
+                                        type="password"
+                                        className="max-w-md"
+                                        value={passwordData.current_password}
+                                        onChange={(e) => setPasswordData('current_password', e.target.value)}
+                                        autoComplete="current-password"
+                                        placeholder="Enter current password"
+                                    />
+                                    <InputError className="mt-2" message={passwordErrors.current_password} />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="password">New Password</Label>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        className="max-w-md"
+                                        value={passwordData.password}
+                                        onChange={(e) => setPasswordData('password', e.target.value)}
+                                        autoComplete="new-password"
+                                        placeholder="Enter new password"
+                                    />
+                                    <InputError className="mt-2" message={passwordErrors.password} />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="password_confirmation">Confirm New Password</Label>
+                                    <Input
+                                        id="password_confirmation"
+                                        type="password"
+                                        className="max-w-md"
+                                        value={passwordData.password_confirmation}
+                                        onChange={(e) => setPasswordData('password_confirmation', e.target.value)}
+                                        autoComplete="new-password"
+                                        placeholder="Confirm new password"
+                                    />
+                                    <InputError className="mt-2" message={passwordErrors.password_confirmation} />
+                                </div>
+                                <div className="flex items-center justify-end">
+                                    <div className="flex items-center gap-4">
+                                        <Button className='primary-btn' disabled={passwordProcessing}>
+                                            {passwordProcessing ? 'Updating...' : 'Update Password'}
+                                        </Button>
+
+                                        <Transition
+                                            show={passwordRecentlySuccessful}
+                                            enter="transition ease-in-out"
+                                            enterFrom="opacity-0"
+                                            leave="transition ease-in-out"
+                                            leaveTo="opacity-0"
+                                        >
+                                            <p className="text-sm text-green-600">Password updated successfully!</p>
+                                        </Transition>
+                                    </div>
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
+                    <div className="flex justify-start">
+                        <Link className="primary-btn btn-logout" method="post" href={route('logout')} as="button" onClick={handleLogout}>
+                            <LogOut className="mr-2" />
+                            Logout
+                        </Link>
+                    </div>
                 </div>
             </div>
         </AppLayout>

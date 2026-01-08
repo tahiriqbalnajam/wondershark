@@ -681,14 +681,20 @@ const visiblePrompts = filteredPrompts.slice((currentPage - 1) * 9, currentPage 
                                     </Button>
                                 )}
                             </div>
-                            {currentPage * 9 < filteredPrompts.length && <a href="/" className='primary-btn' onClick={(e) => { e.preventDefault(); setCurrentPage(prev => prev + 1); }}> Load More Citations</a>}
                         </div>
                     </CardHeader>
                     <CardContent>
                         <AiCitations 
                             prompts={visiblePrompts} 
                             onPromptClick={handlePromptClick}
-                        />
+                            />
+                            {currentPage * 9 < filteredPrompts.length && (
+                                <div className="flex justify-center mt-4">
+                                    <Button className='primary-btn' onClick={() => setCurrentPage(prev => prev + 1)}>
+                                        Load More Citations
+                                    </Button>
+                                </div>
+                            )}
                     </CardContent>
                 </Card>
 
