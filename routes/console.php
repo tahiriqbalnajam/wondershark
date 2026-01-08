@@ -11,20 +11,23 @@ Artisan::command('inspire', function () {
 // Competitive Analysis Scheduling - Runs at 2 AM and 2 PM
 Schedule::command('brands:analyze-competitive-stats')
     ->twiceDaily(2, 14)
+    ->timezone('America/Montreal')
     ->withoutOverlapping()
     ->onOneServer()
     ->runInBackground();
 
 // Brand Prompt Analysis Scheduling (only unanalyzed prompts) - Runs at 2 AM and 2 PM
-Schedule::command('brand:analyze-prompts --all')
-    ->twiceDaily(2, 14)
+Schedule::command('brand:analyze-prompts --all --force')
+    ->dailyAt('02:00')
+    ->timezone('America/Montreal')
     ->withoutOverlapping()
     ->onOneServer()
     ->runInBackground();
 
 // Post Prompt Stats Fetching - Runs daily at 3 AM
 Schedule::command('posts:fetch-prompts-stats')
-    ->dailyAt('03:00')
+    ->dailyAt('02:00')
+    ->timezone('America/Montreal')
     ->withoutOverlapping()
     ->onOneServer()
     ->runInBackground();

@@ -432,6 +432,11 @@ const filteredPrompts = useMemo(() => {
     return (brand.prompts || []).filter(item => {
         if (!item.is_active) return false;
 
+        // Date range filter based on analysis_completed_at
+        if (item.analysis_completed_at && !isWithinDateRange(item.analysis_completed_at)) {
+            return false;
+        }
+
         // AI model filter
         if (selectedAIModel !== 'all') {
             if (item.ai_model?.name !== selectedAIModel) {
@@ -452,6 +457,8 @@ const filteredPrompts = useMemo(() => {
     brand.prompts,
     selectedCompetitorDomain,
     selectedAIModel,
+    selectedDateRange,
+    customDateRange,
 ]);
 
 const visiblePrompts = filteredPrompts.slice((currentPage - 1) * 9, currentPage * 9);

@@ -14,6 +14,7 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
     use Queueable;
 
     public int $timeout = 600; // 10 minutes timeout
+
     public int $tries = 3;
 
     /**
@@ -32,33 +33,40 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
     public function handle(BrandPromptAnalysisService $analysisService): void
     {
         try {
-            Log::info("Starting brand prompt analysis", [
+            Log::info('Starting brand prompt analysis', [
                 'brand_prompt_id' => $this->brandPrompt->id,
                 'brand_id' => $this->brandPrompt->brand_id,
-                'prompt' => substr($this->brandPrompt->prompt, 0, 100) . '...',
+                'prompt' => substr($this->brandPrompt->prompt, 0, 100).'...',
                 'force_regenerate' => $this->forceRegenerate,
-                'preferred_ai_model' => $this->preferredAiModel
+                'preferred_ai_model' => $this->preferredAiModel,
             ]);
 
             // Skip if already analyzed and not forcing regeneration
-            if (!$this->forceRegenerate && 
-                $this->brandPrompt->ai_response && 
-                $this->brandPrompt->resources && 
+            if (! $this->forceRegenerate &&
+                $this->brandPrompt->ai_response &&
+                $this->brandPrompt->resources &&
                 $this->brandPrompt->analysis_completed_at) {
-                Log::info("Skipping already analyzed prompt", [
-                    'brand_prompt_id' => $this->brandPrompt->id
+
+                // Touch updated_at to show when this prompt was last checked
+                $this->brandPrompt->touch();
+
+                Log::info('Skipping already analyzed prompt', [
+                    'brand_prompt_id' => $this->brandPrompt->id,
+                    'last_checked' => now(),
                 ]);
+
                 return;
             }
 
             // Load brand with competitors
             $brand = $this->brandPrompt->brand()->with('competitors')->first();
-            
-            if (!$brand) {
-                Log::error("Brand not found for prompt", [
+
+            if (! $brand) {
+                Log::error('Brand not found for prompt', [
                     'brand_prompt_id' => $this->brandPrompt->id,
-                    'brand_id' => $this->brandPrompt->brand_id
+                    'brand_id' => $this->brandPrompt->brand_id,
                 ]);
+
                 return;
             }
 
@@ -74,16 +82,18 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
                 'visibility' => $result['analysis']['visibility'],
                 'competitor_mentions' => json_encode($result['analysis']['competitor_mentions']),
                 'analysis_completed_at' => now(),
+                'analysis_failed_at' => null, // Clear any previous failure
+                'analysis_error' => null, // Clear any previous error
                 'session_id' => $this->sessionId ?: $this->brandPrompt->session_id,
                 'ai_model_id' => $result['ai_model_id'] ?? null,
             ]);
 
-            Log::info("Successfully completed brand prompt analysis", [
+            Log::info('Successfully completed brand prompt analysis', [
                 'brand_prompt_id' => $this->brandPrompt->id,
                 'sentiment' => $result['analysis']['sentiment'],
                 'position' => $result['analysis']['position'],
                 'visibility' => $result['analysis']['visibility'],
-                'resources_count' => count($result['resources'])
+                'resources_count' => count($result['resources']),
             ]);
 
         } catch (\Exception $e) {
@@ -91,9 +101,9 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
                 'brand_prompt_id' => $this->brandPrompt->id,
                 'brand_id' => $this->brandPrompt->brand_id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             throw $e;
         }
     }
@@ -107,13 +117,13 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
             'brand_prompt_id' => $this->brandPrompt->id,
             'brand_id' => $this->brandPrompt->brand_id,
             'error' => $exception->getMessage(),
-            'attempts' => $this->tries
+            'attempts' => $this->tries,
         ]);
 
         // Mark as failed
         $this->brandPrompt->update([
             'analysis_failed_at' => now(),
-            'analysis_error' => $exception->getMessage()
+            'analysis_error' => $exception->getMessage(),
         ]);
     }
 }

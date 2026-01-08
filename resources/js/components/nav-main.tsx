@@ -40,6 +40,9 @@ export function NavMain({ items = [], label = 'General' }: { items: NavItem[], l
                     
                     const isActive = isExactMatch || isBrandDashboard || isBrandsListPage || isStartsWithMatch;
                     
+                    // Check if any child item is active to auto-expand
+                    const hasActiveChild = item.items?.some(subItem => page.url.startsWith(subItem.href));
+                    
                     if (item.items && item.items.length > 0 && item.alwaysOpenSubmenu) {
                         return (
                             <SidebarMenuItem key={item.title}>
@@ -70,6 +73,48 @@ export function NavMain({ items = [], label = 'General' }: { items: NavItem[], l
                                     })}
                                 </SidebarMenuSub>
                             </SidebarMenuItem>
+                        );
+                    }
+
+                    // Collapsible submenu (can be toggled)
+                    if (item.items && item.items.length > 0) {
+                        return (
+                            <Collapsible 
+                                key={item.title} 
+                                asChild 
+                                defaultOpen={hasActiveChild}
+                                className="group/collapsible"
+                            >
+                                <SidebarMenuItem>
+                                    <CollapsibleTrigger asChild>
+                                        <SidebarMenuButton isActive={isActive}>
+                                            <span className="menu-icon">{item.icon && <item.icon />}</span>
+                                            <span>{item.title}</span>
+                                            <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                                        </SidebarMenuButton>
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent>
+                                        <SidebarMenuSub className="ml-5 mt-1">
+                                            {item.items.map((subItem) => {
+                                                const subIsActive = page.url.startsWith(subItem.href);
+
+                                                return (
+                                                    <SidebarMenuSubItem key={subItem.title}>
+                                                        <SidebarMenuSubButton asChild isActive={subIsActive}>
+                                                            <Link href={subItem.href} className="menu-link">
+                                                                <span className="menu-icon">
+                                                                    {subItem.icon && <subItem.icon />}
+                                                                </span>
+                                                                <span>{subItem.title}</span>
+                                                            </Link>
+                                                        </SidebarMenuSubButton>
+                                                    </SidebarMenuSubItem>
+                                                );
+                                            })}
+                                        </SidebarMenuSub>
+                                    </CollapsibleContent>
+                                </SidebarMenuItem>
+                            </Collapsible>
                         );
                     }
 

@@ -46,6 +46,17 @@ class BrandPrompt extends Model
         'analysis_failed_at' => 'datetime',
     ];
 
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        // Apply global scope to only get brand prompts (post_id is null)
+        static::addGlobalScope('brand_prompts', function ($query) {
+            $query->whereNull('post_id');
+        });
+    }
+
     public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class);
