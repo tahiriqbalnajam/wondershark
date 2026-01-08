@@ -193,6 +193,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::prefix('admin/competitors')->name('admin.competitors.')->middleware('role.permission:view-admin-panel')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\CompetitorController::class, 'index'])->name('index');
             Route::post('/', [\App\Http\Controllers\Admin\CompetitorController::class, 'store'])->name('store');
+            Route::post('/fetch-ai', [\App\Http\Controllers\Admin\CompetitorController::class, 'fetchFromAI'])->name('fetchFromAI');
             Route::put('/{competitor}', [\App\Http\Controllers\Admin\CompetitorController::class, 'update'])->name('update');
             Route::delete('/{competitor}', [\App\Http\Controllers\Admin\CompetitorController::class, 'destroy'])->name('destroy');
         });

@@ -1,6 +1,7 @@
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
@@ -36,7 +37,13 @@ import {
     Trash2,
     ExternalLink,
     Eye,
-    Pencil
+    Pencil,
+    WandSparkles,
+    Loader2,
+    Check,
+    X,
+    Edit,
+    CheckCheck
 } from 'lucide-react';
 import { 
     DropdownMenu, 
@@ -64,6 +71,12 @@ type Competitor = {
     };
 };
 
+type SuggestedCompetitor = {
+    name: string;
+    domain: string;
+    mentions: number;
+};
+
 type Agency = {
     id: number;
     name: string;
@@ -73,6 +86,7 @@ type Brand = {
     id: number;
     name: string;
     agency_id: number;
+    website?: string;
 };
 
 type Filters = {
@@ -109,6 +123,9 @@ export default function AdminCompetitorsIndex({ competitors, filters, agencies, 
     const [editDrawerOpen, setEditDrawerOpen] = useState(false);
     const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
     const [selectedCompetitor, setSelectedCompetitor] = useState<Competitor | null>(null);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [suggestedCompetitors, setSuggestedCompetitors] = useState<SuggestedCompetitor[]>([]);
+    const [showAiSuggestions, setShowAiSuggestions] = useState(false);
     
     const { data, setData, processing } = useForm<Filters>({
         agency_id: filters.agency_id || 'all',
@@ -201,6 +218,97 @@ export default function AdminCompetitorsIndex({ competitors, filters, agencies, 
         });
     };
 
+    const handleFetchFromAI = async () => {
+        if (!competitorData.brand_id) {
+            toast.error('Please select a brand first');
+            return;
+        }
+
+        setAiLoading(true);
+        setSuggestedCompetitors([]);
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            
+            const response = await fetch('/admin/competitors/fetch-ai', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken || '',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    brand_id: competitorData.brand_id
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to fetch competitors');
+            }
+
+            const responseData = await response.json();
+
+            if (responseData.success) {
+                setSuggestedCompetitors(responseData.competitors);
+                setShowAiSuggestions(true);
+                toast.success(`Found ${responseData.competitors.length} competitors using ${responseData.ai_model_used}`);
+            } else {
+                throw new Error(responseData.error || 'Failed to fetch competitors');
+            }
+        } catch (error: any) {
+            console.error('Error fetching competitors:', error);
+            toast.error(error.message || 'Failed to fetch competitors from AI');
+        } finally {
+            setAiLoading(false);
+        }
+    };
+
+    const handleAddDirectly = async (suggestion: SuggestedCompetitor) => {
+        try {
+            const response = await fetch('/admin/competitors', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    brand_id: competitorData.brand_id,
+                    name: suggestion.name,
+                    trackedName: suggestion.name,
+                    domain: suggestion.domain
+                })
+            });
+
+            if (response.ok) {
+                toast.success(`${suggestion.name} added successfully!`);
+                // Remove from suggestions
+                setSuggestedCompetitors(prev => prev.filter(s => s.domain !== suggestion.domain));
+                // Refresh the page to show the new competitor
+                router.reload({ only: ['competitors'] });
+            } else {
+                const errorData = await response.json();
+                toast.error(errorData.message || 'Failed to add competitor');
+            }
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to add competitor');
+        }
+    };
+
+    const handleFillFields = (suggestion: SuggestedCompetitor) => {
+        setCompetitorData('name', suggestion.name);
+        setCompetitorData('trackedName', suggestion.name);
+        setCompetitorData('domain', suggestion.domain);
+        setShowAiSuggestions(false);
+        toast.success('Fields filled. Review and click "Add Competitor" to save.');
+    };
+
+    const handleRejectSuggestion = (index: number) => {
+        setSuggestedCompetitors(prev => prev.filter((_, i) => i !== index));
+        toast.info('Suggestion removed');
+    };
+
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {
             year: 'numeric',
@@ -233,7 +341,7 @@ export default function AdminCompetitorsIndex({ competitors, filters, agencies, 
                                 <DrawerHeader>
                                     <DrawerTitle>Add New Competitor</DrawerTitle>
                                 </DrawerHeader>
-                                <div className="px-4 space-y-4">
+                                <div className="px-4 space-y-4 overflow-y-auto flex-1">
                                     <div className="space-y-2">
                                         <Label htmlFor="brand_id">Brand *</Label>
                                         <Select 
@@ -253,6 +361,92 @@ export default function AdminCompetitorsIndex({ competitors, filters, agencies, 
                                             </SelectContent>
                                         </Select>
                                     </div>
+
+                                    {/* AI Suggestion Button */}
+                                    {competitorData.brand_id && brands.find(b => b.id.toString() === competitorData.brand_id)?.website && (
+                                        <div className="space-y-3">
+                                            <Button
+                                                type="button"
+                                                onClick={handleFetchFromAI}
+                                                disabled={aiLoading}
+                                                variant="outline"
+                                                className="w-full"
+                                            >
+                                                {aiLoading ? (
+                                                    <>
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        Fetching from AI...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <WandSparkles className="mr-2 h-4 w-4" />
+                                                        Suggest Competitors with AI
+                                                    </>
+                                                )}
+                                            </Button>
+
+                                            {/* AI Suggestions List */}
+                                            {showAiSuggestions && suggestedCompetitors.length > 0 && (
+                                                <div className="space-y-2">
+                                                    <Label className="text-sm font-semibold">AI Suggestions:</Label>
+                                                    <div className="max-h-60 overflow-y-auto space-y-2 border rounded-md p-2">
+                                                        {suggestedCompetitors.map((suggestion, index) => (
+                                                            <div
+                                                                key={index}
+                                                                className="flex items-start justify-between gap-2 p-2 border rounded hover:bg-gray-50"
+                                                            >
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="font-medium text-sm truncate">{suggestion.name}</p>
+                                                                    <p className="text-xs text-muted-foreground truncate">{suggestion.domain}</p>
+                                                                    <Badge variant="outline" className="mt-1 text-xs">
+                                                                        {suggestion.mentions} mentions
+                                                                    </Badge>
+                                                                </div>
+                                                                <div className="flex gap-1">
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        variant="ghost"
+                                                                        onClick={() => handleAddDirectly(suggestion)}
+                                                                        className="h-8 w-8 p-0"
+                                                                        title="Add directly"
+                                                                    >
+                                                                        <CheckCheck className="h-4 w-4 text-green-600" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        variant="ghost"
+                                                                        onClick={() => handleFillFields(suggestion)}
+                                                                        className="h-8 w-8 p-0"
+                                                                        title="Fill fields"
+                                                                    >
+                                                                        <Edit className="h-4 w-4 text-blue-600" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        variant="ghost"
+                                                                        onClick={() => handleRejectSuggestion(index)}
+                                                                        className="h-8 w-8 p-0"
+                                                                        title="Reject"
+                                                                    >
+                                                                        <X className="h-4 w-4 text-red-600" />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {showAiSuggestions && suggestedCompetitors.length === 0 && (
+                                                <p className="text-sm text-muted-foreground text-center py-2">
+                                                    No new competitors found
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <div className="space-y-2">
                                         <Label htmlFor="name">Competitor Name *</Label>
