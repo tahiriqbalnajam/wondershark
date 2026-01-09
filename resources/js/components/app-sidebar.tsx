@@ -2,6 +2,9 @@ import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarHeader } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
+import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
+import { LogOut } from 'lucide-react';
+import { Link, router} from '@inertiajs/react';
 import { 
     LayoutGrid, 
     Users, 
@@ -233,6 +236,11 @@ const getOrderNavItems = (permissions: ReturnType<typeof usePermissions>, select
 };
 
 export function AppSidebar() {
+    const cleanup = useMobileNavigation();
+    const handleLogout = () => {
+            cleanup();
+            // router.flushAll();
+        };
     const permissions = usePermissions();
     const page = usePage<SharedData>();
     const isRankingPage = page.url.includes('/ranking');
@@ -259,7 +267,7 @@ export function AppSidebar() {
     return (
         <Sidebar collapsible="icon" variant="inset" className='left-side-wrapp p-0 rounded-xl'>
             <SidebarHeader>
-                <NavUser />
+                {!permissions.hasRole('brand') && <NavUser />}
                 
                 {/* New Brand Button for Agency Users */}
                 {/* {permissions.hasRole('agency') && (
@@ -300,6 +308,18 @@ export function AppSidebar() {
                 )}
                 {orderNavItems.length > 0 && (
                     <NavMain items={orderNavItems} label="Order" />
+                )}
+                {permissions.hasRole('brand') && (
+                    <Link
+                        href={route('logout')}
+                        method="post"
+                        as="button"
+                        onClick={handleLogout}
+                        className="ml-4  flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition"
+                    >
+                        <LogOut className="h-4 w-4" />
+                        Logout
+                    </Link>
                 )}
             </SidebarContent>
         </Sidebar>
