@@ -4,6 +4,7 @@ import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { type User, type SharedData } from '@/types';
 import { Link, router, usePage } from '@inertiajs/react';
 import { LogOut, Settings, CirclePlus, Mail } from 'lucide-react';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface UserMenuContentProps {
     user: User;
@@ -13,6 +14,7 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
     const cleanup = useMobileNavigation();
     const { brands, auth } = usePage<SharedData>().props;
     const isAdmin = auth.roles.includes('admin');
+    const permissions = usePermissions();
 
     const handleLogout = () => {
         cleanup();
@@ -26,6 +28,7 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                     <span><Mail className='w-[15px]'/> </span><UserInfo user={user} showEmail={true} />
                 </div>
             </DropdownMenuLabel>
+            {!permissions.hasRole('brand') && (
             <div className="dropdown-menu-mail">
                 {brands && brands.length > 0 ? (
                     <>
@@ -73,6 +76,7 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                     </div>
                 )}
             </div>
+            )}
             <DropdownMenuGroup className='dropdown-menu-link'>
                 {/* <DropdownMenuItem asChild className='btn-default'>
                     <Link href="/brands" className='btn-default'>
@@ -80,12 +84,15 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                         Brand List
                     </Link>
                 </DropdownMenuItem> */}
-                <DropdownMenuItem asChild className='btn-default'>
-                    <Link href="/brands/create" className='btn-default'>
-                        <CirclePlus className="h-4 w-4" />
-                        New Brand
-                    </Link>
-                </DropdownMenuItem>
+
+                {!permissions.hasRole('brand') && (
+                    <DropdownMenuItem asChild className='btn-default'>
+                        <Link href="/brands/create" className='btn-default'>
+                            <CirclePlus className="h-4 w-4" />
+                            New Brand
+                        </Link>
+                    </DropdownMenuItem>)
+            }
                 {/* <DropdownMenuItem asChild className='btn-default'>
                     <Link className="block w-full btn-default" href={route('profile.edit')} as="button" prefetch onClick={cleanup}>
                         <Settings className="mr-2" />
