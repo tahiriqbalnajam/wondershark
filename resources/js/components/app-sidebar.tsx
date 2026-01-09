@@ -152,12 +152,23 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
             href: '/admin',
             icon: Settings,
             permission: 'view-admin-panel',
-            alwaysOpenSubmenu: true,
             items: [
                 {
                     title: 'AI Models',
                     href: '/admin/ai-models',
                     icon: Settings,
+                },
+                {
+                    title: 'Prompts',
+                    href: '/admin/prompts',
+                    icon: MessageSquare,
+                    permission: 'view-admin-panel',
+                },
+                {
+                    title: 'Competitors',
+                    href: '/admin/competitors',
+                    icon: Shield,
+                    permission: 'view-admin-panel',
                 },
                 {
                     title: 'Posts',
@@ -209,30 +220,6 @@ const getDocsFilesNavItems = (permissions: ReturnType<typeof usePermissions>): N
     return items;
 };
 
-const getBrandSpecificNavItems = (brandId: number): NavItem[] => {
-    return [
-        {
-            title: 'Dashboard',
-            href: `/brands/${brandId}`,
-            icon: LayoutGrid,
-        },
-        {
-            title: 'Posts',
-            href: `/brands/${brandId}/posts`,
-            icon: FileText,
-        },
-        {
-            title: 'Prompts',
-            href: `/brands/${brandId}/prompts`,
-            icon: MessageSquare,
-        },
-        {
-            title: 'Competitors',
-            href: `/brands/${brandId}/competitors`,
-            icon: Shield,
-        },
-    ];
-};
 const getOrderNavItems = (permissions: ReturnType<typeof usePermissions>, selectedBrandId?: number): NavItem[] => {
     const items: NavItem[] = [];
     if (permissions.hasRole('agency')) {
@@ -268,11 +255,6 @@ export function AppSidebar() {
     const settingsNavItems = getSettingsNavItems(permissions, brandIdForMenu);
     const orderNavItems = getOrderNavItems(permissions, brandIdForMenu);
     const docsFilesNavItems = getDocsFilesNavItems(permissions);
-    
-    // Get brand-specific nav items if admin has selected a brand
-    const brandNavItems = selectedBrand && permissions.hasRole('admin') 
-        ? getBrandSpecificNavItems(selectedBrand.id)
-        : [];
 
     return (
         <Sidebar collapsible="icon" variant="inset" className='left-side-wrapp p-0 rounded-xl'>
@@ -318,19 +300,6 @@ export function AppSidebar() {
                 )}
                 {orderNavItems.length > 0 && (
                     <NavMain items={orderNavItems} label="Order" />
-                )}
-                
-                {/* Brand-specific menu for admin when brand is selected */}
-                {selectedBrand && permissions.hasRole('admin') && brandNavItems.length > 0 && (
-                    <div className="px-3 pt-2">
-                        <div className="flex items-center gap-2 px-2 pb-2 text-xs font-semibold text-muted-foreground">
-                            <Package className="h-4 w-4" />
-                            {selectedBrand.name}
-                        </div>
-                        <div className="-mt-8">
-                            <NavMain items={brandNavItems} label={null} />
-                        </div>
-                    </div>
                 )}
             </SidebarContent>
         </Sidebar>

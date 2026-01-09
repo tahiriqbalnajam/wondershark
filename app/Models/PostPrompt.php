@@ -50,6 +50,24 @@ class PostPrompt extends Model
         'analysis_failed_at' => 'datetime',
     ];
 
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        // Apply global scope to only get post prompts (post_id is not null)
+        static::addGlobalScope('post_prompts', function ($query) {
+            $query->whereNotNull('post_id');
+        });
+
+        // Auto-set post_id to 0 if not provided (to differentiate from brand prompts)
+        static::creating(function ($model) {
+            if ($model->post_id === null) {
+                $model->post_id = 0;
+            }
+        });
+    }
+
     public function post(): BelongsTo
     {
         return $this->belongsTo(Post::class);

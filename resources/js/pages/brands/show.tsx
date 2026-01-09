@@ -432,6 +432,11 @@ const filteredPrompts = useMemo(() => {
     return (brand.prompts || []).filter(item => {
         if (!item.is_active) return false;
 
+        // Date range filter based on analysis_completed_at
+        if (item.analysis_completed_at && !isWithinDateRange(item.analysis_completed_at)) {
+            return false;
+        }
+
         // AI model filter
         if (selectedAIModel !== 'all') {
             if (item.ai_model?.name !== selectedAIModel) {
@@ -452,6 +457,8 @@ const filteredPrompts = useMemo(() => {
     brand.prompts,
     selectedCompetitorDomain,
     selectedAIModel,
+    selectedDateRange,
+    customDateRange,
 ]);
 
 const visiblePrompts = filteredPrompts.slice((currentPage - 1) * 9, currentPage * 9);
@@ -681,14 +688,20 @@ const visiblePrompts = filteredPrompts.slice((currentPage - 1) * 9, currentPage 
                                     </Button>
                                 )}
                             </div>
-                            {currentPage * 9 < filteredPrompts.length && <a href="/" className='primary-btn' onClick={(e) => { e.preventDefault(); setCurrentPage(prev => prev + 1); }}> Load More Citations</a>}
                         </div>
                     </CardHeader>
                     <CardContent>
                         <AiCitations 
                             prompts={visiblePrompts} 
                             onPromptClick={handlePromptClick}
-                        />
+                            />
+                            {currentPage * 9 < filteredPrompts.length && (
+                                <div className="flex justify-center mt-4">
+                                    <Button className='primary-btn' onClick={() => setCurrentPage(prev => prev + 1)}>
+                                        Load More Citations
+                                    </Button>
+                                </div>
+                            )}
                     </CardContent>
                 </Card>
 
