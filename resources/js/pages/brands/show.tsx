@@ -461,7 +461,8 @@ const filteredPrompts = useMemo(() => {
     customDateRange,
 ]);
 
-const visiblePrompts = filteredPrompts.slice((currentPage - 1) * 9, currentPage * 9);
+// const visiblePrompts = filteredPrompts.slice((currentPage - 1) * 9, currentPage * 9);
+const visiblePrompts = filteredPrompts.slice(0, currentPage * 9);
 
     const handlePromptClick = (prompt: Brand['prompts'][0]) => {
         setSelectedPrompt(prompt);
