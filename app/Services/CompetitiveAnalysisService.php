@@ -50,22 +50,25 @@ class CompetitiveAnalysisService
             // Generate analysis prompt
             $prompt = $this->buildCompetitiveAnalysisPrompt($brand->website, $competitorUrls, $brand->name);
 
-            // Get AI analysis
-            $analysis = $this->callAIForAnalysis($prompt);
+            // Get AI analysis with ai_model_id
+            $aiResponse = $this->callAIForAnalysis($prompt);
 
-            if (! $analysis) {
+            if (! $aiResponse || ! isset($aiResponse['analysis'])) {
                 throw new \Exception('Failed to get AI analysis');
             }
 
+            $analysis = $aiResponse['analysis'];
+            $aiModelId = $aiResponse['ai_model_id'];
+
             // Parse and store brand stats
-            $brandStats = $this->parseBrandStats($analysis, $brand, $sessionId);
+            $brandStats = $this->parseBrandStats($analysis, $brand, $sessionId, $aiModelId);
             if ($brandStats) {
                 $results[] = $brandStats;
             }
 
             // Parse and store competitor stats
             foreach ($competitors as $competitor) {
-                $competitorStats = $this->parseCompetitorStats($analysis, $brand, $competitor, $sessionId);
+                $competitorStats = $this->parseCompetitorStats($analysis, $brand, $competitor, $sessionId, $aiModelId);
                 if ($competitorStats) {
                     $results[] = $competitorStats;
                 }
@@ -174,12 +177,22 @@ CRITICAL INSTRUCTIONS:
     protected function callAIForAnalysis(string $prompt): ?array
     {
         try {
-            // Get the first available AI model
-            $aiModel = AiModel::where('is_enabled', true)->first();
+            // Get the first available AI model using weightage/order
+            $aiModel = AiModel::where('is_enabled', true)
+                ->orderBy('order', 'asc')
+                ->orderBy('id', 'asc')
+                ->first();
 
             if (! $aiModel) {
                 throw new \Exception('No enabled AI model found');
             }
+
+            Log::info('Using AI model for competitive analysis', [
+                'model_name' => $aiModel->name,
+                'display_name' => $aiModel->display_name,
+                'order' => $aiModel->order,
+                'ai_model_id' => $aiModel->id
+            ]);
 
             // Use a different approach - call the AI directly with a simple prompt
             $config = $aiModel->api_config;
@@ -246,7 +259,10 @@ CRITICAL INSTRUCTIONS:
                 throw new \Exception('Invalid JSON in AI response: '.json_last_error_msg());
             }
 
-            return $analysis;
+            return [
+                'analysis' => $analysis,
+                'ai_model_id' => $aiModel->id
+            ];
 
         } catch (\Exception $e) {
             Log::error('AI competitive analysis failed', [
@@ -261,7 +277,7 @@ CRITICAL INSTRUCTIONS:
     /**
      * Parse and store brand stats from AI analysis
      */
-    protected function parseBrandStats(array $analysis, Brand $brand, string $sessionId): ?BrandCompetitiveStat
+    protected function parseBrandStats(array $analysis, Brand $brand, string $sessionId, ?int $aiModelId = null): ?BrandCompetitiveStat
     {
         if (! isset($analysis['brand_analysis'])) {
             Log::warning('Brand analysis not found in AI response');
@@ -275,6 +291,7 @@ CRITICAL INSTRUCTIONS:
             'brand_id' => $brand->id,
             'entity_type' => 'brand',
             'competitor_id' => null,
+            'ai_model_id' => $aiModelId,
             'entity_name' => $brandData['name'] ?? $brand->name,
             'entity_url' => $brandData['url'] ?? $brand->website,
             'visibility' => $this->validateMetric($brandData['visibility'] ?? 0, 0, 100),
@@ -289,7 +306,7 @@ CRITICAL INSTRUCTIONS:
     /**
      * Parse and store competitor stats from AI analysis
      */
-    protected function parseCompetitorStats(array $analysis, Brand $brand, $competitor, string $sessionId): ?BrandCompetitiveStat
+    protected function parseCompetitorStats(array $analysis, Brand $brand, $competitor, string $sessionId, ?int $aiModelId = null): ?BrandCompetitiveStat
     {
         if (! isset($analysis['competitors_analysis']) || ! is_array($analysis['competitors_analysis'])) {
             Log::warning('Competitors analysis not found in AI response');
@@ -308,6 +325,7 @@ CRITICAL INSTRUCTIONS:
                     'brand_id' => $brand->id,
                     'entity_type' => 'competitor',
                     'competitor_id' => $competitor->id,
+                    'ai_model_id' => $aiModelId,
                     'entity_name' => $competitorData['name'] ?? $competitor->name,
                     'entity_url' => $competitorData['url'] ?? $competitorDomain,
                     'visibility' => $this->validateMetric($competitorData['visibility'] ?? 0, 0, 100),
