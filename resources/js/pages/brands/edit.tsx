@@ -146,7 +146,7 @@ export default function BrandEdit({ brand }: Props) {
     <AppLayout title={`Edit ${brand.name}`}>
       <Head title={`Edit ${brand.name}`} />
 
-      <div className="mx-15 space-y-6">
+      <div className="lg:mx-15 mx-0 space-y-6">
         <div className="flex items-center justify-between">
           {/* <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" asChild>
@@ -399,8 +399,9 @@ export default function BrandEdit({ brand }: Props) {
           </Card> */}
 
           {/* Actions */}
-          <div className="flex justify-between items-center w-full mt-6">
+          <div className="lg:flex block justify-between items-center w-full mt-6">
               <Button
+                className='lg:w-auto w-full lg:m-0 mb-3'
                 type="button"
                 variant="destructive"
                 onClick={() => {
@@ -412,12 +413,12 @@ export default function BrandEdit({ brand }: Props) {
                 Delete Brand
               </Button>
 
-            <div className="flex  gap-2">
-              <Button type="button" variant="outline" asChild>
+            <div className="lg:flex block gap-2">
+              <Button type="button" variant="outline" asChild className='lg:w-auto w-full lg:m-0 mb-3'>
                 <a href={`/brands/${brand.id}`}>Cancel</a>
               </Button>
 
-              <Button type="submit" disabled={processing}>
+              <Button type="submit" disabled={processing} className='lg:w-auto w-full'>
                 <Save className="h-4 w-4 mr-2" /> {processing ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
