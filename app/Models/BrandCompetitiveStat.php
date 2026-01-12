@@ -14,6 +14,7 @@ class BrandCompetitiveStat extends Model
         'brand_id',
         'entity_type',
         'competitor_id',
+        'ai_model_id',
         'entity_name',
         'entity_url',
         'visibility',
@@ -39,6 +40,11 @@ class BrandCompetitiveStat extends Model
     public function competitor(): BelongsTo
     {
         return $this->belongsTo(Competitor::class);
+    }
+
+    public function aiModel(): BelongsTo
+    {
+        return $this->belongsTo(AiModel::class);
     }
 
     /**
