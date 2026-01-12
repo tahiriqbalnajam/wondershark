@@ -8,7 +8,6 @@
 body, html {
 	pointer-events: auto !important;
     font-family: var(--inter-font);
-    cursor: pointer !important;
 }
 
 button{
