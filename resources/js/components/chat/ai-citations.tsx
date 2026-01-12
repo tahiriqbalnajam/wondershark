@@ -66,7 +66,7 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
                         };
                     })
                     .filter(item => item !== null)
-                    .slice(0, 6) || [];
+                    .slice(0, 10) || [];
 
                 // Format date
                 const daysAgo = prompt.analysis_completed_at
