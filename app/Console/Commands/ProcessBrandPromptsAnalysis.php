@@ -19,8 +19,7 @@ class ProcessBrandPromptsAnalysis extends Command
                             {--brand=* : Process specific brand IDs}
                             {--all : Process all brands}
                             {--force : Force re-analysis of already processed prompts}
-                            {--session= : Optional session ID for tracking}
-                            {--v|verbose : Show detailed information}';
+                            {--session= : Optional session ID for tracking}';
 
     /**
      * The console command description.
