@@ -16,7 +16,7 @@ Schedule::command('brands:analyze-competitive-stats')
     ->onOneServer()
     ->runInBackground();
 
-// Brand Prompt Analysis Scheduling (only unanalyzed prompts) - Runs at 2 AM and 2 PM
+// Brand Prompt Analysis Scheduling - Runs daily at 2 AM
 Schedule::command('brand:analyze-prompts --all --force')
     ->dailyAt('02:00')
     ->timezone('America/Montreal')
@@ -26,8 +26,15 @@ Schedule::command('brand:analyze-prompts --all --force')
 
 // Post Prompt Stats Fetching - Runs daily at 3 AM
 Schedule::command('posts:fetch-prompts-stats')
-    ->dailyAt('02:00')
+    ->dailyAt('03:00')
     ->timezone('America/Montreal')
     ->withoutOverlapping()
     ->onOneServer()
     ->runInBackground();
+
+// AI Model Health Check - Runs daily at 4 AM
+Schedule::job(new \App\Jobs\TestAiModels)
+    ->dailyAt('04:00')
+    ->timezone('America/Montreal')
+    ->withoutOverlapping()
+    ->onOneServer();
