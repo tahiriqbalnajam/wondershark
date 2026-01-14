@@ -54,8 +54,8 @@ interface BrandVisibilityIndexProps {
 }
 
 export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, limit, hoveredDomain, onDomainHover, entities }: BrandVisibilityIndexProps) {
-    // Sort by position (lower is better)
-    const sortedStats = [...competitiveStats].sort((a, b) => a.position - b.position);
+    // Sort by visibility (higher is better)
+    const sortedStats = [...competitiveStats].sort((a, b) => (b.visibility ?? 0) - (a.visibility ?? 0));
     
     // Apply limit if specified
     const displayStats = limit ? sortedStats.slice(0, limit) : sortedStats;
