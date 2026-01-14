@@ -2,34 +2,39 @@
 
 namespace App\Services;
 
+use App\Models\AiModel;
 use App\Models\Brand;
 use App\Models\BrandPrompt;
 use App\Models\BrandPromptResource;
-use App\Models\AiModel;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class BrandPromptAnalysisService
 {
     protected AIPromptService $aiPromptService;
 
-    public function __construct(AIPromptService $aiPromptService)
-    {
+    protected AiModelDistributionService $distributionService;
+
+    public function __construct(
+        AIPromptService $aiPromptService,
+        AiModelDistributionService $distributionService
+    ) {
         $this->aiPromptService = $aiPromptService;
+        $this->distributionService = $distributionService;
     }
 
     /**
      * Analyze a brand prompt and generate AI response with competitor analysis
      */
-    public function analyzePrompt(BrandPrompt $brandPrompt, Brand $brand, ?string $preferredModelName = null): array
+    public function analyzePrompt(BrandPrompt $brandPrompt, Brand $brand, ?string $preferredModelName = null, ?string $sessionId = null): array
     {
         $competitors = $brand->competitors()->pluck('name')->toArray();
-        
-        Log::info("Analyzing brand prompt", [
+
+        Log::info('Analyzing brand prompt', [
             'brand_prompt_id' => $brandPrompt->id,
             'brand_name' => $brand->name,
             'competitors_count' => count($competitors),
-            'preferred_model' => $preferredModelName
+            'preferred_model' => $preferredModelName,
+            'session_id' => $sessionId,
         ]);
 
         // Generate the enhanced prompt
@@ -39,9 +44,9 @@ class BrandPromptAnalysisService
             $brandPrompt->prompt
         );
 
-        // Get AI response with preferred model
-        $aiResponseData = $this->generateAIResponse($enhancedPrompt, $preferredModelName);
-        
+        // Get AI response with preferred model and session-based distribution
+        $aiResponseData = $this->generateAIResponse($enhancedPrompt, $preferredModelName, $sessionId);
+
         // Parse the response to extract resources and analysis
         $parsedResponse = $this->parseAIResponse($aiResponseData['text'], $brand, $competitors, $brandPrompt);
 
@@ -49,7 +54,7 @@ class BrandPromptAnalysisService
             'ai_response' => $parsedResponse['html_response'],
             'resources' => $parsedResponse['resources'],
             'analysis' => $parsedResponse['analysis'],
-            'ai_model_id' => $aiResponseData['ai_model_id']
+            'ai_model_id' => $aiResponseData['ai_model_id'],
         ];
     }
 
@@ -59,7 +64,7 @@ class BrandPromptAnalysisService
     protected function buildAnalysisPrompt(string $brandName, array $competitors, string $phrase): string
     {
         $competitorsString = implode(', ', $competitors);
-        
+
         return "Given a brand [{$brandName}], a comma-separated list of competitors [{$competitorsString}], and a single phrase [{$phrase}], generate two outputs:
 
             1. An AI-generated response to the [{$phrase}] in HTML format, simulating a natural, informative answer that mentions [{$brandName}] and [{$competitorsString}] as relevant players in the context of the phrase.
@@ -90,74 +95,74 @@ class BrandPromptAnalysisService
     /**
      * Generate AI response using the configured AI model
      */
-    protected function generateAIResponse(string $prompt, ?string $preferredModelName = null): array
+    protected function generateAIResponse(string $prompt, ?string $preferredModelName = null, ?string $sessionId = null): array
     {
         try {
             $aiModel = null;
-            
+
             // If a preferred model is specified, try to use it first
             if ($preferredModelName) {
                 // Try case-insensitive matching by name
                 $aiModel = AiModel::where('is_enabled', true)
                     ->get()
-                    ->first(function($model) use ($preferredModelName) {
+                    ->first(function ($model) use ($preferredModelName) {
                         return strcasecmp($model->name, $preferredModelName) === 0;
                     });
-                
+
                 if ($aiModel) {
-                    Log::info("Using preferred AI model", [
+                    Log::info('Using preferred AI model', [
                         'requested' => $preferredModelName,
                         'model_name' => $aiModel->name,
                         'display_name' => $aiModel->display_name,
-                        'model_id' => $aiModel->id
+                        'model_id' => $aiModel->id,
                     ]);
                 } else {
                     $enabledModels = AiModel::where('is_enabled', true)->pluck('name')->toArray();
-                    Log::warning("Preferred AI model not found or disabled", [
+                    Log::warning('Preferred AI model not found or disabled', [
                         'requested_model' => $preferredModelName,
-                        'enabled_models' => $enabledModels
+                        'enabled_models' => $enabledModels,
                     ]);
                 }
             }
-            
-            // If no preferred model or it wasn't found, use weighted selection based on order
-            if (!$aiModel) {
-                // Get the first enabled model ordered by 'order' field (respects weight/priority)
-                $aiModel = AiModel::where('is_enabled', true)
-                    ->orderBy('order', 'asc')
-                    ->orderBy('id', 'asc') // Secondary sort for consistent fallback
-                    ->first();
+
+            // If no preferred model or it wasn't found, use weighted distribution service
+            if (! $aiModel) {
+                $aiModel = $this->distributionService->getNextModel(
+                    AiModelDistributionService::STRATEGY_WEIGHTED,
+                    $sessionId
+                );
 
                 if ($aiModel) {
-                    Log::info("Using fallback AI model (ordered by priority)", [
+                    Log::info('Using weighted distribution AI model', [
                         'model_name' => $aiModel->name,
                         'display_name' => $aiModel->display_name,
-                        'order' => $aiModel->order
+                        'order' => $aiModel->order,
+                        'session_id' => substr($sessionId ?? 'none', 0, 8),
                     ]);
                 }
             }
 
-            if (!$aiModel) {
+            if (! $aiModel) {
                 throw new \Exception('No enabled AI model found');
             }
 
-            Log::info("Using AI model for analysis", [
+            Log::info('Using AI model for analysis', [
                 'model_name' => $aiModel->name,
                 'display_name' => $aiModel->display_name,
-                'ai_model_id' => $aiModel->id
+                'ai_model_id' => $aiModel->id,
             ]);
 
             $response = $this->callAiProvider($aiModel, $prompt);
-            
+
             return [
                 'text' => $response->text,
-                'ai_model_id' => $aiModel->id
+                'ai_model_id' => $aiModel->id,
             ];
 
         } catch (\Exception $e) {
             Log::error('AI Response Generation Failed', [
                 'error' => $e->getMessage(),
-                'prompt' => substr($prompt, 0, 200) . '...'
+                'prompt' => substr($prompt, 0, 200).'...',
             ]);
             throw $e;
         }
@@ -171,18 +176,18 @@ class BrandPromptAnalysisService
         $apiConfig = $aiModel->api_config ?? [];
 
         // Validate provider
-        if (!$this->validateProvider($aiModel->name)) {
-            Log::warning("Potentially unsupported AI provider", [
-                'provider' => $aiModel->name
+        if (! $this->validateProvider($aiModel->name)) {
+            Log::warning('Potentially unsupported AI provider', [
+                'provider' => $aiModel->name,
             ]);
         }
 
         $model = $apiConfig['model'] ?? $this->getDefaultModel($aiModel->name);
         $temperature = $apiConfig['temperature'] ?? 0.7;
         $maxTokens = $apiConfig['max_tokens'] ?? 2000;
-        
+
         $apiKey = $apiConfig['api_key'] ?? null;
-        if (!$apiKey || trim($apiKey) === '') {
+        if (! $apiKey || trim($apiKey) === '') {
             throw new \Exception("API key not configured or is empty for AI model: {$aiModel->name}. Please check the API configuration.");
         }
 
@@ -232,9 +237,10 @@ class BrandPromptAnalysisService
 
             default:
                 // Generic fallback - try OpenAI-compatible API
-                Log::warning("Unknown AI provider, attempting OpenAI-compatible API", [
-                    'provider' => $aiModel->name
+                Log::warning('Unknown AI provider, attempting OpenAI-compatible API', [
+                    'provider' => $aiModel->name,
                 ]);
+
                 return $this->callOpenAIDirect($apiKey, $model, $prompt, $temperature, $maxTokens);
         }
     }
@@ -245,7 +251,7 @@ class BrandPromptAnalysisService
     protected function callOpenAIDirect($apiKey, $model, $prompt, $temperature, $maxTokens)
     {
         // Validate API key format for OpenAI (should start with 'sk-')
-        if (!str_starts_with($apiKey, 'sk-')) {
+        if (! str_starts_with($apiKey, 'sk-')) {
             throw new \Exception("Invalid OpenAI API key format. OpenAI API keys should start with 'sk-'");
         }
 
@@ -254,21 +260,22 @@ class BrandPromptAnalysisService
             ->post('https://api.openai.com/v1/chat/completions', [
                 'model' => $model,
                 'messages' => [
-                    ['role' => 'user', 'content' => $prompt]
+                    ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
                 'max_tokens' => $maxTokens,
             ]);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             $errorBody = $response->body();
             $errorData = json_decode($errorBody, true);
             $errorMessage = $errorData['error']['message'] ?? $errorBody;
-            
+
             throw new \Exception("OpenAI API error (Status: {$response->status()}): {$errorMessage}");
         }
 
         $data = $response->json();
+
         return (object) ['text' => $data['choices'][0]['message']['content'] ?? ''];
     }
 
@@ -282,17 +289,18 @@ class BrandPromptAnalysisService
             ->post('https://api.perplexity.ai/chat/completions', [
                 'model' => $model,
                 'messages' => [
-                    ['role' => 'user', 'content' => $prompt]
+                    ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
                 'max_tokens' => $maxTokens,
             ]);
 
-        if (!$response->successful()) {
-            throw new \Exception("Perplexity API error: " . $response->status() . " - " . $response->body());
+        if (! $response->successful()) {
+            throw new \Exception('Perplexity API error: '.$response->status().' - '.$response->body());
         }
 
         $data = $response->json();
+
         return (object) ['text' => $data['choices'][0]['message']['content'] ?? ''];
     }
 
@@ -304,19 +312,20 @@ class BrandPromptAnalysisService
         $response = \Illuminate\Support\Facades\Http::timeout(60)
             ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
                 'contents' => [
-                    ['parts' => [['text' => $prompt]]]
+                    ['parts' => [['text' => $prompt]]],
                 ],
                 'generationConfig' => [
                     'temperature' => $temperature,
                     'maxOutputTokens' => $maxTokens,
-                ]
+                ],
             ]);
 
-        if (!$response->successful()) {
-            throw new \Exception("Gemini API error: " . $response->status() . " - " . $response->body());
+        if (! $response->successful()) {
+            throw new \Exception('Gemini API error: '.$response->status().' - '.$response->body());
         }
 
         $data = $response->json();
+
         return (object) ['text' => $data['candidates'][0]['content']['parts'][0]['text'] ?? ''];
     }
 
@@ -326,25 +335,26 @@ class BrandPromptAnalysisService
     protected function callAnthropicDirect($apiKey, $model, $prompt, $temperature, $maxTokens)
     {
         $response = \Illuminate\Support\Facades\Http::withHeaders([
-                'x-api-key' => $apiKey,
-                'anthropic-version' => '2023-06-01',
-                'Content-Type' => 'application/json',
-            ])
+            'x-api-key' => $apiKey,
+            'anthropic-version' => '2023-06-01',
+            'Content-Type' => 'application/json',
+        ])
             ->timeout(60)
             ->post('https://api.anthropic.com/v1/messages', [
                 'model' => $model,
                 'max_tokens' => $maxTokens,
                 'temperature' => $temperature,
                 'messages' => [
-                    ['role' => 'user', 'content' => $prompt]
-                ]
+                    ['role' => 'user', 'content' => $prompt],
+                ],
             ]);
 
-        if (!$response->successful()) {
-            throw new \Exception("Anthropic API error: " . $response->status() . " - " . $response->body());
+        if (! $response->successful()) {
+            throw new \Exception('Anthropic API error: '.$response->status().' - '.$response->body());
         }
 
         $data = $response->json();
+
         return (object) ['text' => $data['content'][0]['text'] ?? ''];
     }
 
@@ -358,17 +368,18 @@ class BrandPromptAnalysisService
             ->post('https://api.groq.com/openai/v1/chat/completions', [
                 'model' => $model,
                 'messages' => [
-                    ['role' => 'user', 'content' => $prompt]
+                    ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
                 'max_tokens' => $maxTokens,
             ]);
 
-        if (!$response->successful()) {
-            throw new \Exception("Groq API error: " . $response->status() . " - " . $response->body());
+        if (! $response->successful()) {
+            throw new \Exception('Groq API error: '.$response->status().' - '.$response->body());
         }
 
         $data = $response->json();
+
         return (object) ['text' => $data['choices'][0]['message']['content'] ?? ''];
     }
 
@@ -382,17 +393,18 @@ class BrandPromptAnalysisService
             ->post('https://api.mistral.ai/v1/chat/completions', [
                 'model' => $model,
                 'messages' => [
-                    ['role' => 'user', 'content' => $prompt]
+                    ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
                 'max_tokens' => $maxTokens,
             ]);
 
-        if (!$response->successful()) {
-            throw new \Exception("Mistral API error: " . $response->status() . " - " . $response->body());
+        if (! $response->successful()) {
+            throw new \Exception('Mistral API error: '.$response->status().' - '.$response->body());
         }
 
         $data = $response->json();
+
         return (object) ['text' => $data['choices'][0]['message']['content'] ?? ''];
     }
 
@@ -406,17 +418,18 @@ class BrandPromptAnalysisService
             ->post('https://api.x.ai/v1/chat/completions', [
                 'model' => $model,
                 'messages' => [
-                    ['role' => 'user', 'content' => $prompt]
+                    ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
                 'max_tokens' => $maxTokens,
             ]);
 
-        if (!$response->successful()) {
-            throw new \Exception("XAI API error: " . $response->status() . " - " . $response->body());
+        if (! $response->successful()) {
+            throw new \Exception('XAI API error: '.$response->status().' - '.$response->body());
         }
 
         $data = $response->json();
+
         return (object) ['text' => $data['choices'][0]['message']['content'] ?? ''];
     }
 
@@ -430,17 +443,18 @@ class BrandPromptAnalysisService
             ->post('https://api.deepseek.com/v1/chat/completions', [
                 'model' => $model,
                 'messages' => [
-                    ['role' => 'user', 'content' => $prompt]
+                    ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
                 'max_tokens' => $maxTokens,
             ]);
 
-        if (!$response->successful()) {
-            throw new \Exception("DeepSeek API error: " . $response->status() . " - " . $response->body());
+        if (! $response->successful()) {
+            throw new \Exception('DeepSeek API error: '.$response->status().' - '.$response->body());
         }
 
         $data = $response->json();
+
         return (object) ['text' => $data['choices'][0]['message']['content'] ?? ''];
     }
 
@@ -454,17 +468,18 @@ class BrandPromptAnalysisService
             ->post('https://openrouter.ai/api/v1/chat/completions', [
                 'model' => $model,
                 'messages' => [
-                    ['role' => 'user', 'content' => $prompt]
+                    ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
                 'max_tokens' => $maxTokens,
             ]);
 
-        if (!$response->successful()) {
-            throw new \Exception("OpenRouter API error: " . $response->status() . " - " . $response->body());
+        if (! $response->successful()) {
+            throw new \Exception('OpenRouter API error: '.$response->status().' - '.$response->body());
         }
 
         $data = $response->json();
+
         return (object) ['text' => $data['choices'][0]['message']['content'] ?? ''];
     }
 
@@ -474,7 +489,7 @@ class BrandPromptAnalysisService
     protected function callOllamaDirect($apiKey, $model, $prompt, $temperature, $maxTokens, $config)
     {
         $baseUrl = $config['base_url'] ?? 'http://localhost:11434';
-        
+
         $response = \Illuminate\Support\Facades\Http::timeout(60)
             ->post("{$baseUrl}/api/generate", [
                 'model' => $model,
@@ -483,14 +498,15 @@ class BrandPromptAnalysisService
                 'options' => [
                     'temperature' => $temperature,
                     'num_predict' => $maxTokens,
-                ]
+                ],
             ]);
 
-        if (!$response->successful()) {
-            throw new \Exception("Ollama API error: " . $response->status() . " - " . $response->body());
+        if (! $response->successful()) {
+            throw new \Exception('Ollama API error: '.$response->status().' - '.$response->body());
         }
 
         $data = $response->json();
+
         return (object) ['text' => $data['response'] ?? ''];
     }
 
@@ -505,13 +521,13 @@ class BrandPromptAnalysisService
         if (count($credentials) !== 2) {
             throw new \Exception("DataForSEO API key must be in format 'username:password'");
         }
-        
+
         [$username, $password] = $credentials;
-        
+
         // Extract location code from config, default to US
         $locationCode = $config['location_code'] ?? 2840; // 2840 = United States
         $languageCode = $config['language_code'] ?? 'en';
-        
+
         // Prepare DataForSEO payload
         $payload = [
             [
@@ -519,12 +535,12 @@ class BrandPromptAnalysisService
                 'location_code' => $locationCode,
                 'keyword' => $prompt,
                 'se_type' => 'ai_overview',
-            ]
+            ],
         ];
 
-        Log::info("Calling Google AI Overview via DataForSEO", [
+        Log::info('Calling Google AI Overview via DataForSEO', [
             'keyword' => substr($prompt, 0, 100),
-            'location_code' => $locationCode
+            'location_code' => $locationCode,
         ]);
 
         // Call DataForSEO API
@@ -532,30 +548,30 @@ class BrandPromptAnalysisService
             ->timeout(90) // Increased timeout for live results
             ->post('https://api.dataforseo.com/v3/serp/google/organic/live/advanced', $payload);
 
-        if (!$response->successful()) {
-            throw new \Exception("DataForSEO API error: " . $response->status() . " - " . $response->body());
+        if (! $response->successful()) {
+            throw new \Exception('DataForSEO API error: '.$response->status().' - '.$response->body());
         }
 
         $data = $response->json();
 
         // Validate response structure
-        if (!isset($data['tasks'][0]['result'][0])) {
-            throw new \Exception("DataForSEO API returned invalid response structure");
+        if (! isset($data['tasks'][0]['result'][0])) {
+            throw new \Exception('DataForSEO API returned invalid response structure');
         }
 
         $result = $data['tasks'][0]['result'][0];
         $aiOverviewText = '';
 
         // Try to get AI Overview answer first
-        if (isset($result['ai_overview']['answer']) && !empty($result['ai_overview']['answer'])) {
+        if (isset($result['ai_overview']['answer']) && ! empty($result['ai_overview']['answer'])) {
             $aiOverviewText = $result['ai_overview']['answer'];
-            Log::info("Retrieved AI Overview content", ['length' => strlen($aiOverviewText)]);
+            Log::info('Retrieved AI Overview content', ['length' => strlen($aiOverviewText)]);
         } else {
             // Fallback: Extract from other sources
-            Log::info("AI Overview not available, extracting from search results");
-            
+            Log::info('AI Overview not available, extracting from search results');
+
             $extractedContent = [];
-            
+
             if (isset($result['items']) && is_array($result['items'])) {
                 foreach ($result['items'] as $item) {
                     // Extract from "Found on Web" sections
@@ -584,20 +600,20 @@ class BrandPromptAnalysisService
                 }
             }
 
-            if (!empty($extractedContent)) {
+            if (! empty($extractedContent)) {
                 // Limit to first 15 items to avoid too much text
-                $aiOverviewText = implode(". ", array_slice($extractedContent, 0, 15));
-                Log::info("Extracted content from search results", [
+                $aiOverviewText = implode('. ', array_slice($extractedContent, 0, 15));
+                Log::info('Extracted content from search results', [
                     'items_count' => count($extractedContent),
-                    'text_length' => strlen($aiOverviewText)
+                    'text_length' => strlen($aiOverviewText),
                 ]);
             } else {
-                throw new \Exception("No content available from DataForSEO API");
+                throw new \Exception('No content available from DataForSEO API');
             }
         }
 
         if (empty($aiOverviewText)) {
-            throw new \Exception("DataForSEO API returned empty content");
+            throw new \Exception('DataForSEO API returned empty content');
         }
 
         return (object) ['text' => $aiOverviewText];
@@ -608,7 +624,7 @@ class BrandPromptAnalysisService
      */
     protected function getDefaultModel(string $provider): string
     {
-        return match($provider) {
+        return match ($provider) {
             'openai' => 'gpt-3.5-turbo',
             'gemini', 'google', 'google-ai' => 'gemini-pro',
             'perplexity' => 'llama-3.1-sonar-small-128k-online',
@@ -633,10 +649,10 @@ class BrandPromptAnalysisService
             // Native Prism providers
             'openai', 'gemini', 'google', 'anthropic', 'claude', 'xai', 'x-ai', 'grok',
             'groq', 'mistral', 'ollama', 'deepseek', 'openrouter',
-            // OpenAI-compatible providers  
+            // OpenAI-compatible providers
             'perplexity', 'google-ai',
             // DataForSEO Google AI Overview
-            'google-ai-overview', 'dataforseo'
+            'google-ai-overview', 'dataforseo',
         ];
 
         return in_array($provider, $supportedProviders);
@@ -653,7 +669,7 @@ class BrandPromptAnalysisService
                     'api_key' => 'sk-your-openai-api-key-here',
                     'model' => 'gpt-3.5-turbo',
                     'temperature' => 0.7,
-                    'max_tokens' => 2000
+                    'max_tokens' => 2000,
                 ];
 
             case 'gemini':
@@ -663,7 +679,7 @@ class BrandPromptAnalysisService
                     'api_key' => 'your-google-ai-api-key-here',
                     'model' => 'gemini-pro',
                     'temperature' => 0.7,
-                    'max_tokens' => 2000
+                    'max_tokens' => 2000,
                 ];
 
             case 'perplexity':
@@ -671,7 +687,7 @@ class BrandPromptAnalysisService
                     'api_key' => 'pplx-your-perplexity-api-key-here',
                     'model' => 'llama-3.1-sonar-small-128k-online',
                     'temperature' => 0.7,
-                    'max_tokens' => 2000
+                    'max_tokens' => 2000,
                 ];
 
             case 'anthropic':
@@ -680,7 +696,7 @@ class BrandPromptAnalysisService
                     'api_key' => 'sk-ant-your-anthropic-api-key-here',
                     'model' => 'claude-3-haiku-20240307',
                     'temperature' => 0.7,
-                    'max_tokens' => 2000
+                    'max_tokens' => 2000,
                 ];
 
             case 'grok':
@@ -690,7 +706,7 @@ class BrandPromptAnalysisService
                     'api_key' => 'xai-your-x-ai-api-key-here',
                     'model' => 'grok-beta',
                     'temperature' => 0.7,
-                    'max_tokens' => 2000
+                    'max_tokens' => 2000,
                 ];
 
             case 'groq':
@@ -698,7 +714,7 @@ class BrandPromptAnalysisService
                     'api_key' => 'gsk_your-groq-api-key-here',
                     'model' => 'llama-3.1-70b-versatile',
                     'temperature' => 0.7,
-                    'max_tokens' => 2000
+                    'max_tokens' => 2000,
                 ];
 
             case 'mistral':
@@ -706,7 +722,7 @@ class BrandPromptAnalysisService
                     'api_key' => 'your-mistral-api-key-here',
                     'model' => 'mistral-small-latest',
                     'temperature' => 0.7,
-                    'max_tokens' => 2000
+                    'max_tokens' => 2000,
                 ];
 
             case 'ollama':
@@ -715,7 +731,7 @@ class BrandPromptAnalysisService
                     'model' => 'llama3.1',
                     'temperature' => 0.7,
                     'max_tokens' => 2000,
-                    'base_url' => 'http://localhost:11434'
+                    'base_url' => 'http://localhost:11434',
                 ];
 
             case 'deepseek':
@@ -723,7 +739,7 @@ class BrandPromptAnalysisService
                     'api_key' => 'sk-your-deepseek-api-key-here',
                     'model' => 'deepseek-chat',
                     'temperature' => 0.7,
-                    'max_tokens' => 2000
+                    'max_tokens' => 2000,
                 ];
 
             case 'openrouter':
@@ -731,7 +747,7 @@ class BrandPromptAnalysisService
                     'api_key' => 'sk-or-your-openrouter-api-key-here',
                     'model' => 'meta-llama/llama-3.1-8b-instruct:free',
                     'temperature' => 0.7,
-                    'max_tokens' => 2000
+                    'max_tokens' => 2000,
                 ];
 
             case 'google-ai-overview':
@@ -740,7 +756,7 @@ class BrandPromptAnalysisService
                     'api_key' => 'username:password',
                     'model' => 'ai_overview',
                     'location_code' => 2840, // United States
-                    'language_code' => 'en'
+                    'language_code' => 'en',
                 ];
 
             default:
@@ -748,7 +764,7 @@ class BrandPromptAnalysisService
                     'api_key' => 'your-api-key-here',
                     'model' => 'default-model',
                     'temperature' => 0.7,
-                    'max_tokens' => 2000
+                    'max_tokens' => 2000,
                 ];
         }
     }
@@ -760,37 +776,37 @@ class BrandPromptAnalysisService
     {
         try {
             // Log the test attempt for debugging
-            Log::info("Testing AI model", [
+            Log::info('Testing AI model', [
                 'model_id' => $aiModel->id,
                 'model_name' => $aiModel->name,
                 'display_name' => $aiModel->display_name,
-                'has_api_config' => !empty($aiModel->api_config),
-                'api_config_keys' => $aiModel->api_config ? array_keys($aiModel->api_config) : []
+                'has_api_config' => ! empty($aiModel->api_config),
+                'api_config_keys' => $aiModel->api_config ? array_keys($aiModel->api_config) : [],
             ]);
 
-            $testPrompt = "Test prompt: What is artificial intelligence? Please respond briefly.";
+            $testPrompt = 'Test prompt: What is artificial intelligence? Please respond briefly.';
             $response = $this->callAiProvider($aiModel, $testPrompt);
-            
+
             return [
                 'success' => true,
                 'response' => $response->text,
                 'model' => $aiModel->name,
-                'message' => 'AI model is working correctly'
+                'message' => 'AI model is working correctly',
             ];
         } catch (\Exception $e) {
             // Log the error for debugging
-            Log::error("AI model test failed", [
+            Log::error('AI model test failed', [
                 'model_id' => $aiModel->id,
                 'model_name' => $aiModel->name,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
                 'model' => $aiModel->name,
-                'message' => 'AI model test failed: ' . $e->getMessage()
+                'message' => 'AI model test failed: '.$e->getMessage(),
             ];
         }
     }
@@ -810,14 +826,14 @@ class BrandPromptAnalysisService
 
         // Parse analysis components
         $analysis = $this->parseAnalysisText($analysisText, $brand, $competitors);
-        
+
         // Extract resources from analysis and save to database
         $resources = $this->extractResources($analysisText, $htmlResponse, $brandPrompt, $competitors);
 
         return [
             'html_response' => $htmlResponse,
             'resources' => $resources,
-            'analysis' => $analysis
+            'analysis' => $analysis,
         ];
     }
 
@@ -858,7 +874,7 @@ class BrandPromptAnalysisService
             } catch (\Exception $e) {
                 Log::warning('Failed to parse competitor mentions JSON', [
                     'json' => $matches[1],
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
@@ -867,7 +883,7 @@ class BrandPromptAnalysisService
             'sentiment' => $sentiment,
             'position' => $position,
             'visibility' => $visibility,
-            'competitor_mentions' => $competitorMentions
+            'competitor_mentions' => $competitorMentions,
         ];
     }
 
@@ -892,8 +908,8 @@ class BrandPromptAnalysisService
                 $exists = collect($resources)->contains(function ($resource) use ($url) {
                     return $resource['url'] === $url;
                 });
-                
-                if (!$exists) {
+
+                if (! $exists) {
                     $resourceData = $this->createResourceEntry($url, 'other', '', '', $brandPrompt, $competitors);
                     if ($resourceData) {
                         $resources[] = $resourceData;
@@ -910,8 +926,8 @@ class BrandPromptAnalysisService
                     $exists = collect($resources)->contains(function ($resource) use ($href) {
                         return $resource['url'] === $href;
                     });
-                    
-                    if (!$exists) {
+
+                    if (! $exists) {
                         $resourceData = $this->createResourceEntry($href, 'other', '', '', $brandPrompt, $competitors);
                         if ($resourceData) {
                             $resources[] = $resourceData;
@@ -939,11 +955,13 @@ class BrandPromptAnalysisService
 
         foreach ($lines as $line) {
             $line = trim($line);
-            if (empty($line) || $line === '-') continue;
+            if (empty($line) || $line === '-') {
+                continue;
+            }
 
             if (preg_match('/^-?\s*URL:\s*(.+)$/i', $line, $matches)) {
                 // Save previous resource if exists
-                if (!empty($currentResource)) {
+                if (! empty($currentResource)) {
                     $resourceData = $this->createResourceEntry(
                         $currentResource['url'] ?? '',
                         $currentResource['type'] ?? 'other',
@@ -968,7 +986,7 @@ class BrandPromptAnalysisService
         }
 
         // Save last resource
-        if (!empty($currentResource)) {
+        if (! empty($currentResource)) {
             $resourceData = $this->createResourceEntry(
                 $currentResource['url'] ?? '',
                 $currentResource['type'] ?? 'other',
@@ -990,7 +1008,7 @@ class BrandPromptAnalysisService
      */
     protected function createResourceEntry(string $url, string $type, string $title, string $description, BrandPrompt $brandPrompt, array $competitors): ?array
     {
-        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+        if (! filter_var($url, FILTER_VALIDATE_URL)) {
             return null;
         }
 
@@ -1015,17 +1033,19 @@ class BrandPromptAnalysisService
      */
     protected function isCompetitorUrl(string $url, ?string $domain, array $competitors): bool
     {
-        if (!$domain) return false;
+        if (! $domain) {
+            return false;
+        }
 
         foreach ($competitors as $competitor) {
             $competitorDomain = strtolower($competitor);
             $urlDomain = strtolower($domain);
-            
+
             // Direct domain match
             if ($urlDomain === $competitorDomain) {
                 return true;
             }
-            
+
             // Check if competitor name is in domain
             if (strpos($urlDomain, $competitorDomain) !== false || strpos($competitorDomain, $urlDomain) !== false) {
                 return true;
@@ -1041,7 +1061,7 @@ class BrandPromptAnalysisService
     protected function normalizeResourceType(string $type): string
     {
         $type = strtolower(trim($type));
-        
+
         $typeMapping = [
             'competitor_website' => 'competitor',
             'competitor' => 'competitor',
@@ -1075,19 +1095,19 @@ class BrandPromptAnalysisService
             BrandPromptResource::where('brand_prompt_id', $brandPrompt->id)->delete();
 
             // Insert new resources
-            if (!empty($resources)) {
+            if (! empty($resources)) {
                 BrandPromptResource::insert($resources);
             }
 
-            Log::info("Saved resources to database", [
+            Log::info('Saved resources to database', [
                 'brand_prompt_id' => $brandPrompt->id,
                 'resource_count' => count($resources),
-                'competitor_resources' => collect($resources)->where('is_competitor_url', true)->count()
+                'competitor_resources' => collect($resources)->where('is_competitor_url', true)->count(),
             ]);
         } catch (\Exception $e) {
-            Log::error("Failed to save resources to database", [
+            Log::error('Failed to save resources to database', [
                 'brand_prompt_id' => $brandPrompt->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -1115,11 +1135,11 @@ class BrandPromptAnalysisService
             ->whereNotNull('analysis_completed_at')
             ->whereHas('promptResources', function ($query) use ($competitorDomain) {
                 $query->where('domain', 'like', "%{$competitorDomain}%")
-                      ->orWhere('url', 'like', "%{$competitorDomain}%");
+                    ->orWhere('url', 'like', "%{$competitorDomain}%");
             })
             ->with(['promptResources' => function ($query) use ($competitorDomain) {
                 $query->where('domain', 'like', "%{$competitorDomain}%")
-                      ->orWhere('url', 'like', "%{$competitorDomain}%");
+                    ->orWhere('url', 'like', "%{$competitorDomain}%");
             }])
             ->get()
             ->map(function ($prompt) {
@@ -1139,7 +1159,7 @@ class BrandPromptAnalysisService
                             'description' => $resource->description,
                             'domain' => $resource->domain,
                         ];
-                    })->toArray()
+                    })->toArray(),
                 ];
             })
             ->toArray();

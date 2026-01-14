@@ -70,8 +70,13 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
                 return;
             }
 
-            // Generate AI response and analyze
-            $result = $analysisService->analyzePrompt($this->brandPrompt, $brand, $this->preferredAiModel);
+            // Generate AI response and analyze with session tracking
+            $result = $analysisService->analyzePrompt(
+                $this->brandPrompt,
+                $brand,
+                $this->preferredAiModel,
+                $this->sessionId
+            );
 
             // Update the brand prompt with results
             $this->brandPrompt->update([
