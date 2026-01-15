@@ -99,6 +99,7 @@ class AiModelDistributionService
         // Calculate current distribution vs desired distribution
         $bestModel = null;
         $lowestRatio = PHP_FLOAT_MAX;
+        $tiedModels = []; // Track models with same utilization gap for tie-breaking
 
         foreach ($models as $model) {
             $desiredRatio = $weights[$model->id] / $totalWeight;
@@ -112,7 +113,16 @@ class AiModelDistributionService
             if ($utilizationGap < $lowestRatio) {
                 $lowestRatio = $utilizationGap;
                 $bestModel = $model;
+                $tiedModels = [$model]; // Reset tied models
+            } elseif (abs($utilizationGap - $lowestRatio) < 0.0001) {
+                // Models with essentially the same utilization gap (tie)
+                $tiedModels[] = $model;
             }
+        }
+
+        // If multiple models tied, pick one randomly for fair distribution
+        if (count($tiedModels) > 1) {
+            $bestModel = $tiedModels[array_rand($tiedModels)];
         }
 
         // Update usage tracking in database
