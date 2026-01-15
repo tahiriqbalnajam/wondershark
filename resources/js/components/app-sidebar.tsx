@@ -225,13 +225,13 @@ const getDocsFilesNavItems = (permissions: ReturnType<typeof usePermissions>): N
 
 const getOrderNavItems = (permissions: ReturnType<typeof usePermissions>, selectedBrandId?: number): NavItem[] => {
     const items: NavItem[] = [];
-    if (permissions.hasRole('agency')) {
-        items.push({
-            title: 'Paid PR',
-            href: selectedBrandId ? `/brands/${selectedBrandId}/orders` : '/orders',
-            icon: FileText,
-        });
-    }
+    // if (permissions.hasRole('agency')) {
+    //     items.push({
+    //         title: 'Paid PR',
+    //         href: selectedBrandId ? `/brands/${selectedBrandId}/orders` : '/orders',
+    //         icon: FileText,
+    //     });
+    // }
     return items;
 };
 
