@@ -73,7 +73,6 @@ button{
 }
 
 /** Left Side Bar **/
-
 .left-side-wrapp{
     background:var(--gray-text-bg);
 }
@@ -97,7 +96,6 @@ button{
 }
 
 /** Main Content **/
-
 .main-content{
     border:1px solid var(--border);
     border-radius:0;
@@ -105,7 +103,6 @@ button{
 }
 
 /** Main Navbar **/
-
 .site-logo-box button > span {
 	width:40px;
 }
@@ -409,6 +406,10 @@ span.img-avatar img{
 	justify-content: space-between;
 	width: 100%;
 }
+.default-table thead th:first-child button,
+.default-table thead td:first-child button{
+    width:16px;
+}
 .sentiment-td {
 	background: rgba(109,195,35,0.20);
 	border-radius:5px;
@@ -474,6 +475,9 @@ textarea.form-control{
 
 .field-icon span svg {
 	width: 16px;
+}
+.allies-card .form-control {
+	margin-bottom: 0;
 }
 
 /** Add Prompts **/
@@ -753,9 +757,8 @@ textarea.form-control{
     color: #fff;
 }
 .allies-card{
-    box-shadow:0 4px 15px 0 rgba(0,0,0,0.15);
     border-radius:10px;
-    padding:15px;
+    padding:35px;
     margin-bottom:15px;
     background:#6f707112;
 }
@@ -1191,5 +1194,16 @@ textarea.form-control{
     }
     .anwser-ai-calendar .rdp-root {
         padding: 15px;
+    }
+    .Create-Competitor {
+        width: 100%;
+        padding: 0 15px;
+    }
+    .setup-wizard-buttons .button-single {
+        min-width: 110px;
+        font-size: 14px;
+    }
+    .default-table th, .default-table td {
+        width: 110px;
     }
 }

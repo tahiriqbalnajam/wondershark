@@ -91,7 +91,7 @@ const submitPassword: FormEventHandler = (e) => {
     return (
         <AppLayout title="Agency Settings" breadcrumbs={breadcrumbs} logo={agency.logo} website={agency.url}>
             <Head title="Agency settings" />
-            <div className="px-4 py-6">
+            <div className="lg:px-4 lg:py-6 px-0 py-0">
                 <div className="space-y-6">
                     <form onSubmit={submit} className="space-y-6">
                         <Card>
@@ -119,9 +119,9 @@ const submitPassword: FormEventHandler = (e) => {
                                     <Label>Agency Logo</Label>
                                     <div className="height=[150px] rounded-md border border-solid border-gray-300 flex items-center gap-4 flex-col justify-center min-h-50">
                                         <p className="text-xs text-muted-foreground"> PNG, JPG or SVG (max 2MB) </p>
-                                        <div className='relative flex items-center gap-4'>
+                                        <div className='relative lg:flex block items-center gap-4'>
                                             <input type="file" id="logo" accept="image/*" className="hidden" onChange={(e) => setData('logo', e.target.files ? e.target.files[0] : null) } />
-                                            <label htmlFor="logo" className="cursor-pointer rounded-md border border-dashed border-gray-300 px-6 py-4 text-sm text-gray-600 transition hover:border-primary hover:bg-muted" >
+                                            <label htmlFor="logo" className="cursor-pointer block rounded-md border border-dashed border-gray-300 px-6 py-4 text-sm text-gray-600 transition hover:border-primary hover:bg-muted lg:mb-0 mb-5" >
                                                 {
                                                     // show selected file name, or basename of existing logo URL, or placeholder
                                                     data.logo
@@ -137,11 +137,11 @@ const submitPassword: FormEventHandler = (e) => {
                                     <InputError className="mt-2" message={errors.logo} />
                                 </div>
                                 <div className="flex items-center justify-end">
-                                    <div className="flex items-center gap-4">
-                                        <Link href="/" className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
+                                    <div className="lg:flex block items-center gap-4 w-full">
+                                        <Link href="/" className="cancle-btn primary-btn lg:mb-0 mb-5">
                                             Cancel
                                         </Link>
-                                        <Button type="submit" disabled={processing} className='primary-btn'>
+                                        <Button type="submit" disabled={processing} className='primary-btn lg:w-auto w-full'>
                                             Save Changes
                                         </Button>
                                         <Transition show={recentlySuccessful} enter="transition ease-in-out" enterFrom="opacity-0" leave="transition ease-in-out" leaveTo="opacity-0" >
@@ -158,49 +158,52 @@ const submitPassword: FormEventHandler = (e) => {
                             <CardDescription>Change your password to keep your account secure</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <form onSubmit={submitPassword} className="space-y-4">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="current_password">Current Password</Label>
-                                    <Input
-                                        id="current_password"
-                                        type="password"
-                                        className="max-w-md"
-                                        value={passwordData.current_password}
-                                        onChange={(e) => setPasswordData('current_password', e.target.value)}
-                                        autoComplete="current-password"
-                                        placeholder="Enter current password"
-                                    />
-                                    <InputError className="mt-2" message={passwordErrors.current_password} />
+                            <form onSubmit={submitPassword} className="">
+                                <div className='grid grid-cols-1 lg:grid-cols-3 gap-4'>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="current_password">Current Password</Label>
+                                        <Input
+                                            id="current_password"
+                                            type="password"
+                                            className="max-w-md form-control"
+                                            value={passwordData.current_password}
+                                            onChange={(e) => setPasswordData('current_password', e.target.value)}
+                                            autoComplete="current-password"
+                                            placeholder="Enter current password"
+                                        />
+                                        <InputError className="mt-2" message={passwordErrors.current_password} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="password">New Password</Label>
+                                        <Input
+                                            id="password"
+                                            type="password"
+                                            className="max-w-md form-control"
+                                            value={passwordData.password}
+                                            onChange={(e) => setPasswordData('password', e.target.value)}
+                                            autoComplete="new-password"
+                                            placeholder="Enter new password"
+                                        />
+                                        <InputError className="mt-2" message={passwordErrors.password} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="password_confirmation">Confirm New Password</Label>
+                                        <Input
+                                            id="password_confirmation"
+                                            type="password"
+                                            className="max-w-md form-control"
+                                            value={passwordData.password_confirmation}
+                                            onChange={(e) => setPasswordData('password_confirmation', e.target.value)}
+                                            autoComplete="new-password"
+                                            placeholder="Confirm new password"
+                                        />
+                                        <InputError className="mt-2" message={passwordErrors.password_confirmation} />
+                                    </div>
                                 </div>
 
-                                <div className="grid gap-2">
-                                    <Label htmlFor="password">New Password</Label>
-                                    <Input
-                                        id="password"
-                                        type="password"
-                                        className="max-w-md"
-                                        value={passwordData.password}
-                                        onChange={(e) => setPasswordData('password', e.target.value)}
-                                        autoComplete="new-password"
-                                        placeholder="Enter new password"
-                                    />
-                                    <InputError className="mt-2" message={passwordErrors.password} />
-                                </div>
-
-                                <div className="grid gap-2">
-                                    <Label htmlFor="password_confirmation">Confirm New Password</Label>
-                                    <Input
-                                        id="password_confirmation"
-                                        type="password"
-                                        className="max-w-md"
-                                        value={passwordData.password_confirmation}
-                                        onChange={(e) => setPasswordData('password_confirmation', e.target.value)}
-                                        autoComplete="new-password"
-                                        placeholder="Confirm new password"
-                                    />
-                                    <InputError className="mt-2" message={passwordErrors.password_confirmation} />
-                                </div>
-                                <div className="flex items-center justify-end">
+                                <div className="flex items-center">
                                     <div className="flex items-center gap-4">
                                         <Button className='primary-btn' disabled={passwordProcessing}>
                                             {passwordProcessing ? 'Updating...' : 'Update Password'}

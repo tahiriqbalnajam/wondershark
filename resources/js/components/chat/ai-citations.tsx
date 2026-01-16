@@ -52,7 +52,7 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
     };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 lg:p-4 p-0">
             {prompts.map((prompt) => {
                 // Get ALL resource logos (not just competitors)
                 const allLogos = prompt.prompt_resources
