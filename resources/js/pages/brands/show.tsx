@@ -768,8 +768,7 @@ const visiblePrompts = filteredPrompts.slice(0, currentPage * 9);
                             )}
                             
                             <div className="grid grid-cols-12 gap-6">
-                                {/* Left Column - 75% width (9/12) */}
-                                <div className="col-span-9 space-y-4">
+                                <div className="lg:col-span-9 col-span-12 space-y-4">
                                     {/* Prompt Card - aligned right */}
                                     <div className="flex items-start justify-end gap-3">
                                         <Card className="max-w-md w-full bg-blue-50 border-blue-200">
@@ -818,9 +817,7 @@ const visiblePrompts = filteredPrompts.slice(0, currentPage * 9);
                                         </Card>
                                     </div>
                                 </div>
-
-                                {/* Right Column - 25% width (3/12) */}
-                                <div className="col-span-3">
+                                <div className="lg:col-span-3 col-span-12">
                                     <h3 className="text-lg font-semibold mb-3">Resources</h3>
                                     <div className="space-y-3">
                                         {/* Brand Icon */}
