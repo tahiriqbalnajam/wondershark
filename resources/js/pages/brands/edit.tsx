@@ -146,7 +146,7 @@ export default function BrandEdit({ brand }: Props) {
     <AppLayout title={`Edit ${brand.name}`}>
       <Head title={`Edit ${brand.name}`} />
 
-      <div className="lg:mx-15 mx-0 space-y-6">
+      <div className="lg:mx-15 mx-0 space-y-0">
         <div className="flex items-center justify-between">
           {/* <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" asChild>

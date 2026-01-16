@@ -165,7 +165,7 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
                             </DialogHeader>
                             <form onSubmit={submit}>
                                 <div className="space-y-4">
-                                    <div className="grid gap-2">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                         <Label htmlFor="name">Full Name</Label>
                                         <Input
                                             id="name"
@@ -177,7 +177,7 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
                                         <InputError message={errors.name} />
                                     </div>
 
-                                    <div className="grid gap-2">
+                                    <div className="grid gap-4">
                                         <Label htmlFor="email">Email Address</Label>
                                         <Input
                                             id="email"
@@ -193,7 +193,7 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
                                         </p>
                                     </div>
 
-                                    <div className="grid gap-2">
+                                    <div className="grid gap-4">
                                         <Label>Permissions</Label>
                                         <div className="space-y-2">
                                             {availableRights.map((right) => (
@@ -239,7 +239,7 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
                             <Clock className="h-5 w-5" />
                             Pending Invitations ({pendingInvitations.length})
                         </h3>
-                        <div className="grid gap-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             {pendingInvitations.map((invitation) => (
                                 <Card key={invitation.id}>
                                     <CardHeader>
@@ -315,11 +315,11 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
                             <Users className="h-5 w-5" />
                             Active Members ({members.length})
                         </h3>
-                        <div className="grid gap-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             {members.map((member) => (
                             <Card key={member.id}>
                                 <CardHeader>
-                                    <div className="flex items-center justify-between">
+                                    <div className="lg:flex block items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                                                 <User className="h-5 w-5 text-primary" />
@@ -332,8 +332,8 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <Badge variant="secondary">
+                                        <div className="lg:flex block items-center gap-2">
+                                            <Badge variant="secondary" className='block lg:inline-block'>
                                                 {member.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                                             </Badge>
                                             <Button
@@ -405,7 +405,7 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
                         </DialogHeader>
                         <form onSubmit={handleRightsUpdate}>
                             <div className="space-y-4">
-                                <div className="grid gap-2">
+                                <div className="grid gap-4">
                                     <Label>Permissions</Label>
                                     <div className="space-y-2">
                                         {availableRights.map((right) => (

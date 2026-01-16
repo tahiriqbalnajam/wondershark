@@ -242,10 +242,10 @@ export default function CompetitorSelector({
                         <CardHeader>
                             <div className="flex items-center justify-between">
                                 <h2 className="text-2xl font-bold">
-                                    Your Competitors
-                                    <span className='text-gray-400 font-normal text-sm'>
+                                    Your Competitors 
+                                    {/* <span className='text-gray-400 font-normal text-sm'>
                                         {acceptedCompetitors.length > 0 ? `- ${acceptedCompetitors.length}` : ''}+
-                                    </span>
+                                    </span> */}
                                     {acceptedCompetitors.length > 0 ? `( ${acceptedCompetitors.length}/10)` : ''}
                                 </h2>
                             </div>
@@ -304,7 +304,7 @@ export default function CompetitorSelector({
                             )}
                         </CardContent>
                     </Card>
-                    <DrawerContent className="w-[25%] right-0 left-auto top-0 bottom-0 m-0 rounded-bl-md items-center Create-Competitor">
+                    <DrawerContent className="min-w-[25%] right-0 left-auto top-0 bottom-0 m-0 rounded-bl-md items-center Create-Competitor">
                         <div className="mx-auto w-full max-w-sm">
                             <DrawerHeader className='p-0 mb-5'>
                                 <DrawerTitle className="text-xl font-semibold mb-6 mt-10">Add New Competitor</DrawerTitle>

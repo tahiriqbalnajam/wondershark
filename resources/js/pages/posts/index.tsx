@@ -223,14 +223,14 @@ export default function PostsIndex({ posts, brand }: Props) {
                                 <p className="text-sm mb-4">
                                     Get started by creating your first post.
                                 </p>
-                                <div className="inline-block">
+                                {/* <div className="inline-block">
                                     <Button asChild className='primary-btn'>
                                         <Link href={createPostUrl}>
                                             <CirclePlus className="h-4 w-4 mr-2" />
                                             Add Post
                                         </Link>
                                     </Button>
-                                </div>
+                                </div> */}
                             </div>
                         ) : (
                             <Tabs defaultValue="all-posts">
