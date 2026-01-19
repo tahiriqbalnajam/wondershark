@@ -248,8 +248,8 @@ export default function Index({ analyses, filters }: PageProps) {
                                 <CardHeader>
                                     <div className="flex justify-between items-start">
                                         <div className="space-y-2">
-                                            <div className="flex items-center space-x-3">
-                                                <CardTitle className="text-lg">
+                                            <div className="lg:flex block items-center space-x-3">
+                                                <CardTitle className="text-lg card-title">
                                                     {analysis.target_url}
                                                 </CardTitle>
                                                 <Badge className={getStatusColor(analysis.status)}>
