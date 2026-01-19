@@ -73,6 +73,7 @@ type Props = {
     title: string;
     files: FileModel[];
     folders: FolderModel[];
+    allFiles: FileModel[]; 
     allFolders: FolderModel[];
     brands: Brand[];
     currentBrand?: number;
@@ -110,7 +111,7 @@ function getDescendantFolders(folders: FolderModel[], parentId: number | null, t
     return descendants;
 }
 
-export default function DocsFilesIndex({ title, files, folders, allFolders, brands, currentBrand, currentFolder }: Props) {
+export default function DocsFilesIndex({ title, files, allFiles, folders, allFolders, brands, currentBrand, currentFolder }: Props) {
     const folderParts = currentFolder ? currentFolder.split('/') : [];
     const dynamicBreadcrumbs: BreadcrumbItem[] = [
         {
@@ -335,44 +336,47 @@ export default function DocsFilesIndex({ title, files, folders, allFolders, bran
                     </div>
                 </div>
 
-                <Card>
-                    <CardHeader className='flex justify-between flex-row items-center'>
+                <Card className="border-0 shadow-md">
+                    <CardHeader className='flex justify-between flex-row items-center px-6 py-5 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white'>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild className='rounded-full primary-btn btn-sm border-0'>
-                                <Button variant="outline"><CirclePlus/> New ...</Button>
+                                <Button variant="outline" className="bg-white hover:bg-gray-100"><CirclePlus className="h-4 w-4 mr-2"/> New ...</Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="max-w-40" align="start">
-                                <DropdownMenuItem onClick={handleCreateFolder}><Folder className="mr-2 px-5 py-3 flex items-center gap-3 text-white" /> Make a New Folder</DropdownMenuItem>
-                                <DropdownMenuItem onClick={handleUploadFilesClick} className='px-5 py-3 flex items-center gap-3'><ArrowUpFromLine/> Upload Files</DropdownMenuItem>
+                                <DropdownMenuItem onClick={handleCreateFolder}><Folder className="mr-2 h-4 w-4" /> Make a New Folder</DropdownMenuItem>
+                                <DropdownMenuItem onClick={handleUploadFilesClick} className='px-5 py-3 flex items-center gap-3'><ArrowUpFromLine className="h-4 w-4 mr-2"/> Upload Files</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <CardTitle className='font-bold'>
+                        <CardTitle className='font-bold text-xl'>
                             Docs & Files
                         </CardTitle>
-                        {/* <DropdownMenu>
-                            <DropdownMenuTrigger asChild className='rounded-full h-10 w-10'>
-                                <Button variant="outline"><Ellipsis/></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="max-w-40" style={{ background:"#FF5B49"}} align="start">
-                                <DropdownMenuLabel className='px-5 py-3 flex items-center gap-3 text-white'><Redo/> Move</DropdownMenuLabel>
-                                <DropdownMenuLabel className='px-5 py-3 flex items-center gap-3 text-white'><Copy/> Copy</DropdownMenuLabel>
-                                <DropdownMenuLabel className='px-5 py-3 flex items-center gap-3 text-white'><SquarePen/> Rename this folder</DropdownMenuLabel>
-                                <DropdownMenuLabel className='px-5 py-3 flex items-center gap-3 text-white'><Archive/> Archive</DropdownMenuLabel>
-                                <DropdownMenuLabel className='px-5 py-3 flex items-center gap-3 text-white'><Trash2/> Put in The Trash</DropdownMenuLabel>
-                            </DropdownMenuContent>
-                        </DropdownMenu> */}
+                        <div className="w-20" />
                     </CardHeader>
-                    <hr/>
-                    <CardContent>
+                    <CardContent className="pt-6">
                         {files.length > 0 || folders.length > 0 ? (
-                            <div className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                 {folders.map((folder) => {
                                     const fullPath = folder.parent ? `${folder.parent}/${folder.name}` : folder.name;
+                                    
+                                    // Get child items for preview
+                                    const childFolders = folders.filter(f => f.parent === fullPath);
+                                    // const childFiles = files.filter(f => f.folder === fullPath);
+                                    const childFiles = allFiles.filter(f => f.folder === fullPath);
+
+
+                                    // total count
+                                    const totalItems = childFolders.length + childFiles.length;
+
+                                    // limit preview to max 3
+                                    const previewItems = [
+                                    ...childFolders.map(f => ({ type: 'folder', name: f.name, mime_type: '' })),
+                                    ...childFiles.map(f => ({ type: 'file', name: f.original_name, mime_type: f.mime_type }))
+                                    ].slice(0, 3);
+
+                                    
                                     return (
                                         <div 
-                                            key={folder.id} 
-                                            className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-gray-50 ${dragOverFolder === folder.id.toString() ? 'bg-blue-50 border-blue-300' : ''}`} 
-                                            onClick={() => !isDragging && router.get('/docs-files', { folder: fullPath })}
+                                            key={folder.id}
                                             draggable={true}
                                             onDragStart={(e) => {
                                                 setIsDragging(true);
@@ -387,87 +391,142 @@ export default function DocsFilesIndex({ title, files, folders, allFolders, bran
                                                 handleDrop(data, folder);
                                                 setDragOverFolder(null);
                                             }}
+                                            className={`group relative flex flex-col bg-white rounded-lg border-2 transition-all duration-200 ${
+                                                dragOverFolder === folder.id.toString() 
+                                                    ? 'border-blue-400 bg-blue-50 shadow-lg' 
+                                                    : 'border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md'
+                                            }`}
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-2xl">📁</span>
-                                                <div>
-                                                    <p className="font-medium">{folder.name}</p>
+                                            {/* Folder Header with Preview */}
+                                            <div 
+                                                onClick={() => !isDragging && router.get('/docs-files', { folder: fullPath })}
+                                                className="flex-1 p-6 flex flex-col items-center justify-center cursor-pointer relative min-h-48"
+                                            >
+                                                {/* Folder Icon + Preview */}
+                                                <div className="relative w-20 h-20 mb-3">
+                                                <div className="text-6xl absolute inset-0 flex items-center justify-center">
+                                                    📁
                                                 </div>
+
+                                                {previewItems.length > 0 && (
+                                                    <div className="absolute -bottom-2 -right-2 flex gap-1">
+                                                    {previewItems.map((item, idx) => (
+                                                        <div
+                                                        key={idx}
+                                                        className="w-6 h-6 bg-white rounded border flex items-center justify-center text-xs shadow"
+                                                        title={item.name}
+                                                        >
+                                                        {item.type === 'folder' ? '📁' : getFileIcon(item.mime_type)}
+                                                        </div>
+                                                    ))}
+
+                                                    {totalItems > 3 && (
+                                                        <div className="w-6 h-6 bg-gray-800 text-white text-[10px] flex items-center justify-center rounded shadow">
+                                                        +{totalItems - 3}
+                                                        </div>
+                                                    )}
+                                                    </div>
+                                                )}
+                                                </div>
+
+                                                
+                                                <h3 className="font-semibold text-gray-900 text-center break-words w-full line-clamp-2 mt-2">{folder.name}</h3>
                                             </div>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent className="max-w-40" style={{ background:"#FF5B49"}} align="start">
-                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRenameFolder(folder); }}className='px-5 py-3 flex items-center gap-3 text-white'>
-                                                        <SquarePen/>
-                                                        Rename
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMoveFolder(folder); }}className='px-5 py-3 flex items-center gap-3 text-white'>
-                                                        <Redo/>
-                                                        Move
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyFolder(folder); }}className='px-5 py-3 flex items-center gap-3 text-white'>
-                                                        <Copy/>
-                                                        Copy
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteFolder(folder); }}className='px-5 py-3 flex items-center gap-3 text-white'>
-                                                        <Trash2/>
-                                                        Delete
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDownloadFolder(folder); }}className='px-5 py-3 flex items-center gap-3 text-white'>
-                                                        <Download/>
-                                                        Download 
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+
+                                            {/* Folder Footer */}
+                                            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between bg-gray-50 rounded-b">
+                                                <span className="text-sm font-medium text-gray-700">{totalItems} {totalItems === 1 ? 'item' : 'items'}</span>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent className="max-w-40" style={{ background:"#FF5B49"}} align="end">
+                                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRenameFolder(folder); }}className='px-5 py-3 flex items-center gap-3 text-white'>
+                                                            <SquarePen className="h-4 w-4"/>
+                                                            Rename
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMoveFolder(folder); }}className='px-5 py-3 flex items-center gap-3 text-white'>
+                                                            <Redo className="h-4 w-4"/>
+                                                            Move
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyFolder(folder); }}className='px-5 py-3 flex items-center gap-3 text-white'>
+                                                            <Copy className="h-4 w-4"/>
+                                                            Copy
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDownloadFolder(folder); }}className='px-5 py-3 flex items-center gap-3 text-white'>
+                                                            <Download className="h-4 w-4"/>
+                                                            Download 
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteFolder(folder); }}className='px-5 py-3 flex items-center gap-3 text-red-600'>
+                                                            <Trash2 className="h-4 w-4"/>
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
                                         </div>
                                     );
                                 })}
                                 {files.map((file) => (
                                     <div 
-                                        key={file.id} 
-                                        className="flex items-center justify-between p-4 border rounded-lg"
+                                        key={file.id}
                                         draggable={true}
                                         onDragStart={(e) => {
                                             e.dataTransfer.setData('text/plain', 'file:' + file.id.toString());
                                         }}
+                                        className="group relative flex flex-col bg-white rounded-lg border-2 border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md transition-all duration-200"
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-2xl">{getFileIcon(file.mime_type)}</span>
-                                            <div>
-                                                <p className="font-medium">{file.original_name}</p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {file.size_for_humans} • Uploaded by {file.user.name} • {new Date(file.created_at).toLocaleDateString()}
-                                                </p>
+                                        {/* File Preview/Icon */}
+                                        <div className="relative h-40 bg-gradient-to-br from-gray-50 to-gray-100 rounded-t flex items-center justify-center overflow-hidden">
+                                            <span className="text-6xl">{getFileIcon(file.mime_type)}</span>
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+                                        </div>
+
+                                        {/* File Info */}
+                                        <div className="flex-1 p-4 flex flex-col">
+                                            <h3 className="font-semibold text-gray-900 text-sm break-words line-clamp-2 mb-2">{file.original_name}</h3>
+                                            <div className="text-xs text-gray-500 space-y-1">
+                                                <p>{file.size_for_humans}</p>
+                                                <p>{new Date(file.created_at).toLocaleDateString()}</p>
+                                                <p className="text-gray-400">by {file.user.name}</p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <Button variant="outline" size="sm" asChild>
+
+                                        {/* File Actions */}
+                                        <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between bg-gray-50 rounded-b">
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="h-8 px-2 text-xs"
+                                                asChild
+                                            >
                                                 <a href={file.url} target="_blank" rel="noopener noreferrer">
-                                                    <Download className="h-4 w-4" />
+                                                    <Download className="h-3 w-3 mr-1" />
+                                                    Download
                                                 </a>
                                             </Button>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="sm">
+                                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                                                         <MoreVertical className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent className="max-w-40" style={{ background:"#FF5B49"}} align="start">
-                                                    <DropdownMenuItem onClick={() => handleMove(file)} className='px-5 py-3 flex items-center gap-3 text-white'><Redo/>
-                                                        Move to Folder
+                                                <DropdownMenuContent className="max-w-40" style={{ background:"#FF5B49"}} align="end">
+                                                    <DropdownMenuItem onClick={() => handleMove(file)} className='px-5 py-3 flex items-center gap-3 text-white'>
+                                                        <Redo className="h-4 w-4"/>
+                                                        Move
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleCopy(file)}  className='px-5 py-3 flex items-center gap-3 text-white'><Copy/>
-                                                        copy
+                                                    <DropdownMenuItem onClick={() => handleCopy(file)}  className='px-5 py-3 flex items-center gap-3 text-white'>
+                                                        <Copy className="h-4 w-4"/>
+                                                        Copy
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleDelete(file)}className='px-5 py-3 flex items-center gap-3 text-white'><Trash2/>
-                                                        Move to Trash
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleDownloadFile(file)}className='px-5 py-3 flex items-center gap-3 text-white'><Download/>
-                                                        Download File
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem onClick={() => handleDelete(file)}className='px-5 py-3 flex items-center gap-3 text-red-600'>
+                                                        <Trash2 className="h-4 w-4"/>
+                                                        Delete
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
@@ -476,10 +535,10 @@ export default function DocsFilesIndex({ title, files, folders, allFolders, bran
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-center py-12 text-muted-foreground">
-                                <FileText className="h-20 w-20 mx-auto mb-4 opacity-50" />
-                                <h3 className="text-lg font-semibold mb-2">No files uploaded</h3>
-                                <p className="text-sm mb-4">
+                            <div className="text-center py-16 text-muted-foreground">
+                                <FileText className="h-24 w-24 mx-auto mb-4 opacity-30" />
+                                <h3 className="text-lg font-semibold mb-2 text-gray-600">No files uploaded</h3>
+                                <p className="text-sm mb-6 text-gray-500">
                                     Start by uploading your documents, images, or other files.
                                 </p>
                                 <label htmlFor="file-upload-empty">
@@ -498,9 +557,9 @@ export default function DocsFilesIndex({ title, files, folders, allFolders, bran
                                     accept="*/*"
                                 />
                                 {data.file && (
-                                    <div className="mt-4">
-                                        <p className="text-sm">Selected: {data.file.name}</p>
-                                        <Button onClick={handleUpload} disabled={uploading} className="mt-2">
+                                    <div className="mt-6">
+                                        <p className="text-sm text-gray-600">Selected: {data.file.name}</p>
+                                        <Button onClick={handleUpload} disabled={uploading} className="mt-4">
                                             {uploading ? 'Uploading...' : 'Upload File'}
                                         </Button>
                                     </div>
@@ -517,7 +576,7 @@ export default function DocsFilesIndex({ title, files, folders, allFolders, bran
                         <DialogTitle>Move File to Folder</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
-                        <p>                                                                       r:</p>
+                        <p>Select a destination folder:</p>
                         <select
                             className="border border-gray-300 rounded-md px-3 py-2 w-full"
                             onChange={(e) => {

@@ -38,6 +38,9 @@ class DocsFileController extends Controller
         $allFolders = Folder::query()
             ->when($brandId, fn($q) => $q->where('brand_id', $brandId))
             ->get();
+        $allFiles = File::query()
+            ->when($brandId, fn($q) => $q->where('brand_id', $brandId))
+            ->get();
 
         $brands = auth()->user()->getAccessibleBrands();
 
@@ -45,6 +48,7 @@ class DocsFileController extends Controller
             'title' => 'Docs & Files',
             'files' => $files,
             'folders' => $folders,
+            'allFiles' => $allFiles,
             'allFolders' => $allFolders,
             'brands' => $brands,
             'currentBrand' => $brandId,
