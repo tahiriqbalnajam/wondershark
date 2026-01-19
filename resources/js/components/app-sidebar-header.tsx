@@ -55,7 +55,7 @@ export function AppSidebarHeader({ breadcrumbs = [], title, logo, website }: { b
     const { toggleSidebar } = useSidebar();
     return (
         <header className="border-b border-sidebar-border/50 pb-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 mb-6">
-            <div className="block mb-2">
+            <div className="lg:flex justify-between items-center mb-2">
                 <div className="flex items-center gap-2 md:justify-start justify-between">
                     {/* <SidebarTrigger className="order-1 md:order-0 block md:none"/>
                     <SidebarTrigger className="order-1 md:order-0 none md:block">
