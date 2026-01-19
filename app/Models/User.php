@@ -109,6 +109,11 @@ class User extends Authenticatable
             return true;
         }
 
+        // Brand user can access their assigned brand
+        if ($brand->user_id === $this->id) {
+            return true;
+        }
+
         // Agency owner can access their own brands
         if ($brand->agency_id === $this->id) {
             return true;

@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -95,9 +96,47 @@ class UserController extends Controller
                 'post_creation_note' => $request->post_creation_note,
             ]);
 
+            Log::info('User created, checking roles', [
+                'user_id' => $user->id,
+                'roles_request' => $request->roles,
+                'has_roles' => !empty($request->roles),
+            ]);
+
             // Assign roles
-            if ($request->roles) {
+            if ($request->roles && !empty($request->roles)) {
                 $user->assignRole($request->roles);
+                
+                Log::info('Roles assigned, checking for brand role', [
+                    'roles' => $request->roles,
+                    'is_array' => is_array($request->roles),
+                    'has_brand' => in_array('brand', $request->roles),
+                ]);
+                
+                // If brand role is assigned, create a brand record
+                if (in_array('brand', $request->roles)) {
+                    // Get the authenticated admin user as the agency
+                    $adminUser = Auth::user();
+                    
+                    Log::info('Creating brand record', [
+                        'admin_user_id' => $adminUser->id,
+                        'brand_user_id' => $user->id,
+                    ]);
+                    
+                    $brand = \App\Models\Brand::create([
+                        'agency_id' => $adminUser->id,
+                        'user_id' => $user->id,
+                        'name' => $request->name . "'s Brand",
+                        'website' => null,
+                        'description' => 'Brand created for ' . $request->name,
+                        'status' => 'active',
+                    ]);
+                    
+                    Log::info('Brand record created successfully', [
+                        'brand_id' => $brand->id,
+                        'user_id' => $user->id,
+                        'user_email' => $user->email,
+                    ]);
+                }
             }
 
             // Assign direct permissions

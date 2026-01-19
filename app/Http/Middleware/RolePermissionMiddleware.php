@@ -28,8 +28,11 @@ class RolePermissionMiddleware
 
         // Check for specific role (skip if role is 'null' string)
         if ($role && $role !== 'null') {
+            // Support multiple roles separated by pipe |
+            $roles = explode('|', $role);
+            
             // Admin users have access to all roles
-            if (!$user->hasRole('admin') && !$user->hasRole($role)) {
+            if (!$user->hasRole('admin') && !$user->hasAnyRole($roles)) {
                 abort(403, 'Access denied. You do not have the required role.');
             }
         }

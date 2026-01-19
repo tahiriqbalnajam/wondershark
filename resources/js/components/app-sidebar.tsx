@@ -54,11 +54,11 @@ const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, sele
     //     });
     // }
 
-    // Posts - only for agency users
-    if (permissions.hasRole('agency')) {
+    // Posts - for agency and brand users, brand users must have brand ID
+    if (permissions.hasAnyRole(['agency', 'brand']) && selectedBrandId) {
         items.push({
             title: 'Posts',
-            href: selectedBrandId ? `/brands/${selectedBrandId}/posts` : '/posts',
+            href: `/brands/${selectedBrandId}/posts`,
             icon: FileText,
         });
     }
@@ -78,17 +78,17 @@ const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, sele
 const getPreferenceNavItems = (permissions: ReturnType<typeof usePermissions>, selectedBrandId?: number): NavItem[] => {
     const items: NavItem[] = [];
 
-    // Only show for agency users
-    if (permissions.hasRole('agency')) {
+    // Show for agency and brand users, brand users must have brand ID
+    if (permissions.hasAnyRole(['agency', 'brand']) && selectedBrandId) {
         items.push({
             title: 'Competitors',
-            href: selectedBrandId ? `/brands/${selectedBrandId}/competitors` : '/competitors',
+            href: `/brands/${selectedBrandId}/competitors`,
             icon: Shield,
         });
 
         items.push({
             title: 'Prompts',
-            href: selectedBrandId ? `/brands/${selectedBrandId}/prompts` : '/prompts',
+            href: `/brands/${selectedBrandId}/prompts`,
             icon: MessageSquare,
         });
     }
@@ -99,20 +99,26 @@ const getPreferenceNavItems = (permissions: ReturnType<typeof usePermissions>, s
 const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, selectedBrandId?: number): NavItem[] => {
     const items: NavItem[] = [];
 
-    // People - for agency users
+    // People - for agency only
     if (permissions.hasRole('agency')) {
         items.push({
             title: 'People',
             href: '/agency/people',
             icon: Users,
         });
+    }
 
+    // Brand - for agency and brand users, brand users must have brand ID
+    if (permissions.hasAnyRole(['agency', 'brand']) && selectedBrandId) {
         items.push({
             title: 'Brand',
-            href: selectedBrandId ? `/brands/${selectedBrandId}/edit` : '/brands',
+            href: `/brands/${selectedBrandId}/edit`,
             icon: Package,
         });
+    }
 
+    // Agency settings - only for agency users
+    if (permissions.hasRole('agency')) {
         items.push({
             title: 'Agency',
             href: '/settings/agency',
@@ -253,10 +259,17 @@ export function AppSidebar() {
     
     const currentBrandId = getCurrentBrandId();
     const selectedBrand = page.props.selectedBrand;
+    const user = page.props.auth.user;
+    const brands = page.props.brands || [];
     
-    // Prioritize currentBrandId from URL over selectedBrand from session
-    // This ensures menu links update immediately when switching brands
-    const brandIdForMenu = currentBrandId || selectedBrand?.id;
+    // For brand role users, use their assigned brand (first brand in the list)
+    // For agency/admin users, prioritize currentBrandId from URL over selectedBrand from session
+    let brandIdForMenu: number | undefined;
+    if (permissions.hasRole('brand') && brands.length > 0) {
+        brandIdForMenu = brands[0].id;
+    } else {
+        brandIdForMenu = currentBrandId || selectedBrand?.id;
+    }
     
     const generalNavItems = getGeneralNavItems(permissions, brandIdForMenu, isRankingPage);
     const preferenceNavItems = getPreferenceNavItems(permissions, brandIdForMenu);
@@ -265,9 +278,9 @@ export function AppSidebar() {
     const docsFilesNavItems = getDocsFilesNavItems(permissions);
 
     return (
-        <Sidebar collapsible="icon" variant="inset" className='left-side-wrapp p-0 rounded-xl'>
+        <Sidebar>
             <SidebarHeader>
-                {!permissions.hasRole('brand') && <NavUser />}
+                <NavUser />
                 
                 {/* New Brand Button for Agency Users */}
                 {/* {permissions.hasRole('agency') && (
@@ -305,21 +318,6 @@ export function AppSidebar() {
                 {/* Settings Section */}
                 {settingsNavItems.length > 0 && (
                     <NavMain items={settingsNavItems} label="Settings" />
-                )}
-                {orderNavItems.length > 0 && (
-                    <NavMain items={orderNavItems} label="Order" />
-                )}
-                {permissions.hasRole('brand') && (
-                    <Link
-                        href={route('logout')}
-                        method="post"
-                        as="button"
-                        onClick={handleLogout}
-                        className="ml-4  flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition"
-                    >
-                        <LogOut className="h-4 w-4" />
-                        Logout
-                    </Link>
                 )}
             </SidebarContent>
         </Sidebar>

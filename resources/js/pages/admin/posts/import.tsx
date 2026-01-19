@@ -154,7 +154,7 @@ export default function AdminPostImport({ brands = [], agencies = [], success, e
                                     <div className="grid gap-4 md:grid-cols-2">
                                         <div className="space-y-2">
                                             <Label htmlFor="agency_filter">Filter by Agency (optional)</Label>
-                                            <Select value={selectedAgency} onValueChange={(value) => setSelectedAgency(value === 'all' ? '' : value)}>
+                                            <Select value={selectedAgency} onValueChange={(value) => setSelectedAgency(value)}>
                                                 <SelectTrigger>
                                                     <SelectValue placeholder="All agencies" />
                                                 </SelectTrigger>
@@ -171,7 +171,7 @@ export default function AdminPostImport({ brands = [], agencies = [], success, e
 
                                         <div className="space-y-2">
                                             <Label htmlFor="default_brand_id">Default Brand (optional)</Label>
-                                            <Select value={data.default_brand_id} onValueChange={(value) => setData('default_brand_id', value === 'none' ? '' : value)}>
+                                            <Select value={data.default_brand_id} onValueChange={(value) => setData('default_brand_id', value)}>
                                                 <SelectTrigger>
                                                     <SelectValue placeholder="Select a default brand" />
                                                 </SelectTrigger>

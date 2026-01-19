@@ -239,8 +239,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('api/competitors/fetch-for-brand-creation', [App\Http\Controllers\CompetitorController::class, 'fetchForBrandCreation'])->name('competitors.fetch-for-brand-creation');
     });
 
-    // Brand Management Routes - Only for agency users
-    Route::middleware('role.permission:null,agency')->group(function () {
+    // Brand Management Routes - For agency and brand users
+    Route::middleware('role.permission:null,agency|brand')->group(function () {
         Route::resource('brands', BrandController::class);
         Route::put('brands/{brand}/status', [BrandController::class, 'updateStatus'])->name('brands.status');
         Route::post('brands/generate-prompts', [BrandController::class, 'generatePrompts'])->name('brands.generatePrompts');
