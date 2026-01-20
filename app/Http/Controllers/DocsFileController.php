@@ -17,10 +17,13 @@ class DocsFileController extends Controller
      */
     public function index(Request $request): Response
     {
+        $user = auth()->user();
         $brandId = $request->get('brand_id');
         $folder = $request->get('folder');
+        $isAdmin = $user->hasRole('admin');
 
         $files = File::query()
+            ->when(!$isAdmin, fn ($q) => $q->where('user_id', $user->id))
             ->when($brandId, fn($q) => $q->where('brand_id', $brandId))
             ->when($folder, fn($q) => $q->where('folder', $folder))
             ->when(!$folder, fn($q) => $q->whereNull('folder'))
@@ -29,6 +32,7 @@ class DocsFileController extends Controller
             ->get();
 
         $folders = Folder::query()
+            ->when(!$isAdmin, fn ($q) => $q->where('user_id', $user->id))
             ->when($brandId, fn($q) => $q->where('brand_id', $brandId))
             ->when($folder, fn($q) => $q->where('parent', $folder))
             ->when(!$folder, fn($q) => $q->whereNull('parent'))
@@ -36,9 +40,11 @@ class DocsFileController extends Controller
             ->get();
 
         $allFolders = Folder::query()
+            ->when(!$isAdmin, fn ($q) => $q->where('user_id', $user->id))
             ->when($brandId, fn($q) => $q->where('brand_id', $brandId))
             ->get();
         $allFiles = File::query()
+            ->when(!$isAdmin, fn ($q) => $q->where('user_id', $user->id))
             ->when($brandId, fn($q) => $q->where('brand_id', $brandId))
             ->get();
 
@@ -174,7 +180,8 @@ class DocsFileController extends Controller
     public function move(File $file, Request $request)
     {
         if ($file->user_id !== auth()->id()) {
-            abort(403);
+            return redirect()->back()
+                ->withErrors(['permission' => 'You are not allowed to modify this file.']);
         }
 
         $validated = $request->validate([
@@ -239,7 +246,8 @@ class DocsFileController extends Controller
     public function updateFolder(Folder $folder, Request $request)
     {
         if ($folder->user_id !== auth()->id()) {
-            abort(403);
+            return redirect()->back()
+                ->withErrors(['permission' => 'You are not allowed to modify this folder.']);
         }
 
         $validated = $request->validate([
@@ -257,7 +265,8 @@ class DocsFileController extends Controller
     public function moveFolder(Folder $folder, Request $request)
     {
         if ($folder->user_id !== auth()->id()) {
-            abort(403);
+            return redirect()->back()
+                ->withErrors(['permission' => 'You are not allowed to modify this folder.']);
         }
 
         $validated = $request->validate([
@@ -377,6 +386,13 @@ class DocsFileController extends Controller
             return redirect()->back()->with('error', 'Failed to create zip file: ' . $e->getMessage());
         }
     }
+    public function download(File $file)
+        {
+            return response()->download(
+                storage_path('app/' . $file->path),
+                $file->original_name
+            );
+        }
     
     /**
      * Clean up old temporary files
