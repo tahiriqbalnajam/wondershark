@@ -76,6 +76,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('docs-files.folders.destroy');
     Route::get('docs-files/folders/{folder}/download', [\App\Http\Controllers\DocsFileController::class, 'downloadFolder'])
         ->name('docs-files.folders.download');
+        Route::get('/docs-files/{file}/download', [DocsFilesController::class, 'download'])
+    ->name('docs-files.download');
 
     // Brand-specific dashboard
     Route::get('brands/{brand}/dashboard', [\App\Http\Controllers\BrandController::class, 'dashboard'])

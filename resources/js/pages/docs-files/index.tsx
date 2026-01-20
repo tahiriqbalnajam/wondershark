@@ -245,8 +245,14 @@ export default function DocsFilesIndex({ title, files, allFiles, folders, allFol
     };
 
     const handleDownloadFile = (file: FileModel) => {
-        window.open(file.url, '_blank');
+        const link = document.createElement('a');
+        link.href = `/docs-files/${file.id}/download`;
+        link.download = file.original_name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
+
 
     const handleDrop = (data: string, folder: FolderModel) => {
         const [type, id] = data.split(':');
@@ -497,17 +503,16 @@ export default function DocsFilesIndex({ title, files, allFiles, folders, allFol
 
                                         {/* File Actions */}
                                         <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between bg-gray-50 rounded-b">
-                                            <Button 
-                                                variant="outline" 
-                                                size="sm" 
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
                                                 className="h-8 px-2 text-xs"
-                                                asChild
+                                                onClick={() => handleDownloadFile(file)}
                                             >
-                                                <a href={file.url} target="_blank" rel="noopener noreferrer">
-                                                    <Download className="h-3 w-3 mr-1" />
-                                                    Download
-                                                </a>
+                                                <Download className="h-3 w-3 mr-1" />
+                                                Download
                                             </Button>
+
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
