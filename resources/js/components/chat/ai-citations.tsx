@@ -44,7 +44,7 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
     // Helper function to strip HTML and get plain text
     const stripHtml = (html: string | undefined): string => {
         if (!html) return '';
-        
+
         // Create a temporary div element to parse HTML
         const tmp = document.createElement('DIV');
         tmp.innerHTML = html;
@@ -68,14 +68,23 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
                     .filter(item => item !== null)
                     .slice(0, 10) || [];
 
-                // Format date
+                // Format date - normalize both dates to midnight in user's local timezone
                 const daysAgo = prompt.analysis_completed_at
-                    ? Math.floor((new Date().getTime() - new Date(prompt.analysis_completed_at).getTime()) / (1000 * 60 * 60 * 24))
+                    ? (() => {
+                        const now = new Date();
+                        const analysisDate = new Date(prompt.analysis_completed_at);
+
+                        // Set both dates to midnight in user's local timezone for accurate day comparison
+                        const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        const analysisMidnight = new Date(analysisDate.getFullYear(), analysisDate.getMonth(), analysisDate.getDate());
+
+                        return Math.floor((todayMidnight.getTime() - analysisMidnight.getTime()) / (1000 * 60 * 60 * 24));
+                    })()
                     : null;
-                const dateText = daysAgo !== null 
-                    ? daysAgo === 0 ? 'Today' 
-                    : daysAgo === 1 ? 'Yesterday' 
-                    : `${daysAgo} days ago`
+                const dateText = daysAgo !== null
+                    ? daysAgo === 0 ? 'Today'
+                        : daysAgo === 1 ? 'Yesterday'
+                            : `${daysAgo} days ago`
                     : 'Not analyzed';
 
                 return (
@@ -91,7 +100,7 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
                                 <div className="flex-shrink-0">
                                     {prompt.ai_model ? (
                                         prompt.ai_model.icon ? (
-                                            <img 
+                                            <img
                                                 src={`/storage/${prompt.ai_model.icon}`}
                                                 alt={prompt.ai_model.display_name}
                                                 className="w-4 h-8 object-contain rounded"
