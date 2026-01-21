@@ -134,6 +134,8 @@ export default function DocsFilesIndex({ title, files, allFiles, folders, allFol
     const [showMoveModal, setShowMoveModal] = useState(false);
     const [showCopyModal, setShowCopyModal] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
+    const [selectedMoveFolderDestination, setSelectedMoveFolderDestination] = useState('');
+    const [selectedCopyFolderDestination, setSelectedCopyFolderDestination] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { data, setData, post, processing, errors } = useForm({
         file: null as File | null,
@@ -650,20 +652,9 @@ export default function DocsFilesIndex({ title, files, allFiles, folders, allFol
                         <p>Select a destination folder:</p>
                         <select
                             className="border border-gray-300 rounded-md px-3 py-2 w-full"
+                            value={selectedMoveFolderDestination}
                             onChange={(e) => {
-                                const value = e.target.value;
-                                if (selectedFolder) {
-                                    router.put(`/docs-files/folders/${selectedFolder.id}/move`, { parent: value }, {
-                                        onSuccess: () => {
-                                            setShowMoveFolderModal(false);
-                                            setSelectedFolder(null);
-                                            router.reload();
-                                        },
-                                        onError: (errors: any) => {
-                                            toast.error(errors.folder || 'Cannot move folder to this location.');
-                                        }
-                                    });
-                                }
+                                setSelectedMoveFolderDestination(e.target.value);
                             }}
                         >
                             <option value="">Root</option>
@@ -694,6 +685,26 @@ export default function DocsFilesIndex({ title, files, allFiles, folders, allFol
                                     );
                                 })}
                         </select>
+                        <Button 
+                            onClick={() => {
+                                if (selectedFolder) {
+                                    router.put(`/docs-files/folders/${selectedFolder.id}/move`, { parent: selectedMoveFolderDestination }, {
+                                        onSuccess: () => {
+                                            setShowMoveFolderModal(false);
+                                            setSelectedFolder(null);
+                                            setSelectedMoveFolderDestination('');
+                                            router.reload();
+                                        },
+                                        onError: (errors: any) => {
+                                            toast.error(errors.folder || 'Cannot move folder to this location.');
+                                        }
+                                    });
+                                }
+                            }}
+                            className="w-full"
+                        >
+                            Move This Folder
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -706,15 +717,9 @@ export default function DocsFilesIndex({ title, files, allFiles, folders, allFol
                         <p>Select a destination folder:</p>
                         <select
                             className="border border-gray-300 rounded-md px-3 py-2 w-full"
+                            value={selectedCopyFolderDestination}
                             onChange={(e) => {
-                                const value = e.target.value;
-                                if (selectedFolder) {
-                                    router.post(`/docs-files/folders/${selectedFolder.id}/copy`, { parent: value }, {
-                                        onSuccess: () => router.reload()
-                                    });
-                                    setShowCopyFolderModal(false);
-                                    setSelectedFolder(null);
-                                }
+                                setSelectedCopyFolderDestination(e.target.value);
                             }}
                         >
                             <option value="">Root</option>
@@ -727,6 +732,23 @@ export default function DocsFilesIndex({ title, files, allFiles, folders, allFol
                                 );
                             })}
                         </select>
+                        <Button 
+                            onClick={() => {
+                                if (selectedFolder) {
+                                    router.post(`/docs-files/folders/${selectedFolder.id}/copy`, { parent: selectedCopyFolderDestination }, {
+                                        onSuccess: () => {
+                                            setShowCopyFolderModal(false);
+                                            setSelectedFolder(null);
+                                            setSelectedCopyFolderDestination('');
+                                            router.reload();
+                                        }
+                                    });
+                                }
+                            }}
+                            className="w-full"
+                        >
+                            Copy This Folder
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>

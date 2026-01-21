@@ -280,9 +280,64 @@ class DocsFileController extends Controller
             ])->with('error', 'Cannot move folder to this location.');
         }
 
+        // Get old folder path
+        $oldFolderPath = $folder->parent ? $folder->parent . '/' . $folder->name : $folder->name;
+        
+        // Update the folder's parent
         $folder->update(['parent' => $validated['parent']]);
+        
+        // Get new folder path
+        $newFolderPath = $validated['parent'] ? $validated['parent'] . '/' . $folder->name : $folder->name;
+        
+        // Update all subfolders' parent paths
+        $this->updateSubfolderPaths($oldFolderPath, $newFolderPath);
+        
+        // Update all files' folder paths
+        $this->updateFilePaths($oldFolderPath, $newFolderPath);
 
         return redirect()->back()->with('success', 'Folder moved successfully.');
+    }
+
+    /**
+     * Recursively update all subfolders' parent paths when a folder is moved.
+     */
+    private function updateSubfolderPaths($oldPath, $newPath)
+    {
+        $subfolders = Folder::where('parent', $oldPath)->get();
+        
+        foreach ($subfolders as $subfolder) {
+            $oldSubfolderPath = $oldPath . '/' . $subfolder->name;
+            $newSubfolderPath = $newPath . '/' . $subfolder->name;
+            
+            // Update this subfolder
+            $subfolder->update(['parent' => $newPath]);
+            
+            // Recursively update its children
+            $this->updateSubfolderPaths($oldSubfolderPath, $newSubfolderPath);
+        }
+    }
+
+    /**
+     * Recursively update all files' folder paths when a folder is moved.
+     */
+    private function updateFilePaths($oldPath, $newPath)
+    {
+        // Get all files that are in this folder or any of its subfolders
+        // by finding files where folder matches the old path pattern
+        $files = File::where('folder', $oldPath)
+            ->orWhere('folder', 'LIKE', $oldPath . '/%')
+            ->get();
+        
+        foreach ($files as $file) {
+            if ($file->folder === $oldPath) {
+                // Direct file in the moved folder
+                $file->update(['folder' => $newPath]);
+            } else {
+                // File in a subfolder - replace the old path prefix with the new path
+                $newFolderPath = str_replace($oldPath . '/', $newPath . '/', $file->folder);
+                $file->update(['folder' => $newFolderPath]);
+            }
+        }
     }
 
     /**
