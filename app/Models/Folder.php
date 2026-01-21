@@ -8,7 +8,7 @@ use Illuminate\Support\Collection;
 
 class Folder extends Model
 {
-    protected $fillable = ['name', 'parent', 'user_id', 'brand_id'];
+    protected $fillable = ['name', 'parent', 'user_id', 'brand_id', 'color'];
 
     public function user(): BelongsTo
     {

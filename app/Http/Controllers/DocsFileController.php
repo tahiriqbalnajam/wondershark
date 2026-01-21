@@ -59,6 +59,10 @@ class DocsFileController extends Controller
             'brands' => $brands,
             'currentBrand' => $brandId,
             'currentFolder' => $folder,
+            'userPreferences' => [
+                'viewMode' => $user->docs_view_mode ?? 'grid',
+                'sortBy' => $user->docs_sort_by ?? 'date',
+            ],
         ]);
     }
 
@@ -254,9 +258,66 @@ class DocsFileController extends Controller
             'name' => 'required|string|max:255',
         ]);
 
-        $folder->update(['name' => $validated['name']]);
+        $oldName = $folder->name;
+        $newName = $validated['name'];
+        
+        // Get old folder path
+        $oldFolderPath = $folder->parent ? $folder->parent . '/' . $oldName : $oldName;
+        
+        // Update the folder name
+        $folder->update(['name' => $newName]);
+        
+        // Get new folder path
+        $newFolderPath = $folder->parent ? $folder->parent . '/' . $newName : $newName;
+        
+        // Update all subfolders' parent paths
+        $this->updateSubfolderPathsOnRename($oldFolderPath, $newFolderPath);
+        
+        // Update all files' folder paths
+        $this->updateFilePathsOnRename($oldFolderPath, $newFolderPath);
 
         return redirect()->back()->with('success', 'Folder renamed successfully.');
+    }
+
+    /**
+     * Recursively update all subfolders' parent paths when a folder is renamed.
+     */
+    private function updateSubfolderPathsOnRename($oldPath, $newPath)
+    {
+        $subfolders = Folder::where('parent', $oldPath)->get();
+        
+        foreach ($subfolders as $subfolder) {
+            $oldSubfolderPath = $oldPath . '/' . $subfolder->name;
+            $newSubfolderPath = $newPath . '/' . $subfolder->name;
+            
+            // Update this subfolder's parent
+            $subfolder->update(['parent' => $newPath]);
+            
+            // Recursively update its children
+            $this->updateSubfolderPathsOnRename($oldSubfolderPath, $newSubfolderPath);
+        }
+    }
+
+    /**
+     * Recursively update all files' folder paths when a folder is renamed.
+     */
+    private function updateFilePathsOnRename($oldPath, $newPath)
+    {
+        // Get all files that are in this folder or any of its subfolders
+        $files = File::where('folder', $oldPath)
+            ->orWhere('folder', 'LIKE', $oldPath . '/%')
+            ->get();
+        
+        foreach ($files as $file) {
+            if ($file->folder === $oldPath) {
+                // Direct file in the renamed folder
+                $file->update(['folder' => $newPath]);
+            } else {
+                // File in a subfolder - replace the old path prefix with the new path
+                $newFolderPath = str_replace($oldPath . '/', $newPath . '/', $file->folder);
+                $file->update(['folder' => $newFolderPath]);
+            }
+        }
     }
 
     /**
@@ -280,9 +341,64 @@ class DocsFileController extends Controller
             ])->with('error', 'Cannot move folder to this location.');
         }
 
+        // Get old folder path
+        $oldFolderPath = $folder->parent ? $folder->parent . '/' . $folder->name : $folder->name;
+        
+        // Update the folder's parent
         $folder->update(['parent' => $validated['parent']]);
+        
+        // Get new folder path
+        $newFolderPath = $validated['parent'] ? $validated['parent'] . '/' . $folder->name : $folder->name;
+        
+        // Update all subfolders' parent paths
+        $this->updateSubfolderPaths($oldFolderPath, $newFolderPath);
+        
+        // Update all files' folder paths
+        $this->updateFilePaths($oldFolderPath, $newFolderPath);
 
         return redirect()->back()->with('success', 'Folder moved successfully.');
+    }
+
+    /**
+     * Recursively update all subfolders' parent paths when a folder is moved.
+     */
+    private function updateSubfolderPaths($oldPath, $newPath)
+    {
+        $subfolders = Folder::where('parent', $oldPath)->get();
+        
+        foreach ($subfolders as $subfolder) {
+            $oldSubfolderPath = $oldPath . '/' . $subfolder->name;
+            $newSubfolderPath = $newPath . '/' . $subfolder->name;
+            
+            // Update this subfolder
+            $subfolder->update(['parent' => $newPath]);
+            
+            // Recursively update its children
+            $this->updateSubfolderPaths($oldSubfolderPath, $newSubfolderPath);
+        }
+    }
+
+    /**
+     * Recursively update all files' folder paths when a folder is moved.
+     */
+    private function updateFilePaths($oldPath, $newPath)
+    {
+        // Get all files that are in this folder or any of its subfolders
+        // by finding files where folder matches the old path pattern
+        $files = File::where('folder', $oldPath)
+            ->orWhere('folder', 'LIKE', $oldPath . '/%')
+            ->get();
+        
+        foreach ($files as $file) {
+            if ($file->folder === $oldPath) {
+                // Direct file in the moved folder
+                $file->update(['folder' => $newPath]);
+            } else {
+                // File in a subfolder - replace the old path prefix with the new path
+                $newFolderPath = str_replace($oldPath . '/', $newPath . '/', $file->folder);
+                $file->update(['folder' => $newFolderPath]);
+            }
+        }
     }
 
     /**
@@ -455,5 +571,55 @@ class DocsFileController extends Controller
             $subPath = $folderPath . '/' . $subfolder->name;
             $this->addFolderToZip($zip, $subPath, $zipPrefix . $subfolder->name . '/');
         }
+    }
+
+    /**
+     * Save user preferences for docs & files page
+     */
+    public function savePreferences(Request $request)
+    {
+        $validated = $request->validate([
+            'view_mode' => 'required|in:grid,list',
+            'sort_by' => 'required|in:name,date,size',
+        ]);
+
+        $user = auth()->user();
+        $user->update([
+            'docs_view_mode' => $validated['view_mode'],
+            'docs_sort_by' => $validated['sort_by'],
+        ]);
+
+        return redirect()->back()->with('success', 'Preferences saved successfully.');
+        // return response()->json(['success' => true]);
+    }
+
+    public function updateFolderColor(Folder $folder, Request $request)
+    {
+        if ($folder->user_id !== auth()->id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'color' => 'required|string|in:gray,red,orange,yellow,green,blue,purple',
+        ]);
+
+        $folder->update(['color' => $validated['color']]);
+
+        return redirect()->back()->with('success', 'color updated successfully.');
+    }
+
+    public function updateFileColor(File $file, Request $request)
+    {
+        if ($file->user_id !== auth()->id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'color' => 'required|string|in:gray,red,orange,yellow,green,blue,purple',
+        ]);
+
+        $file->update(['color' => $validated['color']]);
+
+        return redirect()->back()->with('success', 'color updated successfully.');
     }
 }
