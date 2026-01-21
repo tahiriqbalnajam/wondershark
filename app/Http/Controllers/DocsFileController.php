@@ -596,7 +596,7 @@ class DocsFileController extends Controller
     public function updateFolderColor(Folder $folder, Request $request)
     {
         if ($folder->user_id !== auth()->id()) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+            return redirect()->back()->with('error', 'Unauthorized');
         }
 
         $validated = $request->validate([
@@ -611,7 +611,7 @@ class DocsFileController extends Controller
     public function updateFileColor(File $file, Request $request)
     {
         if ($file->user_id !== auth()->id()) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+            return redirect()->back()->with('error', 'Unauthorized');
         }
 
         $validated = $request->validate([
