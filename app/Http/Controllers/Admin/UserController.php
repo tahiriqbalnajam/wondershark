@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -85,7 +86,9 @@ class UserController extends Controller
             'post_creation_note' => 'nullable|string|max:500',
         ]);
 
-        DB::transaction(function () use ($request) {
+        $user = null;
+        
+        DB::transaction(function () use ($request, &$user) {
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
@@ -96,7 +99,7 @@ class UserController extends Controller
             ]);
 
             // Assign roles
-            if ($request->roles) {
+            if ($request->roles && !empty($request->roles)) {
                 $user->assignRole($request->roles);
             }
 
@@ -105,6 +108,35 @@ class UserController extends Controller
                 $user->givePermissionTo($request->permissions);
             }
         });
+
+        // Create brand record after transaction if brand role was assigned
+        if ($user && $request->roles && in_array('brand', $request->roles)) {
+            try {
+                $adminUser = Auth::user();
+                
+                $brand = \App\Models\Brand::create([
+                    'agency_id' => $adminUser->id,
+                    'user_id' => $user->id,
+                    'name' => $request->name . "'s Brand",
+                    'website' => null,
+                    'description' => 'Brand created for ' . $request->name,
+                    'status' => 'active',
+                ]);
+                
+                Log::info('Brand record created successfully', [
+                    'brand_id' => $brand->id,
+                    'brand_name' => $brand->name,
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Failed to create brand record', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+            }
+        }
 
         return redirect()->route('admin.users.index')
             ->with('success', 'User created successfully.');

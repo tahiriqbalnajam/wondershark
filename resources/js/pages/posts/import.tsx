@@ -149,7 +149,7 @@ export default function PostImport({ brands = [], success, error, import_errors,
 
                                     <div className="space-y-2">
                                         <Label htmlFor="default_brand_id">Default Brand (optional)</Label>
-                                        <Select value={data.default_brand_id} onValueChange={(value) => setData('default_brand_id', value === 'none' ? '' : value)}>
+                                        <Select value={data.default_brand_id} onValueChange={(value) => setData('default_brand_id', value)}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select a default brand" />
                                             </SelectTrigger>

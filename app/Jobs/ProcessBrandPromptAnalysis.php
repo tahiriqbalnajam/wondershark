@@ -39,6 +39,7 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
                 'prompt' => substr($this->brandPrompt->prompt, 0, 100).'...',
                 'force_regenerate' => $this->forceRegenerate,
                 'preferred_ai_model' => $this->preferredAiModel,
+                'session_id' => substr($this->sessionId, 0, 8),
             ]);
 
             // Skip if already analyzed and not forcing regeneration
@@ -58,8 +59,8 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
                 return;
             }
 
-            // Load brand with competitors
-            $brand = $this->brandPrompt->brand()->with('competitors')->first();
+            // Load brand with competitors and subreddits
+            $brand = $this->brandPrompt->brand()->with(['competitors', 'subreddits'])->first();
 
             if (! $brand) {
                 Log::error('Brand not found for prompt', [
@@ -69,6 +70,14 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
 
                 return;
             }
+
+            Log::info('Brand loaded for analysis', [
+                'brand_id' => $brand->id,
+                'brand_name' => $brand->name,
+                'competitors_count' => $brand->competitors->count(),
+                'subreddits_count' => $brand->subreddits->count(),
+                'subreddits' => $brand->subreddits->pluck('subreddit_name')->toArray(),
+            ]);
 
             // Generate AI response and analyze with session tracking
             $result = $analysisService->analyzePrompt(

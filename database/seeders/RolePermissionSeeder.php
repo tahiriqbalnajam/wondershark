@@ -60,6 +60,7 @@ class RolePermissionSeeder extends Seeder
         $brandRole = Role::firstOrCreate(['name' => 'brand']);
         $brandRole->syncPermissions([
             'view-dashboard',
+            'manage-dashboard',
             'view-settings',
         ]);
 

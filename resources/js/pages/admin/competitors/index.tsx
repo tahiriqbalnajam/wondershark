@@ -133,7 +133,7 @@ export default function AdminCompetitorsIndex({ competitors, filters, agencies, 
     });
 
     const { data: competitorData, setData: setCompetitorData, post, reset } = useForm({
-        brand_id: '',
+        brand_id: undefined as string | undefined,
         name: '',
         trackedName: '',
         domain: '',
@@ -141,7 +141,7 @@ export default function AdminCompetitorsIndex({ competitors, filters, agencies, 
     });
 
     const { data: editCompetitorData, setData: setEditCompetitorData, put, reset: resetEdit } = useForm({
-        brand_id: '',
+        brand_id: undefined as string | undefined,
         name: '',
         trackedName: '',
         domain: '',

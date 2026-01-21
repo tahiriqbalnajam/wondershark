@@ -59,12 +59,17 @@ class HandleInertiaRequests extends Middleware
                       ->limit(10);
             } else {
                 // Regular users see only their own brands
+                // Include brands for: brand users (user_id), agency owners (agency_id), and agency members
                 $query->where(function($q) use ($user) {
                     $q->where('user_id', $user->id)
                       ->orWhere('agency_id', $user->id);
+                    
+                    // Also include brands from user's agency if they are an agency member
+                    $membership = $user->agencyMembership;
+                    if ($membership) {
+                        $q->orWhere('agency_id', $membership->agency_id);
+                    }
                 })
-                ->whereNotNull('website')
-                ->where('website', '!=', '')
                 ->orderBy('updated_at', 'desc')
                 ->limit(10);
             }

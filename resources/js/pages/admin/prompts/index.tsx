@@ -123,7 +123,7 @@ export default function AdminPromptsIndex({ prompts, filters, agencies, brands }
     });
 
     const { data: promptData, setData: setPromptData, post, reset } = useForm({
-        brand_id: '',
+        brand_id: undefined as string | undefined,
         prompt: '',
         type: 'brand',
         country_code: 'US',

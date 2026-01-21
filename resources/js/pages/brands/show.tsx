@@ -10,7 +10,7 @@ import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, B
 import { VisibilityChart } from '@/components/chart/visibility';
 import { BrandVisibilityIndex } from '@/components/dashboard-table/brand-visibility';
 import { AiCitations } from '@/components/chat/ai-citations';
-import { 
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -153,12 +153,12 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
             label: string;
             logo: string | null;
         }> = [
-            {
-                value: 'all',
-                label: 'All AI Models',
-                logo: null,
-            },
-        ];
+                {
+                    value: 'all',
+                    label: 'All AI Models',
+                    logo: null,
+                },
+            ];
 
         // Add dynamic models from database
         aiModels.forEach(model => {
@@ -184,6 +184,8 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                 .replace(/^www\./, '')
                 .split('/')[0];
 
+            if (!cleanDomain) return;
+
             if (!map.has(cleanDomain)) {
                 map.set(cleanDomain, {
                     value: cleanDomain,
@@ -199,54 +201,54 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
     }, [competitiveStats]);
 
     const isWithinDateRange = (dateString: string) => {
-    const date = new Date(dateString);
+        const date = new Date(dateString);
 
-    if (selectedDateRange === 'custom') {
-        if (!customDateRange.from || !customDateRange.to) return true;
+        if (selectedDateRange === 'custom') {
+            if (!customDateRange.from || !customDateRange.to) return true;
 
-        const from = new Date(customDateRange.from);
-        from.setHours(0, 0, 0, 0);
+            const from = new Date(customDateRange.from);
+            from.setHours(0, 0, 0, 0);
 
-        const to = new Date(customDateRange.to);
-        to.setHours(23, 59, 59, 999);
+            const to = new Date(customDateRange.to);
+            to.setHours(23, 59, 59, 999);
 
-        return date >= from && date <= to;
-    }
+            return date >= from && date <= to;
+        }
 
-    const days = parseInt(selectedDateRange);
-    const fromDate = subDays(new Date(), days);
-    return date >= fromDate;
-};
+        const days = parseInt(selectedDateRange);
+        const fromDate = subDays(new Date(), days);
+        return date >= fromDate;
+    };
 
     const aiProviderMap = useMemo(() => {
         const map: Record<string, string[]> = {};
-        
+
         aiModels.forEach(model => {
             if (model.provider) {
                 map[model.name] = [model.provider.toLowerCase()];
             }
         });
-        
+
         return map;
     }, [aiModels]);
-const filteredCompetitiveStats = useMemo(() => {
-    return competitiveStats.filter(stat => {
-        // Date filter
-        if (!isWithinDateRange(stat.analyzed_at)) return false;
+    const filteredCompetitiveStats = useMemo(() => {
+        return competitiveStats.filter(stat => {
+            // Date filter
+            if (!isWithinDateRange(stat.analyzed_at)) return false;
 
-        // Brand filter
-        if (selectedBrand !== 'all') {
-            const domain = stat.entity_url
-                .replace(/^https?:\/\//, '')
-                .replace(/^www\./, '')
-                .split('/')[0];
+            // Brand filter
+            if (selectedBrand !== 'all') {
+                const domain = stat.entity_url
+                    .replace(/^https?:\/\//, '')
+                    .replace(/^www\./, '')
+                    .split('/')[0];
 
-            if (!domain.includes(selectedBrand)) return false;
-        }
+                if (!domain.includes(selectedBrand)) return false;
+            }
 
-        return true;
-    });
-}, [competitiveStats, selectedDateRange, customDateRange, selectedBrand]);
+            return true;
+        });
+    }, [competitiveStats, selectedDateRange, customDateRange, selectedBrand]);
 
 
 
@@ -255,10 +257,10 @@ const filteredCompetitiveStats = useMemo(() => {
         // If we have historical stats, use them
         if (historicalStats && Object.keys(historicalStats).length > 0) {
             const dates = Object.keys(historicalStats).sort();
-            
+
             // Get all unique entities across all dates
             const entitiesMap = new Map<string, { name: string; domain: string }>();
-            
+
             dates.forEach(date => {
                 const dayData = historicalStats[date];
                 Object.keys(dayData).forEach(domain => {
@@ -290,10 +292,10 @@ const filteredCompetitiveStats = useMemo(() => {
                 return dataPoint;
             });
 
-            return { 
-                data: chartData, 
-                granularity: 'day' as 'month' | 'day', 
-                entities 
+            return {
+                data: chartData,
+                granularity: 'day' as 'month' | 'day',
+                entities
             };
         }
 
@@ -311,7 +313,7 @@ const filteredCompetitiveStats = useMemo(() => {
                 .replace(/^https?:\/\//, '')
                 .replace(/^www\./, '')
                 .split('/')[0];
-            
+
             if (!entitiesMap.has(cleanDomain)) {
                 const entity = { name: stat.entity_name, domain: cleanDomain };
                 entitiesMap.set(cleanDomain, entity);
@@ -321,7 +323,7 @@ const filteredCompetitiveStats = useMemo(() => {
 
         // For now, show current visibility as a single data point
         const currentDate = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        
+
         const dataPoint: Record<string, string | number> = {
             date: currentDate
         };
@@ -332,42 +334,42 @@ const filteredCompetitiveStats = useMemo(() => {
                 .replace(/^https?:\/\//, '')
                 .replace(/^www\./, '')
                 .split('/')[0];
-            
+
             dataPoint[cleanDomain] = stat.visibility;
         });
 
-        return { 
-            data: [dataPoint], 
-            granularity: 'month' as 'month' | 'day', 
-            entities 
+        return {
+            data: [dataPoint],
+            granularity: 'month' as 'month' | 'day',
+            entities
         };
     }, [competitiveStats, historicalStats]);
     const filteredVisibilityChartData = useMemo(() => {
-    if (!historicalStats) return visibilityChartData;
+        if (!historicalStats) return visibilityChartData;
 
-    const filteredDates = Object.keys(historicalStats).filter(date =>
-        isWithinDateRange(date)
-    ).sort();
+        const filteredDates = Object.keys(historicalStats).filter(date =>
+            isWithinDateRange(date)
+        ).sort();
 
-    const data = filteredDates.map(dateStr => {
-        const date = new Date(dateStr + 'T00:00:00Z');
-        const row: any = { 
-            date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
-        };
+        const data = filteredDates.map(dateStr => {
+            const date = new Date(dateStr + 'T00:00:00Z');
+            const row: any = {
+                date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+            };
 
-        Object.entries(historicalStats[dateStr]).forEach(([domain, stats]) => {
-            if (selectedBrand !== 'all' && !domain.includes(selectedBrand)) return;
-            row[domain] = stats.visibility;
+            Object.entries(historicalStats[dateStr]).forEach(([domain, stats]) => {
+                if (selectedBrand !== 'all' && !domain.includes(selectedBrand)) return;
+                row[domain] = stats.visibility;
+            });
+
+            return row;
         });
 
-        return row;
-    });
-
-    return {
-        ...visibilityChartData,
-        data,
-    };
-}, [historicalStats, selectedDateRange, customDateRange, selectedBrand]);
+        return {
+            ...visibilityChartData,
+            data,
+        };
+    }, [historicalStats, selectedDateRange, customDateRange, selectedBrand]);
 
     const [selectedPrompt, setSelectedPrompt] = useState<Brand['prompts'][0] | null>(null);
     const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
@@ -380,8 +382,8 @@ const filteredCompetitiveStats = useMemo(() => {
         // }
         // // Set the competitor filter
         // setSelectedCompetitorDomain(domain);
-            setSelectedBrand(domain);
-            setSelectedCompetitorDomain(domain);
+        setSelectedBrand(domain);
+        setSelectedCompetitorDomain(domain);
     };
 
     // Helper function to render trend indicators (only for up/down changes)
@@ -390,17 +392,17 @@ const filteredCompetitiveStats = useMemo(() => {
         if (trend !== 'up' && trend !== 'down') {
             return null;
         }
-        
+
         // Handle null/undefined change values
         if (change == null || isNaN(change)) {
             return null;
         }
-        
+
         const isUp = trend === 'up';
         const colorClass = isUp ? 'text-green-600' : 'text-red-600';
         const Icon = isUp ? TrendingUp : TrendingDown;
         const prefix = isUp ? '+' : '';
-        
+
         return (
             <div className={`flex items-center gap-1 ${colorClass}`}>
                 <Icon className="h-3 w-3" />
@@ -421,48 +423,48 @@ const filteredCompetitiveStats = useMemo(() => {
 
     //     return activePrompts.filter(prompt => {
     //         if (!prompt.prompt_resources) return false;
-            
+
     //         return prompt.prompt_resources.some((resource: { url: string; type: string; title: string; description: string; domain: string; is_competitor_url: boolean; }) => {
     //             const resourceDomain = resource.domain ? resource.domain.replace(/^www\./, '') : '';
     //             return resourceDomain === selectedCompetitorDomain;
     //         });
     //     });
     // }, [brand.prompts, selectedCompetitorDomain]);
-const filteredPrompts = useMemo(() => {
-    return (brand.prompts || []).filter(item => {
-        if (!item.is_active) return false;
+    const filteredPrompts = useMemo(() => {
+        return (brand.prompts || []).filter(item => {
+            if (!item.is_active) return false;
 
-        // Date range filter based on analysis_completed_at
-        if (item.analysis_completed_at && !isWithinDateRange(item.analysis_completed_at)) {
-            return false;
-        }
-
-        // AI model filter
-        if (selectedAIModel !== 'all') {
-            if (item.ai_model?.name !== selectedAIModel) {
+            // Date range filter based on analysis_completed_at
+            if (item.analysis_completed_at && !isWithinDateRange(item.analysis_completed_at)) {
                 return false;
             }
-        }
 
-        // Competitor filter
-        if (selectedCompetitorDomain) {
-            return item.prompt_resources?.some(resource =>
-                resource.domain.replace(/^www\./, '') === selectedCompetitorDomain
-            );
-        }
+            // AI model filter
+            if (selectedAIModel !== 'all') {
+                if (item.ai_model?.name !== selectedAIModel) {
+                    return false;
+                }
+            }
 
-        return true;
-    });
-}, [
-    brand.prompts,
-    selectedCompetitorDomain,
-    selectedAIModel,
-    selectedDateRange,
-    customDateRange,
-]);
+            // Competitor filter
+            if (selectedCompetitorDomain) {
+                return item.prompt_resources?.some(resource =>
+                    resource.domain.replace(/^www\./, '') === selectedCompetitorDomain
+                );
+            }
 
-// const visiblePrompts = filteredPrompts.slice((currentPage - 1) * 9, currentPage * 9);
-const visiblePrompts = filteredPrompts.slice(0, currentPage * 9);
+            return true;
+        });
+    }, [
+        brand.prompts,
+        selectedCompetitorDomain,
+        selectedAIModel,
+        selectedDateRange,
+        customDateRange,
+    ]);
+
+    // const visiblePrompts = filteredPrompts.slice((currentPage - 1) * 9, currentPage * 9);
+    const visiblePrompts = filteredPrompts.slice(0, currentPage * 9);
 
     const handlePromptClick = (prompt: Brand['prompts'][0]) => {
         setSelectedPrompt(prompt);
@@ -516,125 +518,125 @@ const visiblePrompts = filteredPrompts.slice(0, currentPage * 9);
     return (
         <AppLayout title={brand.name}>
             <Head title={brand.name} />
-                {/* Filters Section */}
-                        <div className="flex flex-wrap gap-4 items-end mb-5">
-                            {/* Date Range Filter */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Date Range</label>
-                                <div className="flex gap-2">
-                                    <Select value={selectedDateRange} onValueChange={handleDateRangeSelect}>
-                                        <SelectTrigger className="w-32">
-                                            <SelectValue placeholder="Select range" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="7">7 days</SelectItem>
-                                            <SelectItem value="14">14 days</SelectItem>
-                                            <SelectItem value="30">30 days</SelectItem>
-                                            <SelectItem value="custom">Custom</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+            {/* Filters Section */}
+            <div className="flex flex-wrap gap-4 items-end mb-5">
+                {/* Date Range Filter */}
+                <div className="space-y-2">
+                    <label className="text-sm font-medium">Date Range</label>
+                    <div className="flex gap-2">
+                        <Select value={selectedDateRange} onValueChange={handleDateRangeSelect}>
+                            <SelectTrigger className="w-32">
+                                <SelectValue placeholder="Select range" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="7">7 days</SelectItem>
+                                <SelectItem value="14">14 days</SelectItem>
+                                <SelectItem value="30">30 days</SelectItem>
+                                <SelectItem value="custom">Custom</SelectItem>
+                            </SelectContent>
+                        </Select>
 
-                                    {selectedDateRange === 'custom' && (
-                                        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                                            <PopoverTrigger asChild>
-                                                <Button variant="outline" className="w-fit">
-                                                    <Calendar className="h-4 w-4 mr-2" />
-                                                    {customDateRange.from ? (
-                                                        customDateRange.to ? (
-                                                            `${format(customDateRange.from, 'MMM dd')} - ${format(customDateRange.to, 'MMM dd')}`
-                                                        ) : (
-                                                            format(customDateRange.from, 'MMM dd, yyyy')
-                                                        )
-                                                    ) : (
-                                                        'Pick a date'
-                                                    )}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
-                                                <DayPicker
-                                                    mode="range"
-                                                    selected={{ from: customDateRange.from, to: customDateRange.to }}
-                                                    onSelect={(range) => setCustomDateRange(range || {})}
-                                                    numberOfMonths={2}
+                        {selectedDateRange === 'custom' && (
+                            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" className="w-fit">
+                                        <Calendar className="h-4 w-4 mr-2" />
+                                        {customDateRange.from ? (
+                                            customDateRange.to ? (
+                                                `${format(customDateRange.from, 'MMM dd')} - ${format(customDateRange.to, 'MMM dd')}`
+                                            ) : (
+                                                format(customDateRange.from, 'MMM dd, yyyy')
+                                            )
+                                        ) : (
+                                            'Pick a date'
+                                        )}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <DayPicker
+                                        mode="range"
+                                        selected={{ from: customDateRange.from, to: customDateRange.to }}
+                                        onSelect={(range) => setCustomDateRange(range || {})}
+                                        numberOfMonths={2}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        )}
+                    </div>
+                </div>
+
+                {/* Brand Filter */}
+                <div className="space-y-2">
+                    <label className="text-sm font-medium">Brand</label>
+                    <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                        <SelectTrigger className="w-48">
+                            <SelectValue placeholder="Select brand" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {brands.map((brand) => (
+                                <SelectItem key={brand.value} value={brand.value}>
+                                    {brand.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                {/* AI Model Filter */}
+                <div className="space-y-2">
+                    <label className="text-sm font-medium">AI Model</label>
+                    <Select value={selectedAIModel} onValueChange={setSelectedAIModel}>
+                        <SelectTrigger className="w-56">
+                            <SelectValue>
+                                {(() => {
+                                    const model = aiModelOptions.find(m => m.value === selectedAIModel);
+                                    if (!model) return 'Select AI model';
+
+                                    return (
+                                        <div className="flex items-center gap-2">
+                                            {model.logo && (
+                                                <img
+                                                    src={model.logo}
+                                                    alt={model.label}
+                                                    className="w-4 h-4 object-contain"
                                                 />
-                                            </PopoverContent>
-                                        </Popover>
-                                    )}
-                                </div>
-                            </div>
+                                            )}
+                                            <span>{model.label}</span>
+                                        </div>
+                                    );
+                                })()}
+                            </SelectValue>
+                        </SelectTrigger>
 
-                            {/* Brand Filter */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Brand</label>
-                                <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-                                    <SelectTrigger className="w-48">
-                                        <SelectValue placeholder="Select brand" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {brands.map((brand) => (
-                                            <SelectItem key={brand.value} value={brand.value}>
-                                                {brand.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                        <SelectContent>
+                            {aiModelOptions.map(model => (
+                                <SelectItem key={model.value} value={model.value}>
+                                    <div className="flex items-center gap-2">
+                                        {model.logo && (
+                                            <img
+                                                src={model.logo}
+                                                alt={model.label}
+                                                className="w-4 h-4 object-contain"
+                                            />
+                                        )}
+                                        <span>{model.label}</span>
+                                    </div>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
 
-                            {/* AI Model Filter */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">AI Model</label>
-                                <Select value={selectedAIModel} onValueChange={setSelectedAIModel}>
-                                    <SelectTrigger className="w-56">
-                                        <SelectValue>
-                                            {(() => {
-                                                const model = aiModelOptions.find(m => m.value === selectedAIModel);
-                                                if (!model) return 'Select AI model';
+                </div>
+            </div>
 
-                                                return (
-                                                    <div className="flex items-center gap-2">
-                                                        {model.logo && (
-                                                            <img
-                                                                src={model.logo}
-                                                                alt={model.label}
-                                                                className="w-4 h-4 object-contain"
-                                                            />
-                                                        )}
-                                                        <span>{model.label}</span>
-                                                    </div>
-                                                );
-                                            })()}
-                                        </SelectValue>
-                                    </SelectTrigger>
-
-                                    <SelectContent>
-                                        {aiModelOptions.map(model => (
-                                            <SelectItem key={model.value} value={model.value}>
-                                                <div className="flex items-center gap-2">
-                                                    {model.logo && (
-                                                        <img
-                                                            src={model.logo}
-                                                            alt={model.label}
-                                                            className="w-4 h-4 object-contain"
-                                                        />
-                                                    )}
-                                                    <span>{model.label}</span>
-                                                </div>
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-
-                            </div>
-                        </div>
-
-                {/* <Separator /> */}
+            {/* <Separator /> */}
             <div className="space-y-6">
                 {/* Brand Overview */}
                 <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-4">
                     <Card className="flex-col">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><Building2/></span>
+                                <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><Building2 /></span>
                                 <div>
                                     Visibility
                                     <p className="mt-2 text-gray-600 text-xs">Percentage of chats mentioning each brand</p>
@@ -657,13 +659,13 @@ const visiblePrompts = filteredPrompts.slice(0, currentPage * 9);
                     <Card className="flex-col">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><Trophy/></span>
+                                <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><Trophy /></span>
                                 Brand Visibility Index
                             </CardTitle>
                         </CardHeader>
-                        <BrandVisibilityIndex 
+                        <BrandVisibilityIndex
                             // competitiveStats={competitiveStats} 
-                            competitiveStats={filteredCompetitiveStats} 
+                            competitiveStats={filteredCompetitiveStats}
                             onRowClick={handleBrandRowClick}
                             brandId={brand.id}
                             limit={5}
@@ -680,8 +682,8 @@ const visiblePrompts = filteredPrompts.slice(0, currentPage * 9);
                         <div className='md:flex block items-center justify-between'>
                             <div className='flex items-center mb-5 md:mb-0'>
                                 <CardTitle className="flex items-center gap-2">
-                                    <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><MessageSquare/></span>
-                                   Recent AI Citations ({visiblePrompts.length} of {filteredPrompts?.length || 0})
+                                    <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><MessageSquare /></span>
+                                    Recent AI Citations ({visiblePrompts.length} of {filteredPrompts?.length || 0})
                                 </CardTitle>
                                 {selectedCompetitorDomain && (
                                     <Button variant="outline" size="sm" className="ml-2" onClick={() => setSelectedCompetitorDomain(null)}>
@@ -692,17 +694,17 @@ const visiblePrompts = filteredPrompts.slice(0, currentPage * 9);
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <AiCitations 
-                            prompts={visiblePrompts} 
+                        <AiCitations
+                            prompts={visiblePrompts}
                             onPromptClick={handlePromptClick}
-                            />
-                            {currentPage * 9 < filteredPrompts.length && (
-                                <div className="flex justify-center mt-4">
-                                    <Button className='primary-btn' onClick={() => setCurrentPage(prev => prev + 1)}>
-                                        Load More Citations
-                                    </Button>
-                                </div>
-                            )}
+                        />
+                        {currentPage * 9 < filteredPrompts.length && (
+                            <div className="flex justify-center mt-4">
+                                <Button className='primary-btn' onClick={() => setCurrentPage(prev => prev + 1)}>
+                                    Load More Citations
+                                </Button>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 
@@ -750,7 +752,7 @@ const visiblePrompts = filteredPrompts.slice(0, currentPage * 9);
                             {selectedPrompt.ai_model && (
                                 <div className="flex items-center gap-2 mb-4 pb-3 border-b">
                                     {selectedPrompt.ai_model.icon ? (
-                                        <img 
+                                        <img
                                             src={`/storage/${selectedPrompt.ai_model.icon}`}
                                             alt={selectedPrompt.ai_model.display_name}
                                             className="w-5 h-5 object-contain rounded"
@@ -766,7 +768,7 @@ const visiblePrompts = filteredPrompts.slice(0, currentPage * 9);
                                     </span>
                                 </div>
                             )}
-                            
+
                             <div className="grid grid-cols-12 gap-6">
                                 <div className="lg:col-span-9 col-span-12 space-y-4">
                                     {/* Prompt Card - aligned right */}
@@ -788,7 +790,7 @@ const visiblePrompts = filteredPrompts.slice(0, currentPage * 9);
                                         <div className="flex-shrink-0 mt-3">
                                             {selectedPrompt.ai_model?.icon ? (
                                                 <div className="w-8 h-8 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center p-1">
-                                                    <img 
+                                                    <img
                                                         src={`/storage/${selectedPrompt.ai_model.icon}`}
                                                         alt={selectedPrompt.ai_model.display_name}
                                                         className="w-full h-full object-contain"
@@ -806,7 +808,7 @@ const visiblePrompts = filteredPrompts.slice(0, currentPage * 9);
                                         <Card className="flex-1">
                                             <CardContent className="pt-6">
                                                 {selectedPrompt.ai_response ? (
-                                                    <div 
+                                                    <div
                                                         className="prose prose-sm max-w-none"
                                                         dangerouslySetInnerHTML={{ __html: selectedPrompt.ai_response }}
                                                     />
@@ -824,7 +826,7 @@ const visiblePrompts = filteredPrompts.slice(0, currentPage * 9);
                                         <div className="border rounded-lg p-3 bg-gradient-to-br from-blue-50 to-indigo-50">
                                             <div className="flex items-center gap-3 mb-2">
                                                 <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center p-1.5">
-                                                    <img 
+                                                    <img
                                                         src={`https://img.logo.dev/${brand.domain?.replace(/^www\./, '') || brand.website?.replace(/^www\./, '')}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`}
                                                         alt={brand.name}
                                                         className="w-full h-full object-contain"
@@ -845,14 +847,14 @@ const visiblePrompts = filteredPrompts.slice(0, currentPage * 9);
                                             selectedPrompt.prompt_resources.map((resource: { url: string; type: string; title: string; description: string; domain: string; is_competitor_url: boolean; }, index: number) => {
                                                 const cleanDomain = resource.domain.replace(/^www\./, '');
                                                 return (
-                                                    <div 
-                                                        key={index} 
+                                                    <div
+                                                        key={index}
                                                         className="border rounded-lg p-3 hover:bg-gray-50 transition-colors cursor-pointer hover:shadow-md"
                                                         onClick={() => window.open(resource.url, '_blank', 'noopener,noreferrer')}
                                                     >
                                                         <div className="flex items-start gap-3">
                                                             <div className="flex-shrink-0 w-8 h-8 rounded bg-white border flex items-center justify-center p-1">
-                                                                <img 
+                                                                <img
                                                                     src={`https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`}
                                                                     alt={resource.domain}
                                                                     className="w-full h-full object-contain"

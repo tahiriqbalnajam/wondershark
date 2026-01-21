@@ -80,7 +80,13 @@ class BrandPromptAnalysisService
 
         $additionalContext = '';
         if (! empty($subreddits)) {
-            $additionalContext .= "\n\nIMPORTANT: When providing resources, you MUST include relevant Reddit posts/discussions from these target subreddits: {$subredditsString}. Include URLs to Reddit threads that discuss topics related to [{$phrase}] in these communities.";
+            $additionalContext .= "\n\n**CRITICAL REQUIREMENT**: You MUST include AT LEAST 2-3 relevant Reddit posts/discussions from these target subreddits: {$subredditsString}. Include actual Reddit URLs (e.g., https://reddit.com/r/subreddit/comments/...) that discuss topics related to [{$phrase}] in these communities.";
+        }
+        
+        // Always emphasize Reddit/YouTube inclusion
+        $additionalContext .= "\n\n**MANDATORY**: Include at least 1-2 YouTube videos (youtube.com or youtu.be URLs) related to [{$phrase}].";
+        if (empty($subreddits)) {
+            $additionalContext .= " Also include at least 1-2 Reddit discussions (reddit.com URLs) from relevant subreddits discussing [{$phrase}].";
         }
 
         return "Given a brand [{$brandName}], a comma-separated list of competitors [{$competitorsString}], and a single phrase [{$phrase}], generate two outputs:
