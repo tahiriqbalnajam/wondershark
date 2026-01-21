@@ -16,6 +16,7 @@ class File extends Model
         'folder',
         'user_id',
         'brand_id',
+        'color',
     ];
 
     public function user(): BelongsTo

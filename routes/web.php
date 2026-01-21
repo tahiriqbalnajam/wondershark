@@ -56,6 +56,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('docs-files.index');
     Route::post('docs-files', [\App\Http\Controllers\DocsFileController::class, 'store'])
         ->name('docs-files.store');
+    Route::post('docs-files/preferences', [\App\Http\Controllers\DocsFileController::class, 'savePreferences'])
+        ->name('docs-files.preferences');
     Route::get('docs-files/folders', [\App\Http\Controllers\DocsFileController::class, 'getFolders'])
         ->name('docs-files.folders.index');
     Route::put('docs-files/{file}/move', [\App\Http\Controllers\DocsFileController::class, 'move'])
@@ -76,6 +78,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('docs-files.folders.destroy');
     Route::get('docs-files/folders/{folder}/download', [\App\Http\Controllers\DocsFileController::class, 'downloadFolder'])
         ->name('docs-files.folders.download');
+    Route::put('docs-files/folders/{folder}/color', [\App\Http\Controllers\DocsFileController::class, 'updateFolderColor'])
+        ->name('docs-files.folders.color');
+    Route::put('docs-files/files/{file}/color', [\App\Http\Controllers\DocsFileController::class, 'updateFileColor'])
+        ->name('docs-files.files.color');
         Route::get('/docs-files/{file}/download', [DocsFilesController::class, 'download'])
     ->name('docs-files.download');
 
