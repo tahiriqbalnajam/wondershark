@@ -121,6 +121,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('role.permission:view-admin-panel')->group(function () {
         Route::get('admin', [AdminController::class, 'index'])->name('admin.index');
         Route::get('admin/brands', [AdminController::class, 'brands'])->name('admin.brands');
+        Route::post('admin/brands', [AdminController::class, 'storeBrand'])->name('admin.brands.store');
         Route::post('admin/select-brand', [AdminController::class, 'selectBrand'])->name('admin.select-brand');
 
         // Agency Management - Admin only
