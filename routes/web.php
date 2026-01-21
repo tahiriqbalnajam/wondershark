@@ -76,8 +76,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('docs-files.folders.destroy');
     Route::get('docs-files/folders/{folder}/download', [\App\Http\Controllers\DocsFileController::class, 'downloadFolder'])
         ->name('docs-files.folders.download');
-        Route::get('/docs-files/{file}/download', [DocsFilesController::class, 'download'])
-    ->name('docs-files.download');
 
     // Brand-specific dashboard
     Route::get('brands/{brand}/dashboard', [\App\Http\Controllers\BrandController::class, 'dashboard'])
@@ -115,6 +113,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('role.permission:view-admin-panel')->group(function () {
         Route::get('admin', [AdminController::class, 'index'])->name('admin.index');
         Route::get('admin/brands', [AdminController::class, 'brands'])->name('admin.brands');
+        Route::post('admin/brands', [AdminController::class, 'storeBrand'])->name('admin.brands.store');
         Route::post('admin/select-brand', [AdminController::class, 'selectBrand'])->name('admin.select-brand');
 
         // Agency Management - Admin only
