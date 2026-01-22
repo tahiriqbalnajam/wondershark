@@ -55,13 +55,16 @@ class RegisteredUserController extends Controller
 
             // If the user is registering as a brand, create a brand record
             if ($validated['role'] === 'brand') {
-                \App\Models\Brand::create([
+                $brand = \App\Models\Brand::create([
                     'agency_id' => null, // Individual brand signup, no agency
                     'user_id' => $user->id,
                     'name' => $validated['name'],
                     'website' => $validated['website'],
                     'country' => $validated['country'],
-                    'status' => 'active',
+                    'status' => 'pending',
+                    'is_completed' => false,
+                    'current_step' => 1,
+                    'monthly_posts' => 10, // Default value
                 ]);
             }
 
@@ -70,6 +73,11 @@ class RegisteredUserController extends Controller
             event(new Registered($user));
 
             Auth::login($user);
+
+            // Redirect brand users to multi-step creation process
+            if ($validated['role'] === 'brand' && isset($brand)) {
+                return redirect()->route('brands.create.step', ['brand' => $brand->id, 'step' => 2]);
+            }
 
             return redirect()->intended(route('dashboard', absolute: false));
         } catch (\Exception $e) {

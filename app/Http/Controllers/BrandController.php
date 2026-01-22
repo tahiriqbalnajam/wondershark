@@ -385,39 +385,16 @@ class BrandController extends Controller
     }
 
     /**
-     * Update step 5 - Finalize brand (account setup and activation)
+     * Update step 5 - Finalize brand (mark as completed)
      */
     public function updateStep5(Request $request, Brand $brand)
     {
-        $validationRules = [
-            'create_account' => 'boolean',
-        ];
-
-        // Add account validation rules only if creating an account
-        if ($request->boolean('create_account')) {
-            $validationRules['brand_email'] = 'required|email|unique:users,email';
-            $validationRules['brand_password'] = 'required|string|min:8';
-        }
-
-        $request->validate($validationRules);
-
-        DB::transaction(function () use ($request, $brand) {
-            // Create brand user account only if requested
-            if ($request->boolean('create_account')) {
-                $brandUser = User::create([
-                    'name' => $brand->name.' User',
-                    'email' => $request->brand_email,
-                    'password' => Hash::make($request->brand_password),
-                    'email_verified_at' => now(),
-                ]);
-                $brandUser->assignRole('brand');
-
-                $brand->update(['user_id' => $brandUser->id]);
-            }
-
-            // Activate the brand
-            $brand->update(['status' => 'active']);
-        });
+        // Simply mark the brand as completed and activate it
+        $brand->update([
+            'status' => 'active',
+            'is_completed' => true,
+            'completed_at' => now(),
+        ]);
 
         // Store the brand in session
         session(['selected_brand_id' => $brand->id]);
@@ -426,7 +403,7 @@ class BrandController extends Controller
             'success' => true,
             'brand_id' => $brand->id,
             'redirect_url' => route('brands.dashboard', $brand),
-            'message' => 'Brand created successfully!',
+            'message' => 'Brand setup completed successfully!',
         ]);
     }
 

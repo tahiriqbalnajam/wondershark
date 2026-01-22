@@ -317,6 +317,13 @@ class CompetitorController extends Controller
 
     public function store(Request $request, Brand $brand)
     {
+        $user = Auth::user();
+        
+        // Check if user has access to the brand
+        if (!$user->canAccessBrand($brand)) {
+            abort(403, 'You do not have permission to add competitors to this brand.');
+        }
+        
         $request->validate([
             'name' => 'required|string|max:255',
             'trackedName' => 'required|string|max:255',
@@ -338,6 +345,14 @@ class CompetitorController extends Controller
 
     public function update(Request $request, Competitor $competitor)
     {
+        $user = Auth::user();
+        
+        // Load brand relationship and check if user has access
+        $competitor->load('brand');
+        if (!$user->canAccessBrand($competitor->brand)) {
+            abort(403, 'You do not have permission to update this competitor.');
+        }
+        
         $request->validate([
             'status' => 'required|in:suggested,accepted,rejected,removed'
         ]);
@@ -374,6 +389,14 @@ class CompetitorController extends Controller
 
     public function destroy(Competitor $competitor)
     {
+        $user = Auth::user();
+        
+        // Load brand relationship and check if user has access
+        $competitor->load('brand');
+        if (!$user->canAccessBrand($competitor->brand)) {
+            abort(403, 'You do not have permission to delete this competitor.');
+        }
+        
         $competitor->delete();
 
         // Handle non-Inertia AJAX requests (like API calls)
@@ -392,6 +415,14 @@ class CompetitorController extends Controller
      */
     public function fetchCompetitorStats(Competitor $competitor)
     {
+        $user = Auth::user();
+        
+        // Load brand relationship and check if user has access
+        $competitor->load('brand');
+        if (!$user->canAccessBrand($competitor->brand)) {
+            abort(403, 'You do not have permission to fetch stats for this competitor.');
+        }
+        
         try {
             // You'll need to add your SerpAPI key to your .env file
             $serpApiKey = env('SERPAPI_KEY');

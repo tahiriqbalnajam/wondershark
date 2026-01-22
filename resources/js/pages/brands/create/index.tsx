@@ -5,8 +5,8 @@ import { toast } from 'sonner';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import { 
-    MessagesSquare, 
+import {
+    MessagesSquare,
     FileText,
     CalendarDays,
     Swords
@@ -74,7 +74,7 @@ type Props = {
 
 export default function CreateBrand({ currentStep: initialStep, existingData, aiModels = [], sessionId }: Props) {
     const [currentStep, setCurrentStep] = useState(initialStep);
-    
+
     // Clean up sessionStorage when starting fresh brand creation
     useEffect(() => {
         if (initialStep === 1 && !existingData.brand) {
@@ -84,7 +84,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
             sessionStorage.removeItem('promptStates');
         }
     }, [initialStep, existingData.brand]);
-    
+
     // Load competitors from existing data (database)
     const [competitors, setCompetitors] = useState<Competitor[]>(() => {
         if (existingData.competitors.length > 0) {
@@ -101,7 +101,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
         }
         return [];
     });
-    
+
     const [aiGeneratedPrompts, setAiGeneratedPrompts] = useState<GeneratedPrompt[]>([]);
     const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
     const generationAttemptedRef = useRef<string | null>(null);
@@ -171,7 +171,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
 
     const nextStep = async () => {
         const brandId = existingData.brand?.id;
-        
+
         // Handle step submission based on current step
         if (currentStep === 1 && !brandId) {
             // Step 1: Create draft brand
@@ -180,7 +180,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                         'Accept': 'application/json', 
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                     },
                     body: JSON.stringify({
@@ -205,7 +205,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                 }
 
                 const result = await response.json();
-                
+
                 if (result.success && result.redirect_url) {
                     window.location.href = result.redirect_url;
                 } else {
@@ -218,7 +218,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
         } else if (currentStep === 2 && brandId) {
             // Step 2: Update competitors
             const acceptedCompetitors = competitors.filter(c => c.status === 'accepted');
-            
+
             try {
                 const response = await fetch(route('brands.update.step2', { brand: brandId }), {
                     method: 'POST',
@@ -238,7 +238,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                 });
 
                 const result = await response.json();
-                
+
                 if (result.success && result.redirect_url) {
                     window.location.href = result.redirect_url;
                 } else {
@@ -263,7 +263,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                 });
 
                 const result = await response.json();
-                
+
                 if (result.success && result.redirect_url) {
                     window.location.href = result.redirect_url;
                 } else {
@@ -288,7 +288,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                 });
 
                 const result = await response.json();
-                
+
                 if (result.success && result.redirect_url) {
                     window.location.href = result.redirect_url;
                 } else {
@@ -308,7 +308,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
 
     const prevStep = () => {
         const brandId = existingData.brand?.id;
-        
+
         if (currentStep > 1 && brandId) {
             // Navigate back to previous step page
             window.location.href = route('brands.create.step', { brand: brandId, step: currentStep - 1 });
@@ -320,13 +320,13 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
     const handleSubmit: FormEventHandler = async (e) => {
         e.preventDefault();
         const brandId = existingData.brand?.id;
-        
+
         if (!brandId) {
             toast.error('Brand ID not found');
             return;
         }
-        
-        // Step 5: Finalize brand (account setup and activation)
+
+        // Step 5: Finalize brand (mark as completed)
         try {
             const response = await fetch(route('brands.update.step5', { brand: brandId }), {
                 method: 'POST',
@@ -334,15 +334,11 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
-                body: JSON.stringify({
-                    create_account: data.create_account,
-                    brand_email: data.brand_email,
-                    brand_password: data.brand_password,
-                }),
+                body: JSON.stringify({}),
             });
 
             const result = await response.json();
-            
+
             if (result.success && result.redirect_url) {
                 toast.success(result.message || 'Brand created successfully!');
                 window.location.href = result.redirect_url;
@@ -356,7 +352,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
     };
 
     const handleFinalSubmit = () => {
-        handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+        handleSubmit({ preventDefault: () => { } } as React.FormEvent);
     };
 
     // AI Prompt generation functions
@@ -373,7 +369,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
 
         generationAttemptedRef.current = data.website;
         setIsGeneratingPrompts(true);
-        
+
         try {
             const response = await fetch(route('brands.generateMultiModelPrompts'), {
                 method: 'POST',
@@ -389,7 +385,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
             });
 
             const responseData = await response.json();
-            
+
             if (responseData.success && responseData.prompts) {
                 setAiGeneratedPrompts(responseData.prompts);
                 toast.success('AI prompts generated successfully!');
@@ -418,17 +414,17 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
     // Auto-generate prompts when moving to step 3 (Prompts step)
     useEffect(() => {
         if (
-            currentStep === 3 && 
-            data.website && 
+            currentStep === 3 &&
+            data.website &&
             data.website.trim() !== '' &&
-            !isGeneratingPrompts && 
+            !isGeneratingPrompts &&
             aiGeneratedPrompts.length === 0 &&
             existingData.prompts.length === 0 && // Only generate if no prompts exist in DB
             generationAttemptedRef.current !== data.website
         ) {
             generateAIPrompts();
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentStep, data.website]);
 
     const acceptPrompt = (prompt: GeneratedPrompt) => {
@@ -477,10 +473,8 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                 return true;
             case 3: // Prompts - optional, always allow proceeding  
                 return true;
-            case 4: // Monthly Posts
-                return data.monthly_posts > 0 && !errors.monthly_posts;
-            case 5: // Account Setup
-                return !data.create_account || (!!(data.brand_email.trim() && data.brand_password.trim()) && !errors.brand_email && !errors.brand_password);
+            case 4: // Account Setup - always allow finishing
+                return true;
             default:
                 return true;
         }
@@ -501,7 +495,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
             case 1:
                 return <Step1BasicInfo {...stepProps} />;
             case 2:
-                 return <Step3Competitors 
+                return <Step3Competitors
                     {...stepProps}
                     competitors={competitors}
                     setCompetitors={setCompetitors}
@@ -509,8 +503,8 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                     brandId={existingData.brand?.id}
                 />;
             case 3:
-                return <Step2Prompts 
-                    {...stepProps} 
+                return <Step2Prompts
+                    {...stepProps}
                     isGeneratingPrompts={isGeneratingPrompts}
                     aiGeneratedPrompts={aiGeneratedPrompts}
                     generateAIPrompts={regenerateAIPrompts}

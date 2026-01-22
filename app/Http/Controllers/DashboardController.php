@@ -36,12 +36,18 @@ class DashboardController extends Controller
             $query->where('user_id', $user->id)
                   ->orWhere('agency_id', $user->id);
         })
-        ->where('status', 'active')
         ->orderBy('updated_at', 'desc')
         ->first();
         
-        // If user has brands, redirect to the first brand's page
-        if ($firstBrand) {
+        // If user has a brand that's not completed, redirect to multi-step creation
+        if ($firstBrand && !$firstBrand->is_completed) {
+            // Redirect to the appropriate step based on current_step
+            $step = $firstBrand->current_step ?? 2;
+            return redirect()->route('brands.create.step', ['brand' => $firstBrand->id, 'step' => $step]);
+        }
+        
+        // If user has active brands, redirect to the first brand's page
+        if ($firstBrand && $firstBrand->status === 'active') {
             return redirect()->route('brands.show', $firstBrand->id);
         }
         
