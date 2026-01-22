@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AiModel;
 use App\Models\Brand;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -19,10 +20,14 @@ class DashboardController extends Controller
         /** @var User $user */
         $user = Auth::user();
         
+        // Get AI models
+        $aiModels = AiModel::enabled()->ordered()->get();
+        
         // If admin, show admin dashboard
         if ($user->hasRole('admin')) {
             return Inertia::render('dashboard', [
-                'isAdmin' => true
+                'isAdmin' => true,
+                'aiModels' => $aiModels
             ]);
         }
         
@@ -41,6 +46,8 @@ class DashboardController extends Controller
         }
         
         // Otherwise, show the default dashboard
-        return Inertia::render('dashboard');
+        return Inertia::render('dashboard', [
+            'aiModels' => $aiModels
+        ]);
     }
 }
