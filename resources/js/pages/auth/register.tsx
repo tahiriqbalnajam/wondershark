@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import { LoaderCircle,Check } from 'lucide-react';
+import { LoaderCircle, Check } from 'lucide-react';
 import { FormEventHandler } from 'react';
 
 import InputError from '@/components/input-error';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { CountrySelector } from '@/components/ui/country-selector';
 import AuthLayout from '@/layouts/auth-layout';
 
 type RegisterForm = {
@@ -16,6 +17,8 @@ type RegisterForm = {
     password: string;
     password_confirmation: string;
     role: string;
+    website?: string;
+    country?: string;
 };
 
 export default function Register() {
@@ -25,6 +28,8 @@ export default function Register() {
         password: '',
         password_confirmation: '',
         role: 'brand', // Default to brand role
+        website: '',
+        country: '',
     });
 
     const submit: FormEventHandler = (e) => {
@@ -43,31 +48,33 @@ export default function Register() {
                     <RadioGroup value={data.role} onValueChange={(value: string) => setData('role', value)} className="grid grid-cols-1 lg:grid-cols-2 gap-3" >
                         <div className="rounded-lg border p-5 shadow-xl hover:shadow-2xl account-type">
                             <Label htmlFor="brand" className="flex-1 cursor-pointer">
-                                <div className="font-bold text-orange-600 flex items-center justify-between text-2xl mb-5"><RadioGroupItem value="brand" id="brand" className='radio-btn'/> Brand</div>
+                                <div className="font-bold text-orange-600 flex items-center justify-between text-2xl mb-5"><RadioGroupItem value="brand" id="brand" className='radio-btn' /> Brand</div>
                                 <div className="text-md text-muted-foreground leading-5">We'll manage posts snd maximize AI visibility for a standalone brand.</div>
-                                <hr className='my-5'/>
+                                <hr className='my-5' />
                                 <ul className='p-0 m-0'>
-                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600'/> Single brand</li>
-                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600'/> Company analytics</li>
-                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600'/> Brand optimization</li>
+                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600' /> Single brand</li>
+                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600' /> Company analytics</li>
+                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600' /> Brand optimization</li>
                                 </ul>
                             </Label>
                         </div>
                         <div className="rounded-lg border p-5 shadow-xl hover:shadow-2xl account-type">
                             <Label htmlFor="agency" className="flex-1 cursor-pointer">
-                                <div className="font-bold text-orange-600 flex items-center justify-between text-2xl mb-5"><RadioGroupItem value="agency" id="agency" className='radio-btn'/> Agency</div>
+                                <div className="font-bold text-orange-600 flex items-center justify-between text-2xl mb-5"><RadioGroupItem value="agency" id="agency" className='radio-btn' /> Agency</div>
                                 <div className="text-md text-muted-foreground leading-5">We'll enhance AI visibility and manage posts for an agency serving multiple brand clients.</div>
-                                <hr className='my-5'/>
+                                <hr className='my-5' />
                                 <ul className='p-0 m-0'>
-                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600'/> Multiple brands</li>
-                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600'/> Client Management</li>
-                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600'/> Multi-brand analytics</li>
+                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600' /> Multiple brands</li>
+                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600' /> Client Management</li>
+                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600' /> Multi-brand analytics</li>
                                 </ul>
                             </Label>
                         </div>
                     </RadioGroup>
                     <InputError message={errors.role} />
                 </div>
+
+
 
                 <div className="grid">
                     <div className="grid gap-2">
@@ -105,6 +112,38 @@ export default function Register() {
                         <InputError message={errors.email} />
                     </div>
 
+                    {data.role === 'brand' && (
+                        <>
+                            <div className="grid gap-2">
+                                <Label htmlFor="website">Website/URL</Label>
+                                <Input
+                                    className='form-control'
+                                    id="website"
+                                    type="url"
+                                    required
+                                    tabIndex={3}
+                                    autoComplete="url"
+                                    value={data.website}
+                                    onChange={(e) => setData('website', e.target.value)}
+                                    disabled={processing}
+                                    placeholder="https://example.com"
+                                />
+                                <InputError message={errors.website} />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="country">Country</Label>
+                                <CountrySelector
+                                    value={data.country}
+                                    onValueChange={(value) => setData('country', value)}
+                                    placeholder="Select country..."
+                                    className="form-control"
+                                />
+                                <InputError message={errors.country} />
+                            </div>
+                        </>
+                    )}
+
                     <div className="grid gap-2">
                         <Label htmlFor="password">Password</Label>
                         <Input
@@ -112,7 +151,7 @@ export default function Register() {
                             id="password"
                             type="password"
                             required
-                            tabIndex={3}
+                            tabIndex={5}
                             autoComplete="new-password"
                             value={data.password}
                             onChange={(e) => setData('password', e.target.value)}
@@ -129,7 +168,7 @@ export default function Register() {
                             id="password_confirmation"
                             type="password"
                             required
-                            tabIndex={4}
+                            tabIndex={6}
                             autoComplete="new-password"
                             value={data.password_confirmation}
                             onChange={(e) => setData('password_confirmation', e.target.value)}
@@ -138,7 +177,7 @@ export default function Register() {
                         />
                         <InputError message={errors.password_confirmation} />
                     </div>
-                    <Button type="submit" className="mt-5 w-full primary-btn uppercase font-bold" tabIndex={5} disabled={processing}>
+                    <Button type="submit" className="mt-5 w-full primary-btn uppercase font-bold" tabIndex={7} disabled={processing}>
                         {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
                         Create account
                     </Button>
@@ -146,7 +185,7 @@ export default function Register() {
 
                 <div className="text-center text-sm text-muted-foreground">
                     Already have an account?{' '}
-                    <TextLink href={route('login')} tabIndex={6}>
+                    <TextLink href={route('login')} tabIndex={8}>
                         Log in
                     </TextLink>
                 </div>

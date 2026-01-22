@@ -50,7 +50,6 @@ export function CountrySelector({
         >
           {selectedCountry ? (
             <div className="flex items-center gap-2">
-              <span className="text-lg">{selectedCountry.flag}</span>
               <span>{selectedCountry.name}</span>
             </div>
           ) : (
@@ -84,7 +83,6 @@ export function CountrySelector({
                     value === country.code && "bg-accent text-accent-foreground"
                   )}
                 >
-                  <span className="text-lg mr-2">{country.flag}</span>
                   <span className="flex-1">{country.name}</span>
                   <span className="text-xs text-muted-foreground mr-2">{country.code}</span>
                   <Check
