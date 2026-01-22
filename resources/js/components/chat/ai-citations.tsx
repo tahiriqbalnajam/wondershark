@@ -45,10 +45,31 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
     const stripHtml = (html: string | undefined): string => {
         if (!html) return '';
 
+        let cleanText = html;
+
+        // Remove special markers like HTML_RESPONSE_START
+        cleanText = cleanText.replace(/HTML_RESPONSE_START/gi, '');
+        cleanText = cleanText.replace(/HTML_RESPONSE_END/gi, '');
+
+        // Remove CSS style blocks (both <style> tags and inline styles in text)
+        cleanText = cleanText.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+        cleanText = cleanText.replace(/\{[^}]*font-family[^}]*\}[\s\S]*?\{[^}]*\}/gi, '');
+        cleanText = cleanText.replace(/body\s*\{[^}]*\}/gi, '');
+        
+        // Remove script tags
+        cleanText = cleanText.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+
         // Create a temporary div element to parse HTML
         const tmp = document.createElement('DIV');
-        tmp.innerHTML = html;
-        return tmp.textContent || tmp.innerText || '';
+        tmp.innerHTML = cleanText;
+        
+        // Get text content
+        let textContent = tmp.textContent || tmp.innerText || '';
+        
+        // Remove excessive whitespace and newlines
+        textContent = textContent.replace(/\s+/g, ' ').trim();
+
+        return textContent;
     };
 
     return (
