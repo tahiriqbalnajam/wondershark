@@ -78,14 +78,6 @@ const industryRanking = [
     { brand: 'FameBit', position: 5, sentiment: 'neutral', visibility: 'low' },
 ];
 
-const aiModels = [
-    { value: 'openai', label: 'OpenAI (GPT-4)' },
-    { value: 'claude', label: 'Claude (Anthropic)' },
-    { value: 'gemini', label: 'Google Gemini' },
-    { value: 'groq', label: 'Groq' },
-    { value: 'deepseek', label: 'DeepSeek' },
-];
-
 const brands = [
     { value: 'all', label: 'All Brands' },
     { value: 'fiverr', label: 'Fiverr' },
@@ -97,9 +89,51 @@ const brands = [
 
 export default function Dashboard() {
     const { roles } = usePermissions();
-    const { props } = usePage<{brands?: Array<{id: number, name: string}>, isAdmin?: boolean}>();
+    const { props } = usePage<{
+        brands?: Array<{id: number, name: string}>, 
+        isAdmin?: boolean,
+        aiModels?: Array<{
+            id: number;
+            name: string;
+            display_name: string;
+            icon?: string;
+            provider?: string;
+        }>;
+    }>();
     
     const userBrands = useMemo(() => props.brands || [], [props.brands]);
+    
+    const aiModelOptions = useMemo(() => {
+        const models: Array<{
+            value: string;
+            label: string;
+            logo: string | null;
+        }> = [
+            {
+                value: 'all',
+                label: 'All AI Models',
+                logo: null,
+            },
+        ];
+
+        // Add dynamic models from database
+        const aiModelsData = props.aiModels || [];
+        aiModelsData.forEach((model: {
+            id: number;
+            name: string;
+            display_name: string;
+            icon?: string;
+            provider?: string;
+        }) => {
+            models.push({
+                value: model.name,
+                label: model.display_name,
+                logo: model.icon ? `/storage/${model.icon}` : null,
+            });
+        });
+
+        return models;
+    }, [props.aiModels]);
     const isAdmin = props.isAdmin || false;
     
     // Redirect to first brand if user has brands (but not for admins)
@@ -111,7 +145,7 @@ export default function Dashboard() {
     }, [userBrands, isAdmin]);
     
     const [selectedBrand, setSelectedBrand] = useState('all');
-    const [selectedAIModel, setSelectedAIModel] = useState('openai');
+    const [selectedAIModel, setSelectedAIModel] = useState('all');
     const [selectedDateRange, setSelectedDateRange] = useState('30');
     const [calendarOpen, setCalendarOpen] = useState(false);
     const [customDateRange, setCustomDateRange] = useState<{ from?: Date; to?: Date }>({});
@@ -227,7 +261,7 @@ export default function Dashboard() {
                                         <SelectValue placeholder="Select AI model" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {aiModels.map((model) => (
+                                        {aiModelOptions.map((model) => (
                                             <SelectItem key={model.value} value={model.value}>
                                                 {model.label}
                                             </SelectItem>
