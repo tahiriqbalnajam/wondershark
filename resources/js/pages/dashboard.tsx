@@ -135,14 +135,22 @@ export default function Dashboard() {
         return models;
     }, [props.aiModels]);
     const isAdmin = props.isAdmin || false;
+    const hasAgencyRole = roles.includes('agency');
     
-    // Redirect to first brand if user has brands (but not for admins)
+    // Redirect based on user role and brands
     useEffect(() => {
+        // If agency user has no brands, redirect to add brand page
+        if (hasAgencyRole && userBrands.length === 0) {
+            router.visit('/brands/create');
+            return;
+        }
+        
+        // Redirect to first brand if user has brands (but not for admins)
         if (!isAdmin && userBrands.length > 0) {
             const firstBrand = userBrands[0];
             router.visit(`/brands/${firstBrand.id}`);
         }
-    }, [userBrands, isAdmin]);
+    }, [userBrands, isAdmin, hasAgencyRole]);
     
     const [selectedBrand, setSelectedBrand] = useState('all');
     const [selectedAIModel, setSelectedAIModel] = useState('all');
