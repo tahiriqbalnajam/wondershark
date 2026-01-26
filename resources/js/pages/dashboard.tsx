@@ -59,32 +59,12 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-// Dummy data for the line chart
-const visibilityData = [
-    { date: 'Jan', fiverr: 45, upwork: 38, influencity: 25, famebit: 15, amazon: 30 },
-    { date: 'Feb', fiverr: 52, upwork: 42, influencity: 28, famebit: 18, amazon: 35 },
-    { date: 'Mar', fiverr: 48, upwork: 45, influencity: 32, famebit: 22, amazon: 38 },
-    { date: 'Apr', fiverr: 55, upwork: 40, influencity: 35, famebit: 25, amazon: 42 },
-    { date: 'May', fiverr: 58, upwork: 47, influencity: 38, famebit: 28, amazon: 45 },
-    { date: 'Jun', fiverr: 62, upwork: 50, influencity: 42, famebit: 30, amazon: 48 },
-];
+const visibilityData: Array<any> = [];
 
-// Dummy data for industry ranking
-const industryRanking = [
-    { brand: 'Fiverr', position: 1, sentiment: 'positive', visibility: 'high' },
-    { brand: 'Upwork', position: 2, sentiment: 'positive', visibility: 'high' },
-    { brand: 'Influencity', position: 3, sentiment: 'neutral', visibility: 'medium' },
-    { brand: 'Amazon Creator Connections', position: 4, sentiment: 'positive', visibility: 'medium' },
-    { brand: 'FameBit', position: 5, sentiment: 'neutral', visibility: 'low' },
-];
+const industryRanking: Array<any> = [];
 
-const brands = [
+const brands: Array<{value: string, label: string}> = [
     { value: 'all', label: 'All Brands' },
-    { value: 'fiverr', label: 'Fiverr' },
-    { value: 'upwork', label: 'Upwork' },
-    { value: 'influencity', label: 'Influencity' },
-    { value: 'famebit', label: 'FameBit' },
-    { value: 'amazon', label: 'Amazon Creator Connections' },
 ];
 
 export default function Dashboard() {
@@ -136,21 +116,6 @@ export default function Dashboard() {
     }, [props.aiModels]);
     const isAdmin = props.isAdmin || false;
     const hasAgencyRole = roles.includes('agency');
-    
-    // Redirect based on user role and brands
-    useEffect(() => {
-        // If agency user has no brands, redirect to add brand page
-        if (hasAgencyRole && userBrands.length === 0) {
-            router.visit('/brands/create');
-            return;
-        }
-        
-        // Redirect to first brand if user has brands (but not for admins)
-        if (!isAdmin && userBrands.length > 0) {
-            const firstBrand = userBrands[0];
-            router.visit(`/brands/${firstBrand.id}`);
-        }
-    }, [userBrands, isAdmin, hasAgencyRole]);
     
     const [selectedBrand, setSelectedBrand] = useState('all');
     const [selectedAIModel, setSelectedAIModel] = useState('all');
@@ -305,20 +270,6 @@ export default function Dashboard() {
                                         <YAxis />
                                         <Tooltip />
                                         <Legend />
-                                        <Line 
-                                            type="monotone" 
-                                            dataKey="fiverr" 
-                                            stroke="#00c851" 
-                                            strokeWidth={2}
-                                            name="Fiverr"
-                                        />
-                                        <Line 
-                                            type="monotone" 
-                                            dataKey="upwork" 
-                                            stroke="#0099cc" 
-                                            strokeWidth={2}
-                                            name="Upwork"
-                                        />
                                         <Line 
                                             type="monotone" 
                                             dataKey="influencity" 

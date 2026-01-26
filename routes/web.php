@@ -82,8 +82,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('docs-files.folders.color');
     Route::put('docs-files/files/{file}/color', [\App\Http\Controllers\DocsFileController::class, 'updateFileColor'])
         ->name('docs-files.files.color');
-        Route::get('/docs-files/{file}/download', [DocsFilesController::class, 'download'])
-    ->name('docs-files.download');
+    Route::get('/docs-files/{file}/download', [\App\Http\Controllers\DocsFileController::class, 'download'])
+        ->name('docs-files.download');
 
     // Brand-specific dashboard
     Route::get('brands/{brand}/dashboard', [\App\Http\Controllers\BrandController::class, 'dashboard'])

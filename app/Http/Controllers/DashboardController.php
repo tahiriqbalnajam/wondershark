@@ -43,6 +43,12 @@ class DashboardController extends Controller
         if ($firstBrand && !$firstBrand->is_completed) {
             // Redirect to the appropriate step based on current_step
             $step = $firstBrand->current_step ?? 2;
+            
+            // Step 1 doesn't have a GET route, so redirect to step 2 minimum
+            if ($step < 2) {
+                $step = 2;
+            }
+            
             return redirect()->route('brands.create.step', ['brand' => $firstBrand->id, 'step' => $step]);
         }
         
