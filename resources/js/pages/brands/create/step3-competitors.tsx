@@ -153,7 +153,7 @@ export default function Step3Competitors({
                             body: JSON.stringify({
                                 competitors: newCompetitors.map((c: Competitor) => ({
                                     name: c.name,
-                                    domain: c.domain,
+                                    domain: c.domain.startsWith('http') ? c.domain : `https://${c.domain}`,
                                     mentions: c.mentions,
                                     status: 'suggested'
                                 }))
@@ -162,18 +162,39 @@ export default function Step3Competitors({
 
                         if (!saveResponse.ok) {
                             console.error('Failed to save competitors to database');
+                            toast.error('Failed to save competitors to database');
                         } else {
                             const savedData = await saveResponse.json();
+                            console.log('Saved competitors data:', savedData); // Debug log
+                            
                             // Update competitors with actual database IDs
-                            if (savedData.competitors) {
-                                setCompetitors([...competitors, ...savedData.competitors.map((comp: CompetitorResponse) => ({
-                                    id: comp.id || Date.now() + Math.random(),
+                            if (savedData.competitors && savedData.competitors.length > 0) {
+                                // Replace the new competitors that were just added with their database versions
+                                const allCompetitors = [...competitors];
+                                
+                                // Remove the temporary competitors we just added
+                                const competitorsWithoutNew = allCompetitors.filter(c => 
+                                    !newCompetitors.some(nc => nc.name === c.name && nc.domain === c.domain)
+                                );
+                                
+                                // Add the saved competitors with real database IDs
+                                const competitorsWithDbIds = savedData.competitors.map((comp: CompetitorResponse) => ({
+                                    id: comp.id!,
                                     name: comp.name,
                                     domain: comp.domain,
+                                    trackedName: comp.trackedName || '',
+                                    allies: comp.allies || [],
                                     mentions: comp.mentions || 0,
                                     status: 'suggested' as const,
                                     source: 'ai' as const
-                                }))]);
+                                }));
+                                
+                                setCompetitors([...competitorsWithoutNew, ...competitorsWithDbIds]);
+                                console.log('Updated competitors with DB IDs:', [...competitorsWithoutNew, ...competitorsWithDbIds]); // Debug log
+                                toast.success(`Saved ${savedData.competitors.length} competitors to database`);
+                            } else {
+                                console.error('No competitors returned from save operation');
+                                toast.error('No competitors were saved - they may already exist');
                             }
                         }
                     } catch (saveError) {
@@ -218,12 +239,26 @@ export default function Step3Competitors({
 
     // Handle competitor actions - UPDATE STATUS IN DATABASE
     const handleAccept = async (competitorId: number) => {
+        console.log('Attempting to accept competitor ID:', competitorId); // Debug log
+        console.log('Current competitors state:', competitors); // Debug log
+        console.log('Brand ID:', brandId); // Debug log
+        
+        // Find the competitor in our local state
+        const competitor = competitors.find(c => c.id === competitorId);
+        console.log('Found competitor in state:', competitor); // Debug log
+        
+        // If brand doesn't exist yet (during creation), just update local state
         if (!brandId) {
-            toast.error('Brand ID is required');
+            setCompetitors(competitors.map(c =>
+                c.id === competitorId ? { ...c, status: "accepted" } : c
+            ));
+            toast.success("Competitor accepted!");
             return;
         }
 
         try {
+            console.log('Making API call to:', `/brands/${brandId}/competitors/${competitorId}/status`); // Debug log
+            
             const response = await fetch(`/brands/${brandId}/competitors/${competitorId}/status`, {
                 method: 'PATCH',
                 headers: {
@@ -234,17 +269,16 @@ export default function Step3Competitors({
                 body: JSON.stringify({ status: 'accepted' }),
             });
 
-            // if (!response.ok) throw new Error('Failed to update competitor status');
+            const data = await response.json();
+            console.log('API response:', data); // Debug log
 
-            const data = await response.json(); // *** Read response body ***
-
-            // 👉 If backend sends success but message indicates limit
+            // If backend sends success but message indicates limit
             if (data.message === "Maximum 10 accepted competitors allowed") {
                 toast.error(data.message);
                 return;
             }
-            // 👉 If backend sends success normally
-            if (response.ok) {
+            // If backend sends success normally
+            if (response.ok && data.success) {
                 // update UI
                 setCompetitors(competitors.map(c =>
                     c.id === competitorId ? { ...c, status: "accepted" } : c
@@ -252,8 +286,8 @@ export default function Step3Competitors({
                 toast.success("Competitor accepted!");
                 return;
             }
-                // 👉 Any other errors
-                toast.error(data.message || "Failed to accept competitor");
+            // Any other errors
+            toast.error(data.message || "Failed to accept competitor");
 
         } catch (error) {
             console.error('Error updating competitor status:', error);
@@ -262,8 +296,12 @@ export default function Step3Competitors({
     };
 
     const handleReject = async (competitorId: number) => {
+        // If brand doesn't exist yet (during creation), just update local state
         if (!brandId) {
-            toast.error('Brand ID is required');
+            setCompetitors(competitors.map(c =>
+                c.id === competitorId ? { ...c, status: 'rejected' as const } : c
+            ));
+            toast.success('Competitor rejected!');
             return;
         }
 
@@ -278,15 +316,17 @@ export default function Step3Competitors({
                 body: JSON.stringify({ status: 'rejected' }),
             });
 
-            if (!response.ok) throw new Error('Failed to update competitor status');
+            const data = await response.json();
 
-            await response.json();
-            
-            // Update local state
-            setCompetitors(competitors.map(c =>
-                c.id === competitorId ? { ...c, status: 'rejected' as const } : c
-            ));
-            toast.success('Competitor rejected!');
+            if (response.ok && data.success) {
+                // Update local state
+                setCompetitors(competitors.map(c =>
+                    c.id === competitorId ? { ...c, status: 'rejected' as const } : c
+                ));
+                toast.success('Competitor rejected!');
+            } else {
+                toast.error(data.message || 'Failed to reject competitor');
+            }
         } catch (error) {
             console.error('Error updating competitor status:', error);
             toast.error('Failed to reject competitor');
@@ -305,7 +345,7 @@ export default function Step3Competitors({
         const newCompetitor: Competitor = {
             id: Date.now(),
             name: formData.name.trim(),
-            domain: formData.domain.trim(),
+            domain: formData.domain.trim().startsWith('http') ? formData.domain.trim() : `https://${formData.domain.trim()}`,
             trackedName: formData.trackedName.trim(),
             allies: formData.allies,
             mentions: 0,

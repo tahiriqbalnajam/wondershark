@@ -67,6 +67,10 @@ class BrandController extends Controller
             ],
             'aiModels' => $aiModels,
             'sessionId' => session()->getId(),
+            'flash' => [
+                'message' => session('info'),
+                'error' => session('error'),
+            ],
         ]);
     }
 
@@ -385,16 +389,51 @@ class BrandController extends Controller
     }
 
     /**
-     * Update step 5 - Finalize brand (mark as completed)
+     * Update step 5 - Finalize brand (account setup and activation)
      */
     public function updateStep5(Request $request, Brand $brand)
     {
-        // Simply mark the brand as completed and activate it
-        $brand->update([
-            'status' => 'active',
-            'is_completed' => true,
-            'completed_at' => now(),
-        ]);
+        $validationRules = [
+            'create_account' => 'boolean',
+            'competitors' => 'nullable|array',
+            'competitors.*.id' => 'required|integer',
+            'competitors.*.status' => 'required|in:suggested,accepted,rejected',
+        ];
+
+        // Add account validation rules only if creating an account
+        if ($request->boolean('create_account')) {
+            $validationRules['brand_email'] = 'required|email|unique:users,email';
+            $validationRules['brand_password'] = 'required|string|min:8';
+        }
+
+        $request->validate($validationRules);
+
+        DB::transaction(function () use ($request, $brand) {
+            // Update competitor statuses if provided
+            if ($request->has('competitors') && is_array($request->competitors)) {
+                foreach ($request->competitors as $competitorData) {
+                    \App\Models\Competitor::where('brand_id', $brand->id)
+                        ->where('id', $competitorData['id'])
+                        ->update(['status' => $competitorData['status']]);
+                }
+            }
+
+            // Create brand user account only if requested
+            if ($request->boolean('create_account')) {
+                $brandUser = User::create([
+                    'name' => $brand->name.' User',
+                    'email' => $request->brand_email,
+                    'password' => Hash::make($request->brand_password),
+                    'email_verified_at' => now(),
+                ]);
+                $brandUser->assignRole('brand');
+
+                $brand->update(['user_id' => $brandUser->id]);
+            }
+
+            // Activate the brand
+            $brand->update(['status' => 'active']);
+        });
 
         // Store the brand in session
         session(['selected_brand_id' => $brand->id]);
@@ -403,7 +442,7 @@ class BrandController extends Controller
             'success' => true,
             'brand_id' => $brand->id,
             'redirect_url' => route('brands.dashboard', $brand),
-            'message' => 'Brand setup completed successfully!',
+            'message' => 'Brand created successfully!',
         ]);
     }
 
@@ -467,18 +506,28 @@ class BrandController extends Controller
         $request->validate([
             'status' => 'required|in:suggested,accepted,rejected',
         ]);
+        
         $countAccepted = \App\Models\Competitor::where('brand_id', $brand->id)
             ->where('status', 'accepted')
             ->count();
+            
         if ($countAccepted >= 10 && $request->status === 'accepted') {
             return response()->json([
-                'success' => true,
+                'success' => false,
                 'message' => 'Maximum 10 accepted competitors allowed',
             ], 400);
         }
+        
         $competitor = \App\Models\Competitor::where('brand_id', $brand->id)
             ->where('id', $competitorId)
-            ->firstOrFail();
+            ->first();
+
+        if (!$competitor) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Competitor not found',
+            ], 404);
+        }
 
         $competitor->update(['status' => $request->status]);
 

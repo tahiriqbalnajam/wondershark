@@ -31,6 +31,14 @@ class DashboardController extends Controller
             ]);
         }
         
+        // Check if agency user has no brands
+        if ($user->hasRole('agency')) {
+            $agencyBrands = Brand::where('agency_id', $user->id)->count();
+            if ($agencyBrands === 0) {
+                return redirect()->route('brands.create')->with('info', 'You need to create your first brand before accessing the dashboard.');
+            }
+        }
+        
         // Get user's first brand (for agency or brand users)
         $firstBrand = Brand::where(function($query) use ($user) {
             $query->where('user_id', $user->id)

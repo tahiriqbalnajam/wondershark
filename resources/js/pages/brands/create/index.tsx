@@ -70,9 +70,13 @@ type Props = {
     };
     aiModels?: AiModel[];
     sessionId?: string;
+    flash?: {
+        message?: string;
+        error?: string;
+    };
 };
 
-export default function CreateBrand({ currentStep: initialStep, existingData, aiModels = [], sessionId }: Props) {
+export default function CreateBrand({ currentStep: initialStep, existingData, aiModels = [], sessionId, flash }: Props) {
     const [currentStep, setCurrentStep] = useState(initialStep);
 
     // Clean up sessionStorage when starting fresh brand creation
@@ -84,6 +88,16 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
             sessionStorage.removeItem('promptStates');
         }
     }, [initialStep, existingData.brand]);
+
+    // Display flash messages
+    useEffect(() => {
+        if (flash?.message) {
+            toast.info(flash.message);
+        }
+        if (flash?.error) {
+            toast.error(flash.error);
+        }
+    }, [flash]);
 
     // Load competitors from existing data (database)
     const [competitors, setCompetitors] = useState<Competitor[]>(() => {
@@ -334,7 +348,15 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
-                body: JSON.stringify({}),
+                body: JSON.stringify({
+                    create_account: data.create_account,
+                    brand_email: data.brand_email,
+                    brand_password: data.brand_password,
+                    competitors: competitors.map(c => ({
+                        id: c.id,
+                        status: c.status
+                    }))
+                }),
             });
 
             const result = await response.json();
