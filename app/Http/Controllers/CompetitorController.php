@@ -310,9 +310,160 @@ class CompetitorController extends Controller
 
     public function fetchFromAI(Request $request, Brand $brand)
     {
-        FetchCompetitors::dispatch($brand);
+        try {
+            // Check if brand already has competitors
+            $existingCompetitors = $brand->competitors()->count();
+            $competitorsToFetch = $existingCompetitors > 0 ? 5 : 7; // Get 5 more if has some, 7 if none
+            
+            // Get enabled AI model with API key (consistent with brand creation)
+            $aiModel = \App\Models\AiModel::where('is_enabled', true)
+                ->whereNotNull('api_config')
+                ->get()
+                ->filter(function ($model) {
+                    $config = $model->api_config;
+                    return !empty($config['api_key']);
+                })
+                ->first();
 
-        return back()->with('success', 'Competitor analysis has been started. Results will appear shortly.');
+            if (!$aiModel) {
+                return back()->with('error', 'No AI model with valid API key found. Please configure an API key for at least one AI model.');
+            }
+
+            // Get existing competitor domains to avoid duplicates
+            $existingDomains = $brand->competitors()->pluck('domain')->toArray();
+            
+            // Prepare the prompt with existing competitors context
+            $prompt = $this->getCompetitorPromptForBrand($brand, $competitorsToFetch, $existingDomains);
+
+            Log::info('Fetching competitors for existing brand', [
+                'brand_id' => $brand->id,
+                'brand_name' => $brand->name,
+                'existing_competitors' => $existingCompetitors,
+                'fetching' => $competitorsToFetch,
+                'ai_model' => $aiModel->name
+            ]);
+
+            // Make API call based on the model type
+            $apiKey = $aiModel->api_config['api_key'];
+            if ($aiModel->name === 'perplexity') {
+                $response = Http::timeout(60)
+                    ->withToken($apiKey)
+                    ->post('https://api.perplexity.ai/chat/completions', [
+                        'model' => $aiModel->api_config['model'] ?? 'sonar-pro',
+                        'messages' => [
+                            ['role' => 'system', 'content' => 'You are a helpful assistant that responds only with valid JSON arrays. Do not include any explanatory text or markdown formatting.'],
+                            ['role' => 'user', 'content' => $prompt]
+                        ],
+                        'max_tokens' => 4000,
+                        'temperature' => 0.3,
+                        'num_search_results' => 10, // Required for sonar models
+                    ]);
+            } else {
+                // OpenAI and other models
+                $response = Http::timeout(60)
+                    ->withToken($apiKey)
+                    ->post('https://api.openai.com/v1/chat/completions', [
+                        'model' => $aiModel->api_config['model'] ?? 'gpt-4',
+                        'messages' => [
+                            ['role' => 'system', 'content' => 'You are a helpful assistant that responds only with valid JSON arrays. Do not include any explanatory text or markdown formatting.'],
+                            ['role' => 'user', 'content' => $prompt]
+                        ],
+                        'max_tokens' => 4000,
+                        'temperature' => 0.3,
+                    ]);
+            }
+
+            if ($response->failed()) {
+                Log::error('AI API call failed', [
+                    'brand_id' => $brand->id,
+                    'status' => $response->status(),
+                    'response' => $response->body()
+                ]);
+                return back()->with('error', 'AI API call failed. Please try again.');
+            }
+
+            $data = $response->json();
+            $content = $data['choices'][0]['message']['content'] ?? null;
+
+            if (!$content) {
+                return back()->with('error', 'No content received from AI');
+            }
+
+            // Parse JSON response
+            $competitorsData = null;
+            
+            // Try direct JSON parsing first
+            $competitorsData = json_decode($content, true);
+            
+            // If that fails, try to extract JSON from the response
+            if (!$competitorsData || json_last_error() !== JSON_ERROR_NONE) {
+                // Look for JSON array pattern in the text
+                if (preg_match('/```json\s*(\[.*?\])\s*```/s', $content, $matches)) {
+                    $competitorsData = json_decode($matches[1], true);
+                } elseif (preg_match('/(\[[\s\S]*?\}[\s\S]*?\])/s', $content, $matches)) {
+                    $competitorsData = json_decode($matches[1], true);
+                } else {
+                    // Try to find individual JSON objects and build an array
+                    preg_match_all('/\{[^{}]*"name"[^{}]*"domain"[^{}]*"mentions"[^{}]*\}/', $content, $matches);
+                    if (!empty($matches[0])) {
+                        $competitorsData = [];
+                        foreach ($matches[0] as $jsonObj) {
+                            $obj = json_decode($jsonObj, true);
+                            if ($obj) {
+                                $competitorsData[] = $obj;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (!$competitorsData || json_last_error() !== JSON_ERROR_NONE) {
+                Log::error('Failed to parse competitor data', [
+                    'brand_id' => $brand->id,
+                    'response' => substr($content, 0, 1000)
+                ]);
+                return back()->with('error', 'Failed to parse competitor data from AI response');
+            }
+
+            // Handle different JSON structures
+            if (isset($competitorsData['competitors']) && is_array($competitorsData['competitors'])) {
+                $competitors = $competitorsData['competitors'];
+            } elseif (is_array($competitorsData)) {
+                $competitors = $competitorsData;
+            } else {
+                return back()->with('error', 'Invalid competitor data structure');
+            }
+
+            // Store competitors
+            $savedCount = 0;
+            foreach ($competitors as $competitorData) {
+                if (isset($competitorData['name']) && isset($competitorData['domain'])) {
+                    $brand->competitors()->updateOrCreate(
+                        ['domain' => $competitorData['domain']],
+                        [
+                            'name' => $competitorData['name'],
+                            'mentions' => $competitorData['mentions'] ?? 10,
+                            'status' => 'suggested',
+                            'source' => 'ai',
+                        ]
+                    );
+                    $savedCount++;
+                }
+            }
+
+            Log::info('Competitors fetched successfully', [
+                'brand_id' => $brand->id,
+                'saved_count' => $savedCount
+            ]);
+
+            return back()->with('success', "Successfully fetched {$savedCount} competitor(s). Review and accept them below.");
+        } catch (\Exception $e) {
+            Log::error('Error fetching competitors', [
+                'brand_id' => $brand->id,
+                'error' => $e->getMessage()
+            ]);
+            return back()->with('error', 'An error occurred while fetching competitors. Please try again.');
+        }
     }
 
     public function store(Request $request, Brand $brand)
@@ -356,6 +507,25 @@ class CompetitorController extends Controller
         $request->validate([
             'status' => 'required|in:suggested,accepted,rejected,removed'
         ]);
+
+        // Check competitor limit when accepting
+        if ($request->status === 'accepted') {
+            $acceptedCount = $competitor->brand->competitors()
+                ->where('status', 'accepted')
+                ->count();
+            
+            if ($acceptedCount >= 10) {
+                // Handle non-Inertia AJAX requests (like API calls)
+                if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && !request()->header('X-Inertia')) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'You can only have a maximum of 10 accepted competitors.'
+                    ], 422);
+                }
+                
+                return back()->with('error', 'You can only have a maximum of 10 accepted competitors.');
+            }
+        }
 
         // If status is rejected, delete the competitor permanently
         if ($request->status === 'rejected') {

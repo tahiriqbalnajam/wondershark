@@ -132,9 +132,6 @@ export default function CompetitorSelector({
                                         {suggestedCompetitors.length > 0 ? `- ${suggestedCompetitors.length}` : ''}
                                     </span>
                                 </h2>
-                                <DrawerTrigger asChild>
-                                    <Button variant="outline" className='add-competitor-btn'>Add Competitor</Button>
-                                </DrawerTrigger>
                                 {/* {totalCompetitors > 0 && onRefreshCompetitors && (
                                     <Button 
                                         className='refresh-ai-analysis-btn'
@@ -158,6 +155,13 @@ export default function CompetitorSelector({
                             </div>
                         </CardHeader>
                         <CardContent>
+                            {acceptedCompetitors.length >= 10 && (
+                                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                                    <p className="text-sm text-yellow-800">
+                                        You've reached the maximum of 10 accepted competitors. Remove one to accept another.
+                                    </p>
+                                </div>
+                            )}
                             {suggestedCompetitors.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     {suggestedCompetitors.map((competitor) => {
@@ -165,6 +169,7 @@ export default function CompetitorSelector({
                                         .replace(/^https?:\/\//, '')
                                         .replace(/^www\./, '');
                                         const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
+                                        const isLimitReached = acceptedCompetitors.length >= 10;
                                         return (
                                         <Card key={competitor.id} className="hover:shadow-md transition-shadow pb-0 justify-between">
                                             <CardHeader>
@@ -190,7 +195,8 @@ export default function CompetitorSelector({
                                                             size="sm" 
                                                             variant="default"
                                                             onClick={() => handleCompetitorAction(competitor.id, 'accepted')}
-                                                            disabled={updating?.id === competitor.id && updating?.action === 'accepted'}
+                                                            disabled={isLimitReached || (updating?.id === competitor.id && updating?.action === 'accepted')}
+                                                            title={isLimitReached ? 'Maximum 10 competitors allowed' : ''}
                                                         >
                                                             {updating?.id === competitor.id && updating?.action === 'accepted' ? 'Accepting...' : 'Accept'}
                                                         </Button>
@@ -216,20 +222,12 @@ export default function CompetitorSelector({
                                     <p className="text-gray-600 mb-4">No suggested competitors found.</p>
                                     {selectedBrand && (
                                         <Button 
-                                            asChild
                                             onClick={() => {
                                                 // Trigger AI competitor fetch
-                                                window.location.href = route('competitors.index', selectedBrand.id);
+                                                router.post(route('competitors.fetch', selectedBrand.id), {});
                                             }}
                                         >
-                                            <Link 
-                                                href={route('competitors.index', selectedBrand.id)}
-                                                method="post"
-                                                as="button"
-                                                className="fetch-ai-competitors"
-                                            >
-                                                Fetch AI Competitors
-                                            </Link>
+                                            Fetch AI Competitors
                                         </Button>
                                     )}
                                 </div>
