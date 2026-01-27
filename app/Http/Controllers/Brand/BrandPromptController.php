@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Brand;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessBrandPromptAnalysis;
 use App\Models\Brand;
 use App\Models\BrandPrompt;
-use App\Services\AIPromptService;
 use App\Services\AiModelDistributionService;
-use App\Jobs\ProcessBrandPromptAnalysis;
+use App\Services\AIPromptService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -18,7 +18,7 @@ class BrandPromptController extends Controller
     public function index(Brand $brand)
     {
         // Check if user has access to this brand
-        if (!Auth::user()->canAccessBrand($brand)) {
+        if (! Auth::user()->canAccessBrand($brand)) {
             abort(403);
         }
 
@@ -54,10 +54,46 @@ class BrandPromptController extends Controller
         ]);
     }
 
+    public function store(Request $request, Brand $brand)
+    {
+        // Check if user has access to this brand
+        if (! Auth::user()->canAccessBrand($brand)) {
+            abort(403);
+        }
+
+        $request->validate([
+            'prompt' => 'required|string|max:2000',
+            'is_active' => 'sometimes|boolean',
+            'country_code' => 'sometimes|string|size:2',
+        ]);
+
+        // Check if trying to add an active prompt and already have 10 active
+        $isActive = $request->is_active ?? true;
+        if ($isActive) {
+            $activeCount = BrandPrompt::where('brand_id', $brand->id)
+                ->where('is_active', true)
+                ->count();
+
+            if ($activeCount >= 10) {
+                return redirect()->back()->withErrors(['error' => 'You can only have a maximum of 10 active prompts. Please deactivate some prompts first.']);
+            }
+        }
+
+        BrandPrompt::create([
+            'brand_id' => $brand->id,
+            'prompt' => $request->prompt,
+            'is_active' => $isActive,
+            'status' => $isActive ? 'active' : 'suggested',
+            'country_code' => $request->country_code ?? 'US',
+        ]);
+
+        return redirect()->back()->with('success', 'Prompt added successfully');
+    }
+
     public function update(Request $request, Brand $brand, BrandPrompt $prompt)
     {
         // Check if user has access to this brand
-        if (!Auth::user()->canAccessBrand($brand)) {
+        if (! Auth::user()->canAccessBrand($brand)) {
             abort(403);
         }
 
@@ -73,7 +109,24 @@ class BrandPromptController extends Controller
             'is_active' => 'sometimes|boolean',
         ]);
 
-        $prompt->update($request->only(['position', 'sentiment', 'visibility', 'is_active']));
+        $data = $request->only(['position', 'sentiment', 'visibility', 'is_active']);
+
+        // If trying to activate a prompt, check if brand already has 10 active prompts
+        if (isset($data['is_active']) && $data['is_active'] === true && ! $prompt->is_active) {
+            $activeCount = BrandPrompt::where('brand_id', $brand->id)
+                ->where('is_active', true)
+                ->count();
+
+            if ($activeCount >= 10) {
+                return redirect()->back()->withErrors(['error' => 'You can only have a maximum of 10 active prompts. Please deactivate some prompts first.']);
+            }
+
+            $data['status'] = 'active';
+        } elseif (isset($data['is_active']) && $data['is_active'] === false) {
+            $data['status'] = 'inactive';
+        }
+
+        $prompt->update($data);
 
         return redirect()->back()->with('success', 'Prompt updated successfully');
     }
@@ -81,7 +134,7 @@ class BrandPromptController extends Controller
     public function destroy(Brand $brand, BrandPrompt $prompt)
     {
         // Check if user has access to this brand
-        if (!Auth::user()->canAccessBrand($brand)) {
+        if (! Auth::user()->canAccessBrand($brand)) {
             abort(403);
         }
 
@@ -98,7 +151,7 @@ class BrandPromptController extends Controller
     public function bulkUpdate(Request $request, Brand $brand)
     {
         // Check if user has access to this brand
-        if (!Auth::user()->canAccessBrand($brand)) {
+        if (! Auth::user()->canAccessBrand($brand)) {
             abort(403);
         }
 
@@ -109,6 +162,23 @@ class BrandPromptController extends Controller
             'value' => 'sometimes|string',
         ]);
 
+        // For activate action, check total active prompts won't exceed 10
+        if ($request->action === 'activate') {
+            $currentActiveCount = BrandPrompt::where('brand_id', $brand->id)
+                ->where('is_active', true)
+                ->count();
+
+            // Count how many we're trying to activate that aren't already active
+            $newActivations = BrandPrompt::whereIn('id', $request->prompt_ids)
+                ->where('brand_id', $brand->id)
+                ->where('is_active', false)
+                ->count();
+
+            if ($currentActiveCount + $newActivations > 10) {
+                return redirect()->back()->withErrors(['error' => 'You can only have a maximum of 10 active prompts. Currently have '.$currentActiveCount.' active.']);
+            }
+        }
+
         $prompts = BrandPrompt::whereIn('id', $request->prompt_ids)
             ->where('brand_id', $brand->id)
             ->get();
@@ -116,10 +186,10 @@ class BrandPromptController extends Controller
         foreach ($prompts as $prompt) {
             switch ($request->action) {
                 case 'activate':
-                    $prompt->update(['is_active' => true]);
+                    $prompt->update(['is_active' => true, 'status' => 'active']);
                     break;
                 case 'deactivate':
-                    $prompt->update(['is_active' => false]);
+                    $prompt->update(['is_active' => false, 'status' => 'inactive']);
                     break;
                 case 'delete':
                     $prompt->delete();
@@ -150,7 +220,7 @@ class BrandPromptController extends Controller
         ]);
 
         // Check if user has access to this brand
-        if (!Auth::user()->canAccessBrand($brand)) {
+        if (! Auth::user()->canAccessBrand($brand)) {
             Log::warning('Unauthorized access attempt', [
                 'brand_id' => $brand->id,
                 'brand_agency_id' => $brand->agency_id,
@@ -160,8 +230,9 @@ class BrandPromptController extends Controller
         }
 
         // Check if brand has required information
-        if (!$brand->website) {
+        if (! $brand->website) {
             Log::warning('Brand missing website', ['brand_id' => $brand->id]);
+
             return redirect()->back()->with('error', 'Brand must have a website to generate AI prompts.');
         }
 
@@ -169,17 +240,18 @@ class BrandPromptController extends Controller
 
         $aiService = app(AIPromptService::class);
         $availableProviders = array_keys($aiService->getAvailableProviders());
-        
+
         Log::info('Available providers', ['providers' => $availableProviders]);
-        
+
         // If no providers available, return error
         if (empty($availableProviders)) {
             Log::warning('No AI providers available');
+
             return redirect()->back()->with('error', 'No AI providers are configured. Please check your settings.');
         }
-        
+
         $request->validate([
-            'ai_provider' => 'sometimes|string|in:' . implode(',', $availableProviders),
+            'ai_provider' => 'sometimes|string|in:'.implode(',', $availableProviders),
             'count' => 'sometimes|integer|min:1|max:20',
         ]);
 
@@ -187,30 +259,31 @@ class BrandPromptController extends Controller
 
         try {
             Log::info('Entered try block');
-            
+
             $sessionId = session()->getId();
             Log::info('Got session ID', ['session_id' => $sessionId]);
-            
+
             // Get the first available provider name (the first value in the array)
-            $defaultProvider = !empty($availableProviders) ? $availableProviders[0] : null;
+            $defaultProvider = ! empty($availableProviders) ? $availableProviders[0] : null;
             Log::info('Default provider', ['provider' => $defaultProvider]);
-            
-            if (!$defaultProvider) {
+
+            if (! $defaultProvider) {
                 Log::warning('No default provider found');
+
                 return redirect()->back()->with('error', 'No AI providers are available. Please enable at least one AI model.');
             }
-            
+
             $aiProvider = $request->input('ai_provider', $defaultProvider);
             $count = $request->input('count', 10);
-            
+
             Log::info('Starting AI prompt generation', [
                 'brand_id' => $brand->id,
                 'website' => $brand->website,
                 'ai_provider' => $aiProvider,
                 'available_providers' => $availableProviders,
-                'count' => $count
+                'count' => $count,
             ]);
-            
+
             // Generate prompts using AI
             $generatedPrompts = $aiService->generatePromptsForWebsite(
                 $brand->website,
@@ -221,7 +294,7 @@ class BrandPromptController extends Controller
 
             // Get distribution service
             $distributionService = app(AiModelDistributionService::class);
-            
+
             // Distribute AI models across prompts
             // Strategy options: 'weighted', 'round_robin', 'random', 'performance_based'
             $modelDistribution = $distributionService->distributeModelsForPrompts(
@@ -246,9 +319,9 @@ class BrandPromptController extends Controller
 
                 // Dispatch analysis job with specific AI model
                 ProcessBrandPromptAnalysis::dispatch($brandPrompt, $sessionId, false, $assignedModel);
-                
+
                 $brandPrompts[] = $brandPrompt;
-                
+
                 if (count($brandPrompts) >= $count) {
                     break;
                 }
@@ -261,19 +334,19 @@ class BrandPromptController extends Controller
                 'brand_id' => $brand->id,
                 'count' => count($brandPrompts),
                 'ai_provider_used_for_generation' => $aiProvider,
-                'analysis_distribution' => $distributionStats
+                'analysis_distribution' => $distributionStats,
             ]);
 
-            return redirect()->back()->with('success', count($brandPrompts) . ' AI prompts generated successfully. Analysis in progress...');
+            return redirect()->back()->with('success', count($brandPrompts).' AI prompts generated successfully. Analysis in progress...');
 
         } catch (\Exception $e) {
             Log::error('Failed to generate AI prompts for brand', [
                 'brand_id' => $brand->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
-            return redirect()->back()->with('error', 'Failed to generate prompts: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Failed to generate prompts: '.$e->getMessage());
         }
     }
 }

@@ -283,6 +283,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Brand Prompts Management Routes
         Route::get('brands/{brand}/prompts', [\App\Http\Controllers\Brand\BrandPromptController::class, 'index'])->name('brands.prompts.index');
+        Route::post('brands/{brand}/prompts', [\App\Http\Controllers\Brand\BrandPromptController::class, 'store'])->name('brands.prompts.store');
         Route::post('brands/{brand}/prompts/generate-ai', [\App\Http\Controllers\Brand\BrandPromptController::class, 'generateAI'])->name('brands.prompts.generateAI');
         Route::put('brands/{brand}/prompts/{prompt}', [\App\Http\Controllers\Brand\BrandPromptController::class, 'update'])->name('brands.prompts.update');
         Route::delete('brands/{brand}/prompts/{prompt}', [\App\Http\Controllers\Brand\BrandPromptController::class, 'destroy'])->name('brands.prompts.destroy');

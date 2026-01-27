@@ -262,38 +262,46 @@ export default function Dashboard() {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="h-80">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={visibilityData}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="date" />
-                                        <YAxis />
-                                        <Tooltip />
-                                        <Legend />
-                                        <Line 
-                                            type="monotone" 
-                                            dataKey="influencity" 
-                                            stroke="#ff6900" 
-                                            strokeWidth={2}
-                                            name="Influencity"
-                                        />
-                                        <Line 
-                                            type="monotone" 
-                                            dataKey="famebit" 
-                                            stroke="#ff4444" 
-                                            strokeWidth={2}
-                                            name="FameBit"
-                                        />
-                                        <Line 
-                                            type="monotone" 
-                                            dataKey="amazon" 
-                                            stroke="#ffbb33" 
-                                            strokeWidth={2}
-                                            name="Amazon Creator Connections"
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
+                            {visibilityData.length === 0 ? (
+                                <div className="h-80 flex items-center justify-center text-center">
+                                    <div>
+                                        <p className="text-muted-foreground">The system is currently analyzing your <strong>prompts</strong>. Results will be displayed shortly.</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="h-80">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={visibilityData}>
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis dataKey="date" />
+                                            <YAxis />
+                                            <Tooltip />
+                                            <Legend />
+                                            <Line 
+                                                type="monotone" 
+                                                dataKey="influencity" 
+                                                stroke="#ff6900" 
+                                                strokeWidth={2}
+                                                name="Influencity"
+                                            />
+                                            <Line 
+                                                type="monotone" 
+                                                dataKey="famebit" 
+                                                stroke="#ff4444" 
+                                                strokeWidth={2}
+                                                name="FameBit"
+                                            />
+                                            <Line 
+                                                type="monotone" 
+                                                dataKey="amazon" 
+                                                stroke="#ffbb33" 
+                                                strokeWidth={2}
+                                                name="Amazon Creator Connections"
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 
@@ -311,38 +319,46 @@ export default function Dashboard() {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-12">#</TableHead>
-                                        <TableHead>Brand</TableHead>
-                                        <TableHead>Position</TableHead>
-                                        <TableHead>Sentiment</TableHead>
-                                        <TableHead>Visibility</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {industryRanking.map((item, index) => (
-                                        <TableRow key={item.brand}>
-                                            <TableCell className="font-medium">{index + 1}</TableCell>
-                                            <TableCell className="font-medium">{item.brand}</TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline">#{item.position}</Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge className={getSentimentColor(item.sentiment)}>
-                                                    {item.sentiment}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge className={getVisibilityColor(item.visibility)}>
-                                                    {item.visibility}
-                                                </Badge>
-                                            </TableCell>
+                            {industryRanking.length === 0 ? (
+                                <div className="h-80 flex items-center justify-center text-center">
+                                    <div>
+                                        <p className="text-muted-foreground">The system is currently analyzing <strong>industry rankings</strong>. Results will be displayed shortly.</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-12">#</TableHead>
+                                            <TableHead>Brand</TableHead>
+                                            <TableHead>Position</TableHead>
+                                            <TableHead>Sentiment</TableHead>
+                                            <TableHead>Visibility</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {industryRanking.map((item, index) => (
+                                            <TableRow key={item.brand}>
+                                                <TableCell className="font-medium">{index + 1}</TableCell>
+                                                <TableCell className="font-medium">{item.brand}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline">#{item.position}</Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge className={getSentimentColor(item.sentiment)}>
+                                                        {item.sentiment}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge className={getVisibilityColor(item.visibility)}>
+                                                        {item.visibility}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            )}
                         </CardContent>
                     </Card>
                 </div>

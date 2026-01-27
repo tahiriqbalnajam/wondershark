@@ -1,6 +1,6 @@
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { AddPromptDialog } from '@/components/brand/add-prompt-dialog';
 import { Button } from '@/components/ui/button';
@@ -65,8 +65,8 @@ type Props = {
 };
 
 export default function BrandPromptsIndex({ brand, prompts }: Props) {
-    const { auth } = usePage().props as any;
-    const userRoles = auth?.user?.roles || [];
+    const { auth, errors } = usePage().props as any;
+    const userRoles = auth?.roles || [];
     const isAdmin = userRoles.includes('admin');
     const isBrandOrAgency = userRoles.includes('brand') || userRoles.includes('agency');
     
@@ -74,6 +74,16 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
     const [isLoading, setIsLoading] = useState(false);
     const [currentTab, setCurrentTab] = useState<'suggested' | 'active' | 'inactive'>('active');
     const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (errors?.error) {
+            setErrorMessage(Array.isArray(errors.error) ? errors.error[0] : errors.error);
+            // Auto-clear error after 5 seconds
+            const timeout = setTimeout(() => setErrorMessage(null), 5000);
+            return () => clearTimeout(timeout);
+        }
+    }, [errors]);
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -133,6 +143,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
         if (confirm('Are you sure you want to delete this prompt?')) {
             await router.delete(`/brands/${brand.id}/prompts/${promptId}`, {
                 preserveScroll: true,
+                preserveState: false,
             });
         }
     };
@@ -175,6 +186,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                 action: 'activate',
             }, {
                 preserveScroll: true,
+                preserveState: false,
                 onSuccess: () => {
                     setSelectedPrompts([]);
                 },
@@ -193,6 +205,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                 action: 'deactivate',
             }, {
                 preserveScroll: true,
+                preserveState: false,
                 onSuccess: () => {
                     setSelectedPrompts([]);
                 },
@@ -213,6 +226,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                 action: 'delete',
             }, {
                 preserveScroll: true,
+                preserveState: false,
                 onSuccess: () => {
                     setSelectedPrompts([]);
                 },
@@ -227,6 +241,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
             [field]: value,
         }, {
             preserveScroll: true,
+            preserveState: false,
         });
     };
 
@@ -261,6 +276,11 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
 
             <TooltipProvider>
                 <div className="space-y-6 relative mt-15">
+                    {errorMessage && (
+                        <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+                            <p className="text-sm text-red-700 font-medium">{errorMessage}</p>
+                        </div>
+                    )}
                     <div className="flex items-center justify-between">
                         <div className="space-y-1">
                             <h3 className="text-xl font-semibold">{brand.name} Prompts <small className="text-gray-400 text-sm"> - {prompts.length} Total</small></h3>
@@ -280,12 +300,12 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                         <div className="flex justify-between items-center mb-10">
                             <TabsList className="add-prompt-lists border">
                                 <TabsTrigger value="active">Active ({activePrompts.length})</TabsTrigger>
-                                {isAdmin && (
+                                {(isAdmin || isBrandOrAgency) && (
                                     <TabsTrigger value="suggested">Suggested ({suggestedPrompts.length})</TabsTrigger>
                                 )}
                                 <TabsTrigger value="inactive">Inactive ({inactivePrompts.length})</TabsTrigger>
                             </TabsList>
-                            {isAdmin && (
+                            {(isAdmin || isBrandOrAgency) && (
                                 <AddPromptDialog brandId={brand.id} className="add-prompt-btn" onPromptAdd={handleManualPromptAdd} />
                             )}
                         </div>
@@ -461,7 +481,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                             </Table>
                         </TabsContent>
 
-                        {isAdmin && (
+                        {(isAdmin || isBrandOrAgency) && (
                             <TabsContent value="suggested" className="active-table-prompt">
                                 <div className="suggested-prompts-box flex justify-between items-center p-4 border rounded-sm mb-5">
                                     <p className='flex items-center gap-3 text-sm'><Sparkles className='text-orange-600'/><b>Suggested prompts.</b> Expand your brand's presence with suggested prompts.</p>

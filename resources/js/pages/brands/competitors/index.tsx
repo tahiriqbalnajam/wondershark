@@ -132,11 +132,11 @@ const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, tot
                             </p>
                         )}
                     </div> */}
-                    {/* <div className="flex gap-2"> */}
+                    <div className="flex gap-2 mb-6">
                         <Drawer direction="right" open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-                            {/* <DrawerTrigger asChild>
+                            <DrawerTrigger asChild>
                                 <Button variant="outline" className='add-competitor-btn'>Add Competitor</Button>
-                            </DrawerTrigger> */}
+                            </DrawerTrigger>
                             <DrawerContent className="w-[25%] right-0 left-auto top-0 bottom-0 m-0 rounded-bl-md items-center Create-Competitor">
                                 <div className="mx-auto w-full max-w-sm">
                                     <DrawerHeader className='p-0 mb-5'>
@@ -242,8 +242,7 @@ const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, tot
                                 </div>
                             </DrawerContent>
                         </Drawer>
-                    {/* </div> */}
-                {/* </div> */}
+                    </div>
 
                 <CompetitorSelector
                     selectedBrand={brand}

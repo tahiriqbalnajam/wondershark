@@ -26,9 +26,11 @@ export function AddPromptDialog({ brandId, className, onPromptAdd }: AddPromptDi
   const [prompt, setPrompt] = useState('');
   const [countryCode, setCountryCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
     if (!prompt.trim() || !countryCode) return;
 
@@ -36,24 +38,28 @@ export function AddPromptDialog({ brandId, className, onPromptAdd }: AddPromptDi
     if (brandId) {
       setLoading(true);
       
-      try {
-        router.post('/api/brand-prompts', {
-          brand_id: brandId,
-          prompt: prompt.trim(),
-          country_code: countryCode,
-        }, {
-          preserveState: true,
-          onSuccess: () => {
-            setPrompt('');
-            setCountryCode('');
-            setOpen(false);
-          },
-          onFinish: () => setLoading(false),
-        });
-      } catch (error) {
-        console.error('Error adding prompt:', error);
-        setLoading(false);
-      }
+      router.post(`/brands/${brandId}/prompts`, {
+        prompt: prompt.trim(),
+        country_code: countryCode,
+        is_active: true,
+      }, {
+        preserveScroll: true,
+        preserveState: false,
+        onSuccess: () => {
+          setPrompt('');
+          setCountryCode('');
+          setOpen(false);
+          setError(null);
+        },
+        onError: (errors) => {
+          if (errors && errors.error) {
+            setError(Array.isArray(errors.error) ? errors.error[0] : errors.error);
+          } else {
+            setError('Failed to add prompt. Please try again.');
+          }
+        },
+        onFinish: () => setLoading(false),
+      });
     } else {
       // For new brands, use the callback function
       if (onPromptAdd) {
@@ -93,6 +99,11 @@ export function AddPromptDialog({ brandId, className, onPromptAdd }: AddPromptDi
               Add a custom marketing prompt for your brand with country targeting.
             </DialogDescription>
           </DialogHeader>
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="prompt">Prompt</Label>
