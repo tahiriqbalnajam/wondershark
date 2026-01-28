@@ -40,7 +40,7 @@ return [
     | AI Services Configuration
     |--------------------------------------------------------------------------
     */
-    
+
     'openai' => [
         'api_key' => env('OPENAI_API_KEY'),
         'organization' => env('OPENAI_ORGANIZATION'),

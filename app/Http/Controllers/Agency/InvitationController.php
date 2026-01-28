@@ -6,11 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\AgencyInvitation;
 use App\Models\AgencyMember;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -23,7 +23,7 @@ class InvitationController extends Controller
     {
         $invitation = AgencyInvitation::where('token', $token)->first();
 
-        if (!$invitation) {
+        if (! $invitation) {
             return redirect()->route('login')->with('error', 'Invalid invitation link.');
         }
 
@@ -58,7 +58,7 @@ class InvitationController extends Controller
 
         $invitation = AgencyInvitation::where('token', $request->token)->first();
 
-        if (!$invitation) {
+        if (! $invitation) {
             return redirect()->route('login')->with('error', 'Invalid invitation link.');
         }
 
@@ -113,7 +113,7 @@ class InvitationController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Ensure the invitation belongs to the authenticated agency
         if ($invitation->agency_id !== $user->id) {
             abort(403);
@@ -140,13 +140,13 @@ class InvitationController extends Controller
             \Log::error('Failed to resend invitation email', [
                 'invitation_id' => $invitation->id,
                 'email' => $invitation->email,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return back()->with('error', 'Failed to send invitation email. Please check your email configuration.');
         }
 
-        return back()->with('success', 'Invitation resent to ' . $invitation->email);
+        return back()->with('success', 'Invitation resent to '.$invitation->email);
     }
 
     /**
@@ -156,7 +156,7 @@ class InvitationController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Ensure the invitation belongs to the authenticated agency
         if ($invitation->agency_id !== $user->id) {
             abort(403);
@@ -169,6 +169,6 @@ class InvitationController extends Controller
         $email = $invitation->email;
         $invitation->delete();
 
-        return back()->with('success', 'Invitation to ' . $email . ' has been cancelled.');
+        return back()->with('success', 'Invitation to '.$email.' has been cancelled.');
     }
 }

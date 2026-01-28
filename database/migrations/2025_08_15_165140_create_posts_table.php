@@ -21,7 +21,7 @@ return new class extends Migration
             $table->enum('status', ['published', 'draft', 'archived'])->default('published');
             $table->timestamp('posted_at')->nullable();
             $table->timestamps();
-            
+
             $table->index(['brand_id', 'status']);
             $table->index(['user_id', 'created_at']);
         });

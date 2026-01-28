@@ -16,7 +16,7 @@ class AiModel extends Model
         'is_enabled',
         'prompts_per_brand',
         'api_config',
-        'order'
+        'order',
     ];
 
     protected $casts = [

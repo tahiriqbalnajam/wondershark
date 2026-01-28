@@ -21,7 +21,7 @@ return new class extends Migration
             $table->text('description')->nullable(); // brief description of the resource
             $table->boolean('is_competitor_url')->default(false);
             $table->timestamps();
-            
+
             // Indexes for faster queries
             $table->index(['brand_prompt_id', 'type']);
             $table->index(['domain', 'is_competitor_url']);

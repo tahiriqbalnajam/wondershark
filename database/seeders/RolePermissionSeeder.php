@@ -2,12 +2,11 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
-use App\Models\User;
+use Spatie\Permission\Models\Role;
 
 class RolePermissionSeeder extends Seeder
 {
@@ -24,17 +23,17 @@ class RolePermissionSeeder extends Seeder
             // Dashboard permissions
             'view-dashboard',
             'manage-dashboard',
-            
+
             // User management permissions
             'view-users',
             'create-users',
             'edit-users',
             'delete-users',
-            
+
             // Settings permissions
             'view-settings',
             'manage-settings',
-            
+
             // Admin permissions
             'view-admin-panel',
             'manage-system',

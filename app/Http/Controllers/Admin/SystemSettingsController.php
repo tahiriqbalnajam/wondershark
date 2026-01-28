@@ -17,11 +17,11 @@ class SystemSettingsController extends Controller
                 'allow_brand_post_creation' => SystemSetting::getBoolean('allow_brand_post_creation', true),
                 'enforce_brand_post_limits' => SystemSetting::getBoolean('enforce_brand_post_limits', true),
                 'default_monthly_post_limit' => SystemSetting::getInteger('default_monthly_post_limit', 50),
-            ]
+            ],
         ];
 
         return Inertia::render('admin/settings/index', [
-            'settings' => $settings
+            'settings' => $settings,
         ]);
     }
 

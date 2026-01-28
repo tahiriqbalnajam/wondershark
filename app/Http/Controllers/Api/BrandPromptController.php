@@ -19,8 +19,8 @@ class BrandPromptController extends Controller
 
         // Check if user has access to this brand
         $brand = \App\Models\Brand::findOrFail($request->brand_id);
-        
-        if (!Auth::user()->canAccessBrand($brand)) {
+
+        if (! Auth::user()->canAccessBrand($brand)) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -32,7 +32,7 @@ class BrandPromptController extends Controller
 
         return response()->json([
             'message' => 'Prompt added successfully',
-            'prompt' => $prompt
+            'prompt' => $prompt,
         ]);
     }
 
@@ -43,8 +43,8 @@ class BrandPromptController extends Controller
         ]);
 
         $brand = \App\Models\Brand::findOrFail($request->brand_id);
-        
-        if (!Auth::user()->canAccessBrand($brand) && $brand->user_id !== Auth::user()->id) {
+
+        if (! Auth::user()->canAccessBrand($brand) && $brand->user_id !== Auth::user()->id) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -58,8 +58,8 @@ class BrandPromptController extends Controller
     public function destroy(BrandPrompt $prompt)
     {
         $brand = $prompt->brand;
-        
-        if (!Auth::user()->canAccessBrand($brand)) {
+
+        if (! Auth::user()->canAccessBrand($brand)) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 

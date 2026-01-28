@@ -48,59 +48,59 @@ class HandleInertiaRequests extends Middleware
         $brands = collect();
         if ($user) {
             $isAdmin = $user->hasRole('admin');
-            
+
             $query = \App\Models\Brand::query();
-            
+
             if ($isAdmin) {
                 // Admin can see all brands, limit to 10 most recent
                 $query->whereNotNull('website')
-                      ->where('website', '!=', '')
-                      ->orderBy('updated_at', 'desc')
-                      ->limit(10);
+                    ->where('website', '!=', '')
+                    ->orderBy('updated_at', 'desc')
+                    ->limit(10);
             } else {
                 // Regular users see only their own brands
                 // Include brands for: brand users (user_id), agency owners (agency_id), and agency members
-                $query->where(function($q) use ($user) {
+                $query->where(function ($q) use ($user) {
                     $q->where('user_id', $user->id)
-                      ->orWhere('agency_id', $user->id);
-                    
+                        ->orWhere('agency_id', $user->id);
+
                     // Also include brands from user's agency if they are an agency member
                     $membership = $user->agencyMembership;
                     if ($membership) {
                         $q->orWhere('agency_id', $membership->agency_id);
                     }
                 })
-                ->orderBy('updated_at', 'desc')
-                ->limit(10);
+                    ->orderBy('updated_at', 'desc')
+                    ->limit(10);
             }
-            
+
             $brands = $query->select('id', 'name', 'website', 'logo')->get();
         }
 
         // Get selected brand from session
         $selectedBrandId = session('selected_brand_id');
         $selectedBrand = null;
-        
+
         if ($selectedBrandId && $user) {
             try {
                 $isAdmin = $user->hasRole('admin');
-                
+
                 $query = \App\Models\Brand::where('id', $selectedBrandId);
-                
+
                 // Admins can see any brand, regular users only their own
-                if (!$isAdmin) {
-                    $query->where(function($q) use ($user) {
+                if (! $isAdmin) {
+                    $query->where(function ($q) use ($user) {
                         $q->where('user_id', $user->id)
-                          ->orWhere('agency_id', $user->id);
+                            ->orWhere('agency_id', $user->id);
                     });
                 }
-                
+
                 $selectedBrand = $query->select('id', 'name', 'website', 'logo')->first();
             } catch (\Exception $e) {
                 Log::error('Error loading selected brand', [
                     'brand_id' => $selectedBrandId,
                     'user_id' => $user->id,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
                 $selectedBrand = null;
             }
@@ -112,8 +112,8 @@ class HandleInertiaRequests extends Middleware
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
                 'user' => $user ? array_merge($user->toArray(), [
-                    'logo' => $user->logo ? asset('storage/' . $user->logo) : null,
-                    'logo_thumbnail' => $user->logo_thumbnail ? asset('storage/' . $user->logo_thumbnail) : null,
+                    'logo' => $user->logo ? asset('storage/'.$user->logo) : null,
+                    'logo_thumbnail' => $user->logo_thumbnail ? asset('storage/'.$user->logo_thumbnail) : null,
                 ]) : null,
                 'roles' => $userRoles,
                 'permissions' => $userPermissions,

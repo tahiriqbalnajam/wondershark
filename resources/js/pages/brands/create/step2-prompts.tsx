@@ -29,7 +29,7 @@ import {
     Sparkles,
     Loader2
 } from 'lucide-react';
-import { Step2Props, GeneratedPrompt } from './types';
+import { Step2Props, BrandPrompt } from './types';
 import { useState, useEffect, useCallback } from 'react';
 import { countries } from '@/data/countries';
 
@@ -88,7 +88,7 @@ export default function Step2Prompts({
     brandId,
     existingPrompts
 }: Step2Props) {
-    const [displayedPrompts, setDisplayedPrompts] = useState<GeneratedPrompt[]>([]);
+    const [displayedPrompts, setDisplayedPrompts] = useState<BrandPrompt[]>([]);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(false);
     const [totalCount, setTotalCount] = useState(0);
@@ -96,7 +96,7 @@ export default function Step2Prompts({
     
     // Keep all prompts from database and AI generation (never remove from this list)
     // Initialize from existingPrompts which comes directly from DB
-    const [allPrompts, setAllPrompts] = useState<GeneratedPrompt[]>(() => existingPrompts || []);
+    const [allPrompts, setAllPrompts] = useState<BrandPrompt[]>(() => existingPrompts || []);
     
     // Track prompt states: 'suggested' (is_active=0), 'active' (is_active=1), 'inactive' (rejected)
     const [promptStates, setPromptStates] = useState<Record<number, 'suggested' | 'active' | 'inactive'>>(() => {
@@ -114,7 +114,7 @@ export default function Step2Prompts({
     });
 
     // Save prompts to database in bulk
-    const saveBulkPromptsToDatabase = useCallback(async (prompts: GeneratedPrompt[]) => {
+    const saveBulkPromptsToDatabase = useCallback(async (prompts: BrandPrompt[]) => {
         if (!brandId) return;
 
         try {
@@ -202,10 +202,15 @@ export default function Step2Prompts({
     }, [allPrompts]);
 
     // Categorize prompts by their state - USE allPrompts instead of aiGeneratedPrompts
-    const suggestedPrompts = allPrompts?.filter(p => {
+    const suggestedPrompts = (allPrompts?.filter(p => {
         const state = promptStates[p.id];
         return !state || state === 'suggested';
-    }) || [];
+    }) || []).sort((a, b) => {
+        // Sort by volume descending (higher volume first)
+        const volumeA = Number(a.volume) || 0;
+        const volumeB = Number(b.volume) || 0;
+        return volumeB - volumeA;
+    });
     const activePrompts = allPrompts?.filter(p => promptStates[p.id] === 'active') || [];
     const inactivePrompts = allPrompts?.filter(p => promptStates[p.id] === 'inactive') || [];
 
@@ -223,7 +228,7 @@ export default function Step2Prompts({
     }, [promptStates, aiGeneratedPrompts, allPrompts, suggestedPrompts.length, activePrompts.length, inactivePrompts.length]);
 
     // Handle Track button - move prompt from suggested to active and UPDATE DATABASE
-    const handleTrackPrompt = async (prompt: GeneratedPrompt) => {
+    const handleTrackPrompt = async (prompt: BrandPrompt) => {
         if (!brandId) {
             console.error('Cannot track prompt: Brand ID is missing');
             return;
@@ -273,7 +278,7 @@ export default function Step2Prompts({
     };
 
     // Handle Reject button - move prompt from suggested to inactive and UPDATE DATABASE
-    const handleRejectPrompt = async (prompt: GeneratedPrompt) => {
+    const handleRejectPrompt = async (prompt: BrandPrompt) => {
         if (!brandId) {
             console.error('Cannot reject prompt: Brand ID is missing');
             return;
@@ -318,7 +323,7 @@ export default function Step2Prompts({
     };
 
     // Handle Add button from inactive - move back to active and UPDATE DATABASE
-    const handleActivatePrompt = async (prompt: GeneratedPrompt) => {
+    const handleActivatePrompt = async (prompt: BrandPrompt) => {
         if (!brandId) {
             console.error('Cannot activate prompt: Brand ID is missing');
             return;
@@ -387,8 +392,8 @@ export default function Step2Prompts({
 
     // Wrapper for handleManualPromptAdd to add prompts to active state
     const handleManualPromptAddWrapper = (prompt: string, countryCode: string) => {
-        // Create a new GeneratedPrompt object for the manually added prompt
-        const newPrompt: GeneratedPrompt = {
+        // Create a new BrandPrompt object for the manually added prompt
+        const newPrompt: BrandPrompt = {
             id: Date.now(), // Use timestamp as unique ID
             prompt: prompt,
             location: countryCode,
@@ -490,7 +495,7 @@ export default function Step2Prompts({
 
     // Toggle all prompts in current tab
     const toggleAllPromptsInTab = (checked: boolean) => {
-        let currentPrompts: GeneratedPrompt[] = [];
+        let currentPrompts: BrandPrompt[] = [];
         
         switch (currentTab) {
             case 'active':

@@ -3,14 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Models\Competitor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
-use App\Jobs\FetchCompetitors;
-use App\Services\SerpApiStatsExtractor;
 
 class OrderController extends Controller
 {
@@ -19,7 +14,7 @@ class OrderController extends Controller
      */
     public function index()
     {
-       $orders = Order::with('items.product')
+        $orders = Order::with('items.product')
             ->where('user_id', Auth::id())
             ->latest()
             ->get();

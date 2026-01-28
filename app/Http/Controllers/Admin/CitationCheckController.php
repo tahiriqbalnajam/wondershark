@@ -37,7 +37,7 @@ class CitationCheckController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('url', 'like', "%{$search}%");
+                    ->orWhere('url', 'like', "%{$search}%");
             });
         }
 
@@ -49,7 +49,7 @@ class CitationCheckController extends Controller
         return Inertia::render('admin/citation-check/index', [
             'posts' => $posts,
             'brands' => $brands,
-            'filters' => $request->only(['brand_id', 'status', 'search'])
+            'filters' => $request->only(['brand_id', 'status', 'search']),
         ]);
     }
 
@@ -57,7 +57,7 @@ class CitationCheckController extends Controller
     {
         $request->validate([
             'post_ids' => 'required|array',
-            'post_ids.*' => 'exists:posts,id'
+            'post_ids.*' => 'exists:posts,id',
         ]);
 
         try {
@@ -73,13 +73,13 @@ class CitationCheckController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Citation check completed successfully',
-                'data' => $result
+                'data' => $result,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Citation check failed: ' . $e->getMessage()
+                'message' => 'Citation check failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -87,7 +87,7 @@ class CitationCheckController extends Controller
     public function show(Post $post)
     {
         $post->load(['brand', 'citations', 'user', 'prompts']);
-        
+
         // Get combined prompts from post prompts (not brand prompts)
         $prompts = $post->prompts()
             ->where('is_selected', true)
@@ -97,7 +97,7 @@ class CitationCheckController extends Controller
 
         return Inertia::render('admin/citation-check/show', [
             'post' => $post,
-            'combinedPrompts' => $combinedPrompts
+            'combinedPrompts' => $combinedPrompts,
         ]);
     }
 
@@ -109,13 +109,13 @@ class CitationCheckController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Citation recheck completed successfully',
-                'data' => $result
+                'data' => $result,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Citation recheck failed: ' . $e->getMessage()
+                'message' => 'Citation recheck failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -125,7 +125,7 @@ class CitationCheckController extends Controller
         $request->validate([
             'brand_id' => 'sometimes|exists:brands,id',
             'status' => 'sometimes|string',
-            'limit' => 'sometimes|integer|min:1|max:100'
+            'limit' => 'sometimes|integer|min:1|max:100',
         ]);
 
         try {
@@ -148,13 +148,13 @@ class CitationCheckController extends Controller
                 'success' => true,
                 'message' => 'Bulk citation check completed successfully',
                 'processed_count' => count($results),
-                'data' => $results
+                'data' => $results,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Bulk citation check failed: ' . $e->getMessage()
+                'message' => 'Bulk citation check failed: '.$e->getMessage(),
             ], 500);
         }
     }

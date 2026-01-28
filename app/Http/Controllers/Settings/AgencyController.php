@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -41,7 +41,7 @@ class AgencyController extends Controller
 
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Update agency name (you might want to store this in a separate agencies table)
         $user->update([
             'name' => $request->agency_name,
@@ -55,7 +55,7 @@ class AgencyController extends Controller
             // }
 
             $logoPath = $request->file('logo')->store('agency-logos', 'public');
-            
+
             // In a real application, save this to agency table
             // $user->update(['logo' => $logoPath]);
         }
@@ -148,12 +148,12 @@ class AgencyController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         return Inertia::render('settings/agency', [
             'agency' => [
                 'name' => $user->name,
                 'url' => $user->url,
-                'logo' => $user->logo ? asset('storage/' . $user->logo) : null,
+                'logo' => $user->logo ? asset('storage/'.$user->logo) : null,
             ],
         ]);
     }
@@ -171,7 +171,7 @@ class AgencyController extends Controller
 
         /** @var User $user */
         $user = Auth::user();
-        
+
         $updateData = [
             'name' => $request->name,
             'url' => $request->url,
@@ -189,19 +189,19 @@ class AgencyController extends Controller
 
             $logo = $request->file('logo');
             $extension = $logo->getClientOriginalExtension();
-            $filename = 'agency_' . $user->id . '_' . time();
-            
+            $filename = 'agency_'.$user->id.'_'.time();
+
             // Store original logo
-            $logoPath = $logo->storeAs('agency-logos', $filename . '.' . $extension, 'public');
+            $logoPath = $logo->storeAs('agency-logos', $filename.'.'.$extension, 'public');
             $updateData['logo'] = $logoPath;
-            
+
             // Create thumbnail (80x80)
             $thumbnailPath = $this->createThumbnail($logo, $filename, $extension);
             if ($thumbnailPath) {
                 $updateData['logo_thumbnail'] = $thumbnailPath;
             }
         }
-        
+
         $user->update($updateData);
 
         return back()->with('status', 'Agency information updated successfully!');
@@ -214,18 +214,18 @@ class AgencyController extends Controller
     {
         try {
             $image = imagecreatefromstring(file_get_contents($file->getRealPath()));
-            
-            if (!$image) {
+
+            if (! $image) {
                 return null;
             }
 
             $originalWidth = imagesx($image);
             $originalHeight = imagesy($image);
-            
+
             // Create 80x80 thumbnail
             $thumbnailSize = 80;
             $thumbnail = imagecreatetruecolor($thumbnailSize, $thumbnailSize);
-            
+
             // Preserve transparency for PNG and GIF
             if ($extension === 'png' || $extension === 'gif') {
                 imagealphablending($thumbnail, false);
@@ -233,7 +233,7 @@ class AgencyController extends Controller
                 $transparent = imagecolorallocatealpha($thumbnail, 255, 255, 255, 127);
                 imagefilledrectangle($thumbnail, 0, 0, $thumbnailSize, $thumbnailSize, $transparent);
             }
-            
+
             // Resize image
             imagecopyresampled(
                 $thumbnail,
@@ -244,16 +244,16 @@ class AgencyController extends Controller
                 $originalWidth,
                 $originalHeight
             );
-            
+
             // Save thumbnail
-            $thumbnailFilename = $filename . '_thumb.' . $extension;
-            $thumbnailPath = storage_path('app/public/agency-logos/' . $thumbnailFilename);
-            
+            $thumbnailFilename = $filename.'_thumb.'.$extension;
+            $thumbnailPath = storage_path('app/public/agency-logos/'.$thumbnailFilename);
+
             // Ensure directory exists
-            if (!file_exists(dirname($thumbnailPath))) {
+            if (! file_exists(dirname($thumbnailPath))) {
                 mkdir(dirname($thumbnailPath), 0755, true);
             }
-            
+
             // Save based on extension
             $saved = false;
             switch (strtolower($extension)) {
@@ -271,13 +271,14 @@ class AgencyController extends Controller
                     $saved = imagewebp($thumbnail, $thumbnailPath, 90);
                     break;
             }
-            
+
             imagedestroy($image);
             imagedestroy($thumbnail);
-            
-            return $saved ? 'agency-logos/' . $thumbnailFilename : null;
+
+            return $saved ? 'agency-logos/'.$thumbnailFilename : null;
         } catch (\Exception $e) {
-            \Log::error('Failed to create thumbnail: ' . $e->getMessage());
+            \Log::error('Failed to create thumbnail: '.$e->getMessage());
+
             return null;
         }
     }

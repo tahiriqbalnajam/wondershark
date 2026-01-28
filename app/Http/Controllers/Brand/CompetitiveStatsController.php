@@ -5,11 +5,11 @@ namespace App\Http\Controllers\Brand;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\BrandCompetitiveStat;
-use App\Services\CompetitiveAnalysisService;
 use App\Services\AIPromptService;
+use App\Services\CompetitiveAnalysisService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class CompetitiveStatsController extends Controller
@@ -18,7 +18,7 @@ class CompetitiveStatsController extends Controller
 
     public function __construct()
     {
-        $this->competitiveAnalysisService = new CompetitiveAnalysisService(new AIPromptService());
+        $this->competitiveAnalysisService = new CompetitiveAnalysisService(new AIPromptService);
     }
 
     /**
@@ -28,7 +28,7 @@ class CompetitiveStatsController extends Controller
     {
         // Get the latest competitive stats with trends
         $stats = $this->competitiveAnalysisService->getLatestStatsWithTrends($brand);
-        
+
         // Get analysis history count
         $totalAnalyses = BrandCompetitiveStat::where('brand_id', $brand->id)
             ->selectRaw('COUNT(DISTINCT analysis_session_id) as count')
@@ -36,7 +36,7 @@ class CompetitiveStatsController extends Controller
 
         // Check if analysis is needed
         $needsAnalysis = $this->competitiveAnalysisService->brandNeedsAnalysis($brand);
-        
+
         // Get competitors count
         $competitorsCount = $brand->competitors()->whereNotNull('domain')->count();
 
@@ -46,7 +46,7 @@ class CompetitiveStatsController extends Controller
             'totalAnalyses' => $totalAnalyses,
             'needsAnalysis' => $needsAnalysis,
             'competitorsCount' => $competitorsCount,
-            'canAnalyze' => !empty($brand->website) && $competitorsCount > 0,
+            'canAnalyze' => ! empty($brand->website) && $competitorsCount > 0,
         ]);
     }
 
@@ -68,7 +68,7 @@ class CompetitiveStatsController extends Controller
 
             // Check if recent analysis exists unless forced
             $force = $request->boolean('force', false);
-            if (!$force && !$this->competitiveAnalysisService->brandNeedsAnalysis($brand, 6)) {
+            if (! $force && ! $this->competitiveAnalysisService->brandNeedsAnalysis($brand, 6)) {
                 return back()->with('error', 'Brand was analyzed recently. Use force option to run again.');
             }
 
@@ -83,20 +83,20 @@ class CompetitiveStatsController extends Controller
                 'brand_id' => $brand->id,
                 'brand_name' => $brand->name,
                 'results_count' => count($results),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
-            return back()->with('success', "Successfully analyzed {$brand->name} and generated " . count($results) . " competitive statistics.");
+            return back()->with('success', "Successfully analyzed {$brand->name} and generated ".count($results).' competitive statistics.');
 
         } catch (\Exception $e) {
             Log::error('Manual competitive analysis failed', [
                 'brand_id' => $brand->id,
                 'brand_name' => $brand->name,
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
-            return back()->with('error', 'Analysis failed: ' . $e->getMessage());
+            return back()->with('error', 'Analysis failed: '.$e->getMessage());
         }
     }
 
@@ -113,6 +113,7 @@ class CompetitiveStatsController extends Controller
             ->groupBy('analysis_session_id')
             ->map(function ($sessionStats, $sessionId) {
                 $firstStat = $sessionStats->first();
+
                 return [
                     'session_id' => $sessionId,
                     'analyzed_at' => $firstStat->analyzed_at,
@@ -135,7 +136,7 @@ class CompetitiveStatsController extends Controller
     public function getData(Brand $brand)
     {
         $stats = $this->competitiveAnalysisService->getLatestStatsWithTrends($brand);
-        
+
         return response()->json([
             'success' => true,
             'stats' => $stats,
@@ -158,7 +159,7 @@ class CompetitiveStatsController extends Controller
                     'brand_id' => $brand->id,
                     'session_id' => $sessionId,
                     'deleted_count' => $deletedCount,
-                    'user_id' => Auth::id()
+                    'user_id' => Auth::id(),
                 ]);
 
                 return back()->with('success', "Deleted analysis session with {$deletedCount} records.");
@@ -171,10 +172,10 @@ class CompetitiveStatsController extends Controller
                 'brand_id' => $brand->id,
                 'session_id' => $sessionId,
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
-            return back()->with('error', 'Failed to delete analysis session: ' . $e->getMessage());
+            return back()->with('error', 'Failed to delete analysis session: '.$e->getMessage());
         }
     }
 }

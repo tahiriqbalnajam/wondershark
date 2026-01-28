@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\User;
-use Spatie\Permission\Models\Role;
+use Illuminate\Console\Command;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class CheckPermissions extends Command
 {
@@ -50,12 +50,12 @@ class CheckPermissions extends Command
         // Check test user
         $testUser = User::where('email', 'test@example.com')->first();
         if ($testUser) {
-            $this->info("Test User (test@example.com):");
-            $this->line("  Roles: " . $testUser->getRoleNames()->implode(', '));
-            $this->line("  Direct Permissions: " . $testUser->getDirectPermissions()->pluck('name')->implode(', '));
-            $this->line("  All Permissions: " . $testUser->getAllPermissions()->pluck('name')->implode(', '));
+            $this->info('Test User (test@example.com):');
+            $this->line('  Roles: '.$testUser->getRoleNames()->implode(', '));
+            $this->line('  Direct Permissions: '.$testUser->getDirectPermissions()->pluck('name')->implode(', '));
+            $this->line('  All Permissions: '.$testUser->getAllPermissions()->pluck('name')->implode(', '));
         } else {
-            $this->error("Test user not found!");
+            $this->error('Test user not found!');
         }
 
         $this->newLine();

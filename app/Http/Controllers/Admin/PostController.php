@@ -3,15 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Post;
-use App\Models\Brand;
-use App\Models\User;
 use App\Models\AiModel;
+use App\Models\Brand;
+use App\Models\Post;
 use App\Models\SystemSetting;
-use App\Jobs\GeneratePostPrompts;
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
 use Inertia\Inertia;
 
 class PostController extends Controller
@@ -308,7 +307,7 @@ class PostController extends Controller
             // No prompts exist, generate them
             try {
                 $postPromptService = app(\App\Services\PostPromptService::class);
-                $sessionId = session()->getId() ?: 'admin-' . uniqid();
+                $sessionId = session()->getId() ?: 'admin-'.uniqid();
                 $description = $post->description ?? $post->url ?? '';
 
                 // Log for debugging
@@ -352,10 +351,10 @@ class PostController extends Controller
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
                 ]);
-                
+
                 return response()->json([
                     'prompts' => [],
-                    'error' => 'Failed to generate prompts: ' . $e->getMessage(),
+                    'error' => 'Failed to generate prompts: '.$e->getMessage(),
                     'debug' => config('app.debug') ? $e->getTraceAsString() : null,
                 ]);
             }
@@ -377,7 +376,7 @@ class PostController extends Controller
         }
 
         return response()->json([
-            'prompts' => $prompts
+            'prompts' => $prompts,
         ]);
     }
 
@@ -388,7 +387,7 @@ class PostController extends Controller
     {
         try {
             $postPromptService = app(\App\Services\PostPromptService::class);
-            $sessionId = session()->getId() ?: 'admin-' . uniqid();
+            $sessionId = session()->getId() ?: 'admin-'.uniqid();
             $description = $request->input('description') ?? $post->description ?? '';
 
             // Generate prompts from all enabled AI models
@@ -415,12 +414,12 @@ class PostController extends Controller
                         'created_at' => $prompt->created_at,
                     ];
                 }),
-                'message' => 'Prompts generated successfully'
+                'message' => 'Prompts generated successfully',
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate prompts: ' . $e->getMessage()
+                'message' => 'Failed to generate prompts: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -457,12 +456,12 @@ class PostController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Prompts updated successfully'
+                'message' => 'Prompts updated successfully',
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update prompts: ' . $e->getMessage()
+                'message' => 'Failed to update prompts: '.$e->getMessage(),
             ], 500);
         }
     }

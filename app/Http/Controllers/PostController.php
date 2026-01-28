@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Post;
+use App\Jobs\GeneratePostPrompts;
 use App\Models\Brand;
+use App\Models\Post;
 use App\Models\SystemSetting;
 use App\Models\User;
-use App\Jobs\GeneratePostPrompts;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
 use Inertia\Inertia;
 
 class PostController extends Controller
@@ -21,7 +21,7 @@ class PostController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         $posts = Post::with(['brand', 'user', 'citations'])
             ->when($user->hasRole('agency'), function ($query) use ($user) {
                 return $query->whereHas('brand', function ($brandQuery) use ($user) {
@@ -72,13 +72,13 @@ class PostController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Ensure the brand belongs to the authenticated user (agency or brand owner)
-        $hasAccess = $user->hasRole('admin') || 
-                     $brand->agency_id === $user->id || 
+        $hasAccess = $user->hasRole('admin') ||
+                     $brand->agency_id === $user->id ||
                      $brand->user_id === $user->id;
-        
-        if (!$hasAccess) {
+
+        if (! $hasAccess) {
             abort(403, 'You do not have permission to access this brand.');
         }
 
@@ -124,13 +124,13 @@ class PostController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Ensure the brand belongs to the authenticated user (agency or brand owner)
-        $hasAccess = $user->hasRole('admin') || 
-                     $brand->agency_id === $user->id || 
+        $hasAccess = $user->hasRole('admin') ||
+                     $brand->agency_id === $user->id ||
                      $brand->user_id === $user->id;
-        
-        if (!$hasAccess) {
+
+        if (! $hasAccess) {
             abort(403, 'You do not have permission to access this brand.');
         }
 
@@ -150,8 +150,8 @@ class PostController extends Controller
             // Brand user - get their own brand(s)
             $allBrands = Brand::where('user_id', $user->id)->orderBy('name')->get();
         }
-        
-        $allBrands = $allBrands->map(fn($b) => [
+
+        $allBrands = $allBrands->map(fn ($b) => [
             'id' => $b->id,
             'name' => $b->name,
             'can_create_posts' => $b->can_create_posts,
@@ -177,13 +177,13 @@ class PostController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Ensure the brand belongs to the authenticated user (agency or brand owner)
-        $hasAccess = $user->hasRole('admin') || 
-                     $brand->agency_id === $user->id || 
+        $hasAccess = $user->hasRole('admin') ||
+                     $brand->agency_id === $user->id ||
                      $brand->user_id === $user->id;
-        
-        if (!$hasAccess) {
+
+        if (! $hasAccess) {
             abort(403, 'You do not have permission to access this brand.');
         }
 
@@ -197,22 +197,24 @@ class PostController extends Controller
         ]);
 
         // Skip permission checks for admin users
-        if (!$user->hasRole('admin')) {
+        if (! $user->hasRole('admin')) {
             // Check if user can create posts
-            if (!$user->can_create_posts) {
+            if (! $user->can_create_posts) {
                 $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
+
                 return back()->withErrors([
-                    'permission' => "You don't have permission to create posts. Please contact the administrator at {$adminEmail}. " . 
-                                   ($user->post_creation_note ? "Note: {$user->post_creation_note}" : '')
+                    'permission' => "You don't have permission to create posts. Please contact the administrator at {$adminEmail}. ".
+                                   ($user->post_creation_note ? "Note: {$user->post_creation_note}" : ''),
                 ]);
             }
 
             // Check if brand can create posts
-            if (!$brand->can_create_posts) {
+            if (! $brand->can_create_posts) {
                 $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
+
                 return back()->withErrors([
-                    'permission' => "The brand '{$brand->name}' doesn't have permission to create posts. Please contact the administrator at {$adminEmail}. " . 
-                                   ($brand->post_creation_note ? "Note: {$brand->post_creation_note}" : '')
+                    'permission' => "The brand '{$brand->name}' doesn't have permission to create posts. Please contact the administrator at {$adminEmail}. ".
+                                   ($brand->post_creation_note ? "Note: {$brand->post_creation_note}" : ''),
                 ]);
             }
 
@@ -224,7 +226,7 @@ class PostController extends Controller
 
             if ($brand->monthly_posts && $postsThisMonth >= $brand->monthly_posts) {
                 return back()->withErrors([
-                    'limit' => "Brand '{$brand->name}' has reached its monthly post limit of {$brand->monthly_posts} posts. Current count: {$postsThisMonth}."
+                    'limit' => "Brand '{$brand->name}' has reached its monthly post limit of {$brand->monthly_posts} posts. Current count: {$postsThisMonth}.",
                 ]);
             }
         }
@@ -241,11 +243,11 @@ class PostController extends Controller
         ]);
 
         // Automatically generate prompts for the post in background
-        $sessionId = session()->getId() ?: 'auto-' . uniqid();
-        
+        $sessionId = session()->getId() ?: 'auto-'.uniqid();
+
         GeneratePostPrompts::dispatch(
-            $post, 
-            $sessionId, 
+            $post,
+            $sessionId,
             $request->description ?? ''
         );
 
@@ -258,7 +260,7 @@ class PostController extends Controller
     public function create()
     {
         $user = Auth::user();
-        
+
         // Get brands the user has access to
         if ($user->hasRole('admin')) {
             // Admin can access all brands
@@ -270,7 +272,7 @@ class PostController extends Controller
             $brands = Brand::where('agency_id', $user->id)
                 ->orderBy('name')
                 ->get(['id', 'name', 'can_create_posts', 'post_creation_note', 'monthly_posts']);
-            
+
             // Check if user or any of their brands can create posts
             $canCreatePosts = $user->can_create_posts && $brands->where('can_create_posts', true)->count() > 0;
         } else {
@@ -278,11 +280,11 @@ class PostController extends Controller
             $brands = Brand::where('user_id', $user->id)
                 ->orderBy('name')
                 ->get(['id', 'name', 'can_create_posts', 'post_creation_note', 'monthly_posts']);
-            
+
             // Check if user or any of their brands can create posts
             $canCreatePosts = $user->can_create_posts && $brands->where('can_create_posts', true)->count() > 0;
         }
-        
+
         $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
 
         return Inertia::render('posts/create', [
@@ -310,7 +312,7 @@ class PostController extends Controller
         ]);
 
         $user = Auth::user();
-        
+
         // Verify user has access to the brand
         if ($user->hasRole('admin')) {
             // Admin can access any brand
@@ -328,22 +330,24 @@ class PostController extends Controller
         }
 
         // Skip permission checks for admin users
-        if (!$user->hasRole('admin')) {
+        if (! $user->hasRole('admin')) {
             // Check if user can create posts
-            if (!$user->can_create_posts) {
+            if (! $user->can_create_posts) {
                 $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
+
                 return back()->withErrors([
-                    'permission' => "You don't have permission to create posts. Please contact the administrator at {$adminEmail}. " . 
-                                   ($user->post_creation_note ? "Note: {$user->post_creation_note}" : '')
+                    'permission' => "You don't have permission to create posts. Please contact the administrator at {$adminEmail}. ".
+                                   ($user->post_creation_note ? "Note: {$user->post_creation_note}" : ''),
                 ]);
             }
 
             // Check if brand can create posts
-            if (!$brand->can_create_posts) {
+            if (! $brand->can_create_posts) {
                 $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
+
                 return back()->withErrors([
-                    'permission' => "The brand '{$brand->name}' doesn't have permission to create posts. Please contact the administrator at {$adminEmail}. " . 
-                                   ($brand->post_creation_note ? "Note: {$brand->post_creation_note}" : '')
+                    'permission' => "The brand '{$brand->name}' doesn't have permission to create posts. Please contact the administrator at {$adminEmail}. ".
+                                   ($brand->post_creation_note ? "Note: {$brand->post_creation_note}" : ''),
                 ]);
             }
 
@@ -355,7 +359,7 @@ class PostController extends Controller
 
             if ($brand->monthly_posts && $postsThisMonth >= $brand->monthly_posts) {
                 return back()->withErrors([
-                    'limit' => "Brand '{$brand->name}' has reached its monthly post limit of {$brand->monthly_posts} posts. Current count: {$postsThisMonth}."
+                    'limit' => "Brand '{$brand->name}' has reached its monthly post limit of {$brand->monthly_posts} posts. Current count: {$postsThisMonth}.",
                 ]);
             }
         }
@@ -370,10 +374,10 @@ class PostController extends Controller
             'posted_at' => $request->posted_at ?: now(),
             'post_type' => $request->post_type,
         ]);
-        
+
         GeneratePostPrompts::dispatch(
-            $post, 
-            $sessionId, 
+            $post,
+            $sessionId,
             $request->description ?? ''
         );
 
@@ -386,7 +390,7 @@ class PostController extends Controller
                 'description' => $post->description,
                 'status' => $post->status,
                 'posted_at' => $post->posted_at,
-            ]
+            ],
         ]);
     }
 
@@ -396,13 +400,13 @@ class PostController extends Controller
     public function show(Post $post)
     {
         $user = Auth::user();
-        
+
         // Check access: Allow if user is admin, owns the agency, or owns the brand directly
-        $hasAccess = $user->hasRole('admin') || 
-                     $post->brand->agency_id === $user->id || 
+        $hasAccess = $user->hasRole('admin') ||
+                     $post->brand->agency_id === $user->id ||
                      $post->brand->user_id === $user->id;
-        
-        if (!$hasAccess) {
+
+        if (! $hasAccess) {
             abort(403, 'You do not have permission to view this post.');
         }
 
@@ -445,13 +449,13 @@ class PostController extends Controller
     public function edit(Post $post)
     {
         $user = Auth::user();
-        
+
         // Check access: Allow if user is admin, owns the agency, or owns the brand directly
-        $hasAccess = $user->hasRole('admin') || 
-                     $post->brand->agency_id === $user->id || 
+        $hasAccess = $user->hasRole('admin') ||
+                     $post->brand->agency_id === $user->id ||
                      $post->brand->user_id === $user->id;
-        
-        if (!$hasAccess) {
+
+        if (! $hasAccess) {
             abort(403, 'You do not have permission to edit this post.');
         }
 
@@ -481,13 +485,13 @@ class PostController extends Controller
     public function update(Request $request, Post $post)
     {
         $user = Auth::user();
-        
+
         // Check access: Allow if user is admin, owns the agency, or owns the brand directly
-        $hasAccess = $user->hasRole('admin') || 
-                     $post->brand->agency_id === $user->id || 
+        $hasAccess = $user->hasRole('admin') ||
+                     $post->brand->agency_id === $user->id ||
                      $post->brand->user_id === $user->id;
-        
-        if (!$hasAccess) {
+
+        if (! $hasAccess) {
             abort(403, 'You do not have permission to update this post.');
         }
 
@@ -502,7 +506,7 @@ class PostController extends Controller
 
         $originalUrl = $post->url;
         $originalDescription = $post->description;
-        
+
         $post->update([
             'brand_id' => $request->brand_id,
             'title' => $request->title,
@@ -515,19 +519,19 @@ class PostController extends Controller
         // Check if URL or description changed significantly
         $urlChanged = $originalUrl !== $request->url;
         $descriptionChanged = $originalDescription !== $request->description;
-        
+
         if ($urlChanged || $descriptionChanged) {
-            $sessionId = session()->getId() ?: 'auto-' . uniqid();
-            
+            $sessionId = session()->getId() ?: 'auto-'.uniqid();
+
             // Generate new prompts in background, replacing existing if URL changed
             GeneratePostPrompts::dispatch(
-                $post, 
-                $sessionId, 
+                $post,
+                $sessionId,
                 $request->description ?? '',
                 $urlChanged // Replace existing prompts if URL changed
             );
-            
-            $message = $urlChanged 
+
+            $message = $urlChanged
                 ? 'Post updated successfully. New prompts are being generated due to URL change.'
                 : 'Post updated successfully. Prompts are being regenerated due to description change.';
         } else {
@@ -543,13 +547,13 @@ class PostController extends Controller
     public function destroy(Post $post)
     {
         $user = Auth::user();
-        
+
         // Check access: Allow if user is admin, owns the agency, or owns the brand directly
-        $hasAccess = $user->hasRole('admin') || 
-                     $post->brand->agency_id === $user->id || 
+        $hasAccess = $user->hasRole('admin') ||
+                     $post->brand->agency_id === $user->id ||
                      $post->brand->user_id === $user->id;
-        
-        if (!$hasAccess) {
+
+        if (! $hasAccess) {
             abort(403, 'You do not have permission to delete this post.');
         }
 
@@ -564,13 +568,13 @@ class PostController extends Controller
     public function storeCitation(Request $request, Post $post)
     {
         $user = Auth::user();
-        
+
         // Check access: Allow if user is admin, owns the agency, or owns the brand directly
-        $hasAccess = $user->hasRole('admin') || 
-                     $post->brand->agency_id === $user->id || 
+        $hasAccess = $user->hasRole('admin') ||
+                     $post->brand->agency_id === $user->id ||
                      $post->brand->user_id === $user->id;
-        
-        if (!$hasAccess) {
+
+        if (! $hasAccess) {
             abort(403, 'You do not have permission to add citations to this post.');
         }
 
@@ -600,7 +604,7 @@ class PostController extends Controller
     public function showPrompts(Post $post)
     {
         $post->load(['brand', 'user', 'prompts']);
-        
+
         return Inertia::render('posts/prompts', [
             'post' => [
                 'id' => $post->id,

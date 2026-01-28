@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('analysis_session_id')->nullable();
             $table->timestamp('analyzed_at');
             $table->timestamps();
-            
+
             $table->index(['brand_id', 'entity_type', 'analyzed_at']);
             $table->index(['brand_id', 'competitor_id', 'analyzed_at']);
         });

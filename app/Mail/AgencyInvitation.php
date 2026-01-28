@@ -27,7 +27,7 @@ class AgencyInvitation extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'You\'ve been invited to join ' . $this->invitation->agency->name,
+            subject: 'You\'ve been invited to join '.$this->invitation->agency->name,
         );
     }
 

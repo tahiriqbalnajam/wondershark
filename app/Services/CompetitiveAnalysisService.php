@@ -191,7 +191,7 @@ CRITICAL INSTRUCTIONS:
                 'model_name' => $aiModel->name,
                 'display_name' => $aiModel->display_name,
                 'order' => $aiModel->order,
-                'ai_model_id' => $aiModel->id
+                'ai_model_id' => $aiModel->id,
             ]);
 
             // Use a different approach - call the AI directly with a simple prompt
@@ -261,7 +261,7 @@ CRITICAL INSTRUCTIONS:
 
             return [
                 'analysis' => $analysis,
-                'ai_model_id' => $aiModel->id
+                'ai_model_id' => $aiModel->id,
             ];
 
         } catch (\Exception $e) {

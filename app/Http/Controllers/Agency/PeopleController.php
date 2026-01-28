@@ -3,16 +3,15 @@
 namespace App\Http\Controllers\Agency;
 
 use App\Http\Controllers\Controller;
-use App\Models\AgencyMember;
 use App\Models\AgencyInvitation;
+use App\Models\AgencyMember;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -25,7 +24,7 @@ class PeopleController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         $members = AgencyMember::where('agency_id', $user->id)
             ->with('user')
             ->orderBy('created_at', 'desc')
@@ -100,15 +99,15 @@ class PeopleController extends Controller
             Log::error('Failed to send invitation email', [
                 'invitation_id' => $invitation->id,
                 'email' => $invitation->email,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return redirect()->route('agency.people.index')
                 ->with('warning', 'Invitation created but email could not be sent. Please check your email configuration.');
         }
 
         return redirect()->route('agency.people.index')
-            ->with('success', 'Invitation sent successfully to ' . $invitation->email);
+            ->with('success', 'Invitation sent successfully to '.$invitation->email);
     }
 
     /**
@@ -118,7 +117,7 @@ class PeopleController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Ensure the member belongs to the authenticated agency
         if ($member->agency_id !== $user->id) {
             abort(403);
@@ -142,7 +141,7 @@ class PeopleController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Ensure the member belongs to the authenticated agency
         if ($member->agency_id !== $user->id) {
             abort(403);
@@ -151,7 +150,7 @@ class PeopleController extends Controller
         DB::transaction(function () use ($member) {
             // Remove the user account
             $member->user->delete();
-            
+
             // Remove the agency member relationship
             $member->delete();
         });

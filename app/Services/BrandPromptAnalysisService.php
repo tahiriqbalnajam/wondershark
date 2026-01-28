@@ -82,7 +82,7 @@ class BrandPromptAnalysisService
         if (! empty($subreddits)) {
             $additionalContext .= "\n\n**CRITICAL REQUIREMENT**: You MUST include AT LEAST 2-3 relevant Reddit posts/discussions from these target subreddits: {$subredditsString}. Include actual Reddit URLs (e.g., https://reddit.com/r/subreddit/comments/...) that discuss topics related to [{$phrase}] in these communities.";
         }
-        
+
         // Always emphasize Reddit/YouTube inclusion
         $additionalContext .= "\n\n**MANDATORY**: Include at least 1-2 YouTube videos (youtube.com or youtu.be URLs) related to [{$phrase}].";
         if (empty($subreddits)) {

@@ -13,16 +13,16 @@ class RolePermissionMiddleware
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, string $permission = null, string $role = null): Response
+    public function handle(Request $request, Closure $next, ?string $permission = null, ?string $role = null): Response
     {
-        if (!$request->user()) {
+        if (! $request->user()) {
             return redirect()->route('login');
         }
 
         $user = $request->user();
 
         // Check for specific permission (skip if permission is 'null' string)
-        if ($permission && $permission !== 'null' && !$user->hasPermissionTo($permission)) {
+        if ($permission && $permission !== 'null' && ! $user->hasPermissionTo($permission)) {
             abort(403, 'Access denied. You do not have the required permission.');
         }
 
@@ -30,9 +30,9 @@ class RolePermissionMiddleware
         if ($role && $role !== 'null') {
             // Support multiple roles separated by pipe |
             $roles = explode('|', $role);
-            
+
             // Admin users have access to all roles
-            if (!$user->hasRole('admin') && !$user->hasAnyRole($roles)) {
+            if (! $user->hasRole('admin') && ! $user->hasAnyRole($roles)) {
                 abort(403, 'Access denied. You do not have the required role.');
             }
         }

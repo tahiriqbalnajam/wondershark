@@ -66,8 +66,8 @@ class BrandCompetitiveStat extends Model
     public function getTrends(): array
     {
         $previous = $this->getPreviousStats();
-        
-        if (!$previous) {
+
+        if (! $previous) {
             return [
                 'visibility_trend' => 'new',
                 'sentiment_trend' => 'new',
@@ -98,7 +98,7 @@ class BrandCompetitiveStat extends Model
     public function scopeLatestForBrand($query, $brandId)
     {
         return $query->where('brand_id', $brandId)
-            ->whereIn('id', function($subQuery) use ($brandId) {
+            ->whereIn('id', function ($subQuery) use ($brandId) {
                 $subQuery->selectRaw('MAX(id)')
                     ->from('brand_competitive_stats')
                     ->where('brand_id', $brandId)
@@ -127,7 +127,7 @@ class BrandCompetitiveStat extends Model
      */
     public function getVisibilityPercentageAttribute(): string
     {
-        return number_format($this->visibility, 1) . '%';
+        return number_format($this->visibility, 1).'%';
     }
 
     /**
@@ -136,9 +136,16 @@ class BrandCompetitiveStat extends Model
     public function getPositionFormattedAttribute(): string
     {
         $pos = $this->position;
-        if ($pos == 1.0) return '1st';
-        if ($pos == 2.0) return '2nd';
-        if ($pos == 3.0) return '3rd';
+        if ($pos == 1.0) {
+            return '1st';
+        }
+        if ($pos == 2.0) {
+            return '2nd';
+        }
+        if ($pos == 3.0) {
+            return '3rd';
+        }
+
         return number_format($pos, 1);
     }
 
@@ -148,10 +155,19 @@ class BrandCompetitiveStat extends Model
     public function getSentimentLevelAttribute(): string
     {
         $sentiment = $this->sentiment;
-        if ($sentiment >= 80) return 'Excellent';
-        if ($sentiment >= 70) return 'Good';
-        if ($sentiment >= 60) return 'Fair';
-        if ($sentiment >= 50) return 'Poor';
+        if ($sentiment >= 80) {
+            return 'Excellent';
+        }
+        if ($sentiment >= 70) {
+            return 'Good';
+        }
+        if ($sentiment >= 60) {
+            return 'Fair';
+        }
+        if ($sentiment >= 50) {
+            return 'Poor';
+        }
+
         return 'Very Poor';
     }
 }

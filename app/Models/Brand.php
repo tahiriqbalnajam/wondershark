@@ -88,7 +88,7 @@ class Brand extends Model
     public function latestCompetitiveStats(): HasMany
     {
         return $this->competitiveStats()
-            ->whereIn('id', function($query) {
+            ->whereIn('id', function ($query) {
                 $query->selectRaw('MAX(id)')
                     ->from('brand_competitive_stats')
                     ->where('brand_id', $this->id)

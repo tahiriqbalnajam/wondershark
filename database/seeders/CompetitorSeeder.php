@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Brand;
 use App\Models\Competitor;
+use Illuminate\Database\Seeder;
 
 class CompetitorSeeder extends Seeder
 {
@@ -18,6 +18,7 @@ class CompetitorSeeder extends Seeder
 
         if ($brands->isEmpty()) {
             $this->command->info('No brands found. Please create brands first.');
+
             return;
         }
 
@@ -36,12 +37,12 @@ class CompetitorSeeder extends Seeder
                     'market_share' => 25.5,
                     'social_metrics' => [
                         'followers' => 150000,
-                        'engagement_rate' => 3.2
-                    ]
+                        'engagement_rate' => 3.2,
+                    ],
                 ],
                 [
                     'name' => 'Competitor Alpha',
-                    'domain' => 'alpha-comp.com', 
+                    'domain' => 'alpha-comp.com',
                     'rank' => 2,
                     'visibility' => 0.78,
                     'sentiment' => 0.72,
@@ -51,8 +52,8 @@ class CompetitorSeeder extends Seeder
                     'market_share' => 18.3,
                     'social_metrics' => [
                         'followers' => 89000,
-                        'engagement_rate' => 2.8
-                    ]
+                        'engagement_rate' => 2.8,
+                    ],
                 ],
                 [
                     'name' => 'Beta Solutions',
@@ -66,8 +67,8 @@ class CompetitorSeeder extends Seeder
                     'market_share' => 12.7,
                     'social_metrics' => [
                         'followers' => 54000,
-                        'engagement_rate' => 2.1
-                    ]
+                        'engagement_rate' => 2.1,
+                    ],
                 ],
                 [
                     'name' => 'Gamma Technologies',
@@ -81,8 +82,8 @@ class CompetitorSeeder extends Seeder
                     'market_share' => 8.9,
                     'social_metrics' => [
                         'followers' => 32000,
-                        'engagement_rate' => 1.9
-                    ]
+                        'engagement_rate' => 1.9,
+                    ],
                 ],
                 [
                     'name' => 'Delta Innovations',
@@ -96,9 +97,9 @@ class CompetitorSeeder extends Seeder
                     'market_share' => 5.2,
                     'social_metrics' => [
                         'followers' => 21000,
-                        'engagement_rate' => 1.5
-                    ]
-                ]
+                        'engagement_rate' => 1.5,
+                    ],
+                ],
             ];
 
             foreach ($competitors as $competitorData) {

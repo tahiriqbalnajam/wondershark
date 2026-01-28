@@ -4,13 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Brand;
 use App\Models\Competitor;
+use App\Services\SerpApiStatsExtractor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
-use App\Jobs\FetchCompetitors;
-use App\Services\SerpApiStatsExtractor;
 
 class CompetitorController extends Controller
 {
@@ -27,12 +26,12 @@ class CompetitorController extends Controller
     {
         // Store selected brand in session
         session(['selected_brand_id' => $brand->id]);
-        
+
         // Get existing competitors
         $suggestedCompetitors = $brand->competitors()->where('status', 'suggested')->get();
         $acceptedCompetitors = $brand->competitors()->where('status', 'accepted')->get();
         $totalCompetitors = $suggestedCompetitors->count() + $acceptedCompetitors->count();
-        
+
         // Only auto-fetch if no competitors exist at all
         $shouldAutoFetch = $totalCompetitors === 0;
 
@@ -51,27 +50,28 @@ class CompetitorController extends Controller
             // Check if brand already has competitors
             $existingCompetitors = $brand->competitors()->count();
             $competitorsToFetch = $existingCompetitors > 0 ? 5 : 7; // Get 5 more if has some, 7 if none
-            
+
             // Get enabled AI model with API key (consistent with brand creation)
             $aiModel = \App\Models\AiModel::where('is_enabled', true)
                 ->whereNotNull('api_config')
                 ->get()
                 ->filter(function ($model) {
                     $config = $model->api_config;
-                    return !empty($config['api_key']);
+
+                    return ! empty($config['api_key']);
                 })
                 ->first();
 
-            if (!$aiModel) {
+            if (! $aiModel) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'No AI model with valid API key found. Please configure an API key for at least one AI model.'
+                    'error' => 'No AI model with valid API key found. Please configure an API key for at least one AI model.',
                 ], 400);
             }
 
             // Get existing competitor domains to avoid duplicates
             $existingDomains = $brand->competitors()->pluck('domain')->toArray();
-            
+
             // Prepare the prompt with existing competitors context
             $prompt = $this->getCompetitorPromptForBrand($brand, $competitorsToFetch, $existingDomains);
 
@@ -80,7 +80,7 @@ class CompetitorController extends Controller
                 'brand_name' => $brand->name,
                 'existing_competitors' => $existingCompetitors,
                 'fetching' => $competitorsToFetch,
-                'ai_model' => $aiModel->name
+                'ai_model' => $aiModel->name,
             ]);
 
             // Make API call based on the model type
@@ -92,7 +92,7 @@ class CompetitorController extends Controller
                         'model' => $aiModel->api_config['model'] ?? 'sonar-pro',
                         'messages' => [
                             ['role' => 'system', 'content' => 'You are a helpful assistant that responds only with valid JSON arrays. Do not include any explanatory text or markdown formatting.'],
-                            ['role' => 'user', 'content' => $prompt]
+                            ['role' => 'user', 'content' => $prompt],
                         ],
                         'max_tokens' => 4000,
                         'temperature' => 0.3,
@@ -106,7 +106,7 @@ class CompetitorController extends Controller
                         'model' => $aiModel->api_config['model'] ?? 'gpt-4',
                         'messages' => [
                             ['role' => 'system', 'content' => 'You are a helpful assistant that responds only with valid JSON arrays. Do not include any explanatory text or markdown formatting.'],
-                            ['role' => 'user', 'content' => $prompt]
+                            ['role' => 'user', 'content' => $prompt],
                         ],
                         'max_tokens' => 4000,
                         'temperature' => 0.3,
@@ -116,28 +116,28 @@ class CompetitorController extends Controller
             if ($response->failed()) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'AI API call failed: ' . $response->body()
+                    'error' => 'AI API call failed: '.$response->body(),
                 ], 500);
             }
 
             $data = $response->json();
             $content = $data['choices'][0]['message']['content'] ?? null;
 
-            if (!$content) {
+            if (! $content) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'No content received from AI'
+                    'error' => 'No content received from AI',
                 ], 500);
             }
 
             // Parse JSON response
             $competitorsData = null;
-            
+
             // Try direct JSON parsing first
             $competitorsData = json_decode($content, true);
-            
+
             // If that fails, try to extract JSON from the response
-            if (!$competitorsData || json_last_error() !== JSON_ERROR_NONE) {
+            if (! $competitorsData || json_last_error() !== JSON_ERROR_NONE) {
                 // Look for JSON array pattern in the text
                 if (preg_match('/```json\s*(\[.*?\])\s*```/s', $content, $matches)) {
                     $competitorsData = json_decode($matches[1], true);
@@ -146,7 +146,7 @@ class CompetitorController extends Controller
                 } else {
                     // Try to find individual JSON objects and build an array
                     preg_match_all('/\{[^{}]*"name"[^{}]*"domain"[^{}]*"mentions"[^{}]*\}/', $content, $matches);
-                    if (!empty($matches[0])) {
+                    if (! empty($matches[0])) {
                         $competitorsData = [];
                         foreach ($matches[0] as $jsonObj) {
                             $obj = json_decode($jsonObj, true);
@@ -157,15 +157,15 @@ class CompetitorController extends Controller
                     }
                 }
             }
-            
-            if (!$competitorsData || json_last_error() !== JSON_ERROR_NONE) {
+
+            if (! $competitorsData || json_last_error() !== JSON_ERROR_NONE) {
                 return response()->json([
                     'success' => false,
                     'error' => 'Failed to parse competitor data from AI response',
                     'debug' => [
                         'raw_response' => substr($content, 0, 1000),
-                        'json_error' => json_last_error_msg()
-                    ]
+                        'json_error' => json_last_error_msg(),
+                    ],
                 ], 500);
             }
 
@@ -177,19 +177,19 @@ class CompetitorController extends Controller
             } else {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Invalid competitor data structure'
+                    'error' => 'Invalid competitor data structure',
                 ], 500);
             }
 
             // Store competitors (only save new ones to avoid duplicates)
             $savedCompetitors = [];
-            
+
             // Get the highest existing rank for this brand to continue from there
             $maxRank = $brand->competitors()
                 ->whereNotNull('rank')
                 ->where('rank', '>', 0)
                 ->max('rank') ?? 0;
-            
+
             foreach ($competitors as $index => $competitorData) {
                 if (isset($competitorData['name']) && isset($competitorData['domain'])) {
                     $competitor = $brand->competitors()->updateOrCreate(
@@ -211,14 +211,15 @@ class CompetitorController extends Controller
             return response()->json([
                 'success' => true,
                 'competitors' => $savedCompetitors,
-                'message' => 'Successfully fetched ' . count($savedCompetitors) . ' competitors'
+                'message' => 'Successfully fetched '.count($savedCompetitors).' competitors',
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Competitor fetch error: ' . $e->getMessage());
+            Log::error('Competitor fetch error: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
-                'error' => 'An error occurred while fetching competitors: ' . $e->getMessage()
+                'error' => 'An error occurred while fetching competitors: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -228,17 +229,18 @@ class CompetitorController extends Controller
         try {
             // Clear existing AI-generated suggested competitors (keep accepted and manual ones)
             $brand->competitors()->where('source', 'ai')->where('status', 'suggested')->delete();
-            
+
             return response()->json([
                 'success' => true,
-                'message' => 'Competitors cleared. Ready to fetch new ones.'
+                'message' => 'Competitors cleared. Ready to fetch new ones.',
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Competitor refresh error: ' . $e->getMessage());
+            Log::error('Competitor refresh error: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
-                'error' => 'Failed to clear competitors: ' . $e->getMessage()
+                'error' => 'Failed to clear competitors: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -247,9 +249,9 @@ class CompetitorController extends Controller
     {
         $brandUrl = $brand->website ?: $brand->name;
         $description = $brand->description ?: '';
-        
+
         $excludeText = '';
-        if (!empty($existingDomains)) {
+        if (! empty($existingDomains)) {
             $excludeList = implode('", "', $existingDomains);
             $excludeText = "\n\nIMPORTANT: Exclude these existing competitors: \"{$excludeList}\"";
         }
@@ -279,13 +281,13 @@ class CompetitorController extends Controller
 
         Respond with ONLY the JSON array, nothing else.
         PROMPT;
-            }
+    }
 
-            private function getCompetitorPrompt(Brand $brand): string
-            {
-                $brandUrl = $brand->website ?: $brand->name;
+    private function getCompetitorPrompt(Brand $brand): string
+    {
+        $brandUrl = $brand->website ?: $brand->name;
 
-                return <<<PROMPT
+        return <<<PROMPT
         You are a competitor analysis expert. Analyze the brand "{$brand->name}" at URL "{$brandUrl}" and identify direct market competitors.
 
         IMPORTANT: Respond ONLY with a valid JSON array. Do not include any explanatory text, disclaimers, or markdown formatting.
@@ -314,24 +316,25 @@ class CompetitorController extends Controller
             // Check if brand already has competitors
             $existingCompetitors = $brand->competitors()->count();
             $competitorsToFetch = $existingCompetitors > 0 ? 5 : 7; // Get 5 more if has some, 7 if none
-            
+
             // Get enabled AI model with API key (consistent with brand creation)
             $aiModel = \App\Models\AiModel::where('is_enabled', true)
                 ->whereNotNull('api_config')
                 ->get()
                 ->filter(function ($model) {
                     $config = $model->api_config;
-                    return !empty($config['api_key']);
+
+                    return ! empty($config['api_key']);
                 })
                 ->first();
 
-            if (!$aiModel) {
+            if (! $aiModel) {
                 return back()->with('error', 'No AI model with valid API key found. Please configure an API key for at least one AI model.');
             }
 
             // Get existing competitor domains to avoid duplicates
             $existingDomains = $brand->competitors()->pluck('domain')->toArray();
-            
+
             // Prepare the prompt with existing competitors context
             $prompt = $this->getCompetitorPromptForBrand($brand, $competitorsToFetch, $existingDomains);
 
@@ -340,7 +343,7 @@ class CompetitorController extends Controller
                 'brand_name' => $brand->name,
                 'existing_competitors' => $existingCompetitors,
                 'fetching' => $competitorsToFetch,
-                'ai_model' => $aiModel->name
+                'ai_model' => $aiModel->name,
             ]);
 
             // Make API call based on the model type
@@ -352,7 +355,7 @@ class CompetitorController extends Controller
                         'model' => $aiModel->api_config['model'] ?? 'sonar-pro',
                         'messages' => [
                             ['role' => 'system', 'content' => 'You are a helpful assistant that responds only with valid JSON arrays. Do not include any explanatory text or markdown formatting.'],
-                            ['role' => 'user', 'content' => $prompt]
+                            ['role' => 'user', 'content' => $prompt],
                         ],
                         'max_tokens' => 4000,
                         'temperature' => 0.3,
@@ -366,7 +369,7 @@ class CompetitorController extends Controller
                         'model' => $aiModel->api_config['model'] ?? 'gpt-4',
                         'messages' => [
                             ['role' => 'system', 'content' => 'You are a helpful assistant that responds only with valid JSON arrays. Do not include any explanatory text or markdown formatting.'],
-                            ['role' => 'user', 'content' => $prompt]
+                            ['role' => 'user', 'content' => $prompt],
                         ],
                         'max_tokens' => 4000,
                         'temperature' => 0.3,
@@ -377,26 +380,27 @@ class CompetitorController extends Controller
                 Log::error('AI API call failed', [
                     'brand_id' => $brand->id,
                     'status' => $response->status(),
-                    'response' => $response->body()
+                    'response' => $response->body(),
                 ]);
+
                 return back()->with('error', 'AI API call failed. Please try again.');
             }
 
             $data = $response->json();
             $content = $data['choices'][0]['message']['content'] ?? null;
 
-            if (!$content) {
+            if (! $content) {
                 return back()->with('error', 'No content received from AI');
             }
 
             // Parse JSON response
             $competitorsData = null;
-            
+
             // Try direct JSON parsing first
             $competitorsData = json_decode($content, true);
-            
+
             // If that fails, try to extract JSON from the response
-            if (!$competitorsData || json_last_error() !== JSON_ERROR_NONE) {
+            if (! $competitorsData || json_last_error() !== JSON_ERROR_NONE) {
                 // Look for JSON array pattern in the text
                 if (preg_match('/```json\s*(\[.*?\])\s*```/s', $content, $matches)) {
                     $competitorsData = json_decode($matches[1], true);
@@ -405,7 +409,7 @@ class CompetitorController extends Controller
                 } else {
                     // Try to find individual JSON objects and build an array
                     preg_match_all('/\{[^{}]*"name"[^{}]*"domain"[^{}]*"mentions"[^{}]*\}/', $content, $matches);
-                    if (!empty($matches[0])) {
+                    if (! empty($matches[0])) {
                         $competitorsData = [];
                         foreach ($matches[0] as $jsonObj) {
                             $obj = json_decode($jsonObj, true);
@@ -416,12 +420,13 @@ class CompetitorController extends Controller
                     }
                 }
             }
-            
-            if (!$competitorsData || json_last_error() !== JSON_ERROR_NONE) {
+
+            if (! $competitorsData || json_last_error() !== JSON_ERROR_NONE) {
                 Log::error('Failed to parse competitor data', [
                     'brand_id' => $brand->id,
-                    'response' => substr($content, 0, 1000)
+                    'response' => substr($content, 0, 1000),
                 ]);
+
                 return back()->with('error', 'Failed to parse competitor data from AI response');
             }
 
@@ -453,15 +458,16 @@ class CompetitorController extends Controller
 
             Log::info('Competitors fetched successfully', [
                 'brand_id' => $brand->id,
-                'saved_count' => $savedCount
+                'saved_count' => $savedCount,
             ]);
 
             return back()->with('success', "Successfully fetched {$savedCount} competitor(s). Review and accept them below.");
         } catch (\Exception $e) {
             Log::error('Error fetching competitors', [
                 'brand_id' => $brand->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return back()->with('error', 'An error occurred while fetching competitors. Please try again.');
         }
     }
@@ -469,12 +475,12 @@ class CompetitorController extends Controller
     public function store(Request $request, Brand $brand)
     {
         $user = Auth::user();
-        
+
         // Check if user has access to the brand
-        if (!$user->canAccessBrand($brand)) {
+        if (! $user->canAccessBrand($brand)) {
             abort(403, 'You do not have permission to add competitors to this brand.');
         }
-        
+
         $request->validate([
             'name' => 'required|string|max:255',
             'trackedName' => 'required|string|max:255',
@@ -497,15 +503,15 @@ class CompetitorController extends Controller
     public function update(Request $request, Competitor $competitor)
     {
         $user = Auth::user();
-        
+
         // Load brand relationship and check if user has access
         $competitor->load('brand');
-        if (!$user->canAccessBrand($competitor->brand)) {
+        if (! $user->canAccessBrand($competitor->brand)) {
             abort(403, 'You do not have permission to update this competitor.');
         }
-        
+
         $request->validate([
-            'status' => 'required|in:suggested,accepted,rejected,removed'
+            'status' => 'required|in:suggested,accepted,rejected,removed',
         ]);
 
         // Check competitor limit when accepting
@@ -513,16 +519,16 @@ class CompetitorController extends Controller
             $acceptedCount = $competitor->brand->competitors()
                 ->where('status', 'accepted')
                 ->count();
-            
+
             if ($acceptedCount >= 10) {
                 // Handle non-Inertia AJAX requests (like API calls)
-                if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && !request()->header('X-Inertia')) {
+                if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && ! request()->header('X-Inertia')) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'You can only have a maximum of 10 accepted competitors.'
+                        'message' => 'You can only have a maximum of 10 accepted competitors.',
                     ], 422);
                 }
-                
+
                 return back()->with('error', 'You can only have a maximum of 10 accepted competitors.');
             }
         }
@@ -530,12 +536,12 @@ class CompetitorController extends Controller
         // If status is rejected, delete the competitor permanently
         if ($request->status === 'rejected') {
             $competitor->delete();
-            
+
             // Handle non-Inertia AJAX requests (like API calls)
-            if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && !request()->header('X-Inertia')) {
+            if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && ! request()->header('X-Inertia')) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Competitor rejected and deleted.'
+                    'message' => 'Competitor rejected and deleted.',
                 ]);
             }
 
@@ -543,14 +549,14 @@ class CompetitorController extends Controller
         }
 
         $competitor->update([
-            'status' => $request->status
+            'status' => $request->status,
         ]);
 
         // Handle non-Inertia AJAX requests (like API calls)
-        if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && !request()->header('X-Inertia')) {
+        if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && ! request()->header('X-Inertia')) {
             return response()->json([
                 'success' => true,
-                'competitor' => $competitor
+                'competitor' => $competitor,
             ]);
         }
 
@@ -560,20 +566,20 @@ class CompetitorController extends Controller
     public function destroy(Competitor $competitor)
     {
         $user = Auth::user();
-        
+
         // Load brand relationship and check if user has access
         $competitor->load('brand');
-        if (!$user->canAccessBrand($competitor->brand)) {
+        if (! $user->canAccessBrand($competitor->brand)) {
             abort(403, 'You do not have permission to delete this competitor.');
         }
-        
+
         $competitor->delete();
 
         // Handle non-Inertia AJAX requests (like API calls)
-        if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && !request()->header('X-Inertia')) {
+        if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && ! request()->header('X-Inertia')) {
             return response()->json([
                 'success' => true,
-                'message' => 'Competitor removed.'
+                'message' => 'Competitor removed.',
             ]);
         }
 
@@ -586,20 +592,20 @@ class CompetitorController extends Controller
     public function fetchCompetitorStats(Competitor $competitor)
     {
         $user = Auth::user();
-        
+
         // Load brand relationship and check if user has access
         $competitor->load('brand');
-        if (!$user->canAccessBrand($competitor->brand)) {
+        if (! $user->canAccessBrand($competitor->brand)) {
             abort(403, 'You do not have permission to fetch stats for this competitor.');
         }
-        
+
         try {
             // You'll need to add your SerpAPI key to your .env file
             $serpApiKey = env('SERPAPI_KEY');
-            
-            if (!$serpApiKey) {
+
+            if (! $serpApiKey) {
                 return response()->json([
-                    'error' => 'SerpAPI key not configured'
+                    'error' => 'SerpAPI key not configured',
                 ], 400);
             }
 
@@ -609,15 +615,15 @@ class CompetitorController extends Controller
                 'engine' => 'google',
                 'api_key' => $serpApiKey,
                 'device' => 'desktop',
-                'google_domain' => 'google.com'
+                'google_domain' => 'google.com',
             ]);
 
             if ($response->successful()) {
                 $serpApiData = $response->json();
-                
+
                 // Extract stats using our SerpApiStatsExtractor
                 $stats = SerpApiStatsExtractor::extractStats($serpApiData);
-                
+
                 // Update the competitor with the extracted stats
                 $competitor->update([
                     'rank' => $stats['rank']['primary_position'] ?? null,
@@ -632,18 +638,18 @@ class CompetitorController extends Controller
                     'success' => true,
                     'message' => 'Stats updated successfully',
                     'stats' => $stats,
-                    'competitor' => $competitor->fresh()
+                    'competitor' => $competitor->fresh(),
                 ]);
             } else {
                 return response()->json([
-                    'error' => 'Failed to fetch data from SerpAPI'
+                    'error' => 'Failed to fetch data from SerpAPI',
                 ], 500);
             }
         } catch (\Exception $e) {
-            Log::error('Error fetching competitor stats: ' . $e->getMessage());
-            
+            Log::error('Error fetching competitor stats: '.$e->getMessage());
+
             return response()->json([
-                'error' => 'An error occurred while fetching stats: ' . $e->getMessage()
+                'error' => 'An error occurred while fetching stats: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -656,15 +662,15 @@ class CompetitorController extends Controller
         try {
             $request->validate([
                 'json_data' => 'required|string',
-                'competitor_name' => 'required|string'
+                'competitor_name' => 'required|string',
             ]);
 
             // Parse the JSON data
             $jsonData = json_decode($request->json_data, true);
-            
-            if (!$jsonData) {
+
+            if (! $jsonData) {
                 return response()->json([
-                    'error' => 'Invalid JSON data provided'
+                    'error' => 'Invalid JSON data provided',
                 ], 400);
             }
 
@@ -681,14 +687,14 @@ class CompetitorController extends Controller
                     'sentiment' => $stats['sentiment']['overall_sentiment'] ?? 'neutral',
                     'estimated_traffic' => $stats['traffic_estimate']['estimated_monthly_clicks'] ?? 0,
                     'social_platforms' => $stats['social_metrics']['platform_count'] ?? 0,
-                    'followers' => $stats['social_metrics']['total_followers'] ?? 0
-                ]
+                    'followers' => $stats['social_metrics']['total_followers'] ?? 0,
+                ],
             ]);
         } catch (\Exception $e) {
-            Log::error('Error analyzing competitor JSON: ' . $e->getMessage());
-            
+            Log::error('Error analyzing competitor JSON: '.$e->getMessage());
+
             return response()->json([
-                'error' => 'An error occurred while analyzing the data: ' . $e->getMessage()
+                'error' => 'An error occurred while analyzing the data: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -703,82 +709,31 @@ class CompetitorController extends Controller
             'name' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:1000',
             'session_id' => 'nullable|string',
+            'brand_id' => 'nullable|integer',
             'existing_competitors' => 'nullable|array',
             'existing_competitors.*.name' => 'nullable|string',
-            'existing_competitors.*.domain' => 'nullable|string'
+            'existing_competitors.*.domain' => 'nullable|string',
         ]);
 
         try {
-            // Normalize the website URL for consistent lookups
-            $normalizedWebsite = rtrim(strtolower($request->website), '/');
-            
-            // Check if the website has changed in this session
-            $sessionKey = 'brand_creation_website_' . ($request->session_id ?? session()->getId());
-            $previousWebsite = session($sessionKey);
-            $websiteChanged = $previousWebsite && $previousWebsite !== $normalizedWebsite;
-            
-            // Store current website in session
-            session([$sessionKey => $normalizedWebsite]);
-            
-            // If website changed, skip cache and generate fresh competitors
-            if (!$websiteChanged) {
-                // Check if we have cached competitors for this website in the database
-                $existingBrand = \App\Models\Brand::where('website', $normalizedWebsite)
-                    ->orWhere('website', 'LIKE', '%' . parse_url($normalizedWebsite, PHP_URL_HOST) . '%')
-                    ->first();
-                
-                if ($existingBrand && $existingBrand->competitors()->exists()) {
-                    // Return existing competitors from database
-                    $cachedCompetitors = $existingBrand->competitors()
-                        ->select('id', 'name', 'domain', 'mentions', 'status', 'source')
-                        ->get()
-                        ->map(function ($competitor) {
-                            return [
-                                'id' => $competitor->id,
-                                'name' => $competitor->name,
-                                'domain' => $competitor->domain,
-                                'mentions' => $competitor->mentions ?? 0,
-                                'status' => $competitor->status ?? 'suggested',
-                                'source' => $competitor->source ?? 'ai'
-                            ];
-                        })
-                        ->toArray();
-                    
-                    Log::info('Returned cached competitors from database', [
-                        'website' => $request->website,
-                        'brand_id' => $existingBrand->id,
-                        'competitor_count' => count($cachedCompetitors)
-                    ]);
-                    
-                    return response()->json([
-                        'success' => true,
-                        'competitors' => $cachedCompetitors,
-                        'cached' => true,
-                        'message' => 'Returning previously saved competitors for this website'
-                    ]);
-                }
-            } else {
-                Log::info('Website changed, skipping cache and generating fresh competitors', [
-                    'previous_website' => $previousWebsite,
-                    'new_website' => $normalizedWebsite
-                ]);
-            }
+            // Skip caching logic - always fetch fresh competitors when user clicks "Fetch with AI"
+            // The exclusion of existing competitors will be handled below
 
-            // If no cached competitors, fetch from AI
             // Get enabled AI model with API key
             $aiModel = \App\Models\AiModel::where('is_enabled', true)
                 ->whereNotNull('api_config')
                 ->get()
                 ->filter(function ($model) {
                     $config = $model->api_config;
-                    return !empty($config['api_key']);
+
+                    return ! empty($config['api_key']);
                 })
                 ->first();
 
-            if (!$aiModel) {
+            if (! $aiModel) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'No AI model with valid API key found. Please configure an API key for at least one AI model.'
+                    'error' => 'No AI model with valid API key found. Please configure an API key for at least one AI model.',
                 ], 400);
             }
 
@@ -786,21 +741,54 @@ class CompetitorController extends Controller
             $brandData = [
                 'name' => $request->name ?: 'Unknown Brand',
                 'website' => $request->website,
-                'description' => $request->description ?: ''
+                'description' => $request->description ?: '',
             ];
 
-            // Prepare the prompt
+            // Get existing competitors from request (frontend state)
             $existingCompetitors = $request->input('existing_competitors', []);
+
+            // If brand_id is provided, also load competitors from database to exclude them
+            if ($request->has('brand_id') && $request->brand_id) {
+                $brand = \App\Models\Brand::find($request->brand_id);
+                if ($brand) {
+                    $dbCompetitors = $brand->competitors()
+                        ->select('name', 'domain')
+                        ->get()
+                        ->map(function ($comp) {
+                            return [
+                                'name' => $comp->name,
+                                'domain' => $comp->domain,
+                            ];
+                        })
+                        ->toArray();
+
+                    // Merge with existing competitors from request
+                    $existingCompetitors = array_merge($existingCompetitors, $dbCompetitors);
+
+                    // Remove duplicates based on domain
+                    $existingCompetitors = array_values(array_reduce($existingCompetitors, function ($carry, $item) {
+                        $domain = strtolower(trim($item['domain']));
+                        if (! isset($carry[$domain])) {
+                            $carry[$domain] = $item;
+                        }
+
+                        return $carry;
+                    }, []));
+                }
+            }
+
+            // Prepare the prompt with all existing competitors
             $prompt = $this->getCompetitorPromptForCreation($brandData, $existingCompetitors);
 
             Log::info('Fetching competitors for brand creation', [
                 'website' => $request->website,
-                'ai_model' => $aiModel->name
+                'ai_model' => $aiModel->name,
+                'existing_competitors_count' => count($existingCompetitors),
             ]);
 
             // Make API call based on the model type
             $apiKey = $aiModel->api_config['api_key'];
-            
+
             if ($aiModel->name === 'perplexity') {
                 $response = Http::timeout(60)
                     ->withToken($apiKey)
@@ -808,7 +796,7 @@ class CompetitorController extends Controller
                         'model' => $aiModel->api_config['model'] ?? 'sonar-pro',
                         'messages' => [
                             ['role' => 'system', 'content' => 'You are a helpful assistant that responds only with valid JSON arrays. Do not include any explanatory text or markdown formatting.'],
-                            ['role' => 'user', 'content' => $prompt]
+                            ['role' => 'user', 'content' => $prompt],
                         ],
                         'max_tokens' => 4000,
                         'temperature' => 0.3,
@@ -822,22 +810,22 @@ class CompetitorController extends Controller
                         'model' => $aiModel->api_config['model'] ?? 'gpt-4',
                         'messages' => [
                             ['role' => 'system', 'content' => 'You are a helpful assistant that responds only with valid JSON arrays. Do not include any explanatory text or markdown formatting.'],
-                            ['role' => 'user', 'content' => $prompt]
+                            ['role' => 'user', 'content' => $prompt],
                         ],
                         'max_tokens' => 4000,
                         'temperature' => 0.3,
                     ]);
             }
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 Log::error('AI API request failed', [
                     'status' => $response->status(),
-                    'body' => $response->body()
+                    'body' => $response->body(),
                 ]);
-                
+
                 return response()->json([
                     'success' => false,
-                    'error' => 'Failed to fetch competitors from AI service. Please try again later.'
+                    'error' => 'Failed to fetch competitors from AI service. Please try again later.',
                 ], 500);
             }
 
@@ -856,30 +844,92 @@ class CompetitorController extends Controller
             if (empty($competitors)) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'No competitors found for this website.'
+                    'error' => 'No competitors found for this website.',
                 ], 400);
             }
 
             Log::info('Successfully fetched competitors', [
                 'website' => $request->website,
-                'competitor_count' => count($competitors)
+                'competitor_count' => count($competitors),
             ]);
 
             return response()->json([
                 'success' => true,
                 'competitors' => $competitors,
-                'ai_model_used' => $aiModel->display_name
+                'ai_model_used' => $aiModel->display_name,
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error fetching competitors for brand creation', [
                 'error' => $e->getMessage(),
-                'website' => $request->website
+                'website' => $request->website,
             ]);
 
             return response()->json([
                 'success' => false,
-                'error' => 'An error occurred while fetching competitors: ' . $e->getMessage()
+                'error' => 'An error occurred while fetching competitors: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Save bulk competitors during brand creation
+     */
+    public function saveBulkForCreation(Request $request)
+    {
+        $request->validate([
+            'brand_id' => 'required|integer|exists:brands,id',
+            'competitors' => 'required|array',
+            'competitors.*.name' => 'required|string|max:255',
+            'competitors.*.domain' => 'required|url|max:255',
+            'competitors.*.status' => 'required|in:suggested,accepted,rejected',
+        ]);
+
+        try {
+            $brand = \App\Models\Brand::findOrFail($request->brand_id);
+            $savedCompetitors = [];
+
+            foreach ($request->competitors as $competitorData) {
+                // Check if competitor with this domain already exists for this brand
+                $existing = $brand->competitors()
+                    ->where('domain', $competitorData['domain'])
+                    ->first();
+
+                if ($existing) {
+                    // Update existing competitor
+                    $existing->update([
+                        'name' => $competitorData['name'],
+                        'status' => $competitorData['status'],
+                    ]);
+                    $savedCompetitors[] = $existing;
+                } else {
+                    // Create new competitor
+                    $competitor = $brand->competitors()->create([
+                        'name' => $competitorData['name'],
+                        'domain' => $competitorData['domain'],
+                        'status' => $competitorData['status'],
+                        'source' => 'ai',
+                        'mentions' => 0,
+                    ]);
+                    $savedCompetitors[] = $competitor;
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'competitors' => $savedCompetitors,
+                'message' => 'Competitors saved successfully',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error saving bulk competitors', [
+                'error' => $e->getMessage(),
+                'brand_id' => $request->brand_id,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to save competitors: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -894,11 +944,11 @@ class CompetitorController extends Controller
         $description = $brandData['description'];
 
         $exclusionText = '';
-        if (!empty($existingCompetitors)) {
-            $exclusionList = array_map(function($comp) {
+        if (! empty($existingCompetitors)) {
+            $exclusionList = array_map(function ($comp) {
                 return "- {$comp['name']} ({$comp['domain']})";
             }, $existingCompetitors);
-            $exclusionText = "\n\nIMPORTANT: Exclude the following competitors that have already been suggested:\n" . implode("\n", $exclusionList) . "\n\nProvide NEW competitors that are NOT in the above list.";
+            $exclusionText = "\n\nIMPORTANT: Exclude the following competitors that have already been suggested:\n".implode("\n", $exclusionList)."\n\nProvide NEW competitors that are NOT in the above list.";
         }
 
         return <<<PROMPT
@@ -936,48 +986,50 @@ PROMPT;
     {
         // Clean the content
         $content = trim($content);
-        
+
         // Remove markdown code blocks if present
         $content = preg_replace('/```json\s*/', '', $content);
         $content = preg_replace('/```\s*$/', '', $content);
-        
+
         try {
             $competitors = json_decode($content, true);
-            
-            if (!is_array($competitors)) {
+
+            if (! is_array($competitors)) {
                 Log::warning('AI response is not an array', ['content' => $content]);
+
                 return [];
             }
-            
+
             // Validate and clean competitors
             $validCompetitors = [];
             foreach ($competitors as $competitor) {
                 if (isset($competitor['name']) && isset($competitor['domain'])) {
                     $domain = $competitor['domain'];
-                    
+
                     // Ensure domain has protocol
-                    if (!preg_match('/^https?:\/\//', $domain)) {
-                        $domain = 'https://' . ltrim($domain, '/');
+                    if (! preg_match('/^https?:\/\//', $domain)) {
+                        $domain = 'https://'.ltrim($domain, '/');
                     }
-                    
+
                     // Validate domain format
                     if (filter_var($domain, FILTER_VALIDATE_URL)) {
                         $validCompetitors[] = [
                             'name' => trim($competitor['name']),
                             'domain' => $domain,
-                            'mentions' => 0 // Default for brand creation
+                            'mentions' => 0, // Default for brand creation
                         ];
                     }
                 }
             }
-            
+
             return $validCompetitors;
-            
+
         } catch (\Exception $e) {
             Log::error('Failed to parse competitors JSON', [
                 'content' => $content,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return [];
         }
     }

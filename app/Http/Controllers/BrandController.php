@@ -274,7 +274,7 @@ class BrandController extends Controller
         // Load competitors if step >= 2
         if ($step >= 2) {
             $existingData['competitors'] = $brand->competitors()
-                ->select('id', 'name', 'domain', 'source', 'status', 'mentions')
+                ->select('id', 'name', 'domain', 'trackedName', 'allies', 'source', 'status', 'mentions')
                 ->get()
                 ->toArray();
         }
@@ -319,32 +319,60 @@ class BrandController extends Controller
     {
         $request->validate([
             'competitors' => 'array|max:50',
+            'competitors.*.id' => 'nullable|integer|exists:competitors,id',
             'competitors.*.name' => 'required|string|max:255',
             'competitors.*.domain' => 'required|url|max:255',
             'competitors.*.source' => 'nullable|string|in:ai,manual',
+            'competitors.*.status' => 'nullable|string|in:suggested,accepted,rejected',
         ]);
 
-        // Delete existing competitors for this draft brand
-        $brand->competitors()->delete();
+        // Instead of deleting all, we'll update/create competitors intelligently
+        // This preserves the history of suggested/rejected competitors for proper exclusion in AI fetching
 
-        // Create new competitors
+        $submittedCompetitorIds = [];
+
+        // Create or update competitors from request
         if ($request->has('competitors') && ! empty($request->competitors)) {
             foreach ($request->competitors as $index => $competitorData) {
-                \App\Models\Competitor::create([
+                $data = [
                     'brand_id' => $brand->id,
                     'name' => $competitorData['name'],
                     'domain' => $competitorData['domain'],
                     'trackedName' => $competitorData['trackedName'] ?? '',
                     'allies' => isset($competitorData['allies']) ? serialize($competitorData['allies']) : serialize([]),
                     'source' => $competitorData['source'] ?? 'manual',
-                    'status' => 'accepted',
-                    'mentions' => 0,
+                    'status' => $competitorData['status'] ?? 'accepted',
                     'rank' => $index + 1,
                     'sentiment' => 0.6,
                     'visibility' => 0.7,
-                ]);
+                ];
+
+                // If competitor has an ID, update it; otherwise create new
+                if (isset($competitorData['id'])) {
+                    $competitor = \App\Models\Competitor::find($competitorData['id']);
+                    if ($competitor && $competitor->brand_id === $brand->id) {
+                        $competitor->update($data);
+                        $submittedCompetitorIds[] = $competitor->id;
+                    }
+                } else {
+                    // Check if competitor with this domain already exists for this brand
+                    $existing = $brand->competitors()->where('domain', $competitorData['domain'])->first();
+                    if ($existing) {
+                        $existing->update($data);
+                        $submittedCompetitorIds[] = $existing->id;
+                    } else {
+                        $data['mentions'] = 0;
+                        $competitor = \App\Models\Competitor::create($data);
+                        $submittedCompetitorIds[] = $competitor->id;
+                    }
+                }
             }
         }
+
+        // Don't delete competitors that weren't submitted - keep suggested/rejected for exclusion history
+        // Only delete "suggested" or "rejected" competitors that are no longer in the submitted list
+        // (i.e., user explicitly removed them from UI, but keep them for AI exclusion history)
+        // Actually, let's keep ALL competitors for history - don't delete anything
 
         return response()->json([
             'success' => true,
@@ -472,6 +500,8 @@ class BrandController extends Controller
                     'brand_id' => $brand->id,
                     'name' => $competitorData['name'],
                     'domain' => $competitorData['domain'],
+                    'trackedName' => $competitorData['trackedName'] ?? '',
+                    'allies' => isset($competitorData['allies']) ? serialize($competitorData['allies']) : serialize([]),
                     'source' => $competitorData['source'] ?? 'ai',
                     'status' => 'suggested', // Save as suggested initially
                     'mentions' => $competitorData['mentions'] ?? 0,
@@ -484,6 +514,8 @@ class BrandController extends Controller
                     'id' => $competitor->id,
                     'name' => $competitor->name,
                     'domain' => $competitor->domain,
+                    'trackedName' => $competitor->trackedName,
+                    'allies' => unserialize($competitor->allies),
                     'source' => $competitor->source,
                     'status' => $competitor->status,
                     'mentions' => $competitor->mentions,
@@ -506,23 +538,23 @@ class BrandController extends Controller
         $request->validate([
             'status' => 'required|in:suggested,accepted,rejected',
         ]);
-        
+
         $countAccepted = \App\Models\Competitor::where('brand_id', $brand->id)
             ->where('status', 'accepted')
             ->count();
-            
+
         if ($countAccepted >= 10 && $request->status === 'accepted') {
             return response()->json([
                 'success' => false,
                 'message' => 'Maximum 10 accepted competitors allowed',
             ], 400);
         }
-        
+
         $competitor = \App\Models\Competitor::where('brand_id', $brand->id)
             ->where('id', $competitorId)
             ->first();
 
-        if (!$competitor) {
+        if (! $competitor) {
             return response()->json([
                 'success' => false,
                 'message' => 'Competitor not found',
@@ -579,8 +611,9 @@ class BrandController extends Controller
                     'brand_id' => $brand->id,
                     'prompt' => $promptText,
                     'order' => is_array($promptData) ? ($promptData['order'] ?? $index + 1) : $index + 1,
-                    'is_active' => is_array($promptData) ? ($promptData['is_active'] ?? false) : false,
+                    'is_active' => false, // All generated prompts start as inactive (suggested)
                     'status' => 'suggested', // New prompts are always suggested initially
+                    'ai_provider' => is_array($promptData) && isset($promptData['source']) ? $promptData['source'] : 'ai',
                     'ai_model_id' => $aiModelId,
                     'visibility' => is_array($promptData) ? ($promptData['visibility'] ?? null) : null,
                     'sentiment' => is_array($promptData) ? ($promptData['sentiment'] ?? null) : null,
@@ -1179,32 +1212,7 @@ class BrandController extends Controller
         try {
             $sessionId = session()->getId();
 
-            // Check if we already have prompts for this website
-            $existingPrompts = $aiService->getPromptsForWebsite($request->website);
-
-            if (count($existingPrompts) > 0) {
-                // Return existing prompts but mark them as for current session
-                foreach ($existingPrompts as $prompt) {
-                    $prompt->update(['session_id' => $sessionId]);
-                }
-
-                return response()->json([
-                    'success' => true,
-                    'prompts' => $existingPrompts->map(function ($prompt) {
-                        return [
-                            'id' => $prompt->id,
-                            'prompt' => $prompt->prompt,
-                            'source' => 'ai_generated_cached',
-                            'ai_provider' => $prompt->ai_provider,
-                            'is_selected' => true,
-                            'order' => $prompt->order,
-                        ];
-                    })->toArray(),
-                    'cached' => true,
-                ]);
-            }
-
-            // Generate new prompts
+            // Generate new prompts (returns plain objects, not persisted)
             $generatedPrompts = $aiService->generatePromptsForWebsite(
                 $request->website,
                 $sessionId,
@@ -1216,11 +1224,10 @@ class BrandController extends Controller
                 'success' => true,
                 'prompts' => array_map(function ($prompt) {
                     return [
-                        'id' => $prompt->id,
                         'prompt' => $prompt->prompt,
                         'source' => $prompt->source,
                         'ai_provider' => $prompt->ai_provider,
-                        'is_selected' => $prompt->is_selected,
+                        'is_selected' => true,
                         'order' => $prompt->order,
                     ];
                 }, $generatedPrompts),

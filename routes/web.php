@@ -246,6 +246,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Competitor fetch for brand creation (doesn't require existing brand)
         Route::post('api/competitors/fetch-for-brand-creation', [App\Http\Controllers\CompetitorController::class, 'fetchForBrandCreation'])->name('competitors.fetch-for-brand-creation');
+        // Save bulk competitors during brand creation
+        Route::post('api/competitors/save-bulk', [App\Http\Controllers\CompetitorController::class, 'saveBulkForCreation'])->name('competitors.save-bulk');
     });
 
     // Brand Management Routes - For agency and brand users

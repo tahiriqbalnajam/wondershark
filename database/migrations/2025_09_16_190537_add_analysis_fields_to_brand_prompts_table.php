@@ -35,7 +35,7 @@ return new class extends Migration
                 'session_id',
                 'analysis_completed_at',
                 'analysis_failed_at',
-                'analysis_error'
+                'analysis_error',
             ]);
         });
     }

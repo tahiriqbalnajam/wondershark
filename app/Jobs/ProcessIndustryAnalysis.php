@@ -2,9 +2,9 @@
 
 namespace App\Jobs;
 
-use App\Models\IndustryAnalysis;
 use App\Models\AiApiResponse;
 use App\Models\AiModel;
+use App\Models\IndustryAnalysis;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -18,6 +18,7 @@ class ProcessIndustryAnalysis implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $analysis;
+
     protected $aiModel;
 
     /**
@@ -35,11 +36,11 @@ class ProcessIndustryAnalysis implements ShouldQueue
     public function handle(): void
     {
         Log::info("ProcessIndustryAnalysis job started for analysis ID: {$this->analysis->id}");
-        
+
         try {
             // Update analysis status to processing if this is the first AI provider
             if ($this->analysis->status === 'pending') {
-                Log::info("Updating analysis status to processing");
+                Log::info('Updating analysis status to processing');
                 $this->analysis->update(['status' => 'processing']);
             }
 
@@ -54,16 +55,16 @@ class ProcessIndustryAnalysis implements ShouldQueue
             ]);
 
             $startTime = microtime(true);
-            
+
             // Make API call based on provider
             $response = $this->callAiProvider($aiResponse->prompt_used);
-            
+
             $processingTime = microtime(true) - $startTime;
 
             if ($response['success']) {
                 // Parse the response
                 $parsedData = $this->parseAiResponse($response['data']);
-                
+
                 // Update AI response record
                 $aiResponse->update([
                     'raw_response' => $response['data'],
@@ -97,6 +98,7 @@ class ProcessIndustryAnalysis implements ShouldQueue
     private function getPromptForProvider(): string
     {
         $basePrompt = "Analyze the website {$this->analysis->target_url} and provide industry insights.";
+
         return $basePrompt;
     }
 
@@ -152,6 +154,7 @@ class ProcessIndustryAnalysis implements ShouldQueue
                     'status' => $response->status(),
                     'response' => $response->body(),
                 ]);
+
                 return ['success' => false, 'error' => $response->body()];
             }
 
@@ -180,6 +183,7 @@ class ProcessIndustryAnalysis implements ShouldQueue
             Log::error("AI API Call Exception for {$this->aiModel->name}", [
                 'error' => $e->getMessage(),
             ]);
+
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
@@ -201,10 +205,10 @@ class ProcessIndustryAnalysis implements ShouldQueue
     private function checkAnalysisCompletion(): void
     {
         $this->analysis->refresh();
-        
+
         $totalExpected = AiModel::enabled()->count();
         $completed = $this->analysis->aiResponses()->whereIn('status', ['completed', 'failed'])->count();
-        
+
         if ($completed >= $totalExpected) {
             $this->analysis->update(['status' => 'completed']);
         }

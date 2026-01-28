@@ -2,17 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Post;
-use App\Models\IndustryAnalysis;
+use App\Jobs\ProcessIndustryAnalysis;
 use App\Models\AiApiResponse;
 use App\Models\AiModel;
-use App\Jobs\ProcessIndustryAnalysis;
+use App\Models\IndustryAnalysis;
+use App\Models\Post;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use Carbon\Carbon;
 
 class IndustryAnalysisController extends Controller
 {
@@ -23,7 +22,7 @@ class IndustryAnalysisController extends Controller
     {
         return AiModel::enabled()->ordered()->get();
     }
-    
+
     /**
      * Display the search analytics page
      */
@@ -51,7 +50,7 @@ class IndustryAnalysisController extends Controller
     public function show(IndustryAnalysis $analysis)
     {
         $analysis->load(['post', 'user', 'aiResponses']);
-        
+
         return Inertia::render('SearchAnalytics/Show', [
             'analysis' => $analysis,
             'progressPercentage' => $analysis->getProgressPercentage(),
@@ -69,11 +68,11 @@ class IndustryAnalysisController extends Controller
         ]);
 
         $post = Post::findOrFail($request->post_id);
-        
+
         // Extract URL from post (assuming URL is in post content or has a url field)
         $targetUrl = $this->extractUrlFromPost($post);
-        
-        if (!$targetUrl) {
+
+        if (! $targetUrl) {
             return response()->json(['error' => 'No URL found in the post'], 400);
         }
 
@@ -101,7 +100,7 @@ class IndustryAnalysisController extends Controller
     private function startAiAnalysis(IndustryAnalysis $analysis)
     {
         $aiProviders = $this->getEnabledAiProviders();
-        
+
         foreach ($aiProviders as $aiModel) {
             ProcessIndustryAnalysis::dispatch($analysis, $aiModel);
         }
@@ -122,16 +121,16 @@ class IndustryAnalysisController extends Controller
             ]);
 
             $startTime = microtime(true);
-            
+
             // Make API call based on provider
             $response = $this->callAiProvider($aiModel, $aiResponse->prompt_used);
-            
+
             $processingTime = microtime(true) - $startTime;
 
             if ($response['success']) {
                 // Parse the response
                 $parsedData = $this->parseAiResponse($aiModel->name, $response['data']);
-                
+
                 // Update AI response record
                 $aiResponse->update([
                     'raw_response' => $response['data'],
@@ -179,11 +178,11 @@ class IndustryAnalysisController extends Controller
 
         switch ($aiModel->name) {
             case 'openai':
-                return $basePrompt . "\n\nProvide response in JSON format with clear categories.";
+                return $basePrompt."\n\nProvide response in JSON format with clear categories.";
             case 'gemini':
-                return $basePrompt . "\n\nInclude confidence scores for each insight.";
+                return $basePrompt."\n\nInclude confidence scores for each insight.";
             case 'perplexity':
-                return $basePrompt . "\n\nFocus on real-time data and cite all sources.";
+                return $basePrompt."\n\nFocus on real-time data and cite all sources.";
             default:
                 return $basePrompt;
         }
@@ -216,24 +215,25 @@ class IndustryAnalysisController extends Controller
     private function callOpenAI(AiModel $aiModel, string $prompt): array
     {
         $config = $aiModel->api_config;
-        
+
         if (empty($config['api_key'])) {
             return ['success' => false, 'error' => 'OpenAI API key not configured'];
         }
 
         $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $config['api_key'],
+            'Authorization' => 'Bearer '.$config['api_key'],
             'Content-Type' => 'application/json',
         ])->post('https://api.openai.com/v1/chat/completions', [
             'model' => $config['model'] ?? 'gpt-4',
             'messages' => [
-                ['role' => 'user', 'content' => $prompt]
+                ['role' => 'user', 'content' => $prompt],
             ],
             'max_tokens' => $config['max_tokens'] ?? 2000,
         ]);
 
         if ($response->successful()) {
             $data = $response->json();
+
             return [
                 'success' => true,
                 'data' => $data['choices'][0]['message']['content'],
@@ -250,21 +250,22 @@ class IndustryAnalysisController extends Controller
     private function callGemini(AiModel $aiModel, string $prompt): array
     {
         $config = $aiModel->api_config;
-        
+
         if (empty($config['api_key'])) {
             return ['success' => false, 'error' => 'Gemini API key not configured'];
         }
 
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
-        ])->post('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=' . $config['api_key'], [
+        ])->post('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key='.$config['api_key'], [
             'contents' => [
-                ['parts' => [['text' => $prompt]]]
+                ['parts' => [['text' => $prompt]]],
             ],
         ]);
 
         if ($response->successful()) {
             $data = $response->json();
+
             return [
                 'success' => true,
                 'data' => $data['candidates'][0]['content']['parts'][0]['text'],
@@ -281,24 +282,25 @@ class IndustryAnalysisController extends Controller
     private function callPerplexity(AiModel $aiModel, string $prompt): array
     {
         $config = $aiModel->api_config;
-        
+
         if (empty($config['api_key'])) {
             return ['success' => false, 'error' => 'Perplexity API key not configured'];
         }
 
         $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $config['api_key'],
+            'Authorization' => 'Bearer '.$config['api_key'],
             'Content-Type' => 'application/json',
         ])->post('https://api.perplexity.ai/chat/completions', [
             'model' => $config['model'] ?? 'llama-3.1-sonar-small-128k-online',
             'messages' => [
-                ['role' => 'user', 'content' => $prompt]
+                ['role' => 'user', 'content' => $prompt],
             ],
             'max_tokens' => $config['max_tokens'] ?? 2000,
         ]);
 
         if ($response->successful()) {
             $data = $response->json();
+
             return [
                 'success' => true,
                 'data' => $data['choices'][0]['message']['content'],
@@ -332,6 +334,7 @@ class IndustryAnalysisController extends Controller
     {
         // Simple regex-based extraction - enhance with NLP in production
         preg_match_all('/industry|sector|market|business/i', $response, $matches);
+
         return array_unique($matches[0]);
     }
 
@@ -343,7 +346,7 @@ class IndustryAnalysisController extends Controller
         // Extract URLs and source citations
         preg_match_all('/https?:\/\/[^\s\)]+/i', $response, $urls);
         preg_match_all('/according to ([^,.]+)/i', $response, $sources);
-        
+
         return [
             'urls' => array_unique($urls[0] ?? []),
             'sources' => array_unique($sources[1] ?? []),
@@ -357,22 +360,24 @@ class IndustryAnalysisController extends Controller
     {
         $positive = ['good', 'excellent', 'strong', 'leader', 'top', 'best'];
         $negative = ['poor', 'weak', 'declining', 'worst', 'bad', 'failing'];
-        
+
         $positiveCount = 0;
         $negativeCount = 0;
-        
+
         foreach ($positive as $word) {
             $positiveCount += substr_count(strtolower($response), $word);
         }
-        
+
         foreach ($negative as $word) {
             $negativeCount += substr_count(strtolower($response), $word);
         }
-        
+
         $total = $positiveCount + $negativeCount;
-        
-        if ($total === 0) return 0.5; // Neutral
-        
+
+        if ($total === 0) {
+            return 0.5;
+        } // Neutral
+
         return $positiveCount / $total;
     }
 
@@ -401,7 +406,7 @@ class IndustryAnalysisController extends Controller
         if ($completedResponses === $totalResponses) {
             // Aggregate results
             $this->aggregateResults($analysis);
-            
+
             $analysis->update(['status' => 'completed']);
         }
     }
@@ -412,30 +417,30 @@ class IndustryAnalysisController extends Controller
     private function aggregateResults(IndustryAnalysis $analysis)
     {
         $responses = $analysis->completedResponses()->get();
-        
+
         $industryRankings = [];
         $topSources = [];
         $overallSentiment = 0;
-        
+
         foreach ($responses as $response) {
             $parsed = $response->parsed_data;
-            
+
             // Aggregate industry mentions
             $industryRankings = array_merge(
-                $industryRankings, 
+                $industryRankings,
                 $parsed['industry_mentions'] ?? []
             );
-            
+
             // Aggregate sources
             $topSources = array_merge(
-                $topSources, 
+                $topSources,
                 $parsed['source_mentions']['sources'] ?? []
             );
-            
+
             // Average sentiment
             $overallSentiment += $parsed['sentiment_score'] ?? 0.5;
         }
-        
+
         $analysis->update([
             'industry_rankings' => array_count_values($industryRankings),
             'top_sources' => array_count_values($topSources),

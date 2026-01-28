@@ -9,13 +9,13 @@ use Illuminate\Support\Facades\Log;
 class CompetitorStatsService
 {
     private $statsExtractor;
-    
+
     public function __construct()
     {
         // You can inject different extractors based on API providers
-        $this->statsExtractor = new CompetitorStatsExtractor();
+        $this->statsExtractor = new CompetitorStatsExtractor;
     }
-    
+
     /**
      * Update stats for a single competitor
      */
@@ -24,26 +24,27 @@ class CompetitorStatsService
         try {
             // Example: Fetch stats from multiple sources
             $stats = $this->fetchStatsFromAPIs($competitor);
-            
+
             // Update competitor with new stats
             $competitor->update([
                 'rank' => $stats['rank'],
-                'visibility' => $stats['visibility'], 
+                'visibility' => $stats['visibility'],
                 'sentiment' => $stats['sentiment'],
                 'traffic_estimate' => $stats['traffic_estimate'] ?? null,
                 'market_share' => $stats['market_share'] ?? null,
                 'social_metrics' => $stats['social_metrics'] ?? null,
                 'stats_updated_at' => now(),
             ]);
-            
+
             return true;
-            
+
         } catch (\Exception $e) {
-            Log::error("Failed to update stats for competitor {$competitor->id}: " . $e->getMessage());
+            Log::error("Failed to update stats for competitor {$competitor->id}: ".$e->getMessage());
+
             return false;
         }
     }
-    
+
     /**
      * Update stats for all competitors of a brand
      */
@@ -51,7 +52,7 @@ class CompetitorStatsService
     {
         $competitors = Competitor::where('brand_id', $brandId)->get();
         $results = ['success' => 0, 'failed' => 0];
-        
+
         foreach ($competitors as $competitor) {
             if ($this->updateCompetitorStats($competitor)) {
                 $results['success']++;
@@ -59,10 +60,10 @@ class CompetitorStatsService
                 $results['failed']++;
             }
         }
-        
+
         return $results;
     }
-    
+
     /**
      * Fetch stats from multiple API sources
      */
@@ -70,15 +71,15 @@ class CompetitorStatsService
     {
         $stats = [
             'rank' => null,
-            'visibility' => null, 
+            'visibility' => null,
             'sentiment' => null,
             'traffic_estimate' => null,
             'market_share' => null,
             'social_metrics' => null,
         ];
-        
+
         // Example API calls (replace with actual APIs)
-        
+
         // 1. SEO/Ranking APIs (SemRush, Ahrefs, etc.)
         $seoStats = $this->fetchSEOStats($competitor);
         if ($seoStats) {
@@ -86,24 +87,24 @@ class CompetitorStatsService
             $stats['visibility'] = $seoStats['visibility'] ?? $stats['visibility'];
             $stats['traffic_estimate'] = $seoStats['traffic'] ?? $stats['traffic_estimate'];
         }
-        
+
         // 2. Social Sentiment APIs (Brandwatch, Mention, etc.)
         $sentimentStats = $this->fetchSentimentStats($competitor);
         if ($sentimentStats) {
             $stats['sentiment'] = $sentimentStats['sentiment'] ?? $stats['sentiment'];
             $stats['social_metrics'] = $sentimentStats['social_metrics'] ?? $stats['social_metrics'];
         }
-        
+
         // 3. Market Research APIs (Crunchbase, Similar Web, etc.)
         $marketStats = $this->fetchMarketStats($competitor);
         if ($marketStats) {
             $stats['market_share'] = $marketStats['market_share'] ?? $stats['market_share'];
             $stats['rank'] = $marketStats['rank'] ?? $stats['rank'];
         }
-        
+
         return $stats;
     }
-    
+
     /**
      * Fetch SEO and ranking data
      */
@@ -117,19 +118,20 @@ class CompetitorStatsService
                 'domain' => $competitor->domain,
                 'database' => 'us',
             ]);
-            
+
             if ($response->successful()) {
                 $data = $response->json();
+
                 return $this->statsExtractor->extractStats(json_encode($data), $competitor->name);
             }
-            
+
         } catch (\Exception $e) {
-            Log::warning("SEO stats fetch failed for {$competitor->domain}: " . $e->getMessage());
+            Log::warning("SEO stats fetch failed for {$competitor->domain}: ".$e->getMessage());
         }
-        
+
         return null;
     }
-    
+
     /**
      * Fetch sentiment and social data
      */
@@ -143,19 +145,20 @@ class CompetitorStatsService
                     'queryId' => 'competitor_mentions',
                     'brands' => $competitor->name,
                 ]);
-            
+
             if ($response->successful()) {
                 $data = $response->json();
+
                 return $this->statsExtractor->extractStats(json_encode($data), $competitor->name);
             }
-            
+
         } catch (\Exception $e) {
-            Log::warning("Sentiment stats fetch failed for {$competitor->name}: " . $e->getMessage());
+            Log::warning("Sentiment stats fetch failed for {$competitor->name}: ".$e->getMessage());
         }
-        
+
         return null;
     }
-    
+
     /**
      * Fetch market and competitive data
      */
@@ -171,36 +174,38 @@ class CompetitorStatsService
                     'country' => 'US',
                     'granularity' => 'monthly',
                 ]);
-            
+
             if ($response->successful()) {
                 $data = $response->json();
+
                 return $this->statsExtractor->extractStats(json_encode($data), $competitor->name);
             }
-            
+
         } catch (\Exception $e) {
-            Log::warning("Market stats fetch failed for {$competitor->domain}: " . $e->getMessage());
+            Log::warning("Market stats fetch failed for {$competitor->domain}: ".$e->getMessage());
         }
-        
+
         return null;
     }
 }
 
-class CompetitorStatsExtractor 
+class CompetitorStatsExtractor
 {
     private $currentCompetitorName;
-    
-    public function __construct($competitorName = null) {
+
+    public function __construct($competitorName = null)
+    {
         $this->currentCompetitorName = $competitorName;
     }
-    
-    public function extractStats($jsonResponse, $competitorName = null): array 
+
+    public function extractStats($jsonResponse, $competitorName = null): array
     {
         $data = json_decode($jsonResponse, true);
-        
+
         if ($competitorName) {
             $this->currentCompetitorName = $competitorName;
         }
-        
+
         return [
             'rank' => $this->extractRank($data),
             'visibility' => $this->extractVisibility($data),
@@ -210,20 +215,20 @@ class CompetitorStatsExtractor
             'social_metrics' => $this->extractSocialMetrics($data),
         ];
     }
-    
-    private function extractRank($data): ?int 
+
+    private function extractRank($data): ?int
     {
         // Multiple patterns for rank extraction
-        return $data['rank'] 
-            ?? $data['seo']['rank'] 
+        return $data['rank']
+            ?? $data['seo']['rank']
             ?? $data['search_rank']
             ?? $data['market_position']
             ?? $data['position']
             ?? $data['competitive_analysis']['ranking']
             ?? null;
     }
-    
-    private function extractVisibility($data): ?float 
+
+    private function extractVisibility($data): ?float
     {
         // Multiple patterns for visibility extraction
         return $data['visibility']
@@ -234,8 +239,8 @@ class CompetitorStatsExtractor
             ?? $data['awareness_score']
             ?? null;
     }
-    
-    private function extractSentiment($data): ?float 
+
+    private function extractSentiment($data): ?float
     {
         // Multiple patterns for sentiment extraction
         return $data['sentiment']
@@ -246,8 +251,8 @@ class CompetitorStatsExtractor
             ?? $this->calculateSentimentFromMentions($data)
             ?? null;
     }
-    
-    private function extractTrafficEstimate($data): ?int 
+
+    private function extractTrafficEstimate($data): ?int
     {
         return $data['traffic']['estimated_visits']
             ?? $data['monthly_visits']
@@ -255,22 +260,22 @@ class CompetitorStatsExtractor
             ?? $data['traffic_estimate']
             ?? null;
     }
-    
-    private function extractMarketShare($data): ?float 
+
+    private function extractMarketShare($data): ?float
     {
         return $data['market_share']
             ?? $data['competitive_analysis']['market_share']
             ?? $data['share_of_voice']
             ?? null;
     }
-    
-    private function extractSocialMetrics($data): ?array 
+
+    private function extractSocialMetrics($data): ?array
     {
-        $socialData = $data['social_metrics'] 
-            ?? $data['social'] 
-            ?? $data['social_media'] 
+        $socialData = $data['social_metrics']
+            ?? $data['social']
+            ?? $data['social_media']
             ?? null;
-            
+
         if ($socialData) {
             return [
                 'followers' => $socialData['followers'] ?? null,
@@ -279,23 +284,23 @@ class CompetitorStatsExtractor
                 'reach' => $socialData['reach'] ?? null,
             ];
         }
-        
+
         return null;
     }
-    
-    private function calculateSentimentFromMentions($data): ?float 
+
+    private function calculateSentimentFromMentions($data): ?float
     {
         if (isset($data['mentions'])) {
             $positive = $data['mentions']['positive'] ?? 0;
             $negative = $data['mentions']['negative'] ?? 0;
             $neutral = $data['mentions']['neutral'] ?? 0;
             $total = $positive + $negative + $neutral;
-            
+
             if ($total > 0) {
                 return round(($positive - $negative) / $total * 100, 2);
             }
         }
-        
+
         return null;
     }
 }

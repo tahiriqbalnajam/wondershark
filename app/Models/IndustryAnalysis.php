@@ -78,8 +78,9 @@ class IndustryAnalysis extends Model
         if ($totalExpected === 0) {
             return 0;
         }
-        
+
         $completed = $this->aiResponses()->whereIn('status', ['completed', 'failed'])->count();
+
         return (int) (($completed / $totalExpected) * 100);
     }
 

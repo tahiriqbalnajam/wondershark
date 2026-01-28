@@ -3,19 +3,19 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\SystemSetting;
-use Illuminate\Http\Request;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
@@ -87,7 +87,7 @@ class UserController extends Controller
         ]);
 
         $user = null;
-        
+
         DB::transaction(function () use ($request, &$user) {
             $user = User::create([
                 'name' => $request->name,
@@ -99,7 +99,7 @@ class UserController extends Controller
             ]);
 
             // Assign roles
-            if ($request->roles && !empty($request->roles)) {
+            if ($request->roles && ! empty($request->roles)) {
                 $user->assignRole($request->roles);
             }
 
@@ -113,16 +113,16 @@ class UserController extends Controller
         if ($user && $request->roles && in_array('brand', $request->roles)) {
             try {
                 $adminUser = Auth::user();
-                
+
                 $brand = \App\Models\Brand::create([
                     'agency_id' => $adminUser->id,
                     'user_id' => $user->id,
-                    'name' => $request->name . "'s Brand",
+                    'name' => $request->name."'s Brand",
                     'website' => null,
-                    'description' => 'Brand created for ' . $request->name,
+                    'description' => 'Brand created for '.$request->name,
                     'status' => 'active',
                 ]);
-                
+
                 Log::info('Brand record created successfully', [
                     'brand_id' => $brand->id,
                     'brand_name' => $brand->name,
@@ -207,7 +207,7 @@ class UserController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|lowercase|email|max:255|unique:users,email,' . $user->id,
+            'email' => 'required|string|lowercase|email|max:255|unique:users,email,'.$user->id,
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
             'roles' => 'array',
             'roles.*' => 'exists:roles,name',
@@ -262,7 +262,7 @@ class UserController extends Controller
 
         if ($brandsCount > 0 || $postsCount > 0) {
             return back()->withErrors([
-                'error' => "Cannot delete user. They have {$brandsCount} brands and {$postsCount} posts associated. Please transfer or delete these first."
+                'error' => "Cannot delete user. They have {$brandsCount} brands and {$postsCount} posts associated. Please transfer or delete these first.",
             ]);
         }
 
@@ -288,7 +288,7 @@ class UserController extends Controller
         ]);
 
         $status = $request->boolean('can_create_posts') ? 'enabled' : 'disabled';
-        
+
         return back()->with('success', "Post creation permission {$status} for {$user->name}.");
     }
 

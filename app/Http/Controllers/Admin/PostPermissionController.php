@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\Brand;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -22,7 +22,7 @@ class PostPermissionController extends Controller
                 'email' => $user->email,
                 'can_create_posts' => $user->can_create_posts,
                 'post_creation_note' => $user->post_creation_note,
-                'brands_count' => $user->brands->count()
+                'brands_count' => $user->brands->count(),
             ];
         });
 
@@ -33,13 +33,13 @@ class PostPermissionController extends Controller
                 'can_create_posts' => $brand->can_create_posts,
                 'post_creation_note' => $brand->post_creation_note,
                 'monthly_posts' => $brand->monthly_posts,
-                'current_month_posts' => $brand->getCurrentMonthPostsCount()
+                'current_month_posts' => $brand->getCurrentMonthPostsCount(),
             ];
         });
 
         return Inertia::render('admin/post-permissions/index', [
             'users' => $users,
-            'brands' => $brands
+            'brands' => $brands,
         ]);
     }
 
@@ -50,12 +50,12 @@ class PostPermissionController extends Controller
     {
         $request->validate([
             'can_create_posts' => 'required|boolean',
-            'post_creation_note' => 'nullable|string|max:500'
+            'post_creation_note' => 'nullable|string|max:500',
         ]);
 
         $user->update([
             'can_create_posts' => $request->can_create_posts,
-            'post_creation_note' => $request->post_creation_note
+            'post_creation_note' => $request->post_creation_note,
         ]);
 
         return redirect()->back()->with('success', 'User permissions updated successfully.');
@@ -69,13 +69,13 @@ class PostPermissionController extends Controller
         $request->validate([
             'can_create_posts' => 'required|boolean',
             'post_creation_note' => 'nullable|string|max:500',
-            'monthly_posts' => 'nullable|integer|min:0'
+            'monthly_posts' => 'nullable|integer|min:0',
         ]);
 
         $brand->update([
             'can_create_posts' => $request->can_create_posts,
             'post_creation_note' => $request->post_creation_note,
-            'monthly_posts' => $request->monthly_posts
+            'monthly_posts' => $request->monthly_posts,
         ]);
 
         return redirect()->back()->with('success', 'Brand permissions updated successfully.');
@@ -90,15 +90,15 @@ class PostPermissionController extends Controller
             'user_ids' => 'required|array',
             'user_ids.*' => 'exists:users,id',
             'can_create_posts' => 'required|boolean',
-            'post_creation_note' => 'nullable|string|max:500'
+            'post_creation_note' => 'nullable|string|max:500',
         ]);
 
         User::whereIn('id', $request->user_ids)->update([
             'can_create_posts' => $request->can_create_posts,
-            'post_creation_note' => $request->post_creation_note
+            'post_creation_note' => $request->post_creation_note,
         ]);
 
-        return redirect()->back()->with('success', 'User permissions updated for ' . count($request->user_ids) . ' users.');
+        return redirect()->back()->with('success', 'User permissions updated for '.count($request->user_ids).' users.');
     }
 
     /**
@@ -111,12 +111,12 @@ class PostPermissionController extends Controller
             'brand_ids.*' => 'exists:brands,id',
             'can_create_posts' => 'required|boolean',
             'post_creation_note' => 'nullable|string|max:500',
-            'monthly_posts' => 'nullable|integer|min:0'
+            'monthly_posts' => 'nullable|integer|min:0',
         ]);
 
         $updateData = [
             'can_create_posts' => $request->can_create_posts,
-            'post_creation_note' => $request->post_creation_note
+            'post_creation_note' => $request->post_creation_note,
         ];
 
         if ($request->has('monthly_posts')) {
@@ -125,6 +125,6 @@ class PostPermissionController extends Controller
 
         Brand::whereIn('id', $request->brand_ids)->update($updateData);
 
-        return redirect()->back()->with('success', 'Brand permissions updated for ' . count($request->brand_ids) . ' brands.');
+        return redirect()->back()->with('success', 'Brand permissions updated for '.count($request->brand_ids).' brands.');
     }
 }

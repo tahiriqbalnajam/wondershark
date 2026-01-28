@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-use Carbon\Carbon;
 
 class JobMonitorController extends Controller
 {
@@ -28,7 +28,7 @@ class JobMonitorController extends Controller
             ->map(function ($job) {
                 $payload = json_decode($job->payload, true);
                 $commandName = $payload['displayName'] ?? 'Unknown Job';
-                
+
                 return [
                     'id' => $job->id,
                     'queue' => $job->queue,
@@ -36,7 +36,7 @@ class JobMonitorController extends Controller
                     'attempts' => $job->attempts,
                     'created_at' => Carbon::parse($job->created_at)->format('Y-m-d H:i:s'),
                     'available_at' => Carbon::parse($job->available_at)->format('Y-m-d H:i:s'),
-                    'status' => 'pending'
+                    'status' => 'pending',
                 ];
             });
 
@@ -49,14 +49,14 @@ class JobMonitorController extends Controller
             ->map(function ($job) {
                 $payload = json_decode($job->payload, true);
                 $commandName = $payload['displayName'] ?? 'Unknown Job';
-                
+
                 return [
                     'id' => $job->id,
                     'uuid' => $job->uuid,
                     'connection' => $job->connection,
                     'queue' => $job->queue,
                     'job_name' => $commandName,
-                    'exception' => substr($job->exception, 0, 200) . '...',
+                    'exception' => substr($job->exception, 0, 200).'...',
                     'failed_at' => Carbon::parse($job->failed_at)->format('Y-m-d H:i:s'),
                 ];
             });
@@ -77,6 +77,7 @@ class JobMonitorController extends Controller
         try {
             // Retry failed job
             DB::table('failed_jobs')->where('id', $jobId)->delete();
+
             return response()->json(['success' => true, 'message' => 'Job queued for retry']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
@@ -87,6 +88,7 @@ class JobMonitorController extends Controller
     {
         try {
             DB::table('failed_jobs')->where('id', $jobId)->delete();
+
             return response()->json(['success' => true, 'message' => 'Failed job deleted']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
@@ -97,7 +99,7 @@ class JobMonitorController extends Controller
     {
         try {
             $type = $request->input('type', 'failed');
-            
+
             if ($type === 'failed') {
                 DB::table('failed_jobs')->truncate();
                 $message = 'All failed jobs cleared';
@@ -105,7 +107,7 @@ class JobMonitorController extends Controller
                 DB::table('jobs')->truncate();
                 $message = 'All pending jobs cleared';
             }
-            
+
             return response()->json(['success' => true, 'message' => $message]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
@@ -121,18 +123,18 @@ class JobMonitorController extends Controller
         if (file_exists($logFile)) {
             $lines = file($logFile);
             $recentLines = array_slice($lines, -200); // Get last 200 lines
-            
+
             foreach ($recentLines as $line) {
                 if (strpos($line, 'Successfully generated prompts for post') !== false) {
                     preg_match('/\[(.*?)\]/', $line, $dateMatch);
                     preg_match('/post_id.*?(\d+)/', $line, $postIdMatch);
-                    
+
                     if ($dateMatch && $postIdMatch) {
                         $completedJobs[] = [
                             'job_name' => 'GeneratePostPrompts',
                             'post_id' => $postIdMatch[1],
                             'completed_at' => $dateMatch[1],
-                            'status' => 'completed'
+                            'status' => 'completed',
                         ];
                     }
                 }

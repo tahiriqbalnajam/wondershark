@@ -2,9 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
 use App\Models\AiModel;
+use Illuminate\Database\Seeder;
 
 class AiModelSeeder extends Seeder
 {
@@ -22,9 +21,9 @@ class AiModelSeeder extends Seeder
                 'api_config' => [
                     'api_key' => '',
                     'model' => 'gpt-4',
-                    'endpoint' => 'https://api.openai.com/v1/chat/completions'
+                    'endpoint' => 'https://api.openai.com/v1/chat/completions',
                 ],
-                'order' => 1
+                'order' => 1,
             ],
             [
                 'name' => 'gemini',
@@ -34,9 +33,9 @@ class AiModelSeeder extends Seeder
                 'api_config' => [
                     'api_key' => '',
                     'model' => 'gemini-pro',
-                    'endpoint' => 'https://generativelanguage.googleapis.com/v1/models'
+                    'endpoint' => 'https://generativelanguage.googleapis.com/v1/models',
                 ],
-                'order' => 2
+                'order' => 2,
             ],
             [
                 'name' => 'perplexity',
@@ -46,9 +45,9 @@ class AiModelSeeder extends Seeder
                 'api_config' => [
                     'api_key' => '',
                     'model' => 'pplx-7b-chat',
-                    'endpoint' => 'https://api.perplexity.ai/chat/completions'
+                    'endpoint' => 'https://api.perplexity.ai/chat/completions',
                 ],
-                'order' => 3
+                'order' => 3,
             ],
             [
                 'name' => 'anthropic',
@@ -58,19 +57,19 @@ class AiModelSeeder extends Seeder
                 'api_config' => [
                     'api_key' => '',
                     'model' => 'claude-3-sonnet-20240229',
-                    'endpoint' => 'https://api.anthropic.com/v1/messages'
+                    'endpoint' => 'https://api.anthropic.com/v1/messages',
                 ],
-                'order' => 4
-            ]
+                'order' => 4,
+            ],
         ];
 
         foreach ($aiModels as $aiModel) {
             $existing = AiModel::where('name', $aiModel['name'])->first();
-            
+
             if ($existing) {
                 // Only update structure, preserve existing API keys if they exist
                 $updateData = $aiModel;
-                if (!empty($existing->api_config['api_key'])) {
+                if (! empty($existing->api_config['api_key'])) {
                     $updateData['api_config']['api_key'] = $existing->api_config['api_key'];
                 }
                 $existing->update($updateData);

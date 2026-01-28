@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Models\Brand;
 use App\Models\AiModel;
+use App\Models\Brand;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -35,13 +35,14 @@ class FetchCompetitors implements ShouldQueue
 
         $aiModel = AiModel::where('provider_name', 'openai')->where('is_enabled', true)->first();
 
-        if (!$aiModel || empty($aiModel->api_config['api_key'])) {
-            Log::error("No enabled OpenAI model with API key found for fetching competitors.");
+        if (! $aiModel || empty($aiModel->api_config['api_key'])) {
+            Log::error('No enabled OpenAI model with API key found for fetching competitors.');
+
             return;
         }
 
         $prompt = $this->getPrompt();
-        
+
         try {
             $response = Http::withToken($aiModel->api_config['api_key'])
                 ->post('https://api.openai.com/v1/chat/completions', [
@@ -52,24 +53,26 @@ class FetchCompetitors implements ShouldQueue
                 ]);
 
             if ($response->failed()) {
-                Log::error("OpenAI API call failed for competitor analysis", [
+                Log::error('OpenAI API call failed for competitor analysis', [
                     'brand_id' => $this->brand->id,
                     'status' => $response->status(),
                     'response' => $response->body(),
                 ]);
+
                 return;
             }
 
             $data = $response->json();
             $content = $data['choices'][0]['message']['content'] ?? null;
 
-            if (!$content) {
-                Log::error("No content in OpenAI response for competitor analysis", ['brand_id' => $this->brand->id]);
+            if (! $content) {
+                Log::error('No content in OpenAI response for competitor analysis', ['brand_id' => $this->brand->id]);
+
                 return;
             }
 
             $competitorsData = json_decode($content, true);
-            
+
             // The prompt asks for a specific structure, but let's handle if it's nested under a key
             if (isset($competitorsData['competitors']) && is_array($competitorsData['competitors'])) {
                 $competitors = $competitorsData['competitors'];
@@ -77,11 +80,12 @@ class FetchCompetitors implements ShouldQueue
                 $competitors = $competitorsData;
             }
 
-            if (json_last_error() !== JSON_ERROR_NONE || !is_array($competitors)) {
-                Log::error("Failed to decode JSON or invalid format from OpenAI response", [
+            if (json_last_error() !== JSON_ERROR_NONE || ! is_array($competitors)) {
+                Log::error('Failed to decode JSON or invalid format from OpenAI response', [
                     'brand_id' => $this->brand->id,
                     'response' => $content,
                 ]);
+
                 return;
             }
 
@@ -102,7 +106,7 @@ class FetchCompetitors implements ShouldQueue
             Log::info("FetchCompetitors job completed for brand ID: {$this->brand->id}");
 
         } catch (\Exception $e) {
-            Log::error("Error in FetchCompetitors job", [
+            Log::error('Error in FetchCompetitors job', [
                 'brand_id' => $this->brand->id,
                 'error' => $e->getMessage(),
             ]);

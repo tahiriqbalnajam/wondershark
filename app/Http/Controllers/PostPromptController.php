@@ -6,8 +6,8 @@ use App\Models\Post;
 use App\Models\PostPrompt;
 use App\Services\PostPromptService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class PostPromptController extends Controller
@@ -25,7 +25,7 @@ class PostPromptController extends Controller
     public function index(Post $post)
     {
         $user = Auth::user();
-        
+
         // Check if user owns this post or has access through their agency
         if ($post->user_id !== $user->id && $post->brand->agency_id !== $user->id) {
             abort(403, 'You do not have permission to manage prompts for this post.');
@@ -93,10 +93,10 @@ class PostPromptController extends Controller
 
         try {
             $sessionId = session()->getId();
-            
+
             // Check if we already have prompts for this post
             $existingPrompts = $this->postPromptService->getPromptsForPost($post);
-            
+
             if (count($existingPrompts) > 0) {
                 return response()->json([
                     'success' => true,
@@ -113,7 +113,7 @@ class PostPromptController extends Controller
                     'cached' => true,
                 ]);
             }
-            
+
             // Generate new prompts from all enabled AI models
             $generatedPrompts = $this->postPromptService->generatePromptsFromMultipleModelsForPost(
                 $post,
@@ -154,7 +154,7 @@ class PostPromptController extends Controller
 
             return response()->json([
                 'success' => false,
-                'error' => 'Failed to generate prompts: ' . $e->getMessage(),
+                'error' => 'Failed to generate prompts: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -172,13 +172,13 @@ class PostPromptController extends Controller
         try {
             $limit = $request->get('limit', 25);
             $offset = $request->get('offset', 0);
-            
+
             // Get prompts with ratio-based selection from active AI models only
             $selectedPrompts = $this->postPromptService->getPromptsWithRatioForPost($post, $limit, $offset);
-            
+
             // Get total count for pagination
             $totalCount = $this->postPromptService->getTotalPromptsCountForPost($post);
-            
+
             $formattedPrompts = array_map(function ($prompt) {
                 return [
                     'id' => $prompt['id'] ?? $prompt->id,
@@ -225,6 +225,7 @@ class PostPromptController extends Controller
             $postPrompt->update(['is_selected' => $request->is_selected]);
 
             $status = $request->is_selected ? 'approved' : 'rejected';
+
             return redirect()->back()->with('success', "Prompt {$status} successfully");
 
         } catch (\Exception $e) {
@@ -248,7 +249,7 @@ class PostPromptController extends Controller
 
         try {
             $sessionId = session()->getId();
-            
+
             $prompt = $this->postPromptService->addCustomPromptForPost(
                 $post,
                 $sessionId,

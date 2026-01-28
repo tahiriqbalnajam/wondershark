@@ -3,9 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\Brand;
-use App\Models\Post;
 use App\Models\BrandPrompt;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Post;
 use Illuminate\Database\Seeder;
 
 class PostsSeeder extends Seeder
@@ -17,9 +16,10 @@ class PostsSeeder extends Seeder
     {
         // Get first brand
         $brand = Brand::first();
-        
-        if (!$brand) {
+
+        if (! $brand) {
             $this->command->info('No brands found. Please create a brand first.');
+
             return;
         }
 
@@ -56,32 +56,32 @@ class PostsSeeder extends Seeder
                 'title' => 'The Ultimate Guide to Small Business Marketing',
                 'url' => 'https://example.com/small-business-marketing-guide',
                 'description' => 'A comprehensive guide covering the most effective marketing strategies for small businesses in 2025.',
-                'status' => 'published'
+                'status' => 'published',
             ],
             [
                 'title' => 'Digital Marketing Trends 2025',
                 'url' => 'https://example.com/digital-marketing-trends-2025',
                 'description' => 'Explore the latest trends in digital marketing and how they can boost your business growth.',
-                'status' => 'published'
+                'status' => 'published',
             ],
             [
                 'title' => 'Social Media Strategies That Work',
                 'url' => 'https://example.com/social-media-strategies',
                 'description' => 'Proven social media strategies to increase engagement and drive more traffic to your business.',
-                'status' => 'draft'
+                'status' => 'draft',
             ],
             [
                 'title' => 'Customer Engagement Best Practices',
                 'url' => 'https://example.com/customer-engagement-practices',
                 'description' => 'Learn how to improve customer engagement and build lasting relationships with your audience.',
-                'status' => 'published'
+                'status' => 'published',
             ],
             [
                 'title' => 'Content Marketing ROI Analysis',
                 'url' => 'https://example.com/content-marketing-roi',
                 'description' => 'Understanding the return on investment for your content marketing efforts.',
-                'status' => 'archived'
-            ]
+                'status' => 'archived',
+            ],
         ];
 
         foreach ($samplePosts as $postData) {
@@ -92,7 +92,7 @@ class PostsSeeder extends Seeder
                 'url' => $postData['url'],
                 'description' => $postData['description'],
                 'status' => $postData['status'],
-                'posted_at' => now()->subDays(rand(1, 30))
+                'posted_at' => now()->subDays(rand(1, 30)),
             ]);
         }
 

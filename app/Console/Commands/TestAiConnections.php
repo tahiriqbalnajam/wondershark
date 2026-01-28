@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Services\PostPromptService;
 use App\Models\AiModel;
+use App\Services\PostPromptService;
+use Illuminate\Console\Command;
 
 class TestAiConnections extends Command
 {
@@ -33,13 +33,13 @@ class TestAiConnections extends Command
             // Test specific provider
             $this->info("Testing connection for: {$provider}");
             $result = $postPromptService->testPostPromptGeneration($provider);
-            
+
             if ($result['success']) {
                 $this->info("✅ {$result['model']} - Connection successful");
                 $this->line("Questions generated: {$result['questions_generated']}");
-                $this->line("Sample questions:");
+                $this->line('Sample questions:');
                 foreach ($result['sample_questions'] as $index => $question) {
-                    $this->line("  " . ($index + 1) . ". {$question}");
+                    $this->line('  '.($index + 1).". {$question}");
                 }
             } else {
                 $this->error("❌ {$provider} - {$result['message']}");
@@ -47,9 +47,9 @@ class TestAiConnections extends Command
         } else {
             // Test all connections
             $this->info('Testing all AI model connections...');
-            
+
             $results = $postPromptService->testAllAiModelConnections();
-            
+
             foreach ($results as $provider => $result) {
                 if ($result['success']) {
                     $this->info("✅ {$provider} - Connection successful");
@@ -57,18 +57,18 @@ class TestAiConnections extends Command
                     $this->error("❌ {$provider} - {$result['message']}");
                 }
             }
-            
+
             $this->newLine();
             $this->info('Testing prompt generation for each model...');
-            
+
             $models = AiModel::enabled()->get();
             foreach ($models as $model) {
                 $this->line("\nTesting {$model->display_name}...");
                 $result = $postPromptService->testPostPromptGeneration($model->name);
-                
+
                 if ($result['success']) {
                     $this->info("✅ Generated {$result['questions_generated']} questions");
-                    $this->line("Sample: " . ($result['sample_questions'][0] ?? 'None'));
+                    $this->line('Sample: '.($result['sample_questions'][0] ?? 'None'));
                 } else {
                     $this->error("❌ Failed: {$result['message']}");
                 }

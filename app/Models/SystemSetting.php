@@ -20,7 +20,7 @@ class SystemSetting extends Model
     {
         $setting = self::where('key', $key)->first();
 
-        if (!$setting) {
+        if (! $setting) {
             return $default;
         }
 
@@ -52,6 +52,7 @@ class SystemSetting extends Model
     public static function getJson($key, $default = [])
     {
         $value = self::get($key, $default);
+
         return is_string($value) ? json_decode($value, true) : $value;
     }
 

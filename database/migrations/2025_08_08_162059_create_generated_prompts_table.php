@@ -20,7 +20,7 @@ return new class extends Migration
             $table->integer('order')->default(0);
             $table->boolean('is_selected')->default(true);
             $table->timestamps();
-            
+
             $table->index('session_id');
         });
     }

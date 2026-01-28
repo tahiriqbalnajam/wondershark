@@ -21,7 +21,7 @@ return new class extends Migration
             $table->integer('order')->default(0);
             $table->boolean('is_selected')->default(true);
             $table->timestamps();
-            
+
             $table->index(['post_id', 'is_selected']);
             $table->index('session_id');
         });

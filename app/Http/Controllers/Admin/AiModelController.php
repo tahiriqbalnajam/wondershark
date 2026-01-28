@@ -23,7 +23,7 @@ class AiModelController extends Controller
         $aiModels = AiModel::ordered()->get();
 
         return Inertia::render('admin/ai-models/index', [
-            'aiModels' => $aiModels
+            'aiModels' => $aiModels,
         ]);
     }
 
@@ -49,14 +49,14 @@ class AiModelController extends Controller
             'api_config.api_key' => 'nullable|string',
             'api_config.model' => 'nullable|string',
             'api_config.endpoint' => 'nullable|url',
-            'order' => 'required|integer|min:1|max:10'
+            'order' => 'required|integer|min:1|max:10',
         ]);
 
         // Handle icon upload
         if ($request->hasFile('icon')) {
             $file = $request->file('icon');
             if ($file && $file->isValid()) {
-                $iconPath = 'ai-model-icons/' . uniqid() . '_' . $file->getClientOriginalName();
+                $iconPath = 'ai-model-icons/'.uniqid().'_'.$file->getClientOriginalName();
                 $file->move(public_path('storage/ai-model-icons'), basename($iconPath));
                 $validated['icon'] = $iconPath;
             } else {
@@ -78,7 +78,7 @@ class AiModelController extends Controller
     public function show(AiModel $aiModel)
     {
         return Inertia::render('admin/ai-models/show', [
-            'aiModel' => $aiModel
+            'aiModel' => $aiModel,
         ]);
     }
 
@@ -88,7 +88,7 @@ class AiModelController extends Controller
     public function edit(AiModel $aiModel)
     {
         return Inertia::render('admin/ai-models/edit', [
-            'aiModel' => $aiModel
+            'aiModel' => $aiModel,
         ]);
     }
 
@@ -98,7 +98,7 @@ class AiModelController extends Controller
     public function update(Request $request, AiModel $aiModel)
     {
         $validated = $request->validate([
-            'name' => 'required|string|unique:ai_models,name,' . $aiModel->id,
+            'name' => 'required|string|unique:ai_models,name,'.$aiModel->id,
             'display_name' => 'required|string',
             'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
             'is_enabled' => 'boolean',
@@ -106,7 +106,7 @@ class AiModelController extends Controller
             'api_config.api_key' => 'nullable|string',
             'api_config.model' => 'nullable|string',
             'api_config.endpoint' => 'nullable|url',
-            'order' => 'required|integer|min:1|max:10'
+            'order' => 'required|integer|min:1|max:10',
         ]);
 
         // Handle icon upload
@@ -114,10 +114,10 @@ class AiModelController extends Controller
             $file = $request->file('icon');
             if ($file && $file->isValid()) {
                 // Delete old icon if exists
-                if ($aiModel->icon && !empty($aiModel->icon) && \Storage::disk('public')->exists($aiModel->icon)) {
+                if ($aiModel->icon && ! empty($aiModel->icon) && \Storage::disk('public')->exists($aiModel->icon)) {
                     \Storage::disk('public')->delete($aiModel->icon);
                 }
-                $iconPath = 'ai-model-icons/' . uniqid() . '_' . $file->getClientOriginalName();
+                $iconPath = 'ai-model-icons/'.uniqid().'_'.$file->getClientOriginalName();
                 $file->move(public_path('storage/ai-model-icons'), basename($iconPath));
                 $validated['icon'] = $iconPath;
             } else {
@@ -150,7 +150,7 @@ class AiModelController extends Controller
     public function toggle(AiModel $aiModel)
     {
         $aiModel->update([
-            'is_enabled' => !$aiModel->is_enabled
+            'is_enabled' => ! $aiModel->is_enabled,
         ]);
 
         return back()->with('success', 'AI Model status updated successfully.');
@@ -161,14 +161,14 @@ class AiModelController extends Controller
      */
     public function test(Request $request, AiModel $aiModel)
     {
-        $brandPromptAnalysisService = new \App\Services\BrandPromptAnalysisService(new AIPromptService());
+        $brandPromptAnalysisService = new \App\Services\BrandPromptAnalysisService(new AIPromptService);
         $result = $brandPromptAnalysisService->testAiModel($aiModel);
-        
+
         // If it's an AJAX request, return JSON
         if ($request->expectsJson() || $request->wantsJson()) {
             return response()->json($result);
         }
-        
+
         // Otherwise, return redirect with flash message (for non-AJAX requests)
         if ($result['success']) {
             return back()->with('success', "Connection test successful for {$aiModel->display_name}");

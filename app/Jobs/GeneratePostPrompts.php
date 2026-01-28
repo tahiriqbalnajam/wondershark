@@ -13,6 +13,7 @@ class GeneratePostPrompts implements ShouldQueue
     use Queueable;
 
     public int $timeout = 300; // 5 minutes timeout
+
     public int $tries = 3;
 
     /**
@@ -31,16 +32,16 @@ class GeneratePostPrompts implements ShouldQueue
     public function handle(PostPromptService $postPromptService): void
     {
         try {
-            Log::info("Starting prompt generation for post", [
+            Log::info('Starting prompt generation for post', [
                 'post_id' => $this->post->id,
                 'post_url' => $this->post->url,
-                'replace_existing' => $this->replaceExisting
+                'replace_existing' => $this->replaceExisting,
             ]);
 
             // Delete existing prompts if requested
             if ($this->replaceExisting) {
                 $this->post->prompts()->delete();
-                Log::info("Deleted existing prompts for post", ['post_id' => $this->post->id]);
+                Log::info('Deleted existing prompts for post', ['post_id' => $this->post->id]);
             }
 
             // Generate prompts from all enabled AI models
@@ -50,9 +51,9 @@ class GeneratePostPrompts implements ShouldQueue
                 $this->description
             );
 
-            Log::info("Successfully generated prompts for post", [
+            Log::info('Successfully generated prompts for post', [
                 'post_id' => $this->post->id,
-                'prompts_generated' => count($prompts)
+                'prompts_generated' => count($prompts),
             ]);
 
         } catch (\Exception $e) {
@@ -60,7 +61,7 @@ class GeneratePostPrompts implements ShouldQueue
                 'post_id' => $this->post->id,
                 'post_url' => $this->post->url,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             // Re-throw the exception so the job can be retried

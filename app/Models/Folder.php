@@ -26,15 +26,15 @@ class Folder extends Model
     public function getDescendants(): Collection
     {
         $descendants = collect();
-        $folderPath = $this->parent ? $this->parent . '/' . $this->name : $this->name;
-        
+        $folderPath = $this->parent ? $this->parent.'/'.$this->name : $this->name;
+
         $children = Folder::where('parent', $folderPath)->get();
-        
+
         foreach ($children as $child) {
             $descendants->push($child);
             $descendants = $descendants->merge($child->getDescendants());
         }
-        
+
         return $descendants;
     }
 
@@ -58,7 +58,7 @@ class Folder extends Model
 
         // Own full path
         $ownPath = $this->parent
-            ? $this->parent . '/' . $this->name
+            ? $this->parent.'/'.$this->name
             : $this->name;
 
         /**
@@ -68,12 +68,11 @@ class Folder extends Model
          */
         if (
             $newParent === $ownPath ||
-            str_starts_with($newParent, $ownPath . '/')
+            str_starts_with($newParent, $ownPath.'/')
         ) {
             return false;
         }
 
         return true;
     }
-
 }

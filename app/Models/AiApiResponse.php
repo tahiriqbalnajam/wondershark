@@ -59,7 +59,7 @@ class AiApiResponse extends Model
      */
     public function getFormattedCost(): string
     {
-        return '$' . number_format($this->cost_estimate, 4);
+        return '$'.number_format($this->cost_estimate, 4);
     }
 
     /**

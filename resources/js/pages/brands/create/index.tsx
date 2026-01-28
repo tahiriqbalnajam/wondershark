@@ -21,7 +21,7 @@ import Step6AccountSetup from './step6-account-setup';
 import StepNavigation from './step-navigation';
 
 // Import types
-import { BrandForm, GeneratedPrompt, AiModel, Competitor } from './types';
+import { BrandForm, BrandPrompt, AiModel, Competitor } from './types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -116,7 +116,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
         return [];
     });
 
-    const [aiGeneratedPrompts, setAiGeneratedPrompts] = useState<GeneratedPrompt[]>([]);
+    const [aiGeneratedPrompts, setAiGeneratedPrompts] = useState<BrandPrompt[]>([]);
     const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
     const generationAttemptedRef = useRef<string | null>(null);
 

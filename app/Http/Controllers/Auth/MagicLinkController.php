@@ -13,8 +13,6 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class MagicLinkController extends Controller
 {
@@ -32,7 +30,7 @@ class MagicLinkController extends Controller
         // Find user by email
         $user = User::where('email', $request->email)->first();
 
-        if (!$user) {
+        if (! $user) {
             throw ValidationException::withMessages([
                 'email' => 'No account found with this email address.',
             ]);
@@ -62,7 +60,7 @@ class MagicLinkController extends Controller
     public function verifyMagicLink(Request $request, User $user): RedirectResponse
     {
         // The signed middleware already validates the signature and expiration
-        
+
         // Log the user in
         Auth::login($user, true); // true = remember me
 
@@ -76,7 +74,7 @@ class MagicLinkController extends Controller
      */
     protected function ensureIsNotRateLimited(Request $request): void
     {
-        if (!RateLimiter::tooManyAttempts($this->throttleKey($request), 3)) {
+        if (! RateLimiter::tooManyAttempts($this->throttleKey($request), 3)) {
             return;
         }
 
@@ -97,6 +95,6 @@ class MagicLinkController extends Controller
      */
     protected function throttleKey(Request $request): string
     {
-        return Str::transliterate(Str::lower($request->input('email')) . '|' . $request->ip());
+        return Str::transliterate(Str::lower($request->input('email')).'|'.$request->ip());
     }
 }

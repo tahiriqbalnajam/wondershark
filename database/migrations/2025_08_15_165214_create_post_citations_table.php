@@ -22,7 +22,7 @@ return new class extends Migration
             $table->json('metadata')->nullable(); // For additional AI-specific data
             $table->timestamp('checked_at')->nullable();
             $table->timestamps();
-            
+
             $table->unique(['post_id', 'ai_model']);
             $table->index(['ai_model', 'is_mentioned']);
             $table->index(['post_id', 'checked_at']);

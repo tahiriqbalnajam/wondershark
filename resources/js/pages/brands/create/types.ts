@@ -5,7 +5,7 @@ export type BrandForm = {
     trackedName : string;
     allies : string[];
     country: string;
-    prompts: string[] | GeneratedPrompt[];
+    prompts: string[] | BrandPrompt[];
     subreddits: string[];
     competitors: Competitor[];
     monthly_posts: number;
@@ -26,7 +26,7 @@ export type Competitor = {
     source: 'ai' | 'manual';
 };
 
-export type GeneratedPrompt = {
+export type BrandPrompt = {
     id: number;
     prompt: string;
     source: string;
@@ -64,18 +64,18 @@ export type StepProps = {
 
 export type Step2Props = StepProps & {
     isGeneratingPrompts: boolean;
-    aiGeneratedPrompts: GeneratedPrompt[];
+    aiGeneratedPrompts: BrandPrompt[];
     generateAIPrompts: () => Promise<void>;
-    acceptPrompt: (prompt: GeneratedPrompt) => void;
-    rejectPrompt: (prompt: GeneratedPrompt) => void;
+    acceptPrompt: (prompt: BrandPrompt) => void;
+    rejectPrompt: (prompt: BrandPrompt) => void;
     removeAcceptedPrompt: (promptText: string) => void;
-    isPromptAccepted: (prompt: GeneratedPrompt) => boolean;
-    isPromptRejected: (prompt: GeneratedPrompt) => boolean;
+    isPromptAccepted: (prompt: BrandPrompt) => boolean;
+    isPromptRejected: (prompt: BrandPrompt) => boolean;
     handleManualPromptAdd: (prompt: string) => void;
     removePrompt: (index: number) => void;
     aiModels: AiModel[];
     brandId?: number;
-    existingPrompts: GeneratedPrompt[];
+    existingPrompts: BrandPrompt[];
 };
 
 export type Step3Props = StepProps & {

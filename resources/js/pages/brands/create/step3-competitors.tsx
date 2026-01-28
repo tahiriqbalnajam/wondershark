@@ -108,6 +108,7 @@ export default function Step3Competitors({
                     website: data.website,
                     name: data.name,
                     description: data.description,
+                    brand_id: brandId, // Pass brand_id to check database competitors
                     existing_competitors: competitors.map(c => ({
                         name: c.name,
                         domain: c.domain
@@ -143,7 +144,7 @@ export default function Step3Competitors({
                 // Save to database immediately if we have a brand ID
                 if (brandId) {
                     try {
-                        const saveResponse = await fetch(`/brands/${brandId}/competitors/save-bulk`, {
+                        const saveResponse = await fetch(route('competitors.save-bulk'), {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -151,10 +152,10 @@ export default function Step3Competitors({
                                 'X-CSRF-TOKEN': csrfToken,
                             },
                             body: JSON.stringify({
+                                brand_id: brandId,
                                 competitors: newCompetitors.map((c: Competitor) => ({
                                     name: c.name,
                                     domain: c.domain.startsWith('http') ? c.domain : `https://${c.domain}`,
-                                    mentions: c.mentions,
                                     status: 'suggested'
                                 }))
                             }),
