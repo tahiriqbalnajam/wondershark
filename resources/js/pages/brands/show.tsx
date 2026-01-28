@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
 import HeadingSmall from '@/components/heading-small';
-import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Calendar, Trophy, TrendingUp, TrendingDown, Bot, User } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Calendar, Trophy, TrendingUp, TrendingDown, Bot, User, Download } from 'lucide-react';
 import { VisibilityChart } from '@/components/chart/visibility';
 import { BrandVisibilityIndex } from '@/components/dashboard-table/brand-visibility';
 import { AiCitations } from '@/components/chat/ai-citations';
@@ -25,6 +25,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { DayPicker } from 'react-day-picker';
 import { format, addDays, subDays } from 'date-fns';
+import { ExportDashboardPDF } from '@/components/pdf/export-dashboard-pdf';
 interface CompetitiveStat {
     id: number;
     entity_type: 'brand' | 'competitor';
@@ -629,11 +630,33 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                 </div>
             </div>
 
+            {/* PDF Export Button - Right after filters */}
+            <div className="flex justify-end mb-5">
+                <ExportDashboardPDF
+                    brandName={brand.name}
+                    dateRange={selectedDateRange === 'custom'
+                        ? customDateRange.from && customDateRange.to
+                            ? `${format(customDateRange.from, 'MMM dd')} - ${format(customDateRange.to, 'MMM dd')}`
+                            : `${selectedDateRange} days`
+                        : `${selectedDateRange} days`
+                    }
+                    aiModel={selectedAIModel === 'all' ? 'All AI Models' : aiModelOptions.find(m => m.value === selectedAIModel)?.label || 'All AI Models'}
+                    industryRanking={filteredCompetitiveStats.map(stat => ({
+                        brand: stat.entity_name,
+                        position: stat.position,
+                        sentiment: stat.sentiment_level,
+                        visibility: stat.visibility_percentage
+                    }))}
+                    prompts={filteredPrompts}
+                    fileName={`${brand.name.toLowerCase().replace(/\s+/g, '-')}-dashboard-report-${new Date().toISOString().split('T')[0]}.pdf`}
+                />
+            </div>
+
             {/* <Separator /> */}
             <div className="space-y-6">
                 {/* Brand Overview */}
                 <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-4">
-                    <Card className="flex-col">
+                    <Card className="flex-col" data-chart="visibility">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><Building2 /></span>
@@ -656,7 +679,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                         /> */}
                     </Card>
 
-                    <Card className="flex-col">
+                    <Card className="flex-col" data-table="industry-ranking">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><Trophy /></span>
@@ -677,7 +700,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                 </div>
 
                 {/* Recent chats */}
-                <Card id="recent-citations">
+                <Card id="recent-citations" data-section="ai-citations">
                     <CardHeader>
                         <div className='md:flex block items-center justify-between'>
                             <div className='flex items-center mb-5 md:mb-0'>

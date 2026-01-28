@@ -2,7 +2,7 @@ import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -28,29 +28,32 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { PermissionWrapper } from '@/components/permission-wrapper';
-import { 
-    Users, 
-    Shield, 
-    Settings, 
-    BarChart3, 
+import {
+    Users,
+    Shield,
+    Settings,
+    BarChart3,
     Calendar,
     Filter,
     TrendingUp,
-    Award
+    Award,
+    Download
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
-import { 
-    LineChart, 
-    Line, 
-    XAxis, 
-    YAxis, 
-    CartesianGrid, 
-    Tooltip, 
-    Legend, 
-    ResponsiveContainer 
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ResponsiveContainer
 } from 'recharts';
 import { DayPicker } from 'react-day-picker';
 import { format, addDays, subDays } from 'date-fns';
+import { ExportDashboardPDF } from '@/components/pdf/export-dashboard-pdf';
+import { AiCitations } from '@/components/chat/ai-citations';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -63,14 +66,20 @@ const visibilityData: Array<any> = [];
 
 const industryRanking: Array<any> = [];
 
-const brands: Array<{value: string, label: string}> = [
+const brands: Array<{ value: string, label: string }> = [
     { value: 'all', label: 'All Brands' },
 ];
 
 export default function Dashboard() {
     const { roles } = usePermissions();
     const { props } = usePage<{
-        brands?: Array<{id: number, name: string}>, 
+        brand?: {
+            id: number;
+            name: string;
+            website?: string;
+            description?: string;
+        };
+        brands?: Array<{ id: number, name: string }>,
         isAdmin?: boolean,
         aiModels?: Array<{
             id: number;
@@ -80,21 +89,23 @@ export default function Dashboard() {
             provider?: string;
         }>;
     }>();
-    
+
+    const currentBrand = props.brand;
+
     const userBrands = useMemo(() => props.brands || [], [props.brands]);
-    
+
     const aiModelOptions = useMemo(() => {
         const models: Array<{
             value: string;
             label: string;
             logo: string | null;
         }> = [
-            {
-                value: 'all',
-                label: 'All AI Models',
-                logo: null,
-            },
-        ];
+                {
+                    value: 'all',
+                    label: 'All AI Models',
+                    logo: null,
+                },
+            ];
 
         // Add dynamic models from database
         const aiModelsData = props.aiModels || [];
@@ -116,7 +127,7 @@ export default function Dashboard() {
     }, [props.aiModels]);
     const isAdmin = props.isAdmin || false;
     const hasAgencyRole = roles.includes('agency');
-    
+
     const [selectedBrand, setSelectedBrand] = useState('all');
     const [selectedAIModel, setSelectedAIModel] = useState('all');
     const [selectedDateRange, setSelectedDateRange] = useState('30');
@@ -163,86 +174,86 @@ export default function Dashboard() {
                 {/* Welcome section */}
 
                 {/* Filters Section */}
-                        <div className="flex flex-wrap gap-4 items-end">
-                            {/* Date Range Filter */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Date Range</label>
-                                <div className="flex gap-2">
-                                    <Select value={selectedDateRange} onValueChange={handleDateRangeSelect}>
-                                        <SelectTrigger className="w-32">
-                                            <SelectValue placeholder="Select range" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="7">7 days</SelectItem>
-                                            <SelectItem value="14">14 days</SelectItem>
-                                            <SelectItem value="30">30 days</SelectItem>
-                                            <SelectItem value="custom">Custom</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                <div className="flex flex-wrap gap-4 items-end">
+                    {/* Date Range Filter */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Date Range</label>
+                        <div className="flex gap-2">
+                            <Select value={selectedDateRange} onValueChange={handleDateRangeSelect}>
+                                <SelectTrigger className="w-32">
+                                    <SelectValue placeholder="Select range" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="7">7 days</SelectItem>
+                                    <SelectItem value="14">14 days</SelectItem>
+                                    <SelectItem value="30">30 days</SelectItem>
+                                    <SelectItem value="custom">Custom</SelectItem>
+                                </SelectContent>
+                            </Select>
 
-                                    {selectedDateRange === 'custom' && (
-                                        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                                            <PopoverTrigger asChild>
-                                                <Button variant="outline" className="w-fit">
-                                                    <Calendar className="h-4 w-4 mr-2" />
-                                                    {customDateRange.from ? (
-                                                        customDateRange.to ? (
-                                                            `${format(customDateRange.from, 'MMM dd')} - ${format(customDateRange.to, 'MMM dd')}`
-                                                        ) : (
-                                                            format(customDateRange.from, 'MMM dd, yyyy')
-                                                        )
-                                                    ) : (
-                                                        'Pick a date'
-                                                    )}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
-                                                <DayPicker
-                                                    mode="range"
-                                                    selected={{ from: customDateRange.from, to: customDateRange.to }}
-                                                    onSelect={(range) => setCustomDateRange(range || {})}
-                                                    numberOfMonths={2}
-                                                />
-                                            </PopoverContent>
-                                        </Popover>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Brand Filter */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Brand</label>
-                                <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-                                    <SelectTrigger className="w-48">
-                                        <SelectValue placeholder="Select brand" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {brands.map((brand) => (
-                                            <SelectItem key={brand.value} value={brand.value}>
-                                                {brand.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* AI Model Filter */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">AI Model</label>
-                                <Select value={selectedAIModel} onValueChange={setSelectedAIModel}>
-                                    <SelectTrigger className="w-48">
-                                        <SelectValue placeholder="Select AI model" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {aiModelOptions.map((model) => (
-                                            <SelectItem key={model.value} value={model.value}>
-                                                {model.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                            {selectedDateRange === 'custom' && (
+                                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className="w-fit">
+                                            <Calendar className="h-4 w-4 mr-2" />
+                                            {customDateRange.from ? (
+                                                customDateRange.to ? (
+                                                    `${format(customDateRange.from, 'MMM dd')} - ${format(customDateRange.to, 'MMM dd')}`
+                                                ) : (
+                                                    format(customDateRange.from, 'MMM dd, yyyy')
+                                                )
+                                            ) : (
+                                                'Pick a date'
+                                            )}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <DayPicker
+                                            mode="range"
+                                            selected={{ from: customDateRange.from, to: customDateRange.to }}
+                                            onSelect={(range) => setCustomDateRange(range || {})}
+                                            numberOfMonths={2}
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            )}
                         </div>
+                    </div>
+
+                    {/* Brand Filter */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Brand</label>
+                        <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                            <SelectTrigger className="w-48">
+                                <SelectValue placeholder="Select brand" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {brands.map((brand) => (
+                                    <SelectItem key={brand.value} value={brand.value}>
+                                        {brand.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {/* AI Model Filter */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">AI Model</label>
+                        <Select value={selectedAIModel} onValueChange={setSelectedAIModel}>
+                            <SelectTrigger className="w-48">
+                                <SelectValue placeholder="Select AI model" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {aiModelOptions.map((model) => (
+                                    <SelectItem key={model.value} value={model.value}>
+                                        {model.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
 
                 <Separator />
 
@@ -277,24 +288,24 @@ export default function Dashboard() {
                                             <YAxis />
                                             <Tooltip />
                                             <Legend />
-                                            <Line 
-                                                type="monotone" 
-                                                dataKey="influencity" 
-                                                stroke="#ff6900" 
+                                            <Line
+                                                type="monotone"
+                                                dataKey="influencity"
+                                                stroke="#ff6900"
                                                 strokeWidth={2}
                                                 name="Influencity"
                                             />
-                                            <Line 
-                                                type="monotone" 
-                                                dataKey="famebit" 
-                                                stroke="#ff4444" 
+                                            <Line
+                                                type="monotone"
+                                                dataKey="famebit"
+                                                stroke="#ff4444"
                                                 strokeWidth={2}
                                                 name="FameBit"
                                             />
-                                            <Line 
-                                                type="monotone" 
-                                                dataKey="amazon" 
-                                                stroke="#ffbb33" 
+                                            <Line
+                                                type="monotone"
+                                                dataKey="amazon"
+                                                stroke="#ffbb33"
                                                 strokeWidth={2}
                                                 name="Amazon Creator Connections"
                                             />
@@ -304,7 +315,6 @@ export default function Dashboard() {
                             )}
                         </CardContent>
                     </Card>
-
                     {/* Industry Ranking Table */}
                     <Card className="col-span-1">
                         <CardHeader>
@@ -418,6 +428,52 @@ export default function Dashboard() {
                             </CardContent>
                         </Card>
                     </PermissionWrapper>
+
+                    {/* PDF Export Card - Testing - Always show for debugging */}
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Export Dashboard</CardTitle>
+                            <Download className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">Download PDF</div>
+                            <p className="text-xs text-muted-foreground">
+                                Export dashboard report as PDF
+                            </p>
+                            <p className="text-xs text-red-500 mt-1">
+                                Debug: currentBrand = {currentBrand ? currentBrand.name : 'NULL'}
+                            </p>
+                            {currentBrand && (
+                                <div className="mt-2">
+                                    <ExportDashboardPDF
+                                        brandName={currentBrand.name}
+                                        dateRange={selectedDateRange === 'custom'
+                                            ? customDateRange.from && customDateRange.to
+                                                ? `${format(customDateRange.from, 'MMM dd')} - ${format(customDateRange.to, 'MMM dd')}`
+                                                : `${selectedDateRange} days`
+                                            : `${selectedDateRange} days`
+                                        }
+                                        aiModel={selectedAIModel === 'all' ? 'All AI Models' : aiModelOptions.find(m => m.value === selectedAIModel)?.label || 'All AI Models'}
+                                        industryRanking={industryRanking}
+                                        prompts={[]}
+                                        fileName={`${currentBrand.name.toLowerCase().replace(/\s+/g, '-')}-dashboard-report-${new Date().toISOString().split('T')[0]}.pdf`}
+                                    />
+                                </div>
+                            )}
+                            {!currentBrand && (
+                                <Button
+                                    variant="default"
+                                    size="sm"
+                                    disabled
+                                    className="gap-2 mt-2"
+                                    style={{ backgroundColor: 'var(--orange-1)', color: 'white' }}
+                                >
+                                    <Download className="h-4 w-4" />
+                                    No Brand Context
+                                </Button>
+                            )}
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </AppLayout>
