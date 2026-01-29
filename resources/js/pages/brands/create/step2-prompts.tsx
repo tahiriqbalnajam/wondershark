@@ -8,16 +8,17 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow
 } from "@/components/ui/table"
 // import { Textarea } from '@/components/ui/textarea';
-import { 
+import {
     Eye,
     Smile,
     ChevronsUpDown,
@@ -27,7 +28,9 @@ import {
     CircleAlert,
     Power,
     Sparkles,
-    Loader2
+    Loader2,
+    AlertCircle,
+    Info
 } from 'lucide-react';
 import { Step2Props, BrandPrompt } from './types';
 import { useState, useEffect, useCallback } from 'react';
@@ -37,7 +40,7 @@ import { countries } from '@/data/countries';
 const getCountryInfo = (location?: string, fallbackCountry?: string) => {
     // First try to find by location (could be country name or code)
     if (location) {
-        const countryByName = countries.find(c => 
+        const countryByName = countries.find(c =>
             c.name.toLowerCase() === location.toLowerCase() ||
             c.code.toLowerCase() === location.toLowerCase()
         );
@@ -49,7 +52,7 @@ const getCountryInfo = (location?: string, fallbackCountry?: string) => {
             };
         }
     }
-    
+
     // Fallback to brand's selected country
     if (fallbackCountry) {
         const countryByCode = countries.find(c => c.code === fallbackCountry);
@@ -61,7 +64,7 @@ const getCountryInfo = (location?: string, fallbackCountry?: string) => {
             };
         }
     }
-    
+
     // Final fallback to USA
     const usaCountry = countries.find(c => c.code === 'US');
     return {
@@ -71,8 +74,8 @@ const getCountryInfo = (location?: string, fallbackCountry?: string) => {
     };
 };
 
-export default function Step2Prompts({ 
-    data, 
+export default function Step2Prompts({
+    data,
     errors,
     isGeneratingPrompts,
     aiGeneratedPrompts,
@@ -93,11 +96,11 @@ export default function Step2Prompts({
     const [hasMore, setHasMore] = useState(false);
     const [totalCount, setTotalCount] = useState(0);
     const [currentOffset, setCurrentOffset] = useState(0);
-    
+
     // Keep all prompts from database and AI generation (never remove from this list)
     // Initialize from existingPrompts which comes directly from DB
     const [allPrompts, setAllPrompts] = useState<BrandPrompt[]>(() => existingPrompts || []);
-    
+
     // Track prompt states: 'suggested' (is_active=0), 'active' (is_active=1), 'inactive' (rejected)
     const [promptStates, setPromptStates] = useState<Record<number, 'suggested' | 'active' | 'inactive'>>(() => {
         const states: Record<number, 'suggested' | 'active' | 'inactive'> = {};
@@ -119,7 +122,7 @@ export default function Step2Prompts({
 
         try {
             const csrfToken = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '';
-            
+
             const response = await fetch(`/brands/${brandId}/prompts/save-bulk`, {
                 method: 'POST',
                 headers: {
@@ -174,12 +177,12 @@ export default function Step2Prompts({
             setAllPrompts(prev => {
                 const existingIds = new Set(prev.map(p => p.id));
                 const newPrompts = aiGeneratedPrompts.filter(p => !existingIds.has(p.id));
-                
+
                 // Save new prompts to database immediately
                 if (newPrompts.length > 0 && brandId) {
                     saveBulkPromptsToDatabase(newPrompts);
                 }
-                
+
                 return [...prev, ...newPrompts];
             });
         }
@@ -198,7 +201,7 @@ export default function Step2Prompts({
                 setPromptStates(prev => ({ ...prev, ...initialStates }));
             }
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [allPrompts]);
 
     // Categorize prompts by their state - USE allPrompts instead of aiGeneratedPrompts
@@ -224,13 +227,19 @@ export default function Step2Prompts({
         console.log('Active Prompts:', activePrompts.length, activePrompts);
         console.log('Inactive Prompts:', inactivePrompts.length, inactivePrompts);
         console.log('===================');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [promptStates, aiGeneratedPrompts, allPrompts, suggestedPrompts.length, activePrompts.length, inactivePrompts.length]);
 
     // Handle Track button - move prompt from suggested to active and UPDATE DATABASE
     const handleTrackPrompt = async (prompt: BrandPrompt) => {
         if (!brandId) {
             console.error('Cannot track prompt: Brand ID is missing');
+            return;
+        }
+
+        // Check if we've reached the limit of 10 active prompts
+        if (activePrompts.length >= 10) {
+            alert("You've reached the limit of 10 tracked prompts. Please remove one before adding a new one.");
             return;
         }
 
@@ -242,7 +251,7 @@ export default function Step2Prompts({
         }
 
         console.log('Tracking prompt:', prompt.id, prompt.prompt);
-        
+
         try {
             const response = await fetch(`/brands/${brandId}/prompts/${prompt.id}/status`, {
                 method: 'PATCH',
@@ -260,13 +269,13 @@ export default function Step2Prompts({
             }
 
             await response.json();
-            
+
             // Update local state
             setPromptStates(prev => ({
                 ...prev,
                 [prompt.id]: 'active' as const
             }));
-            
+
             // Call parent acceptPrompt if available
             if (acceptPrompt) {
                 acceptPrompt(prompt);
@@ -292,7 +301,7 @@ export default function Step2Prompts({
         }
 
         console.log('Rejecting prompt:', prompt.id, prompt.prompt);
-        
+
         try {
             const response = await fetch(`/brands/${brandId}/prompts/${prompt.id}/status`, {
                 method: 'PATCH',
@@ -310,7 +319,7 @@ export default function Step2Prompts({
             }
 
             await response.json();
-            
+
             // Update local state
             setPromptStates(prev => ({
                 ...prev,
@@ -337,7 +346,7 @@ export default function Step2Prompts({
         }
 
         console.log('Activating prompt:', prompt.id, prompt.prompt);
-        
+
         try {
             const response = await fetch(`/brands/${brandId}/prompts/${prompt.id}/status`, {
                 method: 'PATCH',
@@ -355,13 +364,13 @@ export default function Step2Prompts({
             }
 
             await response.json();
-            
+
             // Update local state
             setPromptStates(prev => ({
                 ...prev,
                 [prompt.id]: 'active' as const
             }));
-            
+
             if (acceptPrompt) {
                 acceptPrompt(prompt);
             }
@@ -378,12 +387,12 @@ export default function Step2Prompts({
             const date = new Date(timestamp);
             const now = new Date();
             const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-            
+
             if (diffInSeconds < 60) return 'Just now';
             if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} min ago`;
             if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
             if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
-            
+
             return date.toLocaleDateString();
         } catch {
             return 'Recently';
@@ -420,9 +429,9 @@ export default function Step2Prompts({
 
     const loadPromptsWithRatio = useCallback(async (offset: number = 0) => {
         if (!data.website.trim()) return;
-        
+
         setIsLoadingMore(true);
-        
+
         try {
             const response = await fetch(route('brands.getPromptsWithRatio'), {
                 method: 'POST',
@@ -496,7 +505,7 @@ export default function Step2Prompts({
     // Toggle all prompts in current tab
     const toggleAllPromptsInTab = (checked: boolean) => {
         let currentPrompts: BrandPrompt[] = [];
-        
+
         switch (currentTab) {
             case 'active':
                 currentPrompts = activePrompts;
@@ -525,7 +534,7 @@ export default function Step2Prompts({
     // Check if all prompts in current tab are selected
     const areAllPromptsInTabSelected = () => {
         let currentPrompts: GeneratedPrompt[] = [];
-        
+
         switch (currentTab) {
             case 'active':
                 currentPrompts = activePrompts;
@@ -539,12 +548,18 @@ export default function Step2Prompts({
         }
 
         if (currentPrompts.length === 0) return false;
-        
+
         return currentPrompts.every(p => selectedPromptIds.has(p.id));
     };
 
     // Bulk action handlers
     const handleBulkActivate = () => {
+        // Check if bulk activation would exceed the limit
+        if (activePrompts.length + selectedPromptIds.size > 10) {
+            alert(`Cannot activate ${selectedPromptIds.size} prompts. You can only have 10 active prompts. Currently you have ${activePrompts.length} active prompts.`);
+            return;
+        }
+
         console.log('Bulk activating prompts:', selectedPromptIds);
         selectedPromptIds.forEach(promptId => {
             setPromptStates(prev => ({
@@ -600,10 +615,18 @@ export default function Step2Prompts({
         <div className="space-y-6 relative mt-15">
             <div className="flex items-center justify-between">
                 <div className="">
-                    <h3 className="text-xl font-semibold">Add Prompt <small className="text-gray-400 text-sm"> - {data.prompts.length}/10 Prompts</small></h3>
+                    <h3 className="text-xl font-semibold">Add Prompt <small className="text-gray-400 text-sm"> - {activePrompts.length}/10 Prompts</small></h3>
                     <p className="text-gray-400 text-sm">Create a competitive prompt without mentioning your own brand. Every line will be a separate prompt.</p>
                 </div>
             </div>
+            {activePrompts.length >= 10 && (
+                <Alert variant="destructive" className="bg-orange-50 border-orange-200">
+                    <AlertCircle className="h-4 w-4 text-orange-600" />
+                    <AlertDescription className="text-orange-800">
+                        You've reached the limit of 10 tracked prompts. Please remove one before adding a new one.
+                    </AlertDescription>
+                </Alert>
+            )}
             <Tabs defaultValue="suggested" className="add-prompts-wrapp" onValueChange={(value) => setCurrentTab(value as 'active' | 'suggested' | 'inactive')}>
                 <div className="flex justify-between items-center mb-10">
                     <TabsList className="add-prompt-lists border">
@@ -618,18 +641,18 @@ export default function Step2Prompts({
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-[70px] text-center p-0">
-                                    <Checkbox 
-                                        id="active-select-all" 
-                                        checked={areAllPromptsInTabSelected()} 
-                                        onCheckedChange={(val) => toggleAllPromptsInTab(!!val)} 
+                                    <Checkbox
+                                        id="active-select-all"
+                                        checked={areAllPromptsInTabSelected()}
+                                        onCheckedChange={(val) => toggleAllPromptsInTab(!!val)}
                                     />
                                 </TableHead>
                                 <TableHead>Prompt</TableHead>
-                                <TableHead><div className="flex items-center"><Eye className="w-4 mr-2"/> Visibility</div></TableHead>
-                                <TableHead><div className="flex items-center"><Smile className="w-4 mr-2"/> Sentiment</div></TableHead>
-                                <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2"/> Position</div></TableHead>
-                                <TableHead><div className="flex items-center"><Trophy className="w-4 mr-2"/> Mentions</div></TableHead>
-                                <TableHead><div className="flex items-center"><MapPin className="w-4 mr-2"/> Location</div></TableHead>
+                                <TableHead><div className="flex items-center"><Eye className="w-4 mr-2" /> Visibility</div></TableHead>
+                                <TableHead><div className="flex items-center"><Smile className="w-4 mr-2" /> Sentiment</div></TableHead>
+                                <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2" /> Position</div></TableHead>
+                                <TableHead><div className="flex items-center"><Trophy className="w-4 mr-2" /> Mentions</div></TableHead>
+                                <TableHead><div className="flex items-center"><MapPin className="w-4 mr-2" /> Location</div></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -645,10 +668,10 @@ export default function Step2Prompts({
                                 activePrompts.map((prompt) => (
                                     <TableRow key={prompt.id}>
                                         <TableHead className="w-[70px] text-center p-0">
-                                            <Checkbox 
-                                                id={`active-${prompt.id}`} 
-                                                checked={isPromptSelected(prompt.id)} 
-                                                onCheckedChange={() => togglePromptSelection(prompt.id)} 
+                                            <Checkbox
+                                                id={`active-${prompt.id}`}
+                                                checked={isPromptSelected(prompt.id)}
+                                                onCheckedChange={() => togglePromptSelection(prompt.id)}
                                             />
                                         </TableHead>
                                         <TableCell>{prompt.prompt}</TableCell>
@@ -699,8 +722,8 @@ export default function Step2Prompts({
                 </TabsContent>
                 <TabsContent value="suggested" className="active-table-prompt">
                     <div className="suggested-prompts-box flex justify-between items-center p-4 border rounded-sm mb-5">
-                        <p className='flex items-center gap-3 text-sm'><Sparkles className='text-orange-600'/><b>Suggested prompts.</b> Expand your brand's presence with suggested prompts.</p>
-                        <button 
+                        <p className='flex items-center gap-3 text-sm'><Sparkles className='text-orange-600' /><b>Suggested prompts.</b> Expand your brand's presence with suggested prompts.</p>
+                        <button
                             onClick={generateAIPrompts}
                             disabled={isGeneratingPrompts}
                             className='py-2 px-4 bg-gray-200 text-gray-950 rounded-sm text-sm hover:bg-orange-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed'
@@ -720,8 +743,8 @@ export default function Step2Prompts({
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Suggested Prompt</TableHead>
-                                        <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2"/> Volume</div></TableHead>
-                                        <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2"/> Suggested At</div></TableHead>
+                                        <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2" /> Volume</div></TableHead>
+                                        <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2" /> Suggested At</div></TableHead>
                                         <TableHead></TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -748,29 +771,29 @@ export default function Step2Prompts({
                                         ))
                                     ) : (
                                         suggestedPrompts.map((prompt) => (
-                                    <TableRow key={prompt.id}>
-                                        <TableCell>{prompt.prompt}</TableCell>
-                                        <TableCell>{prompt.volume || 0}</TableCell>
-                                        <TableCell>{formatTimestamp(prompt.created_at)}</TableCell>
-                                        <TableCell>
-                                            <div className="flex gap-3 justify-center">
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => handleRejectPrompt(prompt)}
-                                                    className="border px-4 py-1 rounded-sm bg-red-100 text-red-600 hover:text-white hover:bg-red-600 hover:border-red-600"
-                                                >
-                                                    Reject
-                                                </button>
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => handleTrackPrompt(prompt)}
-                                                    className="border px-4 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-orange-600 hover:text-white"
-                                                >
-                                                    Track
-                                                </button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
+                                            <TableRow key={prompt.id}>
+                                                <TableCell>{prompt.prompt}</TableCell>
+                                                <TableCell>{prompt.volume || 0}</TableCell>
+                                                <TableCell>{formatTimestamp(prompt.created_at)}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex gap-3 justify-center">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRejectPrompt(prompt)}
+                                                            className="border px-4 py-1 rounded-sm bg-red-100 text-red-600 hover:text-white hover:bg-red-600 hover:border-red-600"
+                                                        >
+                                                            Reject
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleTrackPrompt(prompt)}
+                                                            className="border px-4 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-orange-600 hover:text-white"
+                                                        >
+                                                            Track
+                                                        </button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
                                         ))
                                     )}
                                 </TableBody>
@@ -783,14 +806,14 @@ export default function Step2Prompts({
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-[70px] text-center p-0">
-                                    <Checkbox 
-                                        id="terms-inactive" 
-                                        checked={areAllPromptsInTabSelected()} 
-                                        onCheckedChange={(checked) => toggleAllPromptsInTab(!!checked)} 
+                                    <Checkbox
+                                        id="terms-inactive"
+                                        checked={areAllPromptsInTabSelected()}
+                                        onCheckedChange={(checked) => toggleAllPromptsInTab(!!checked)}
                                     />
                                 </TableHead>
                                 <TableHead>Suggested Prompt</TableHead>
-                                <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2"/> Suggested At</div></TableHead>
+                                <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2" /> Suggested At</div></TableHead>
                                 <TableHead></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -807,17 +830,17 @@ export default function Step2Prompts({
                                 inactivePrompts.map((prompt) => (
                                     <TableRow key={prompt.id}>
                                         <TableHead className="w-[70px] text-center p-0">
-                                            <Checkbox 
-                                                id={`inactive-${prompt.id}`} 
-                                                checked={isPromptSelected(prompt.id)} 
-                                                onCheckedChange={() => togglePromptSelection(prompt.id)} 
+                                            <Checkbox
+                                                id={`inactive-${prompt.id}`}
+                                                checked={isPromptSelected(prompt.id)}
+                                                onCheckedChange={() => togglePromptSelection(prompt.id)}
                                             />
                                         </TableHead>
                                         <TableCell>{prompt.prompt}</TableCell>
                                         <TableCell>{formatTimestamp(prompt.created_at)}</TableCell>
                                         <TableCell>
                                             <div className="flex justify-center">
-                                                <button 
+                                                <button
                                                     type="button"
                                                     onClick={() => handleActivatePrompt(prompt)}
                                                     className="border px-4 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-orange-600 hover:text-white"
@@ -833,38 +856,45 @@ export default function Step2Prompts({
                     </Table>
                 </TabsContent>
             </Tabs>
-            <div className={`prompts-action ${selectedPromptIds.size > 0 ? "active" : ""}`}>
-                <p>{selectedPromptIds.size > 0
-                ? `${selectedPromptIds.size} Selected`
-                : "0 Select"}</p>
-                <div className="prompts-action-btns">
-                    {currentTab !== 'active' && (
-                        <button 
+            {selectedPromptIds.size > 0 && (
+                <div className="prompts-action active">
+                    <div className="flex items-center gap-2">
+                        <Info className="h-4 w-4" />
+                        <p className="font-semibold">
+                            {selectedPromptIds.size} {selectedPromptIds.size === 1 ? 'prompt' : 'prompts'} selected
+                        </p>
+                    </div>
+                    <div className="prompts-action-btns">
+                        {currentTab !== 'active' && (
+                            <button
+                                type="button"
+                                onClick={handleBulkActivate}
+                                className="active-ch"
+                                disabled={currentTab === 'suggested' && activePrompts.length + selectedPromptIds.size > 10}
+                                title={currentTab === 'suggested' && activePrompts.length + selectedPromptIds.size > 10 ? "Would exceed 10 prompt limit" : ""}
+                            >
+                                <CircleCheckBig className="h-4 w-4" /> Activate
+                            </button>
+                        )}
+                        {currentTab !== 'inactive' && (
+                            <button
+                                type="button"
+                                onClick={handleBulkDeactivate}
+                                className="deactive-ch"
+                            >
+                                <CircleAlert className="h-4 w-4" /> Deactivate
+                            </button>
+                        )}
+                        <button
                             type="button"
-                            onClick={handleBulkActivate}
-                            className="active-ch"
+                            onClick={handleBulkDelete}
+                            className="delete-ch"
                         >
-                            <CircleCheckBig/> Active
+                            <Power className="h-4 w-4" /> Delete
                         </button>
-                    )}
-                    {currentTab !== 'inactive' && (
-                        <button 
-                            type="button"
-                            onClick={handleBulkDeactivate}
-                            className="deactive-ch"
-                        >
-                            <CircleAlert/>Deactive
-                        </button>
-                    )}
-                    <button 
-                        type="button"
-                        onClick={handleBulkDelete}
-                        className="delete-ch"
-                    >
-                        <Power/>Delete
-                    </button>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

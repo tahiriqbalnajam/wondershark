@@ -605,14 +605,14 @@ textarea.form-control {
 
 .prompts-action {
     display: flex;
-    max-width: 500px;
-    min-width: 280px;
+    max-width: 600px;
+    min-width: 320px;
     align-items: center;
     justify-content: space-between;
-    gap: 15px;
-    padding: 10px 10px 10px 20px;
-    border-radius: 5px;
-    box-shadow: 0 0 15px 0 rgba(0, 0, 0, 0.10);
+    gap: 20px;
+    padding: 15px 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.15);
     position: fixed;
     bottom: -100%;
     transform: translateX(-50%);
@@ -623,14 +623,14 @@ textarea.form-control {
 }
 
 .prompts-action.active {
-    bottom: 10px;
+    bottom: 20px;
 }
 
 .prompts-action p {
     font-size: 14px;
     font-weight: 600;
     margin: 0;
-    color: var(--color-gray-400);
+    color: var(--color-black);
 }
 
 .prompts-action p span {
@@ -645,18 +645,25 @@ textarea.form-control {
 }
 
 .prompts-action-btns button {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
-    padding: 10px 25px;
+    padding: 8px 16px;
     display: flex;
-    gap: 10px;
+    gap: 6px;
     align-items: center;
     cursor: pointer;
     border-radius: 5px;
+    transition: all 0.2s ease;
+}
+
+.prompts-action-btns button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .prompts-action-btns button svg {
     width: 14px;
+    height: 14px;
 }
 
 .prompts-action-btns button.active-ch {

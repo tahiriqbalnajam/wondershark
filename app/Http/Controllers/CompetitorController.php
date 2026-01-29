@@ -883,6 +883,8 @@ class CompetitorController extends Controller
             'competitors.*.name' => 'required|string|max:255',
             'competitors.*.domain' => 'required|url|max:255',
             'competitors.*.status' => 'required|in:suggested,accepted,rejected',
+            'competitors.*.tracked_name' => 'nullable|string|max:255',
+            'competitors.*.allies' => 'nullable|array',
         ]);
 
         try {
@@ -895,29 +897,45 @@ class CompetitorController extends Controller
                     ->where('domain', $competitorData['domain'])
                     ->first();
 
+                $dataToSave = [
+                    'name' => $competitorData['name'],
+                    'status' => $competitorData['status'],
+                    'tracked_name' => $competitorData['tracked_name'] ?? null,
+                    'allies' => !empty($competitorData['allies']) ? json_encode($competitorData['allies']) : null,
+                ];
+
                 if ($existing) {
                     // Update existing competitor
-                    $existing->update([
-                        'name' => $competitorData['name'],
-                        'status' => $competitorData['status'],
-                    ]);
-                    $savedCompetitors[] = $existing;
+                    $existing->update($dataToSave);
+                    $savedCompetitors[] = $existing->fresh();
                 } else {
                     // Create new competitor
-                    $competitor = $brand->competitors()->create([
-                        'name' => $competitorData['name'],
+                    $competitor = $brand->competitors()->create(array_merge($dataToSave, [
                         'domain' => $competitorData['domain'],
-                        'status' => $competitorData['status'],
-                        'source' => 'ai',
+                        'source' => $competitorData['source'] ?? 'ai',
                         'mentions' => 0,
-                    ]);
+                    ]));
                     $savedCompetitors[] = $competitor;
                 }
             }
 
+            // Format response to match frontend expectations
+            $formattedCompetitors = array_map(function($comp) {
+                return [
+                    'id' => $comp->id,
+                    'name' => $comp->name,
+                    'domain' => $comp->domain,
+                    'trackedName' => $comp->tracked_name,
+                    'allies' => $comp->allies ? json_decode($comp->allies, true) : [],
+                    'mentions' => $comp->mentions ?? 0,
+                    'status' => $comp->status,
+                    'source' => $comp->source,
+                ];
+            }, $savedCompetitors);
+
             return response()->json([
                 'success' => true,
-                'competitors' => $savedCompetitors,
+                'competitors' => $formattedCompetitors,
                 'message' => 'Competitors saved successfully',
             ]);
 

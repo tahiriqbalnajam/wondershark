@@ -12,8 +12,8 @@ interface Competitor {
     id: number;
     name: string;
     domain: string;
-    trackedName : string;
-    allies : string[];
+    trackedName: string;
+    allies: string[];
     mentions: number;
     status: 'suggested' | 'accepted' | 'rejected';
     source: 'ai' | 'manual';
@@ -23,8 +23,8 @@ interface CompetitorResponse {
     id?: number;
     name: string;
     domain: string;
-    trackedName : string;
-    allies : string[];
+    trackedName: string;
+    allies: string[];
     mentions?: number;
 }
 
@@ -56,8 +56,8 @@ export default function Step3Competitors({
     const [progress, setProgress] = useState(0);
     const [progressText, setProgressText] = useState('');
     const [showForm, setShowForm] = useState(false);
-    const [formData, setFormData] = useState({ name: '', domain: '' , trackedName: '', allies: [] as string[]});
-    
+    const [formData, setFormData] = useState({ name: '', domain: '', trackedName: '', allies: [] as string[] });
+
     // Track if we've already attempted to fetch automatically
     const autoFetchAttemptedRef = useRef<string | null>(null);
     // Add new empty ally field
@@ -91,7 +91,7 @@ export default function Step3Competitors({
 
             // Get fresh CSRF token from the page
             const csrfToken = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
-            
+
             if (!csrfToken) {
                 throw new Error('CSRF token not found. Please refresh the page.');
             }
@@ -140,7 +140,7 @@ export default function Step3Competitors({
                 }));
 
                 setCompetitors([...competitors, ...newCompetitors]);
-                
+
                 // Save to database immediately if we have a brand ID
                 if (brandId) {
                     try {
@@ -167,17 +167,17 @@ export default function Step3Competitors({
                         } else {
                             const savedData = await saveResponse.json();
                             console.log('Saved competitors data:', savedData); // Debug log
-                            
+
                             // Update competitors with actual database IDs
                             if (savedData.competitors && savedData.competitors.length > 0) {
                                 // Replace the new competitors that were just added with their database versions
                                 const allCompetitors = [...competitors];
-                                
+
                                 // Remove the temporary competitors we just added
-                                const competitorsWithoutNew = allCompetitors.filter(c => 
-                                    !newCompetitors.some(nc => nc.name === c.name && nc.domain === c.domain)
+                                const competitorsWithoutNew = allCompetitors.filter(c =>
+                                    !newCompetitors.some((nc: Competitor) => nc.name === c.name && nc.domain === c.domain)
                                 );
-                                
+
                                 // Add the saved competitors with real database IDs
                                 const competitorsWithDbIds = savedData.competitors.map((comp: CompetitorResponse) => ({
                                     id: comp.id!,
@@ -189,7 +189,7 @@ export default function Step3Competitors({
                                     status: 'suggested' as const,
                                     source: 'ai' as const
                                 }));
-                                
+
                                 setCompetitors([...competitorsWithoutNew, ...competitorsWithDbIds]);
                                 console.log('Updated competitors with DB IDs:', [...competitorsWithoutNew, ...competitorsWithDbIds]); // Debug log
                                 toast.success(`Saved ${savedData.competitors.length} competitors to database`);
@@ -202,7 +202,7 @@ export default function Step3Competitors({
                         console.error('Error saving competitors to database:', saveError);
                     }
                 }
-                
+
                 toast.success('Competitors fetched successfully!');
             } else {
                 throw new Error(responseData.error || 'Failed to fetch competitors');
@@ -222,12 +222,12 @@ export default function Step3Competitors({
         // If we have brand ID but no competitors loaded yet, they will come from server via Inertia props
         // If we have competitors from DB (they'll have proper IDs), don't auto-fetch
         const hasExistingCompetitors = competitors.length > 0;
-        
+
         const shouldAutoFetch = (
             brandId && // Must have brand ID
-            data.website && 
+            data.website &&
             data.website.trim() !== '' &&
-            !loading && 
+            !loading &&
             !hasExistingCompetitors &&
             autoFetchAttemptedRef.current !== data.website
         );
@@ -243,11 +243,11 @@ export default function Step3Competitors({
         console.log('Attempting to accept competitor ID:', competitorId); // Debug log
         console.log('Current competitors state:', competitors); // Debug log
         console.log('Brand ID:', brandId); // Debug log
-        
+
         // Find the competitor in our local state
         const competitor = competitors.find(c => c.id === competitorId);
         console.log('Found competitor in state:', competitor); // Debug log
-        
+
         // If brand doesn't exist yet (during creation), just update local state
         if (!brandId) {
             setCompetitors(competitors.map(c =>
@@ -259,7 +259,7 @@ export default function Step3Competitors({
 
         try {
             console.log('Making API call to:', `/brands/${brandId}/competitors/${competitorId}/status`); // Debug log
-            
+
             const response = await fetch(`/brands/${brandId}/competitors/${competitorId}/status`, {
                 method: 'PATCH',
                 headers: {
@@ -335,7 +335,7 @@ export default function Step3Competitors({
     };
 
     // Manual add functionality
-    const handleManualAdd = (e: React.FormEvent) => {
+    const handleManualAdd = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!formData.name.trim() || !formData.domain.trim()) {
@@ -343,24 +343,95 @@ export default function Step3Competitors({
             return;
         }
 
-        const newCompetitor: Competitor = {
-            id: Date.now(),
-            name: formData.name.trim(),
-            domain: formData.domain.trim().startsWith('http') ? formData.domain.trim() : `https://${formData.domain.trim()}`,
-            trackedName: formData.trackedName.trim(),
-            allies: formData.allies,
-            mentions: 0,
-            status: 'accepted',
-            source: 'manual'
-        };
-        if (competitors.length >= 10) {
+        if (acceptedCompetitors.length >= 10) {
             toast.error("Maximum 10 competitors allowed");
-            return; // ❗ Do NOT add more
+            return;
         }
-        setCompetitors([...competitors, newCompetitor]);
-        setShowForm(false);
-        setFormData({ name: '', domain: '' , trackedName: '', allies: [] });
-        toast.success('Competitor added successfully');
+
+        const domain = formData.domain.trim().startsWith('http')
+            ? formData.domain.trim()
+            : `https://${formData.domain.trim()}`;
+
+        // If we have a brand ID, save to database first
+        if (brandId) {
+            try {
+                const csrfToken = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+
+                if (!csrfToken) {
+                    toast.error('CSRF token not found. Please refresh the page.');
+                    return;
+                }
+
+                const response = await fetch(route('competitors.save-bulk'), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({
+                        brand_id: brandId,
+                        competitors: [{
+                            name: formData.name.trim(),
+                            domain: domain,
+                            tracked_name: formData.trackedName.trim(),
+                            allies: formData.allies.filter(a => a.trim() !== ''),
+                            status: 'accepted',
+                            source: 'manual'
+                        }]
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    toast.error(errorData.message || 'Failed to save competitor');
+                    return;
+                }
+
+                const savedData = await response.json();
+
+                if (savedData.competitors && savedData.competitors.length > 0) {
+                    const savedCompetitor = savedData.competitors[0];
+                    const newCompetitor: Competitor = {
+                        id: savedCompetitor.id,
+                        name: savedCompetitor.name,
+                        domain: savedCompetitor.domain,
+                        trackedName: savedCompetitor.trackedName || '',
+                        allies: savedCompetitor.allies || [],
+                        mentions: savedCompetitor.mentions || 0,
+                        status: 'accepted',
+                        source: 'manual'
+                    };
+
+                    setCompetitors([...competitors, newCompetitor]);
+                    setShowForm(false);
+                    setFormData({ name: '', domain: '', trackedName: '', allies: [] });
+                    toast.success('Competitor added successfully');
+                } else {
+                    toast.error('Failed to save competitor - no data returned');
+                }
+            } catch (error) {
+                console.error('Error saving competitor:', error);
+                toast.error('Failed to save competitor');
+            }
+        } else {
+            // No brand ID yet (during creation flow), just update local state
+            const newCompetitor: Competitor = {
+                id: Date.now(),
+                name: formData.name.trim(),
+                domain: domain,
+                trackedName: formData.trackedName.trim(),
+                allies: formData.allies.filter(a => a.trim() !== ''),
+                mentions: 0,
+                status: 'accepted',
+                source: 'manual'
+            };
+
+            setCompetitors([...competitors, newCompetitor]);
+            setShowForm(false);
+            setFormData({ name: '', domain: '', trackedName: '', allies: [] });
+            toast.success('Competitor added successfully');
+        }
     };
 
     return (
@@ -418,15 +489,15 @@ export default function Step3Competitors({
                 {suggestedCompetitors.map((competitor) => {
                     const cleanDomain = competitor.domain.replace(/^https?:\/\//, '').replace(/^www\./, '');
                     const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
-                    
+
                     return (
                         <div key={competitor.id} className="block">
                             <div className="competitor-box bg-sidebar border">
                                 <div className="flex items-center justify-between mb-12">
                                     <div className="flex items-center gap-[10px]">
                                         <span className='w-[20px] h-[20px] flex items-center justify-center'>
-                                            <img 
-                                                src={logoUrl} 
+                                            <img
+                                                src={logoUrl}
                                                 alt={competitor.name}
                                                 className="w-full h-full object-contain"
                                                 onError={(e) => {
@@ -447,14 +518,14 @@ export default function Step3Competitors({
                                         className='btn-action-close'
                                         onClick={() => handleReject(competitor.id)}
                                     >
-                                        <X className="w-[15px]"/>
+                                        <X className="w-[15px]" />
                                     </button>
                                     <button
                                         type="button"
                                         className='btn-action-check'
                                         onClick={() => handleAccept(competitor.id)}
                                     >
-                                        <Check className="w-[15px]"/>
+                                        <Check className="w-[15px]" />
                                     </button>
                                 </div>
                             </div>
@@ -466,15 +537,15 @@ export default function Step3Competitors({
                 {rejectedCompetitors.map((competitor) => {
                     const cleanDomain = competitor.domain.replace(/^https?:\/\//, '').replace(/^www\./, '');
                     const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
-                    
+
                     return (
                         <div key={competitor.id} className="block">
                             <div className="competitor-box bg-gray-200 border opacity-50">
                                 <div className="flex items-center justify-between mb-12">
                                     <div className="flex items-center gap-[10px]">
                                         <span className='w-[20px] h-[20px] flex items-center justify-center'>
-                                            <img 
-                                                src={logoUrl} 
+                                            <img
+                                                src={logoUrl}
                                                 alt={competitor.name}
                                                 className="w-full h-full object-contain"
                                                 onError={(e) => {
@@ -485,16 +556,16 @@ export default function Step3Competitors({
                                         <h4>{competitor.name}</h4>
                                     </div>
                                     <button className="edit-btn">
-                                        <Pencil className="w-[15px]"/>
+                                        <Pencil className="w-[15px]" />
                                     </button>
                                 </div>
                                 <p className='text-gray-400'>{competitor.mentions} Mentions</p>
                                 <div className="competitor-btn-action">
                                     <button className='btn-action-close opacity-50' disabled>
-                                        <X className="w-[15px]"/>
+                                        <X className="w-[15px]" />
                                     </button>
                                     <button className='btn-action-check opacity-50' disabled>
-                                        <Check className="w-[15px]"/>
+                                        <Check className="w-[15px]" />
                                     </button>
                                 </div>
                             </div>
@@ -510,7 +581,7 @@ export default function Step3Competitors({
                     <div className="space-y-4">
                         <div className="grid gap-2">
                             <Label htmlFor="name">Name</Label>
-                            <Input id="name" value={formData.name} onChange={e => setFormData(prev => ({...prev, name: e.target.value}))}/>
+                            <Input id="name" value={formData.name} onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))} />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="domain">Domain</Label>
@@ -518,12 +589,12 @@ export default function Step3Competitors({
                                 let val = e.target.value;
                                 if (val && !val.startsWith('http://') && !val.startsWith('https://')) val = 'https://' + val;
                                 setFormData(prev => ({ ...prev, domain: val }));
-                            }}/>
+                            }} />
                         </div>
                         <div className=" space-y-4 allies-card">
                             <div className="grid gap-2">
                                 <Label>Tracked Name  <small className='text-xs font-normal text-muted-foreground'>( Optional )</small> </Label>
-                                <Input value={formData.trackedName} onChange={e => setFormData(prev => ({ ...prev, trackedName: e.target.value }))}/>
+                                <Input value={formData.trackedName} onChange={e => setFormData(prev => ({ ...prev, trackedName: e.target.value }))} />
                             </div>
                             <div className="flex gap-2">
                                 <Label>Alias  <small className='text-xs font-normal text-muted-foreground'>( Optional )</small> </Label>
@@ -532,20 +603,20 @@ export default function Step3Competitors({
                                     <div key={i} className="grid gap-2">
                                         <Input value={a} onChange={e => {
                                             const updated = [...formData.allies]; updated[i] = e.target.value;
-                                            setFormData(prev => ({...prev, allies: updated}));
-                                        }}/>
+                                            setFormData(prev => ({ ...prev, allies: updated }));
+                                        }} />
                                         <Button type="button" variant="destructive" size="sm" onClick={() => removeAllyField(i)}>✕</Button>
                                     </div>
                                 ))}
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <Button type="button" onClick={handleManualAdd}><Check className='w-4'/> Save</Button>
+                            <Button type="button" onClick={handleManualAdd}><Check className='w-4' /> Save</Button>
                             <Button type="button" onClick={() => setShowForm(false)}>Cancel</Button>
                         </div>
                     </div>
                 ) : (
-                    <Button type="button" onClick={() => setShowForm(true)}><CirclePlus className='w-4'/> Add Competitor</Button>
+                    <Button type="button" onClick={() => setShowForm(true)}><CirclePlus className='w-4' /> Add Competitor</Button>
                 )}
             </div>
 
@@ -556,7 +627,7 @@ export default function Step3Competitors({
 
                 {/* Your Brand */}
                 <div className="flex items-center gap-[15px] border rounded-sm min-h-[60px] p-5 mb-1 bg-white flex-wrap">
-                    <button><RotateCw className='w-4 text-gray-400'/></button>
+                    <button><RotateCw className='w-4 text-gray-400' /></button>
                     <p className='text-black'>{data.name || 'Your Brand'}</p>
                     <Badge className='bg-green-100 text-green-600 h-[40px] w-[110px]'>
                         <span className='h-3 w-3 rounded-full bg-green-600 mr-2'></span>
@@ -567,7 +638,7 @@ export default function Step3Competitors({
                 {/* Accepted Competitors */}
                 {acceptedCompetitors.map((competitor) => (
                     <div key={competitor.id} className="flex items-center gap-[15px] border rounded-sm min-h-[60px] p-5 bg-white flex-wrap">
-                        <button><Settings className='w-4 text-gray-400'/></button>
+                        <button><Settings className='w-4 text-gray-400' /></button>
                         <p className='text-black'>{competitor.name}</p>
                         <Badge variant="outline">{competitor.mentions} mentions</Badge>
                         <Badge variant={competitor.source === 'ai' ? 'default' : 'secondary'}>

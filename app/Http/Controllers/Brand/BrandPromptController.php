@@ -75,7 +75,7 @@ class BrandPromptController extends Controller
                 ->count();
 
             if ($activeCount >= 10) {
-                return redirect()->back()->withErrors(['error' => 'You can only have a maximum of 10 active prompts. Please deactivate some prompts first.']);
+                return redirect()->back()->withErrors(['error' => 'You’ve reached the limit of 10 tracked prompts. Please remove one before adding a new one.']);
             }
         }
 
@@ -118,7 +118,7 @@ class BrandPromptController extends Controller
                 ->count();
 
             if ($activeCount >= 10) {
-                return redirect()->back()->withErrors(['error' => 'You can only have a maximum of 10 active prompts. Please deactivate some prompts first.']);
+                return redirect()->back()->withErrors(['error' => 'You’ve reached the limit of 10 tracked prompts. Please remove one before adding a new one.']);
             }
 
             $data['status'] = 'active';
