@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
     },
     header: {
         marginBottom: 20,
-        borderBottom: '1 solid #E5E7EB',
+        borderBottom: '2 solid #E5E7EB',
         paddingBottom: 15,
     },
     title: {
@@ -50,9 +50,6 @@ const styles = StyleSheet.create({
         fontWeight: 700,
         color: '#111827',
         marginBottom: 5,
-        display:'flex',
-        alignItems:'center',
-        gap:'10px',
     },
     subtitle: {
         fontSize: 12,
@@ -75,18 +72,9 @@ const styles = StyleSheet.create({
         color: '#6B7280',
         marginBottom: 10,
     },
-    chartBox: {
-        borderWidth: 1,
-        borderColor: "#E5E7EB",
-        borderRadius:10,
-        padding: 12,
-        backgroundColor: "#E9E9E9",
-        boxShadow: "0 0 15px 0 rgba(0,0,0,0.15)"
-    },
     chartImage: {
-        width: "100%",
-        height: "auto",
-        borderRadius:5,
+        width: '100%',
+        marginBottom: 15,
     },
     chartPlaceholder: {
         backgroundColor: '#F3F4F6',
@@ -361,24 +349,23 @@ export const DashboardPDF: React.FC<DashboardPDFProps> = ({
             <Page size="A4" style={styles.page}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <Text style={styles.title}><img src="" alt="" /><Image src="/images/StackInfluence.png" style={{ width: 24 }}/> {brandName} – AI Brand Visibility Dashboard</Text>
-                    <Text style={styles.subtitle}>Generated: {generatedDate}</Text>
-                    {/* 
+                    <Text style={styles.title}>Dashboard Report</Text>
+                    <Text style={styles.subtitle}>Brand: {brandName}</Text>
                     <Text style={styles.subtitle}>Date Range: {dateRange}</Text>
                     <Text style={styles.subtitle}>AI Model: {aiModel}</Text>
-                    <Text style={styles.subtitle}>Generated: {generatedDate}</Text> */}
+                    <Text style={styles.subtitle}>Generated: {generatedDate}</Text>
                 </View>
 
                 {/* Visibility Section */}
                 <View style={styles.section}>
-                    {/* <Text style={styles.sectionTitle}>Visibility</Text>
+                    <Text style={styles.sectionTitle}>Visibility</Text>
                     <Text style={styles.sectionDescription}>
                         Percentage of chats mentioning each brand
-                    </Text> */}
+                    </Text>
 
 
                     {chartImages?.visibilityChart ? (
-                    <View style={styles.chartBox}> <Image src={chartImages.visibilityChart} style={styles.chartImage} /> </View>
+                        <Image src={chartImages.visibilityChart} style={styles.chartImage} />
                     ) : industryRanking.length === 0 ? (
                         <View style={styles.chartPlaceholder}>
                             <Text style={styles.chartText}>
@@ -421,14 +408,14 @@ export const DashboardPDF: React.FC<DashboardPDFProps> = ({
 
                 {/* Industry Ranking Section */}
                 <View style={styles.section}>
-                    {/* <Text style={styles.sectionTitle}>Industry Ranking</Text>
+                    <Text style={styles.sectionTitle}>Industry Ranking</Text>
                     <Text style={styles.sectionDescription}>
                         Brands with highest visibility
-                    </Text> */}
+                    </Text>
 
 
                     {chartImages?.industryRankingTable ? (
-                        <View style={styles.chartBox}><Image src={chartImages.industryRankingTable} style={styles.chartImage} /></View>
+                        <Image src={chartImages.industryRankingTable} style={styles.chartImage} />
                     ) : industryRanking.length === 0 ? (
                         <View style={styles.emptyState}>
                             <Text style={styles.emptyStateText}>
@@ -482,8 +469,7 @@ export const DashboardPDF: React.FC<DashboardPDFProps> = ({
                 </View>
 
                 {chartImages?.citationsSection ? (
-                    <View style={styles.chartBox}><Image src={chartImages.citationsSection} style={styles.chartImage} /></View>
-                    
+                    <Image src={chartImages.citationsSection} style={styles.chartImage} />
                 ) : prompts.length === 0 ? (
                     <View style={styles.emptyState}>
                         <Text style={styles.emptyStateText}>
