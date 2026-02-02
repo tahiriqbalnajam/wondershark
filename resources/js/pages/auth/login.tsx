@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import { LoaderCircle, Mail, FileLock, WandSparkles, LockKeyhole } from 'lucide-react';
+import { LoaderCircle, Mail, Eye, EyeOff } from 'lucide-react';
 import { FormEventHandler, useState } from 'react';
 
 import InputError from '@/components/input-error';
@@ -27,6 +27,7 @@ interface LoginProps {
 
 export default function Login({ status, canResetPassword }: LoginProps) {
     const [useMagicLink, setUseMagicLink] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const { data, setData, post, processing, errors, reset } = useForm<Required<LoginForm>>({
         email: '',
@@ -118,9 +119,9 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             </div>
                             <div className='relative field-icon'>
                                 <Input
-                                    className='form-control'
+                                    className='form-control pr-10'
                                     id="password"
-                                    type="password"
+                                    type={showPassword ? 'text' : 'password'}
                                     required
                                     tabIndex={2}
                                     autoComplete="current-password"
@@ -128,7 +129,15 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     onChange={(e) => setData('password', e.target.value)}
                                     placeholder="Password"
                                 />
-                                <span><LockKeyhole/></span>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword((current) => !current)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-600"
+                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                    aria-pressed={showPassword}
+                                >
+                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
                             </div>
                             <InputError message={errors.password} />
                         </div>

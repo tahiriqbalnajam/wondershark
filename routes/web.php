@@ -262,7 +262,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Step-by-step brand creation routes
         Route::post('brands/create/step/1', [BrandController::class, 'storeStep1'])->name('brands.create.step1');
-        Route::get('brands/{brand}/create/step/{step}', [BrandController::class, 'showCreateStep'])->name('brands.create.step')->where('step', '[2-5]');
+        Route::get('brands/{brand}/create/step/{step}', [BrandController::class, 'showCreateStep'])->name('brands.create.step')->where('step', '[1-5]');
         Route::post('brands/{brand}/create/step/2', [BrandController::class, 'updateStep2'])->name('brands.update.step2');
         Route::post('brands/{brand}/create/step/3', [BrandController::class, 'updateStep3'])->name('brands.update.step3');
         Route::post('brands/{brand}/create/step/4', [BrandController::class, 'updateStep4'])->name('brands.update.step4');

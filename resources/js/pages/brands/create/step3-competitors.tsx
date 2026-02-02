@@ -69,7 +69,7 @@ export default function Step3Competitors({
     // Separate competitors by status
     const suggestedCompetitors = competitors.filter(c => c.status === 'suggested');
     const acceptedCompetitors = competitors.filter(c => c.status === 'accepted');
-    const rejectedCompetitors = competitors.filter(c => c.status === 'rejected');
+    // Remove rejectedCompetitors since we're deleting them instead of showing them
 
 
 
@@ -297,12 +297,10 @@ export default function Step3Competitors({
     };
 
     const handleReject = async (competitorId: number) => {
-        // If brand doesn't exist yet (during creation), just update local state
+        // If brand doesn't exist yet (during creation), just remove from local state
         if (!brandId) {
-            setCompetitors(competitors.map(c =>
-                c.id === competitorId ? { ...c, status: 'rejected' as const } : c
-            ));
-            toast.success('Competitor rejected!');
+            setCompetitors(competitors.filter(c => c.id !== competitorId));
+            toast.success('Competitor removed!');
             return;
         }
 
@@ -320,11 +318,9 @@ export default function Step3Competitors({
             const data = await response.json();
 
             if (response.ok && data.success) {
-                // Update local state
-                setCompetitors(competitors.map(c =>
-                    c.id === competitorId ? { ...c, status: 'rejected' as const } : c
-                ));
-                toast.success('Competitor rejected!');
+                // Remove from local state instead of updating status
+                setCompetitors(competitors.filter(c => c.id !== competitorId));
+                toast.success('Competitor removed!');
             } else {
                 toast.error(data.message || 'Failed to reject competitor');
             }
@@ -525,46 +521,6 @@ export default function Step3Competitors({
                                         className='btn-action-check'
                                         onClick={() => handleAccept(competitor.id)}
                                     >
-                                        <Check className="w-[15px]" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })}
-
-                {/* Rejected competitors with gray background */}
-                {rejectedCompetitors.map((competitor) => {
-                    const cleanDomain = competitor.domain.replace(/^https?:\/\//, '').replace(/^www\./, '');
-                    const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
-
-                    return (
-                        <div key={competitor.id} className="block">
-                            <div className="competitor-box bg-gray-200 border opacity-50">
-                                <div className="flex items-center justify-between mb-12">
-                                    <div className="flex items-center gap-[10px]">
-                                        <span className='w-[20px] h-[20px] flex items-center justify-center'>
-                                            <img
-                                                src={logoUrl}
-                                                alt={competitor.name}
-                                                className="w-full h-full object-contain"
-                                                onError={(e) => {
-                                                    e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`;
-                                                }}
-                                            />
-                                        </span>
-                                        <h4>{competitor.name}</h4>
-                                    </div>
-                                    <button className="edit-btn">
-                                        <Pencil className="w-[15px]" />
-                                    </button>
-                                </div>
-                                <p className='text-gray-400'>{competitor.mentions} Mentions</p>
-                                <div className="competitor-btn-action">
-                                    <button className='btn-action-close opacity-50' disabled>
-                                        <X className="w-[15px]" />
-                                    </button>
-                                    <button className='btn-action-check opacity-50' disabled>
                                         <Check className="w-[15px]" />
                                     </button>
                                 </div>

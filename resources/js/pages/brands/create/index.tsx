@@ -2,6 +2,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/react';
 import { useState, FormEventHandler, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
+import { getCsrfToken } from '@/utils/csrf';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
@@ -195,7 +196,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        'X-CSRF-TOKEN': getCsrfToken(),
                     },
                     body: JSON.stringify({
                         name: data.name,
@@ -238,7 +239,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        'X-CSRF-TOKEN': getCsrfToken(),
                     },
                     body: JSON.stringify({
                         competitors: acceptedCompetitors.map(c => ({
@@ -269,7 +270,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        'X-CSRF-TOKEN': getCsrfToken(),
                     },
                     body: JSON.stringify({
                         prompts: data.prompts,
@@ -294,7 +295,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        'X-CSRF-TOKEN': getCsrfToken(),
                     },
                     body: JSON.stringify({
                         monthly_posts: data.monthly_posts,
@@ -323,11 +324,13 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
     const prevStep = () => {
         const brandId = existingData.brand?.id;
 
-        if (currentStep > 1 && brandId) {
-            // Navigate back to previous step page
-            window.location.href = route('brands.create.step', { brand: brandId, step: currentStep - 1 });
-        } else if (currentStep > 1) {
-            setCurrentStep(currentStep - 1);
+        if (currentStep > 1) {
+            if (brandId) {
+                // For all steps (1-5), use the step-based route with brand ID to load existing data
+                window.location.href = route('brands.create.step', { brand: brandId, step: currentStep - 1 });
+            } else {
+                setCurrentStep(currentStep - 1);
+            }
         }
     };
 
@@ -346,7 +349,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-CSRF-TOKEN': getCsrfToken(),
                 },
                 body: JSON.stringify({
                     create_account: data.create_account,
@@ -397,7 +400,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-CSRF-TOKEN': getCsrfToken(),
                 },
                 body: JSON.stringify({
                     website: data.website,
