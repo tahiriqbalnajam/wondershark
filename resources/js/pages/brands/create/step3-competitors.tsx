@@ -583,7 +583,6 @@ export default function Step3Competitors({
 
                 {/* Your Brand */}
                 <div className="flex items-center gap-[15px] border rounded-sm min-h-[60px] p-5 mb-1 bg-white flex-wrap">
-                    <button><RotateCw className='w-4 text-gray-400' /></button>
                     <p className='text-black'>{data.name || 'Your Brand'}</p>
                     <Badge className='bg-green-100 text-green-600 h-[40px] w-[110px]'>
                         <span className='h-3 w-3 rounded-full bg-green-600 mr-2'></span>
@@ -594,7 +593,6 @@ export default function Step3Competitors({
                 {/* Accepted Competitors */}
                 {acceptedCompetitors.map((competitor) => (
                     <div key={competitor.id} className="flex items-center gap-[15px] border rounded-sm min-h-[60px] p-5 bg-white flex-wrap">
-                        <button><Settings className='w-4 text-gray-400' /></button>
                         <p className='text-black'>{competitor.name}</p>
                         <Badge variant="outline">{competitor.mentions} mentions</Badge>
                         <Badge variant={competitor.source === 'ai' ? 'default' : 'secondary'}>

@@ -479,6 +479,44 @@ span.img-avatar img {
     color: var(--color-sidebar-ring);
 }
 
+/** Flexible Table - Copy of default-table without fixed column widths **/
+
+.flexible-table thead th {
+    color: var(--gray-text-color);
+    padding: 5px 10px;
+    background: #f8f8f8;
+    font-weight: 700;
+}
+
+.flexible-table th,
+.flexible-table td {
+    border: 1px solid var(--border);
+    padding: 15px 10px;
+}
+
+.flexible-table.table-fixed th:first-child,
+.flexible-table.table-fixed td:first-child {
+    max-width: 40px;
+    min-width: 40px;
+}
+
+.flexible-table th button[aria-checked="true"],
+.flexible-table td button[aria-checked="true"] {
+    background: var(--orange-1);
+    border-color: var(--orange-1);
+}
+
+.flexible-table thead th button {
+    padding: 0;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.flexible-table thead th:first-child button,
+.flexible-table thead td:first-child button {
+    width: 16px;
+}
+
 /** Form Control **/
 
 .form-control {
