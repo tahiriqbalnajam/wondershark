@@ -133,7 +133,7 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
                 variant="default"
                 size="sm"
                 disabled
-                className="gap-2"
+                className="gap-2 primary-btn"
                 style={{ backgroundColor: 'var(--orange-1)', color: 'white' }}
             >
                 <Download className="h-4 w-4" />
@@ -157,7 +157,7 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
                 size="sm"
                 onClick={captureScreenshots}
                 disabled={isGenerating}
-                className="gap-2"
+                className="gap-2 primary-btn"
                 style={{ backgroundColor: 'var(--orange-1)', color: 'white' }}
             >
                 {isGenerating ? (
