@@ -520,80 +520,99 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
         <AppLayout title={brand.name}>
             <Head title={brand.name} />
             {/* Filters Section */}
-            <div className="flex flex-wrap gap-4 items-end mb-5">
-                {/* Date Range Filter */}
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Date Range</label>
-                    <div className="flex gap-2">
-                        <Select value={selectedDateRange} onValueChange={handleDateRangeSelect}>
-                            <SelectTrigger className="w-32">
-                                <SelectValue placeholder="Select range" />
+            <div className="flex flex-wrap gap-4 items-end mb-10 justify-between">
+                <div className="flex flex-wrap gap-4 items-end">
+                    {/* Date Range Filter */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Date Range</label>
+                        <div className="flex gap-2">
+                            <Select value={selectedDateRange} onValueChange={handleDateRangeSelect}>
+                                <SelectTrigger className="w-32">
+                                    <SelectValue placeholder="Select range" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="7">7 days</SelectItem>
+                                    <SelectItem value="14">14 days</SelectItem>
+                                    <SelectItem value="30">30 days</SelectItem>
+                                    <SelectItem value="custom">Custom</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            {selectedDateRange === 'custom' && (
+                                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className="w-fit">
+                                            <Calendar className="h-4 w-4 mr-2" />
+                                            {customDateRange.from ? (
+                                                customDateRange.to ? (
+                                                    `${format(customDateRange.from, 'MMM dd')} - ${format(customDateRange.to, 'MMM dd')}`
+                                                ) : (
+                                                    format(customDateRange.from, 'MMM dd, yyyy')
+                                                )
+                                            ) : (
+                                                'Pick a date'
+                                            )}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <DayPicker
+                                            mode="range"
+                                            selected={{ from: customDateRange.from, to: customDateRange.to }}
+                                            onSelect={(range) => setCustomDateRange(range || {})}
+                                            numberOfMonths={2}
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Brand Filter */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Brand</label>
+                        <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                            <SelectTrigger className="w-48">
+                                <SelectValue placeholder="Select brand" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="7">7 days</SelectItem>
-                                <SelectItem value="14">14 days</SelectItem>
-                                <SelectItem value="30">30 days</SelectItem>
-                                <SelectItem value="custom">Custom</SelectItem>
+                                {brands.map((brand) => (
+                                    <SelectItem key={brand.value} value={brand.value}>
+                                        {brand.label}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
-
-                        {selectedDateRange === 'custom' && (
-                            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" className="w-fit">
-                                        <Calendar className="h-4 w-4 mr-2" />
-                                        {customDateRange.from ? (
-                                            customDateRange.to ? (
-                                                `${format(customDateRange.from, 'MMM dd')} - ${format(customDateRange.to, 'MMM dd')}`
-                                            ) : (
-                                                format(customDateRange.from, 'MMM dd, yyyy')
-                                            )
-                                        ) : (
-                                            'Pick a date'
-                                        )}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <DayPicker
-                                        mode="range"
-                                        selected={{ from: customDateRange.from, to: customDateRange.to }}
-                                        onSelect={(range) => setCustomDateRange(range || {})}
-                                        numberOfMonths={2}
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                        )}
                     </div>
-                </div>
 
-                {/* Brand Filter */}
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Brand</label>
-                    <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-                        <SelectTrigger className="w-48">
-                            <SelectValue placeholder="Select brand" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {brands.map((brand) => (
-                                <SelectItem key={brand.value} value={brand.value}>
-                                    {brand.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
+                    {/* AI Model Filter */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">AI Model</label>
+                        <Select value={selectedAIModel} onValueChange={setSelectedAIModel}>
+                            <SelectTrigger className="w-56">
+                                <SelectValue>
+                                    {(() => {
+                                        const model = aiModelOptions.find(m => m.value === selectedAIModel);
+                                        if (!model) return 'Select AI model';
 
-                {/* AI Model Filter */}
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">AI Model</label>
-                    <Select value={selectedAIModel} onValueChange={setSelectedAIModel}>
-                        <SelectTrigger className="w-56">
-                            <SelectValue>
-                                {(() => {
-                                    const model = aiModelOptions.find(m => m.value === selectedAIModel);
-                                    if (!model) return 'Select AI model';
+                                        return (
+                                            <div className="flex items-center gap-2">
+                                                {model.logo && (
+                                                    <img
+                                                        src={model.logo}
+                                                        alt={model.label}
+                                                        className="w-4 h-4 object-contain"
+                                                    />
+                                                )}
+                                                <span>{model.label}</span>
+                                            </div>
+                                        );
+                                    })()}
+                                </SelectValue>
+                            </SelectTrigger>
 
-                                    return (
+                            <SelectContent>
+                                {aiModelOptions.map(model => (
+                                    <SelectItem key={model.value} value={model.value}>
                                         <div className="flex items-center gap-2">
                                             {model.logo && (
                                                 <img
@@ -604,52 +623,35 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                                             )}
                                             <span>{model.label}</span>
                                         </div>
-                                    );
-                                })()}
-                            </SelectValue>
-                        </SelectTrigger>
-
-                        <SelectContent>
-                            {aiModelOptions.map(model => (
-                                <SelectItem key={model.value} value={model.value}>
-                                    <div className="flex items-center gap-2">
-                                        {model.logo && (
-                                            <img
-                                                src={model.logo}
-                                                alt={model.label}
-                                                className="w-4 h-4 object-contain"
-                                            />
-                                        )}
-                                        <span>{model.label}</span>
-                                    </div>
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
-            </div>
 
-            {/* PDF Export Button - Right after filters */}
-            <div className="flex justify-end mb-5">
-                <ExportDashboardPDF
-                    brandName={brand.name}
-                    dateRange={selectedDateRange === 'custom'
-                        ? customDateRange.from && customDateRange.to
-                            ? `${format(customDateRange.from, 'MMM dd')} - ${format(customDateRange.to, 'MMM dd')}`
+                {/* PDF Export Button - Right after filters */}
+                <div className="space-y-2">
+                    <ExportDashboardPDF
+                        brandName={brand.name}
+                        dateRange={selectedDateRange === 'custom'
+                            ? customDateRange.from && customDateRange.to
+                                ? `${format(customDateRange.from, 'MMM dd')} - ${format(customDateRange.to, 'MMM dd')}`
+                                : `${selectedDateRange} days`
                             : `${selectedDateRange} days`
-                        : `${selectedDateRange} days`
-                    }
-                    aiModel={selectedAIModel === 'all' ? 'All AI Models' : aiModelOptions.find(m => m.value === selectedAIModel)?.label || 'All AI Models'}
-                    industryRanking={filteredCompetitiveStats.map(stat => ({
-                        brand: stat.entity_name,
-                        position: stat.position,
-                        sentiment: stat.sentiment_level,
-                        visibility: stat.visibility_percentage
-                    }))}
-                    prompts={filteredPrompts}
-                    fileName={`${brand.name.toLowerCase().replace(/\s+/g, '-')}-dashboard-report-${new Date().toISOString().split('T')[0]}.pdf`}
-                />
+                        }
+                        aiModel={selectedAIModel === 'all' ? 'All AI Models' : aiModelOptions.find(m => m.value === selectedAIModel)?.label || 'All AI Models'}
+                        industryRanking={filteredCompetitiveStats.map(stat => ({
+                            brand: stat.entity_name,
+                            position: stat.position,
+                            sentiment: stat.sentiment_level,
+                            visibility: stat.visibility_percentage
+                        }))}
+                        prompts={filteredPrompts}
+                        fileName={`${brand.name.toLowerCase().replace(/\s+/g, '-')}-dashboard-report-${new Date().toISOString().split('T')[0]}.pdf`}
+                    />
+                </div>
+                
             </div>
 
             {/* <Separator /> */}
