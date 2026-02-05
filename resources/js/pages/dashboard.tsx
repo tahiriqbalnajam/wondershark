@@ -78,6 +78,8 @@ export default function Dashboard() {
             name: string;
             website?: string;
             description?: string;
+            logo?: string;
+            logo_thumbnail?: string;
         };
         brands?: Array<{ id: number, name: string }>,
         isAdmin?: boolean,
@@ -447,6 +449,7 @@ export default function Dashboard() {
                                 <div className="mt-2">
                                     <ExportDashboardPDF
                                         brandName={currentBrand.name}
+                                        logoUrl={currentBrand.logo ? `/storage/${currentBrand.logo}` : currentBrand.website ? `https://img.logo.dev/${(currentBrand.website || '').replace(/^https?:\/\//, '').replace(/^www\./, '')}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA` : undefined}
                                         dateRange={selectedDateRange === 'custom'
                                             ? customDateRange.from && customDateRange.to
                                                 ? `${format(customDateRange.from, 'MMM dd')} - ${format(customDateRange.to, 'MMM dd')}`
