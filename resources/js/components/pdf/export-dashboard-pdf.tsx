@@ -44,6 +44,7 @@ interface ExportDashboardPDFProps {
     industryRanking: IndustryRankingItem[];
     prompts: Prompt[];
     fileName?: string;
+    autoTrigger?: boolean;
 }
 
 export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
@@ -54,11 +55,14 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
     industryRanking,
     prompts,
     fileName = 'dashboard-report.pdf',
+    autoTrigger = false,
 }) => {
     const [isClient, setIsClient] = useState(false);
     const [PDFDownloadLink, setPDFDownloadLink] = useState<any>(null);
     const [DashboardPDF, setDashboardPDF] = useState<any>(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isManualGeneration, setIsManualGeneration] = useState(false);
+    const [hasTriggered, setHasTriggered] = useState(false);
     const [chartImages, setChartImages] = useState<{
         visibilityChart?: string;
         industryRankingTable?: string;
@@ -78,8 +82,10 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
         });
     }, []);
 
-    const captureScreenshots = async () => {
+    const captureScreenshots = async (manual = true) => {
+        console.log('Capturing screenshots...', { autoTrigger, isClient, PDFDownloadLink: !!PDFDownloadLink, DashboardPDF: !!DashboardPDF, manual });
         setIsGenerating(true);
+        setIsManualGeneration(manual);
         const images: any = {};
 
         try {
@@ -116,6 +122,7 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
 
             setChartImages(images);
             setIsGenerating(false);
+            setIsManualGeneration(false);
 
             // Trigger PDF download after screenshots are captured
             setTimeout(() => {
@@ -125,9 +132,23 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
         } catch (error) {
             console.error('Error capturing screenshots:', error);
             setIsGenerating(false);
+            setIsManualGeneration(false);
             alert('Error generating PDF: ' + (error as Error).message);
         }
     };
+
+    // Auto-trigger PDF generation when components are loaded and autoTrigger is true
+    useEffect(() => {
+        console.log('Auto-trigger useEffect running:', { autoTrigger, isClient, PDFDownloadLink: !!PDFDownloadLink, DashboardPDF: !!DashboardPDF, isGenerating, hasTriggered });
+        if (autoTrigger && isClient && PDFDownloadLink && DashboardPDF && !isGenerating && !hasTriggered) {
+            console.log('Auto-triggering PDF generation...');
+            setHasTriggered(true);
+            // Small delay to ensure DOM elements are rendered
+            setTimeout(() => {
+                captureScreenshots(false); // false = not manual
+            }, 2000); // Increased delay to ensure charts are loaded
+        }
+    }, [autoTrigger, isClient, PDFDownloadLink, DashboardPDF, isGenerating, hasTriggered]);
 
     if (!isClient || !PDFDownloadLink || !DashboardPDF) {
         return (
@@ -157,12 +178,12 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
             <Button
                 variant="default"
                 size="sm"
-                onClick={captureScreenshots}
-                disabled={isGenerating}
+                onClick={() => captureScreenshots(true)}
+                disabled={isGenerating && isManualGeneration}
                 className="gap-2 primary-btn"
                 style={{ backgroundColor: 'var(--orange-1)', color: 'white' }}
             >
-                {isGenerating ? (
+                {(isGenerating && isManualGeneration) ? (
                     <>
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Generating PDF...

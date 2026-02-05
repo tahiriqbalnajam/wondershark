@@ -230,10 +230,7 @@ const styles = StyleSheet.create({
         color: '#6B7280',
     },
     footer: {
-        position: 'absolute',
-        bottom: 20,
-        left: 30,
-        right: 30,
+        marginTop: 20,
         textAlign: 'center',
         fontSize: 8,
         color: '#9CA3AF',
@@ -361,71 +358,81 @@ export const DashboardPDF: React.FC<DashboardPDFProps> = ({
     return (
         <Document>
             <Page size="A4" style={styles.page}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
-                        <Image src={logoUrl || "/images/StackInfluence.png"} style={{ width: 24, height: 24, marginRight: 10 }} />
-                        <Text style={styles.title}>{brandName} – AI Brand Visibility Dashboard</Text>
+                <View style={{ flex: 1, flexDirection: 'column' }}>
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
+                            <Image src={logoUrl || "/images/StackInfluence.png"} style={{ width: 24, height: 24, marginRight: 10 }} />
+                            <Text style={styles.title}>{brandName} – AI Brand Visibility Dashboard</Text>
+                        </View>
+                        <Text style={styles.subtitle}>Generated: {generatedDate}</Text>
+                        {/* 
+                        <Text style={styles.subtitle}>Date Range: {dateRange}</Text>
+                        <Text style={styles.subtitle}>AI Model: {aiModel}</Text>
+                        <Text style={styles.subtitle}>Generated: {generatedDate}</Text> */}
                     </View>
-                    <Text style={styles.subtitle}>Generated: {generatedDate}</Text>
-                    {/* 
-                    <Text style={styles.subtitle}>Date Range: {dateRange}</Text>
-                    <Text style={styles.subtitle}>AI Model: {aiModel}</Text>
-                    <Text style={styles.subtitle}>Generated: {generatedDate}</Text> */}
-                </View>
 
-                {/* Visibility Section */}
-                <View style={styles.section}>
-                    {/* <Text style={styles.sectionTitle}>Visibility</Text>
-                    <Text style={styles.sectionDescription}>
-                        Percentage of chats mentioning each brand
-                    </Text> */}
+                    {/* Visibility Section */}
+                    <View style={[styles.section, { flex: 1 }]}>
+                        {/* <Text style={styles.sectionTitle}>Visibility</Text>
+                        <Text style={styles.sectionDescription}>
+                            Percentage of chats mentioning each brand
+                        </Text> */}
 
 
-                    {chartImages?.visibilityChart ? (
-                    <View style={styles.chartBox}> <Image src={chartImages.visibilityChart} style={styles.chartImage} /> </View>
-                    ) : industryRanking.length === 0 ? (
-                        <View style={styles.chartPlaceholder}>
-                            <Text style={styles.chartText}>
-                                The system is currently analyzing visibility data. Please check back later.
-                            </Text>
-                        </View>
-                    ) : (
-                        <View style={styles.table}>
-                            {/* Table Header */}
-                            <View style={[styles.tableRow, styles.tableHeader]}>
-                                <Text style={[styles.tableCol, styles.tableColRank]}>#</Text>
-                                <Text style={[styles.tableCol, styles.tableColBrand]}>Brand</Text>
-                                <Text style={[styles.tableCol, styles.tableColVisibility]}>Visibility %</Text>
+                        {chartImages?.visibilityChart ? (
+                        <View style={styles.chartBox}> <Image src={chartImages.visibilityChart} style={styles.chartImage} /> </View>
+                        ) : industryRanking.length === 0 ? (
+                            <View style={styles.chartPlaceholder}>
+                                <Text style={styles.chartText}>
+                                    The system is currently analyzing visibility data. Please check back later.
+                                </Text>
                             </View>
+                        ) : (
+                            <View style={styles.table}>
+                                {/* Table Header */}
+                                <View style={[styles.tableRow, styles.tableHeader]}>
+                                    <Text style={[styles.tableCol, styles.tableColRank]}>#</Text>
+                                    <Text style={[styles.tableCol, styles.tableColBrand]}>Brand</Text>
+                                    <Text style={[styles.tableCol, styles.tableColVisibility]}>Visibility %</Text>
+                                </View>
 
-                            {/* Table Rows - Sorted by visibility */}
-                            {industryRanking
-                                .sort((a, b) => {
-                                    // Try to extract numeric value from visibility string
-                                    const aNum = parseFloat(a.visibility) || 0;
-                                    const bNum = parseFloat(b.visibility) || 0;
-                                    return bNum - aNum;
-                                })
-                                .map((item, index) => (
-                                    <View key={index} style={styles.tableRow}>
-                                        <Text style={[styles.tableCol, styles.tableColRank]}>{index + 1}</Text>
-                                        <Text style={[styles.tableCol, styles.tableColBrand]}>{item.brand}</Text>
-                                        <Text style={[styles.tableCol, styles.tableColVisibility]}>
-                                            <Text style={[styles.badge, getVisibilityBadgeStyle(item.visibility)]}>
-                                                {item.visibility}
+                                {/* Table Rows - Sorted by visibility */}
+                                {industryRanking
+                                    .sort((a, b) => {
+                                        // Try to extract numeric value from visibility string
+                                        const aNum = parseFloat(a.visibility) || 0;
+                                        const bNum = parseFloat(b.visibility) || 0;
+                                        return bNum - aNum;
+                                    })
+                                    .slice(0, 8)
+                                    .map((item, index) => (
+                                        <View key={index} style={styles.tableRow}>
+                                            <Text style={[styles.tableCol, styles.tableColRank]}>{index + 1}</Text>
+                                            <Text style={[styles.tableCol, styles.tableColBrand]}>{item.brand}</Text>
+                                            <Text style={[styles.tableCol, styles.tableColVisibility]}>
+                                                <Text style={[styles.badge, getVisibilityBadgeStyle(item.visibility)]}>
+                                                    {item.visibility}
+                                                </Text>
                                             </Text>
-                                        </Text>
-                                    </View>
-                                ))}
-                        </View>
-                    )}
+                                        </View>
+                                    ))}
+                            </View>
+                        )}
+                    </View>
+
+                    {/* Footer */}
+                    <Text style={styles.footer}>
+                        Wondershark Dashboard Report - Page 1
+                    </Text>
                 </View>
+            </Page>
 
-
-
-                {/* Industry Ranking Section */}
-                <View style={styles.section}>
+            {/* Brand Visibility Index - Page 2 */}
+            <Page size="A4" style={styles.page}>
+                <View style={{ flex: 1, flexDirection: 'column' }}>
+                    {/* Industry Ranking Section */}
+                    <View style={[styles.section, { flex: 1 }]}>
                     {/* <Text style={styles.sectionTitle}>Industry Ranking</Text>
                     <Text style={styles.sectionDescription}>
                         Brands with highest visibility
@@ -452,7 +459,7 @@ export const DashboardPDF: React.FC<DashboardPDFProps> = ({
                             </View>
 
                             {/* Table Rows */}
-                            {industryRanking.map((item, index) => (
+                            {industryRanking.slice(0, 8).map((item, index) => (
                                 <View key={index} style={styles.tableRow}>
                                     <Text style={[styles.tableCol, styles.tableColRank]}>{index + 1}</Text>
                                     <Text style={[styles.tableCol, styles.tableColBrand]}>{item.brand}</Text>
@@ -471,25 +478,28 @@ export const DashboardPDF: React.FC<DashboardPDFProps> = ({
                             ))}
                         </View>
                     )}
-                </View>
+                    </View>
 
-                {/* Footer */}
-                <Text style={styles.footer}>
-                    Wondershark Dashboard Report - Page 1
-                </Text>
+                    {/* Footer */}
+                    <Text style={styles.footer}>
+                        Wondershark Dashboard Report - Page 2
+                    </Text>
+                </View>
             </Page>
 
-            {/* AI Citations Section - New Page */}
-            <Page size="A4" style={styles.page}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>AI Citations</Text>
-                    <Text style={styles.subtitle}>Analysis results from AI models</Text>
-                </View>
+            {/* AI Citations Section - Page 3 - Only render if there's content */}
+            {(chartImages?.citationsSection || prompts.length > 0) && (
+                <Page size="A4" style={styles.page}>
+                    <View style={{ flex: 1, flexDirection: 'column' }}>
+                        <View style={styles.header}>
+                        <Text style={styles.title}>AI Citations</Text>
+                            <Text style={styles.subtitle}>Analysis results from AI models</Text>
+                        </View>
 
-                {chartImages?.citationsSection ? (
-                    <View style={styles.chartBox}><Image src={chartImages.citationsSection} style={styles.chartImage} /></View>
-                    
-                ) : prompts.length === 0 ? (
+                        <View style={{ flex: 1 }}>
+                            {chartImages?.citationsSection ? (
+                        <View style={styles.chartBox}><Image src={chartImages.citationsSection} style={styles.chartImage} /></View>
+                    ) : prompts.length === 0 ? (
                     <View style={styles.emptyState}>
                         <Text style={styles.emptyStateText}>
                             No AI citations found for this filter.
@@ -530,15 +540,18 @@ export const DashboardPDF: React.FC<DashboardPDFProps> = ({
                     <View style={{ marginTop: 15, padding: 10, backgroundColor: '#F9FAFB', borderRadius: 8 }}>
                         <Text style={{ fontSize: 9, color: '#6B7280', textAlign: 'center' }}>
                             Showing first 10 of {prompts.length} citations. View full list in the online dashboard.
+                            </Text>
+                        </View>
+                    )}
+                        </View>
+
+                        {/* Footer */}
+                        <Text style={styles.footer}>
+                            Wondershark Dashboard Report - Page 3
                         </Text>
                     </View>
-                )}
-
-                {/* Footer */}
-                <Text style={styles.footer}>
-                    Wondershark Dashboard Report - Page 2
-                </Text>
-            </Page>
+                </Page>
+            )}
         </Document>
     );
 };

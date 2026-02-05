@@ -460,6 +460,7 @@ export default function Dashboard() {
                                         industryRanking={industryRanking}
                                         prompts={[]}
                                         fileName={`${currentBrand.name.toLowerCase().replace(/\s+/g, '-')}-dashboard-report-${new Date().toISOString().split('T')[0]}.pdf`}
+                                        autoTrigger={true}
                                     />
                                 </div>
                             )}
