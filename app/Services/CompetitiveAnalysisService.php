@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\AiModel;
 use App\Models\Brand;
 use App\Models\BrandCompetitiveStat;
+use App\Models\BrandMention;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -574,5 +576,281 @@ CRITICAL INSTRUCTIONS:
         });
 
         return $brandsNeedingAnalysis->get();
+    }
+
+    /**
+     * Get mention-based visibility stats for a brand
+     *
+     * This calculates visibility as: (prompts mentioning entity / total prompts) * 100
+     */
+    public function getMentionBasedVisibility(Brand $brand, ?int $days = 30, ?int $aiModelId = null): array
+    {
+        $startDate = now()->subDays($days);
+        $endDate = now();
+
+        // Get total unique prompts analyzed in the time window
+        $totalPromptsQuery = BrandMention::where('brand_id', $brand->id)
+            ->whereBetween('analyzed_at', [$startDate, $endDate]);
+
+        if ($aiModelId) {
+            $totalPromptsQuery->where('ai_model_id', $aiModelId);
+        }
+
+        $totalPrompts = $totalPromptsQuery->distinct('brand_prompt_id')->count('brand_prompt_id');
+
+        if ($totalPrompts === 0) {
+            // Fall back to AI-generated analysis stats
+            return $this->getLatestStatsWithTrends($brand);
+        }
+
+        // Get mention counts grouped by entity
+        $mentionStatsQuery = BrandMention::where('brand_id', $brand->id)
+            ->whereBetween('analyzed_at', [$startDate, $endDate])
+            ->select(
+                'entity_type',
+                'entity_name',
+                'entity_domain',
+                'competitor_id',
+                DB::raw('COUNT(DISTINCT brand_prompt_id) as prompts_mentioned'),
+                DB::raw('SUM(mention_count) as total_mentions'),
+                DB::raw('AVG(position) as avg_position')
+            )
+            ->groupBy('entity_type', 'entity_name', 'entity_domain', 'competitor_id');
+
+        if ($aiModelId) {
+            $mentionStatsQuery->where('ai_model_id', $aiModelId);
+        }
+
+        $mentionStats = $mentionStatsQuery->get();
+
+        if ($mentionStats->isEmpty()) {
+            return $this->getLatestStatsWithTrends($brand);
+        }
+
+        // Calculate total mentions across ALL entities (brand + competitors) for fair share of voice
+        $totalAllMentions = $mentionStats->sum('total_mentions');
+
+        // Build visibility stats array
+        $visibilityStats = [];
+
+        foreach ($mentionStats as $stat) {
+            // Calculate visibility as share of voice across all entities
+            // This gives a fair comparison: brand and competitors compete for the same 100%
+            $visibility = $totalAllMentions > 0
+                ? ($stat->total_mentions / $totalAllMentions) * 100
+                : 0;
+
+            // Get sentiment from competitive stats if available
+            $competitiveStat = BrandCompetitiveStat::where('brand_id', $brand->id)
+                ->where('entity_type', $stat->entity_type)
+                ->when($stat->competitor_id, fn ($q) => $q->where('competitor_id', $stat->competitor_id))
+                ->latest('analyzed_at')
+                ->first();
+
+            $entityUrl = $stat->entity_domain
+                ? 'https://'.$stat->entity_domain
+                : ($stat->entity_type === 'brand' ? $brand->website : '');
+
+            // Calculate position score based on average first-mention position
+            // Lower position = mentioned earlier = better ranking
+            // Convert to 1-10 scale where 1 is best (mentioned first)
+            $avgPosition = $stat->avg_position ?? 5000;
+            $positionScore = min(10, max(1, round($avgPosition / 500, 1)));
+
+            $visibilityStats[] = [
+                'id' => $competitiveStat->id ?? 0,
+                'entity_type' => $stat->entity_type,
+                'entity_name' => $stat->entity_name,
+                'entity_url' => $entityUrl,
+                'visibility' => round($visibility, 2),
+                'sentiment' => $competitiveStat->sentiment ?? 50,
+                'position' => round($positionScore, 1),
+                'analyzed_at' => now()->toDateTimeString(),
+                'trends' => $this->calculateTrendsForEntity($brand, $stat->entity_type, $stat->competitor_id, $days),
+                'visibility_percentage' => round($visibility, 1).'%',
+                'position_formatted' => '#'.round($positionScore, 1),
+                'sentiment_level' => $competitiveStat ? $competitiveStat->sentiment_level : 'Neutral',
+                'mention_data' => [
+                    'prompts_mentioned' => $stat->prompts_mentioned,
+                    'total_prompts' => $totalPrompts,
+                    'total_mentions' => $stat->total_mentions,
+                    'total_all_mentions' => $totalAllMentions,
+                    'share_of_voice' => round($visibility, 2),
+                ],
+            ];
+        }
+
+        // Sort by visibility descending
+        usort($visibilityStats, fn ($a, $b) => $b['visibility'] <=> $a['visibility']);
+
+        return $visibilityStats;
+    }
+
+    /**
+     * Calculate trends for an entity based on mention data
+     */
+    protected function calculateTrendsForEntity(Brand $brand, string $entityType, ?int $competitorId, int $days = 30): array
+    {
+        $currentPeriodStart = now()->subDays($days);
+        $previousPeriodStart = now()->subDays($days * 2);
+        $previousPeriodEnd = now()->subDays($days);
+
+        // Current period stats
+        $currentQuery = BrandMention::where('brand_id', $brand->id)
+            ->where('entity_type', $entityType)
+            ->when($competitorId, fn ($q) => $q->where('competitor_id', $competitorId))
+            ->whereBetween('analyzed_at', [$currentPeriodStart, now()]);
+
+        $currentPrompts = (clone $currentQuery)->distinct('brand_prompt_id')->count('brand_prompt_id');
+        $currentTotal = BrandMention::where('brand_id', $brand->id)
+            ->whereBetween('analyzed_at', [$currentPeriodStart, now()])
+            ->distinct('brand_prompt_id')
+            ->count('brand_prompt_id');
+
+        $currentVisibility = $currentTotal > 0 ? ($currentPrompts / $currentTotal) * 100 : 0;
+
+        // Previous period stats
+        $previousQuery = BrandMention::where('brand_id', $brand->id)
+            ->where('entity_type', $entityType)
+            ->when($competitorId, fn ($q) => $q->where('competitor_id', $competitorId))
+            ->whereBetween('analyzed_at', [$previousPeriodStart, $previousPeriodEnd]);
+
+        $previousPrompts = (clone $previousQuery)->distinct('brand_prompt_id')->count('brand_prompt_id');
+        $previousTotal = BrandMention::where('brand_id', $brand->id)
+            ->whereBetween('analyzed_at', [$previousPeriodStart, $previousPeriodEnd])
+            ->distinct('brand_prompt_id')
+            ->count('brand_prompt_id');
+
+        $previousVisibility = $previousTotal > 0 ? ($previousPrompts / $previousTotal) * 100 : 0;
+
+        $visibilityChange = $currentVisibility - $previousVisibility;
+
+        if ($previousTotal === 0 && $currentTotal === 0) {
+            return [
+                'visibility_trend' => 'new',
+                'sentiment_trend' => 'stable',
+                'position_trend' => 'stable',
+                'visibility_change' => 0,
+                'sentiment_change' => 0,
+                'position_change' => 0,
+            ];
+        }
+
+        return [
+            'visibility_trend' => $visibilityChange > 1 ? 'up' : ($visibilityChange < -1 ? 'down' : 'stable'),
+            'sentiment_trend' => 'stable', // Sentiment is not tracked via mentions
+            'position_trend' => 'stable', // Position tracking would need more complex logic
+            'visibility_change' => round($visibilityChange, 2),
+            'sentiment_change' => 0,
+            'position_change' => 0,
+        ];
+    }
+
+    /**
+     * Get historical visibility data based on brand mentions
+     */
+    public function getHistoricalMentionVisibility(Brand $brand, ?int $days = 30, ?int $aiModelId = null): array
+    {
+        $startDate = now()->subDays($days);
+        $endDate = now();
+
+        // Get daily aggregated mention data with total_mentions for share of voice
+        $dailyStatsQuery = BrandMention::where('brand_id', $brand->id)
+            ->whereBetween('analyzed_at', [$startDate, $endDate])
+            ->select(
+                DB::raw('DATE(analyzed_at) as date'),
+                'entity_type',
+                'entity_name',
+                'entity_domain',
+                DB::raw('SUM(mention_count) as total_mentions')
+            )
+            ->groupBy(DB::raw('DATE(analyzed_at)'), 'entity_type', 'entity_name', 'entity_domain');
+
+        if ($aiModelId) {
+            $dailyStatsQuery->where('ai_model_id', $aiModelId);
+        }
+
+        $dailyStats = $dailyStatsQuery->get();
+
+        if ($dailyStats->isEmpty()) {
+            // Fall back to existing historical stats
+            return $this->getHistoricalStatsForChart($brand);
+        }
+
+        // Get daily competitor-only totals for fair comparison
+        $dailyCompetitorTotalsQuery = BrandMention::where('brand_id', $brand->id)
+            ->where('entity_type', 'competitor')
+            ->whereBetween('analyzed_at', [$startDate, $endDate])
+            ->select(
+                DB::raw('DATE(analyzed_at) as date'),
+                DB::raw('SUM(mention_count) as total_mentions'),
+                DB::raw('COUNT(DISTINCT entity_name) as competitor_count')
+            )
+            ->groupBy(DB::raw('DATE(analyzed_at)'));
+
+        if ($aiModelId) {
+            $dailyCompetitorTotalsQuery->where('ai_model_id', $aiModelId);
+        }
+
+        $dailyCompetitorTotals = $dailyCompetitorTotalsQuery->get()->keyBy('date');
+
+        // Calculate daily visibility percentages
+        $historicalData = [];
+
+        foreach ($dailyStats as $stat) {
+            $date = $stat->date;
+            $competitorData = $dailyCompetitorTotals[$date] ?? null;
+            $totalCompetitorMentions = $competitorData->total_mentions ?? 0;
+            $competitorCount = $competitorData->competitor_count ?? 0;
+            $avgCompetitorMentions = $competitorCount > 0 ? $totalCompetitorMentions / $competitorCount : 0;
+
+            if ($stat->entity_type === 'brand') {
+                // For brand: visibility relative to average competitor
+                if ($avgCompetitorMentions > 0) {
+                    $ratio = $stat->total_mentions / $avgCompetitorMentions;
+                    $visibility = 100 * ($ratio / ($ratio + 1));
+                } else {
+                    $visibility = 50;
+                }
+            } else {
+                // For competitors: share of voice among competitors
+                $visibility = $totalCompetitorMentions > 0
+                    ? ($stat->total_mentions / $totalCompetitorMentions) * 100
+                    : 0;
+            }
+
+            $domain = $stat->entity_domain ?? $stat->entity_name;
+
+            if (! isset($historicalData[$date])) {
+                $historicalData[$date] = [];
+            }
+
+            $historicalData[$date][$domain] = [
+                'entity_name' => $stat->entity_name,
+                'visibility' => round($visibility, 2),
+                'sentiment' => 50, // Default sentiment
+                'position' => 5, // Default position
+            ];
+        }
+
+        // Sort by date
+        ksort($historicalData);
+
+        // If we have mention-based data, merge with existing stats for sentiment/position
+        if (! empty($historicalData)) {
+            $existingStats = $this->getHistoricalStatsForChart($brand);
+
+            foreach ($historicalData as $date => &$dateData) {
+                foreach ($dateData as $domain => &$entityData) {
+                    // Try to get sentiment/position from existing stats
+                    if (isset($existingStats[$date][$domain])) {
+                        $entityData['sentiment'] = $existingStats[$date][$domain]['sentiment'] ?? 50;
+                        $entityData['position'] = $existingStats[$date][$domain]['position'] ?? 5;
+                    }
+                }
+            }
+        }
+
+        return $historicalData;
     }
 }

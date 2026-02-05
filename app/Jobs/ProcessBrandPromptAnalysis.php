@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Brand;
 use App\Models\BrandPrompt;
 use App\Services\BrandPromptAnalysisService;
+use App\Services\VisibilityCalculationService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -30,7 +31,7 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(BrandPromptAnalysisService $analysisService): void
+    public function handle(BrandPromptAnalysisService $analysisService, VisibilityCalculationService $visibilityService): void
     {
         try {
             Log::info('Starting brand prompt analysis', [
@@ -109,6 +110,28 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
             ]);
 
             $this->brandPrompt->update($updateData);
+
+            // Extract and log brand mentions for visibility calculation
+            try {
+                $visibilityService->extractAndLogMentions(
+                    $this->brandPrompt,
+                    $brand,
+                    $result['ai_response'],
+                    $result['ai_model_id'] ?? null,
+                    $this->sessionId ?: null
+                );
+
+                Log::info('Brand mentions extracted successfully', [
+                    'brand_prompt_id' => $this->brandPrompt->id,
+                    'session_id' => substr($this->sessionId, 0, 8),
+                ]);
+            } catch (\Exception $e) {
+                // Don't fail the whole job if mention extraction fails
+                Log::warning('Failed to extract brand mentions', [
+                    'brand_prompt_id' => $this->brandPrompt->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             // Verify the update
             $this->brandPrompt->refresh();

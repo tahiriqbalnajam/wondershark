@@ -89,9 +89,13 @@ class BrandPromptAnalysisService
             $additionalContext .= " Also include at least 1-2 Reddit discussions (reddit.com URLs) from relevant subreddits discussing [{$phrase}].";
         }
 
-        return "Given a brand [{$brandName}], a comma-separated list of competitors [{$competitorsString}], and a single phrase [{$phrase}], generate two outputs:
+        return "You are an AI assistant answering the question: [{$phrase}]
 
-            1. An AI-generated response to the [{$phrase}] in HTML format, simulating a natural, informative answer that mentions [{$brandName}] and [{$competitorsString}] as relevant players in the context of the phrase.
+            For context, [{$brandName}] is a brand in this space. Related competitors include: [{$competitorsString}].
+
+            Generate two outputs:
+
+            1. A natural, informative HTML-formatted response to [{$phrase}]. Answer the question naturally and objectively - only mention brands/competitors if they are genuinely relevant to answering the question. Do NOT force mentions of all brands.
 
             2. A detailed analysis with resources categorized by type.
             {$additionalContext}
@@ -99,7 +103,7 @@ class BrandPromptAnalysisService
             Please structure your response as follows:
 
             HTML_RESPONSE_START
-            [Your HTML formatted response here]
+            [Your HTML formatted response here - mention brands ONLY if naturally relevant]
             HTML_RESPONSE_END
 
             ANALYSIS_START
@@ -112,10 +116,10 @@ class BrandPromptAnalysisService
             IMPORTANT: Include Reddit URLs (from reddit.com) and YouTube URLs (from youtube.com) when relevant to the topic. For Reddit, prioritize the target subreddits mentioned above if provided.
             ]
             
-            Brand_Sentiment: [Positive/Neutral/Negative with score 1-10]
-            Brand_Position: [Percentage representing brand's prominence in response]
-            Brand_Visibility: [How prominently the brand is featured - score 1-10]
-            Competitor_Mentions: [JSON object with competitor names and their mention counts/context]
+            Brand_Sentiment: [Positive/Neutral/Negative with score 1-10 for [{$brandName}] if mentioned]
+            Brand_Position: [Percentage representing [{$brandName}]'s prominence in response, 0 if not mentioned]
+            Brand_Visibility: [How prominently [{$brandName}] is featured - score 1-10, 0 if not mentioned]
+            Competitor_Mentions: [JSON object with competitor names and their mention counts/context - include only those actually mentioned]
             ANALYSIS_END";
     }
 

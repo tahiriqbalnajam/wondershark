@@ -26,8 +26,8 @@ class CompetitiveStatsController extends Controller
      */
     public function index(Brand $brand)
     {
-        // Get the latest competitive stats with trends
-        $stats = $this->competitiveAnalysisService->getLatestStatsWithTrends($brand);
+        // Get mention-based visibility stats (falls back to AI-generated if no mentions)
+        $stats = $this->competitiveAnalysisService->getMentionBasedVisibility($brand, 30);
 
         // Get analysis history count
         $totalAnalyses = BrandCompetitiveStat::where('brand_id', $brand->id)
@@ -135,7 +135,8 @@ class CompetitiveStatsController extends Controller
      */
     public function getData(Brand $brand)
     {
-        $stats = $this->competitiveAnalysisService->getLatestStatsWithTrends($brand);
+        // Use mention-based visibility for more accurate stats
+        $stats = $this->competitiveAnalysisService->getMentionBasedVisibility($brand, 30);
 
         return response()->json([
             'success' => true,

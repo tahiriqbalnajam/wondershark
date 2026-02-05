@@ -721,9 +721,10 @@ class BrandController extends Controller
         ]);
 
         // Get competitive stats with trends (service now handles empty stats with placeholders)
+        // Try mention-based visibility first, fall back to AI-generated analysis
         $competitiveAnalysisService = app(\App\Services\CompetitiveAnalysisService::class);
-        $competitiveStats = $competitiveAnalysisService->getLatestStatsWithTrends($brand);
-        $historicalStats = $competitiveAnalysisService->getHistoricalStatsForChart($brand);
+        $competitiveStats = $competitiveAnalysisService->getMentionBasedVisibility($brand, 30);
+        $historicalStats = $competitiveAnalysisService->getHistoricalMentionVisibility($brand, 30);
 
         // Get enabled AI models for filtering
         $aiModels = AiModel::enabled()->ordered()->get();
@@ -769,8 +770,9 @@ class BrandController extends Controller
         }
 
         // Get competitive stats with trends (all competitors)
+        // Use mention-based visibility for accurate stats
         $competitiveAnalysisService = app(\App\Services\CompetitiveAnalysisService::class);
-        $competitiveStats = $competitiveAnalysisService->getLatestStatsWithTrends($brand);
+        $competitiveStats = $competitiveAnalysisService->getMentionBasedVisibility($brand, 30);
 
         return Inertia::render('brands/ranking', [
             'brand' => $brand,
