@@ -146,7 +146,7 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
             // Small delay to ensure DOM elements are rendered
             setTimeout(() => {
                 captureScreenshots(false); // false = not manual
-            }, 2000); // Increased delay to ensure charts are loaded
+            }, 500); // Increased delay to ensure charts are loaded
         }
     }, [autoTrigger, isClient, PDFDownloadLink, DashboardPDF, isGenerating, hasTriggered]);
 
