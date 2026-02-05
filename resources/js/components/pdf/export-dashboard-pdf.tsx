@@ -38,6 +38,7 @@ interface IndustryRankingItem {
 
 interface ExportDashboardPDFProps {
     brandName?: string;
+    logoUrl?: string;
     dateRange?: string;
     aiModel?: string;
     industryRanking: IndustryRankingItem[];
@@ -47,6 +48,7 @@ interface ExportDashboardPDFProps {
 
 export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
     brandName = 'All Brands',
+    logoUrl,
     dateRange = '30 days',
     aiModel = 'All AI Models',
     industryRanking,
@@ -179,6 +181,7 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
                     document={
                         <DashboardPDF
                             brandName={brandName}
+                            logoUrl={logoUrl}
                             dateRange={dateRange}
                             aiModel={aiModel}
                             industryRanking={industryRanking}

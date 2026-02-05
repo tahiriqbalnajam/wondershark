@@ -56,6 +56,8 @@ interface Brand {
     description?: string;
     created_at?: string;
     status: string;
+    logo?: string;
+    logo_thumbnail?: string;
     competitors: Array<{
         id: number;
         name: string;
@@ -634,6 +636,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                 <div className="space-y-2">
                     <ExportDashboardPDF
                         brandName={brand.name}
+                        logoUrl={brand.logo ? `/storage/${brand.logo}` : brand.website ? `https://img.logo.dev/${(brand.website || brand.domain || '').replace(/^https?:\/\//, '').replace(/^www\./, '')}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA` : undefined}
                         dateRange={selectedDateRange === 'custom'
                             ? customDateRange.from && customDateRange.to
                                 ? `${format(customDateRange.from, 'MMM dd')} - ${format(customDateRange.to, 'MMM dd')}`

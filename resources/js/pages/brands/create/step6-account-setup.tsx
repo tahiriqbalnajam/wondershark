@@ -56,7 +56,7 @@ export default function Step6AccountSetup({ }: StepProps) {
                 </Card>
 
                 <p className="text-sm text-muted-foreground mt-6">
-                    Click "Finish" to activate your brand and access the dashboard.
+                    Click "Create Brand" to activate your brand and access the dashboard.
                 </p>
             </div>
         </div>

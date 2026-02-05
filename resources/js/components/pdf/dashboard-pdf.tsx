@@ -277,6 +277,7 @@ interface IndustryRankingItem {
 
 interface DashboardPDFProps {
     brandName?: string;
+    logoUrl?: string;
     dateRange?: string;
     aiModel?: string;
     industryRanking: IndustryRankingItem[];
@@ -334,6 +335,7 @@ const getVisibilityBadgeStyle = (visibility: string) => {
 
 export const DashboardPDF: React.FC<DashboardPDFProps> = ({
     brandName = 'All Brands',
+    logoUrl,
     dateRange = '30 days',
     aiModel = 'All AI Models',
     industryRanking,
@@ -361,7 +363,10 @@ export const DashboardPDF: React.FC<DashboardPDFProps> = ({
             <Page size="A4" style={styles.page}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <Text style={styles.title}><img src="" alt="" /><Image src="/images/StackInfluence.png" style={{ width: 24 }}/> {brandName} – AI Brand Visibility Dashboard</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
+                        <Image src={logoUrl || "/images/StackInfluence.png"} style={{ width: 24, height: 24, marginRight: 10 }} />
+                        <Text style={styles.title}>{brandName} – AI Brand Visibility Dashboard</Text>
+                    </View>
                     <Text style={styles.subtitle}>Generated: {generatedDate}</Text>
                     {/* 
                     <Text style={styles.subtitle}>Date Range: {dateRange}</Text>
