@@ -52,7 +52,8 @@ class DashboardController extends Controller
         }
 
         // For non-agency users, check for incomplete brands and redirect to steps
-        if (! $user->hasRole('agency')) {
+        // Skip this check for brand role users (they already have an existing brand account)
+        if (! $user->hasRole('agency') && ! $user->hasRole('brand')) {
             // Get user's first brand (for individual users)
             $firstBrand = Brand::where('user_id', $user->id)
                 ->orderBy('updated_at', 'desc')
@@ -80,7 +81,7 @@ class DashboardController extends Controller
             ->orderBy('updated_at', 'desc')
             ->first();
 
-        // If user has active brands, redirect to the first brand's page
+        // If user has active brands, redirect to the first brand's show page
         if ($firstBrand && $firstBrand->status === 'active') {
             return redirect()->route('brands.show', $firstBrand->id);
         }
