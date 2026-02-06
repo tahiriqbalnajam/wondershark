@@ -77,13 +77,22 @@ class DashboardController extends Controller
         $firstBrand = Brand::where(function ($query) use ($user) {
             $query->where('user_id', $user->id)
                 ->orWhere('agency_id', $user->id);
+            
+            // Also include brands from user's agency if they are an agency member
+            $membership = $user->agencyMembership;
+            if ($membership) {
+                $query->orWhere('agency_id', $membership->agency_id);
+            }
         })
             ->orderBy('updated_at', 'desc')
             ->first();
 
         // If user has active brands, redirect to the first brand's show page
         if ($firstBrand && $firstBrand->status === 'active') {
-            return redirect()->route('brands.show', $firstBrand->id);
+            // Verify user can actually access this brand before redirecting
+            if ($user->canAccessBrand($firstBrand)) {
+                return redirect()->route('brands.show', $firstBrand->id);
+            }
         }
 
         // Otherwise, show the default dashboard

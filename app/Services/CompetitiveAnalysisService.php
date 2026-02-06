@@ -361,7 +361,7 @@ CRITICAL INSTRUCTIONS:
     /**
      * Get latest competitive stats for a brand with trends (only accepted competitors)
      */
-    public function getLatestStatsWithTrends(Brand $brand): array
+    public function getLatestStatsWithTrends(Brand $brand, ?int $aiModelId = null): array
     {
         $stats = BrandCompetitiveStat::latestForBrand($brand->id)
             ->with(['competitor'])
@@ -377,7 +377,12 @@ CRITICAL INSTRUCTIONS:
             ->orderBy('entity_name')
             ->get();
 
-        $statsArray = $stats->map(function ($stat) {
+        $statsArray = $stats->map(function ($stat) use ($aiModelId) {
+            // Skip if ai_model_id filter is provided and doesn't match
+            if ($aiModelId && $stat->ai_model_id != $aiModelId) {
+                return null;
+            }
+            
             $trends = $stat->getTrends();
             $statArray = $stat->toArray();
 
@@ -396,7 +401,7 @@ CRITICAL INSTRUCTIONS:
             $statArray['sentiment_level'] = $stat->sentiment_level;
 
             return $statArray;
-        })->toArray();
+        })->filter()->values()->toArray(); // Filter out null values from ai_model_id filtering
 
         // If no stats exist, create placeholders for brand and accepted competitors
         if (empty($statsArray)) {
@@ -599,8 +604,8 @@ CRITICAL INSTRUCTIONS:
         $totalPrompts = $totalPromptsQuery->distinct('brand_prompt_id')->count('brand_prompt_id');
 
         if ($totalPrompts === 0) {
-            // Fall back to AI-generated analysis stats
-            return $this->getLatestStatsWithTrends($brand);
+            // Fall back to latest stored stats (filtered by ai_model_id if provided)
+            return $this->getLatestStatsWithTrends($brand, $aiModelId);
         }
 
         // Get mention counts grouped by entity
@@ -624,7 +629,7 @@ CRITICAL INSTRUCTIONS:
         $mentionStats = $mentionStatsQuery->get();
 
         if ($mentionStats->isEmpty()) {
-            return $this->getLatestStatsWithTrends($brand);
+            return $this->getLatestStatsWithTrends($brand, $aiModelId);
         }
 
         // Calculate total mentions across ALL entities (brand + competitors) for fair share of voice

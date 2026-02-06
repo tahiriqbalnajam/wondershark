@@ -61,12 +61,32 @@ class RecalculateBrandVisibility extends Command
                     $this->regenerateMentionsForBrand($brand, $visibilityService, $days);
                 }
 
-                // Calculate and update visibility stats
-                $visibilityService->updateCompetitiveStats(
-                    $brand,
-                    now()->subDays($days),
-                    now()
-                );
+                // Get all unique AI models that have mentions for this brand
+                $aiModelIds = \App\Models\BrandMention::where('brand_id', $brand->id)
+                    ->whereNotNull('ai_model_id')
+                    ->distinct('ai_model_id')
+                    ->pluck('ai_model_id')
+                    ->toArray();
+
+                if (empty($aiModelIds)) {
+                    // No AI model mentions found, calculate without filter
+                    $visibilityService->updateCompetitiveStats(
+                        $brand,
+                        now()->subDays($days),
+                        now(),
+                        null
+                    );
+                } else {
+                    // Calculate stats separately for each AI model
+                    foreach ($aiModelIds as $aiModelId) {
+                        $visibilityService->updateCompetitiveStats(
+                            $brand,
+                            now()->subDays($days),
+                            now(),
+                            $aiModelId
+                        );
+                    }
+                }
 
                 $bar->advance();
             } catch (\Exception $e) {

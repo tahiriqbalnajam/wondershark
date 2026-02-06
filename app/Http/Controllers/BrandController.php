@@ -692,8 +692,23 @@ class BrandController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
+        // Debug logging
+        \Log::info('Brand access check', [
+            'user_id' => $user->id,
+            'user_roles' => $user->getRoleNames(),
+            'brand_id' => $brand->id,
+            'brand_user_id' => $brand->user_id,
+            'brand_agency_id' => $brand->agency_id,
+            'has_agency_membership' => $user->agencyMembership !== null,
+            'agency_membership_id' => $user->agencyMembership?->agency_id,
+        ]);
+
         // Ensure the brand belongs to the authenticated agency or user is admin
         if (! $user->canAccessBrand($brand)) {
+            \Log::error('Brand access denied', [
+                'user_id' => $user->id,
+                'brand_id' => $brand->id,
+            ]);
             abort(403);
         }
 

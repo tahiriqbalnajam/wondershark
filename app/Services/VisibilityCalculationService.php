@@ -215,30 +215,26 @@ class VisibilityCalculationService
             // Cap position at 10.0 (the column is DECIMAL(3,1) which maxes at 99.9, but we want 1-10 scale)
             $position = min(10.0, max(1.0, ($stat['avg_position'] ?? 500) / 100));
 
-            // Create or update competitive stat
-            $competitiveStat = BrandCompetitiveStat::updateOrCreate(
-                [
-                    'brand_id' => $brand->id,
-                    'entity_type' => $stat['entity_type'],
-                    'competitor_id' => $stat['competitor_id'],
-                    'ai_model_id' => $aiModelId,
+            // Create new competitive stat (always create new records for historical tracking)
+            $competitiveStat = BrandCompetitiveStat::create([
+                'brand_id' => $brand->id,
+                'entity_type' => $stat['entity_type'],
+                'competitor_id' => $stat['competitor_id'],
+                'ai_model_id' => $aiModelId, // Ensure ai_model_id is saved
+                'entity_name' => $stat['entity_name'],
+                'entity_url' => $entityUrl,
+                'visibility' => $stat['visibility'],
+                'sentiment' => 50, // Default neutral sentiment for mention-based calculation
+                'position' => $position,
+                'analysis_session_id' => $sessionId,
+                'analyzed_at' => $analyzedAt,
+                'raw_data' => [
+                    'prompts_mentioned' => $stat['prompts_mentioned'],
+                    'total_prompts' => $stat['total_prompts'],
+                    'total_mentions' => $stat['total_mentions'],
+                    'calculation_method' => 'mention_based',
                 ],
-                [
-                    'entity_name' => $stat['entity_name'],
-                    'entity_url' => $entityUrl,
-                    'visibility' => $stat['visibility'],
-                    'sentiment' => 50, // Default neutral sentiment for mention-based calculation
-                    'position' => $position,
-                    'analysis_session_id' => $sessionId,
-                    'analyzed_at' => $analyzedAt,
-                    'raw_data' => [
-                        'prompts_mentioned' => $stat['prompts_mentioned'],
-                        'total_prompts' => $stat['total_prompts'],
-                        'total_mentions' => $stat['total_mentions'],
-                        'calculation_method' => 'mention_based',
-                    ],
-                ]
-            );
+            ]);
 
             $updatedStats[] = $competitiveStat;
         }
