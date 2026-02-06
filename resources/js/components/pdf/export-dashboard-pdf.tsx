@@ -82,10 +82,22 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
         });
     }, []);
 
+    const handleManualExport = () => {
+        setIsGenerating(true);
+        setIsManualGeneration(true);
+        
+        // Add delay for manual click
+        setTimeout(() => {
+            captureScreenshots(true);
+        }, 1000); // 1 second delay for manual clicks
+    };
+
     const captureScreenshots = async (manual = true) => {
         console.log('Capturing screenshots...', { autoTrigger, isClient, PDFDownloadLink: !!PDFDownloadLink, DashboardPDF: !!DashboardPDF, manual });
-        setIsGenerating(true);
-        setIsManualGeneration(manual);
+        if (!manual) {
+            setIsGenerating(true);
+            setIsManualGeneration(manual);
+        }
         const images: any = {};
 
         try {
@@ -146,7 +158,7 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
             // Small delay to ensure DOM elements are rendered
             setTimeout(() => {
                 captureScreenshots(false); // false = not manual
-            }, 500); // Increased delay to ensure charts are loaded
+            }, 1500); // Increased delay to ensure charts are loaded
         }
     }, [autoTrigger, isClient, PDFDownloadLink, DashboardPDF, isGenerating, hasTriggered]);
 
@@ -178,7 +190,7 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
             <Button
                 variant="default"
                 size="sm"
-                onClick={() => captureScreenshots(true)}
+                onClick={handleManualExport}
                 disabled={isGenerating && isManualGeneration}
                 className="gap-2 primary-btn"
                 style={{ backgroundColor: 'var(--orange-1)', color: 'white' }}
