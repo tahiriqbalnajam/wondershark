@@ -101,6 +101,20 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
         const images: any = {};
 
         try {
+            // Hide "Show All" buttons and other elements before screenshot
+            const hideElements = document.querySelectorAll('.pdf-export-hidden, .print\\:hidden');
+            console.log('Hiding', hideElements.length, 'elements for PDF export');
+            
+            const originalStyles: string[] = [];
+            hideElements.forEach((el, index) => {
+                const element = el as HTMLElement;
+                originalStyles[index] = element.style.display;
+                element.style.setProperty('display', 'none', 'important');
+            });
+
+            // Small delay to ensure elements are hidden
+            await new Promise(resolve => setTimeout(resolve, 50));
+
             // Capture Visibility Chart
             const visibilityElement = document.querySelector('[data-chart="visibility"]') as HTMLElement;
             if (visibilityElement) {
@@ -131,6 +145,17 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
                 });
                 images.citationsSection = dataUrl;
             }
+
+            // Restore hidden elements to their original state
+            console.log('Restoring', hideElements.length, 'elements after PDF export');
+            hideElements.forEach((el, index) => {
+                const element = el as HTMLElement;
+                if (originalStyles[index]) {
+                    element.style.display = originalStyles[index];
+                } else {
+                    element.style.removeProperty('display');
+                }
+            });
 
             setChartImages(images);
             setIsGenerating(false);

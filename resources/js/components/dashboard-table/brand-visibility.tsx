@@ -228,7 +228,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                 </Table>
                 
                 {hasMore && brandId && (
-                    <div className="flex justify-end mt-4 px-4 print:hidden">
+                    <div className="flex justify-end mt-4 px-4 print:hidden pdf-export-hidden">
                         <Link href={`/brands/${brandId}/ranking`}>
                             <Button variant="outline" size="sm">
                                 Show All
