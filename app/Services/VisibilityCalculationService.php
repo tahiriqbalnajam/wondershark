@@ -155,9 +155,9 @@ class VisibilityCalculationService
         $totalMentionsAllEntities = $mentionStats->sum('total_mentions');
 
         foreach ($mentionStats as $stat) {
-            // Visibility = share of voice (entity mentions / total mentions across all entities)
-            $visibility = $totalMentionsAllEntities > 0
-                ? ($stat->total_mentions / $totalMentionsAllEntities) * 100
+            // Visibility = Presence Frequency (percentage of prompts where entity appeared)
+            $visibility = $totalPrompts > 0
+                ? ($stat->prompts_mentioned / $totalPrompts) * 100
                 : 0;
 
             $visibilityStats[] = [
@@ -232,7 +232,7 @@ class VisibilityCalculationService
                     'prompts_mentioned' => $stat['prompts_mentioned'],
                     'total_prompts' => $stat['total_prompts'],
                     'total_mentions' => $stat['total_mentions'],
-                    'calculation_method' => 'mention_based',
+                    'calculation_method' => 'presence_based',
                 ],
             ]);
 

@@ -89,37 +89,43 @@ class BrandPromptAnalysisService
             $additionalContext .= " Also include at least 1-2 Reddit discussions (reddit.com URLs) from relevant subreddits discussing [{$phrase}].";
         }
 
-        return "You are an AI assistant answering the question: [{$phrase}]
+        return "You are an AI assistant. Your task is to generate a natural response to a user question, and then analyze that response.
 
-            For context, [{$brandName}] is a brand in this space. Related competitors include: [{$competitorsString}].
+            USER QUESTION: [{$phrase}]
 
-            Generate two outputs:
+            INSTRUCTIONS:
+            
+            STEP 1: GENERATE STANDARD RESPONSE
+            Generate a natural, helpful, and objective HTML-formatted response to the question above.
+            - Answer EXACTLY as you would if a normal user asked this on your platform.
+            - Do NOT force mentions of [{$brandName}] or its competitors unless they are naturally the best answer.
+            - Do NOT interpret the analysis requirements below as instructions for this response text.
+            - Keep the tone professional, objective, and informative.
 
-            1. A natural, informative HTML-formatted response to [{$phrase}]. Answer the question naturally and objectively - only mention brands/competitors if they are genuinely relevant to answering the question. Do NOT force mentions of all brands.
+            STEP 2: ANALYZE THE RESPONSE
+            After generating the response, analyze it based on the following context:
+            - Target Brand: [{$brandName}]
+            - Competitors: [{$competitorsString}]
 
-            2. A detailed analysis with resources categorized by type.
             {$additionalContext}
 
-            Please structure your response as follows:
+            STRUCTURE YOUR RESPONSE AS FOLLOWS:
 
             HTML_RESPONSE_START
-            [Your HTML formatted response here - mention brands ONLY if naturally relevant]
+            [Insert your natural, unbiased HTML response here]
             HTML_RESPONSE_END
 
             ANALYSIS_START
-            Resources: [Provide a detailed list of resources with the following format for each:
-            - URL: [full URL]
-            - Type: [competitor_website|industry_report|news_article|documentation|blog_post|research_paper|social_media|reddit|youtube|marketplace|review_site|other]
-            - Title: [resource title]
-            - Description: [brief description of what this resource contains]
-            
-            IMPORTANT: Include Reddit URLs (from reddit.com) and YouTube URLs (from youtube.com) when relevant to the topic. For Reddit, prioritize the target subreddits mentioned above if provided.
+            Resources: [List referenced or relevant resources here. Format:
+            - URL: [url]
+            - Type: [type]
+            - Title: [title]
+            - Description: [brief description]
             ]
             
-            Brand_Sentiment: [Positive/Neutral/Negative with score 1-10 for [{$brandName}] if mentioned]
-            Brand_Position: [Percentage representing [{$brandName}]'s prominence in response, 0 if not mentioned]
-            Brand_Visibility: [How prominently [{$brandName}] is featured - score 1-10, 0 if not mentioned]
-            Competitor_Mentions: [JSON object with competitor names and their mention counts/context - include only those actually mentioned]
+            Brand_Sentiment: [Positive/Neutral/Negative score 1-10 for [{$brandName}] if mentioned]
+            Brand_Position: [Percentage prominence of [{$brandName}], 0 if not mentioned]
+            Competitor_Mentions: [JSON object of mentioned competitors]
             ANALYSIS_END";
     }
 
@@ -905,7 +911,6 @@ class BrandPromptAnalysisService
     {
         $sentiment = 'neutral';
         $position = 0;
-        $visibility = 0;
         $competitorMentions = [];
 
         // Extract sentiment
@@ -923,10 +928,6 @@ class BrandPromptAnalysisService
             $position = (int) $matches[1];
         }
 
-        // Extract visibility score
-        if (preg_match('/Brand_Visibility:\s*(\d+)/i', $analysisText, $matches)) {
-            $visibility = (int) $matches[1];
-        }
 
         // Extract competitor mentions
         if (preg_match('/Competitor_Mentions:\s*(\{.*?\})/s', $analysisText, $matches)) {
@@ -943,7 +944,6 @@ class BrandPromptAnalysisService
         return [
             'sentiment' => $sentiment,
             'position' => $position,
-            'visibility' => $visibility,
             'competitor_mentions' => $competitorMentions,
         ];
     }

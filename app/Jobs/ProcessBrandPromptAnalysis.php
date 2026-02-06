@@ -94,7 +94,6 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
                 'resources' => json_encode($result['resources']),
                 'sentiment' => $result['analysis']['sentiment'],
                 'position' => $result['analysis']['position'],
-                'visibility' => $result['analysis']['visibility'],
                 'competitor_mentions' => json_encode($result['analysis']['competitor_mentions']),
                 'analysis_completed_at' => now(),
                 'analysis_failed_at' => null, // Clear any previous failure

@@ -55,6 +55,7 @@ class BrandCompetitiveStat extends Model
         return static::where('brand_id', $this->brand_id)
             ->where('entity_type', $this->entity_type)
             ->where('competitor_id', $this->competitor_id)
+            ->where('ai_model_id', $this->ai_model_id)
             ->where('analyzed_at', '<', $this->analyzed_at)
             ->orderBy('analyzed_at', 'desc')
             ->first();
