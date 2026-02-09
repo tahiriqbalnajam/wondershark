@@ -161,7 +161,7 @@ class AiModelController extends Controller
      */
     public function test(Request $request, AiModel $aiModel)
     {
-        $brandPromptAnalysisService = new \App\Services\BrandPromptAnalysisService(new AIPromptService);
+        $brandPromptAnalysisService = app(\App\Services\BrandPromptAnalysisService::class);
         $result = $brandPromptAnalysisService->testAiModel($aiModel);
 
         // If it's an AJAX request, return JSON
