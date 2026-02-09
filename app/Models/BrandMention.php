@@ -23,6 +23,7 @@ class BrandMention extends Model
         'context',
         'session_id',
         'analyzed_at',
+        'sentiment',
     ];
 
     protected $casts = [

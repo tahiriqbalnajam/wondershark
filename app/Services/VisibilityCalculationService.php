@@ -49,6 +49,7 @@ class VisibilityCalculationService
                 'context' => $brandMentionData['context'],
                 'session_id' => $sessionId,
                 'analyzed_at' => $analyzedAt,
+                'sentiment' => $this->getSentimentScore($brandPrompt->sentiment),
             ]);
             $mentions[] = $mention;
         }
@@ -76,6 +77,7 @@ class VisibilityCalculationService
                     'context' => $competitorMentionData['context'],
                     'session_id' => $sessionId,
                     'analyzed_at' => $analyzedAt,
+                    'sentiment' => 50, // Default to neutral for competitors for now
                 ]);
                 $mentions[] = $mention;
             }
@@ -141,7 +143,8 @@ class VisibilityCalculationService
                 'competitor_id',
                 DB::raw('COUNT(DISTINCT brand_prompt_id) as prompts_mentioned'),
                 DB::raw('SUM(mention_count) as total_mentions'),
-                DB::raw('AVG(position) as avg_position')
+                DB::raw('AVG(position) as avg_position'),
+                DB::raw('AVG(sentiment) as avg_sentiment')
             )
             ->groupBy('entity_type', 'entity_name', 'entity_domain', 'competitor_id');
 
@@ -171,6 +174,7 @@ class VisibilityCalculationService
                 'total_mentions' => $stat->total_mentions,
                 'total_all_entities' => $totalMentionsAllEntities,
                 'avg_position' => round($stat->avg_position ?? 0, 1),
+                'avg_sentiment' => $stat->avg_sentiment,
             ];
         }
 
@@ -224,7 +228,7 @@ class VisibilityCalculationService
                 'entity_name' => $stat['entity_name'],
                 'entity_url' => $entityUrl,
                 'visibility' => $stat['visibility'],
-                'sentiment' => 50, // Default neutral sentiment for mention-based calculation
+                'sentiment' => round($stat['avg_sentiment'] ?? 50),
                 'position' => $position,
                 'analysis_session_id' => $sessionId,
                 'analyzed_at' => $analyzedAt,
@@ -477,5 +481,26 @@ class VisibilityCalculationService
         $parts = explode('/', $url);
 
         return $parts[0] ?? null;
+    }
+    /**
+     * Convert sentiment string to numeric score (0-100)
+     */
+    protected function getSentimentScore(?string $sentiment): int
+    {
+        if (! $sentiment) {
+            return 50;
+        }
+
+        $sentiment = strtolower($sentiment);
+
+        if (str_contains($sentiment, 'positive')) {
+            return 100;
+        }
+
+        if (str_contains($sentiment, 'negative')) {
+            return 0;
+        }
+
+        return 50;
     }
 }
