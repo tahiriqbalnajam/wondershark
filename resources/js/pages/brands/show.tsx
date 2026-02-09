@@ -757,7 +757,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                             onPromptClick={handlePromptClick}
                         />
                         {currentPage * 9 < filteredPrompts.length && (
-                            <div className="flex justify-center mt-4">
+                            <div className="flex justify-center mt-4 pdf-export-hidden print:hidden">
                                 <Button className='primary-btn' onClick={() => setCurrentPage(prev => prev + 1)}>
                                     Load More Citations
                                 </Button>

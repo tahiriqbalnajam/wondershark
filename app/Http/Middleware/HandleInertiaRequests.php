@@ -114,6 +114,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $user ? array_merge($user->toArray(), [
                     'logo' => $user->logo ? asset('storage/'.$user->logo) : null,
                     'logo_thumbnail' => $user->logo_thumbnail ? asset('storage/'.$user->logo_thumbnail) : null,
+                    'agency_color' => $user->agency_color,
                 ]) : null,
                 'roles' => $userRoles,
                 'permissions' => $userPermissions,

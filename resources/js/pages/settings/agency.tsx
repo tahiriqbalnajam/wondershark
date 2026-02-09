@@ -26,6 +26,7 @@ type AgencyForm = {
     url: string;
     // can be a File when selected, or a string URL/path returned from the server
     logo: File | string | null;
+    color: string;
 };
 type PasswordForm = {
     current_password: string;
@@ -33,11 +34,12 @@ type PasswordForm = {
     password_confirmation: string;
 };
 
-export default function Agency({ agency }: { agency: { name: string; url?: string; logo?: string } }) {
+export default function Agency({ agency }: { agency: { name: string; url?: string; logo?: string; color?: string } }) {
 const { data, setData, post, errors, processing, recentlySuccessful } = useForm<AgencyForm>({
     name: agency.name || '',
     url: agency.url || '',
     logo: agency.logo || null,
+    color: agency.color || '',
 });
 const cleanup = useMobileNavigation();
 const handleLogout = () => {
@@ -135,6 +137,44 @@ const submitPassword: FormEventHandler = (e) => {
                                         </div>
                                     </div>
                                     <InputError className="mt-2" message={errors.logo} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label>Agency Color</Label>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm text-gray-600">Color Picker:</span>
+                                                <input
+                                                    type="color"
+                                                    value={data.color}
+                                                    onChange={(e) => setData('color', e.target.value)}
+                                                    className="w-10 h-10 border border-gray-300 rounded cursor-pointer"
+                                                    title="Select agency color"
+                                                />
+                                            </div>
+                                            <div className="flex-1 max-w-xs">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-gray-600">Or enter color code:</span>
+                                                    <Input
+                                                        type="text"
+                                                        value={data.color}
+                                                        onChange={(e) => setData('color', e.target.value)}
+                                                        placeholder="#3b82f6 or rgb(59, 130, 246)"
+                                                        className="form-control text-sm"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-gray-500">Preview:</span>
+                                            <div
+                                                className="w-16 h-6 rounded border border-gray-300"
+                                                style={{ backgroundColor: data.color }}
+                                                title={`Color: ${data.color}`}
+                                            />
+                                        </div>
+                                    </div>
+                                    <InputError className="mt-2" message={errors.color} />
                                 </div>
                                 <div className="flex items-center justify-end">
                                     <div className="lg:flex block items-center gap-4 w-full">

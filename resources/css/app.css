@@ -99,7 +99,8 @@
     --sidebar-accent-foreground: rgb(23, 23, 23);
     --sidebar-border:oklch(0.8975 0 0);
     --sidebar-ring: oklch(0.87 0 0);
-    --orange-1:oklch(0.6871 0.2025 29.48);
+    --orange-1: var(--agency-color, oklch(0.6871 0.2025 29.48));
+    --cancel-btn: var(--agency-color, oklch(0.6871 0.2025 29.48));
     --gray-text:oklch(0.5538 0.0025 17.23);
     --gray-text-bg:oklch(0.9672 0 0);
     --ligt-shadow:oklch(0 0 0 / 15%);
@@ -138,7 +139,8 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(0.269 0 0);
     --sidebar-ring: oklch(0.439 0 0);
-    --orange-1:oklch(0.6871 0.2025 29.48);
+    --orange-1: var(--agency-color, oklch(0.6871 0.2025 29.48));
+    --cancel-btn: var(--agency-color, rgba(255, 0, 63, 0.15););
     --gray-text:oklch(1 0 0);
     --gray-text-bg:oklch(0.2046 0 0);
     --ligt-shadow:oklch(1 0 0 / 15%);

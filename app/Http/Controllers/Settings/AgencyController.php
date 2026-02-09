@@ -154,6 +154,7 @@ class AgencyController extends Controller
                 'name' => $user->name,
                 'url' => $user->url,
                 'logo' => $user->logo ? asset('storage/'.$user->logo) : null,
+                'color' => $user->agency_color ?? '',
             ],
         ]);
     }
@@ -167,6 +168,7 @@ class AgencyController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'url' => ['nullable', 'url', 'max:255'],
             'logo' => ['nullable', 'image', 'max:2048'], // 2MB max
+            'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
         ]);
 
         /** @var User $user */
@@ -175,6 +177,7 @@ class AgencyController extends Controller
         $updateData = [
             'name' => $request->name,
             'url' => $request->url,
+            'agency_color' => $request->color ?: null,
         ];
 
         // Handle logo upload

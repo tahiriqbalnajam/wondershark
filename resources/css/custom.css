@@ -51,8 +51,9 @@ button {
 }
 
 .cancle-btn {
-    background: rgba(255, 0, 63, 0.15);
-    color: #FF003F;
+    
+    background: var(--cancel-btn);
+    color: var(--color-white);
 }
 
 .cancle-btn:hover {

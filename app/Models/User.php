@@ -30,6 +30,7 @@ class User extends Authenticatable
         'url',
         'logo',
         'logo_thumbnail',
+        'agency_color',
         'docs_view_mode',
         'docs_sort_by',
     ];
