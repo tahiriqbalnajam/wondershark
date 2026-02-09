@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -136,19 +136,48 @@ const breadcrumbs = (brand: Brand) => [
 export default function BrandShow({ brand, competitiveStats, historicalStats, aiModels, allBrands }: Props) {
     const [selectedCompetitorDomain, setSelectedCompetitorDomain] = useState<string | null>(null);
     const [triggeringAnalysis, setTriggeringAnalysis] = useState(false);
-    const [selectedDateRange, setSelectedDateRange] = useState('30');
+
+    // Initialize from URL params
+    const queryParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const initialDateRange = queryParams?.get('date_range') || '30';
+    const initialAIModel = queryParams?.get('ai_model') || 'all';
+
+    const [selectedDateRange, setSelectedDateRange] = useState(initialDateRange);
     const [calendarOpen, setCalendarOpen] = useState(false);
     const [customDateRange, setCustomDateRange] = useState<{ from?: Date; to?: Date }>({});
     const [selectedBrand, setSelectedBrand] = useState('all');
-    const [selectedAIModel, setSelectedAIModel] = useState('all');
+    const [selectedAIModel, setSelectedAIModel] = useState(initialAIModel);
     const [hoveredDomain, setHoveredDomain] = useState<string | null>(null);
     const [brandFilter, setBrandFilter] = useState<'all' | 'with-agency' | 'without-agency'>('all');
     const [currentPage, setCurrentPage] = useState(1);
+
+    const fetchDashboardData = (days: string, model: string) => {
+        router.get(
+            `/brands/${brand.id}`,
+            {
+                date_range: days === 'custom' ? '30' : days,
+                ai_model: model
+            },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+                only: ['competitiveStats', 'historicalStats']
+            }
+        );
+    };
+
     const handleDateRangeSelect = (days: string) => {
         setSelectedDateRange(days);
         if (days !== 'custom') {
             setCustomDateRange({});
+            fetchDashboardData(days, selectedAIModel);
         }
+    };
+
+    const handleAIModelSelect = (value: string) => {
+        setSelectedAIModel(value);
+        fetchDashboardData(selectedDateRange, value);
     };
     const aiModelOptions = useMemo(() => {
         const models: Array<{
@@ -589,7 +618,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                     {/* AI Model Filter */}
                     <div className="space-y-2">
                         <label className="text-sm font-medium">AI Model</label>
-                        <Select value={selectedAIModel} onValueChange={setSelectedAIModel}>
+                        <Select value={selectedAIModel} onValueChange={handleAIModelSelect}>
                             <SelectTrigger className="w-56">
                                 <SelectValue>
                                     {(() => {
@@ -655,7 +684,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                         autoTrigger={true}
                     />
                 </div>
-                
+
             </div>
 
             {/* <Separator /> */}

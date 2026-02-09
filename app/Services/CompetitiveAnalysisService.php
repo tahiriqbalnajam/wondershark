@@ -465,10 +465,17 @@ CRITICAL INSTRUCTIONS:
     /**
      * Get historical competitive stats for visibility chart (all dates)
      */
-    public function getHistoricalStatsForChart(Brand $brand): array
+    /**
+     * Get historical competitive stats for visibility chart (all dates)
+     */
+    public function getHistoricalStatsForChart(Brand $brand, ?int $days = 30, ?int $aiModelId = null): array
     {
-        // Get all competitive stats ordered by date
-        $stats = BrandCompetitiveStat::where('brand_id', $brand->id)
+        $startDate = now()->subDays($days);
+        $endDate = now();
+
+        // Get competitive stats ordered by date
+        $query = BrandCompetitiveStat::where('brand_id', $brand->id)
+            ->whereBetween('analyzed_at', [$startDate, $endDate])
             ->with(['competitor', 'brand'])
             ->where(function ($query) {
                 // Include brand stats (entity_type = 'brand')
@@ -477,48 +484,21 @@ CRITICAL INSTRUCTIONS:
                     ->orWhereHas('competitor', function ($subQuery) {
                         $subQuery->accepted();
                     });
-            })
-            ->orderBy('analyzed_at')
-            ->get();
+            });
+
+        if ($aiModelId) {
+            $query->where('ai_model_id', $aiModelId);
+        }
+
+        $stats = $query->orderBy('analyzed_at')->get();
 
         if ($stats->isEmpty()) {
-            // Return a single data point with 0 values for all entities
-            $currentDate = now()->format('Y-m-d');
-            $groupedByDate = [$currentDate => []];
-
-            // Add brand with 0 values
-            $brandDomain = str_replace(['https://', 'http://', 'www.'], '', $brand->website ?? $brand->domain ?? '');
-            $brandDomain = explode('/', $brandDomain)[0];
-            if ($brandDomain) {
-                $groupedByDate[$currentDate][$brandDomain] = [
-                    'entity_name' => $brand->name,
-                    'visibility' => 0,
-                    'sentiment' => 0,
-                    'position' => 0,
-                ];
-            }
-
-            // Add accepted competitors with 0 values
-            $competitors = $brand->competitors()->accepted()->get();
-            foreach ($competitors as $competitor) {
-                $competitorDomain = str_replace(['https://', 'http://', 'www.'], '', $competitor->domain);
-                $competitorDomain = explode('/', $competitorDomain)[0];
-                if ($competitorDomain) {
-                    $groupedByDate[$currentDate][$competitorDomain] = [
-                        'entity_name' => $competitor->name,
-                        'visibility' => 0,
-                        'sentiment' => 0,
-                        'position' => 0,
-                    ];
-                }
-            }
-
-            return $groupedByDate;
+            return [];
         }
 
         // Group by date and entity
         $groupedByDate = [];
-
+// ... (rest of the aggregation logic remains same)
         foreach ($stats as $stat) {
             // Use UTC timezone to ensure consistent date grouping across all timezones
             $date = $stat->analyzed_at->copy()->setTimezone('UTC')->format('Y-m-d');
@@ -552,6 +532,7 @@ CRITICAL INSTRUCTIONS:
 
         return $groupedByDate;
     }
+
 
     /**
      * Check if brand needs analysis (hasn't been analyzed recently)
@@ -649,6 +630,7 @@ CRITICAL INSTRUCTIONS:
             $competitiveStat = BrandCompetitiveStat::where('brand_id', $brand->id)
                 ->where('entity_type', $stat->entity_type)
                 ->when($stat->competitor_id, fn ($q) => $q->where('competitor_id', $stat->competitor_id))
+                ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
                 ->latest('analyzed_at')
                 ->first();
 
@@ -671,7 +653,7 @@ CRITICAL INSTRUCTIONS:
                 'sentiment' => $competitiveStat->sentiment ?? 50,
                 'position' => round($positionScore, 1),
                 'analyzed_at' => now()->toDateTimeString(),
-                'trends' => $this->calculateTrendsForEntity($brand, $stat->entity_type, $stat->competitor_id, $days),
+                'trends' => $this->calculateTrendsForEntity($brand, $stat->entity_type, $stat->competitor_id, $days, $aiModelId),
                 'visibility_percentage' => round($visibility, 1).'%',
                 'position_formatted' => '#'.round($positionScore, 1),
                 'sentiment_level' => $competitiveStat ? $competitiveStat->sentiment_level : 'Neutral',
@@ -694,7 +676,7 @@ CRITICAL INSTRUCTIONS:
     /**
      * Calculate trends for an entity based on mention data
      */
-    protected function calculateTrendsForEntity(Brand $brand, string $entityType, ?int $competitorId, int $days = 30): array
+    protected function calculateTrendsForEntity(Brand $brand, string $entityType, ?int $competitorId, int $days = 30, ?int $aiModelId = null): array
     {
         $currentPeriodStart = now()->subDays($days);
         $previousPeriodStart = now()->subDays($days * 2);
@@ -704,11 +686,13 @@ CRITICAL INSTRUCTIONS:
         $currentQuery = BrandMention::where('brand_id', $brand->id)
             ->where('entity_type', $entityType)
             ->when($competitorId, fn ($q) => $q->where('competitor_id', $competitorId))
+            ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
             ->whereBetween('analyzed_at', [$currentPeriodStart, now()]);
 
         $currentPrompts = (clone $currentQuery)->distinct('brand_prompt_id')->count('brand_prompt_id');
         $currentTotal = BrandMention::where('brand_id', $brand->id)
             ->whereBetween('analyzed_at', [$currentPeriodStart, now()])
+            ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
             ->distinct('brand_prompt_id')
             ->count('brand_prompt_id');
 
@@ -718,11 +702,13 @@ CRITICAL INSTRUCTIONS:
         $previousQuery = BrandMention::where('brand_id', $brand->id)
             ->where('entity_type', $entityType)
             ->when($competitorId, fn ($q) => $q->where('competitor_id', $competitorId))
+            ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
             ->whereBetween('analyzed_at', [$previousPeriodStart, $previousPeriodEnd]);
 
         $previousPrompts = (clone $previousQuery)->distinct('brand_prompt_id')->count('brand_prompt_id');
         $previousTotal = BrandMention::where('brand_id', $brand->id)
             ->whereBetween('analyzed_at', [$previousPeriodStart, $previousPeriodEnd])
+            ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
             ->distinct('brand_prompt_id')
             ->count('brand_prompt_id');
 
@@ -779,7 +765,7 @@ CRITICAL INSTRUCTIONS:
 
         if ($dailyStats->isEmpty()) {
             // Fall back to existing historical stats
-            return $this->getHistoricalStatsForChart($brand);
+            return $this->getHistoricalStatsForChart($brand, $days, $aiModelId);
         }
 
         // Get daily competitor-only totals for fair comparison
@@ -843,17 +829,38 @@ CRITICAL INSTRUCTIONS:
 
         // If we have mention-based data, merge with existing stats for sentiment/position
         if (! empty($historicalData)) {
-            $existingStats = $this->getHistoricalStatsForChart($brand);
+            $existingStats = $this->getHistoricalStatsForChart($brand, $days, $aiModelId);
 
+            // First, merge missing dates/domains from existing stats
+            foreach ($existingStats as $date => $domains) {
+                if (! isset($historicalData[$date])) {
+                    $historicalData[$date] = $domains;
+                } else {
+                    foreach ($domains as $domain => $entityData) {
+                        if (! isset($historicalData[$date][$domain])) {
+                            $historicalData[$date][$domain] = $entityData;
+                        }
+                    }
+                }
+            }
+
+            // Then update sentiment/position for mention-based records
             foreach ($historicalData as $date => &$dateData) {
                 foreach ($dateData as $domain => &$entityData) {
                     // Try to get sentiment/position from existing stats
                     if (isset($existingStats[$date][$domain])) {
-                        $entityData['sentiment'] = $existingStats[$date][$domain]['sentiment'] ?? 50;
-                        $entityData['position'] = $existingStats[$date][$domain]['position'] ?? 5;
+                        // Only update if these are the default values from calculation
+                        if (($entityData['sentiment'] == 50 && $entityData['position'] == 5) || 
+                            (!isset($entityData['sentiment']) || !isset($entityData['position']))) {
+                            $entityData['sentiment'] = $existingStats[$date][$domain]['sentiment'] ?? 50;
+                            $entityData['position'] = $existingStats[$date][$domain]['position'] ?? 5;
+                        }
                     }
                 }
             }
+
+            // Re-sort by date as we might have added new dates
+            ksort($historicalData);
         }
 
         return $historicalData;

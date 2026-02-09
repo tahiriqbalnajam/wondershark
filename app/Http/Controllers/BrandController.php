@@ -687,7 +687,7 @@ class BrandController extends Controller
     /**
      * Display the specified brand.
      */
-    public function show(Brand $brand): Response
+    public function show(Request $request, Brand $brand): Response
     {
         /** @var User $user */
         $user = Auth::user();
@@ -735,11 +735,17 @@ class BrandController extends Controller
             },
         ]);
 
+        // Filter parameters
+        $days = (int) $request->input('date_range', 30);
+        $aiModelId = $request->input('ai_model') && $request->input('ai_model') !== 'all' 
+            ? AiModel::where('name', $request->input('ai_model'))->value('id') 
+            : null;
+
         // Get competitive stats with trends (service now handles empty stats with placeholders)
         // Try mention-based visibility first, fall back to AI-generated analysis
         $competitiveAnalysisService = app(\App\Services\CompetitiveAnalysisService::class);
-        $competitiveStats = $competitiveAnalysisService->getMentionBasedVisibility($brand, 30);
-        $historicalStats = $competitiveAnalysisService->getHistoricalMentionVisibility($brand, 30);
+        $competitiveStats = $competitiveAnalysisService->getMentionBasedVisibility($brand, $days, $aiModelId);
+        $historicalStats = $competitiveAnalysisService->getHistoricalMentionVisibility($brand, $days, $aiModelId);
 
         // Get enabled AI models for filtering
         $aiModels = AiModel::enabled()->ordered()->get();
