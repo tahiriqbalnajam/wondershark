@@ -38,7 +38,7 @@ export default function Agency({ agency }: { agency: { name: string; url?: strin
 const { data, setData, post, errors, processing, recentlySuccessful } = useForm<AgencyForm>({
     name: agency.name || '',
     url: agency.url || '',
-    logo: agency.logo || null,
+    logo: null, // Always null - only for new uploads
     color: agency.color || '',
 });
 const cleanup = useMobileNavigation();
