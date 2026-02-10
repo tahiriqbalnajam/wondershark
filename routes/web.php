@@ -258,6 +258,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('brands/get-prompts-with-ratio', [BrandController::class, 'getPromptsWithRatio'])->name('brands.getPromptsWithRatio');
         Route::post('brands/get-existing-prompts', [BrandController::class, 'getExistingPrompts'])->name('brands.getExistingPrompts');
         Route::get('brands/{brand}/prompts-with-competitor-urls', [BrandController::class, 'getPromptsWithCompetitorUrls'])->name('brands.prompts-with-competitor-urls');
+        Route::get('brands/{brand}/get-historical-stats', [BrandController::class, 'getHistoricalStats'])->name('brands.get-historical-stats');
         Route::post('brands/{brand}/trigger-prompt-analysis', [BrandController::class, 'triggerPromptAnalysis'])->name('brands.trigger-prompt-analysis');
 
         // Step-by-step brand creation routes

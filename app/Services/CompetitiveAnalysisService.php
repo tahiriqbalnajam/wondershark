@@ -468,7 +468,7 @@ CRITICAL INSTRUCTIONS:
     /**
      * Get historical competitive stats for visibility chart (all dates)
      */
-    public function getHistoricalStatsForChart(Brand $brand, ?int $days = 30, ?int $aiModelId = null): array
+    public function getHistoricalStatsForChart(Brand $brand, ?int $days = 30, ?int $aiModelId = null, string $timezone = '+00:00'): array
     {
         $startDate = now()->subDays($days);
         $endDate = now();
@@ -500,8 +500,8 @@ CRITICAL INSTRUCTIONS:
         $groupedByDate = [];
 // ... (rest of the aggregation logic remains same)
         foreach ($stats as $stat) {
-            // Use UTC timezone to ensure consistent date grouping across all timezones
-            $date = $stat->analyzed_at->copy()->setTimezone('UTC')->format('Y-m-d');
+            // Group by date using the requested timezone
+            $date = $stat->analyzed_at->copy()->setTimezone($timezone)->format('Y-m-d');
 
             if (! isset($groupedByDate[$date])) {
                 $groupedByDate[$date] = [];
@@ -740,7 +740,7 @@ CRITICAL INSTRUCTIONS:
     /**
      * Get historical visibility data based on brand mentions
      */
-    public function getHistoricalMentionVisibility(Brand $brand, ?int $days = 30, ?int $aiModelId = null): array
+    public function getHistoricalMentionVisibility(Brand $brand, ?int $days = 30, ?int $aiModelId = null, string $timezone = '+00:00'): array
     {
         $startDate = now()->subDays($days);
         $endDate = now();
@@ -749,13 +749,13 @@ CRITICAL INSTRUCTIONS:
         $dailyStatsQuery = BrandMention::where('brand_id', $brand->id)
             ->whereBetween('analyzed_at', [$startDate, $endDate])
             ->select(
-                DB::raw('DATE(analyzed_at) as date'),
+                DB::raw("DATE(CONVERT_TZ(analyzed_at, '+00:00', '{$timezone}')) as date"),
                 'entity_type',
                 'entity_name',
                 'entity_domain',
                 DB::raw('SUM(mention_count) as total_mentions')
             )
-            ->groupBy(DB::raw('DATE(analyzed_at)'), 'entity_type', 'entity_name', 'entity_domain');
+            ->groupBy(DB::raw("DATE(CONVERT_TZ(analyzed_at, '+00:00', '{$timezone}'))"), 'entity_type', 'entity_name', 'entity_domain');
 
         if ($aiModelId) {
             $dailyStatsQuery->where('ai_model_id', $aiModelId);
@@ -765,7 +765,7 @@ CRITICAL INSTRUCTIONS:
 
         if ($dailyStats->isEmpty()) {
             // Fall back to existing historical stats
-            return $this->getHistoricalStatsForChart($brand, $days, $aiModelId);
+            return $this->getHistoricalStatsForChart($brand, $days, $aiModelId, $timezone);
         }
 
         // Get daily competitor-only totals for fair comparison
@@ -773,11 +773,11 @@ CRITICAL INSTRUCTIONS:
             ->where('entity_type', 'competitor')
             ->whereBetween('analyzed_at', [$startDate, $endDate])
             ->select(
-                DB::raw('DATE(analyzed_at) as date'),
+                DB::raw("DATE(CONVERT_TZ(analyzed_at, '+00:00', '{$timezone}')) as date"),
                 DB::raw('SUM(mention_count) as total_mentions'),
                 DB::raw('COUNT(DISTINCT entity_name) as competitor_count')
             )
-            ->groupBy(DB::raw('DATE(analyzed_at)'));
+            ->groupBy(DB::raw("DATE(CONVERT_TZ(analyzed_at, '+00:00', '{$timezone}'))"));
 
         if ($aiModelId) {
             $dailyCompetitorTotalsQuery->where('ai_model_id', $aiModelId);

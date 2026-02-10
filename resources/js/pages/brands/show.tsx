@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -152,11 +152,19 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
     const [currentPage, setCurrentPage] = useState(1);
 
     const fetchDashboardData = (days: string, model: string) => {
+        const offset = -new Date().getTimezoneOffset();
+        const sign = offset >= 0 ? '+' : '-';
+        const pad = (n: number) => String(Math.abs(n)).padStart(2, '0');
+        const hours = pad(Math.floor(Math.abs(offset) / 60));
+        const minutes = pad(Math.abs(offset) % 60);
+        const timezone = `${sign}${hours}:${minutes}`;
+
         router.get(
             `/brands/${brand.id}`,
             {
                 date_range: days === 'custom' ? '30' : days,
-                ai_model: model
+                ai_model: model,
+                timezone: timezone
             },
             {
                 preserveState: true,
@@ -166,6 +174,21 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
             }
         );
     };
+
+    useEffect(() => {
+        const offset = -new Date().getTimezoneOffset();
+        const sign = offset >= 0 ? '+' : '-';
+        const pad = (n: number) => String(Math.abs(n)).padStart(2, '0');
+        const hours = pad(Math.floor(Math.abs(offset) / 60));
+        const minutes = pad(Math.abs(offset) % 60);
+        const timezone = `${sign}${hours}:${minutes}`;
+
+        // Initial fetch with timezone if not present in query params or if different
+        const currentTz = queryParams?.get('timezone');
+        if (currentTz !== timezone) {
+            fetchDashboardData(selectedDateRange, selectedAIModel);
+        }
+    }, []);
 
     const handleDateRangeSelect = (days: string) => {
         setSelectedDateRange(days);

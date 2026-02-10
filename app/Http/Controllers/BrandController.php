@@ -740,12 +740,13 @@ class BrandController extends Controller
         $aiModelId = $request->input('ai_model') && $request->input('ai_model') !== 'all' 
             ? AiModel::where('name', $request->input('ai_model'))->value('id') 
             : null;
+        $timezone = $request->input('timezone', '+00:00');
 
         // Get competitive stats with trends (service now handles empty stats with placeholders)
         // Try mention-based visibility first, fall back to AI-generated analysis
         $competitiveAnalysisService = app(\App\Services\CompetitiveAnalysisService::class);
-        $competitiveStats = $competitiveAnalysisService->getMentionBasedVisibility($brand, $days, $aiModelId);
-        $historicalStats = $competitiveAnalysisService->getHistoricalMentionVisibility($brand, $days, $aiModelId);
+        $competitiveStats = $competitiveAnalysisService->getMentionBasedVisibility($brand, $days, $aiModelId, $timezone);
+        $historicalStats = $competitiveAnalysisService->getHistoricalMentionVisibility($brand, $days, $aiModelId, $timezone);
 
         // Get enabled AI models for filtering
         $aiModels = AiModel::enabled()->ordered()->get();
@@ -774,6 +775,35 @@ class BrandController extends Controller
             'historicalStats' => $historicalStats,
             'aiModels' => $aiModels,
             'allBrands' => $allBrands,
+        ]);
+    }
+
+    /**
+     * Get historical stats via AJAX with timezone support
+     */
+    public function getHistoricalStats(Request $request, Brand $brand)
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        // Ensure the brand belongs to the authenticated agency or user is admin
+        if (! $user->canAccessBrand($brand)) {
+             return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $days = (int) $request->input('date_range', 30);
+        $aiModelId = $request->input('ai_model') && $request->input('ai_model') !== 'all' 
+            ? AiModel::where('name', $request->input('ai_model'))->value('id') 
+            : null;
+        
+        $timezone = $request->input('timezone', '+00:00');
+
+        $competitiveAnalysisService = app(\App\Services\CompetitiveAnalysisService::class);
+        $historicalStats = $competitiveAnalysisService->getHistoricalMentionVisibility($brand, $days, $aiModelId, $timezone);
+
+        return response()->json([
+            'success' => true,
+            'historicalStats' => $historicalStats,
         ]);
     }
 
