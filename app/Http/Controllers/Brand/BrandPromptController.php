@@ -74,8 +74,8 @@ class BrandPromptController extends Controller
                 ->where('is_active', true)
                 ->count();
 
-            if ($activeCount >= 10) {
-                return redirect()->back()->withErrors(['error' => 'You’ve reached the limit of 10 tracked prompts. Please remove one before adding a new one.']);
+            if ($activeCount >= 25) {
+                return redirect()->back()->withErrors(['error' => 'You’ve reached the limit of 25 tracked prompts. Please remove one before adding a new one.']);
             }
         }
 
@@ -111,14 +111,14 @@ class BrandPromptController extends Controller
 
         $data = $request->only(['position', 'sentiment', 'visibility', 'is_active']);
 
-        // If trying to activate a prompt, check if brand already has 10 active prompts
+        // If trying to activate a prompt, check if brand already has 25 active prompts
         if (isset($data['is_active']) && $data['is_active'] === true && ! $prompt->is_active) {
             $activeCount = BrandPrompt::where('brand_id', $brand->id)
                 ->where('is_active', true)
                 ->count();
 
-            if ($activeCount >= 10) {
-                return redirect()->back()->withErrors(['error' => 'You’ve reached the limit of 10 tracked prompts. Please remove one before adding a new one.']);
+            if ($activeCount >= 25) {
+                return redirect()->back()->withErrors(['error' => 'You’ve reached the limit of 25 tracked prompts. Please remove one before adding a new one.']);
             }
 
             $data['status'] = 'active';
