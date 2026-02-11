@@ -90,6 +90,24 @@ const submitPassword: FormEventHandler = (e) => {
         });
     };
 
+
+    const pickColorFromScreen = async () => {
+        if (!('EyeDropper' in window)) {
+            alert('Eyedropper is not supported in this browser.');
+            return;
+        }
+
+        try {
+            // @ts-ignore
+            const eyeDropper = new window.EyeDropper();
+            const result = await eyeDropper.open();
+            setData('color', result.sRGBHex);
+        } catch {
+            // user cancelled
+        }
+    };
+
+
     return (
         <AppLayout title="Agency Settings" breadcrumbs={breadcrumbs} logo={agency.logo} website={agency.url}>
             <Head title="Agency settings" />
@@ -152,6 +170,7 @@ const submitPassword: FormEventHandler = (e) => {
                                                     title="Select agency color"
                                                 />
                                             </div>
+
                                             <div className="flex-1 max-w-xs">
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-sm text-gray-600">Or enter color code:</span>
@@ -164,6 +183,34 @@ const submitPassword: FormEventHandler = (e) => {
                                                     />
                                                 </div>
                                             </div>
+
+
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span className="text-sm text-gray-600">Pick from screen:</span>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={pickColorFromScreen}
+                                                    className="text-sm"
+                                                >
+                                                    🎨 Eyedropper
+                                                </Button>
+                                            </div>
+
+                                            <div className="flex-1 max-w-xs">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-gray-600">Or enter color code:</span>
+                                                    <Input
+                                                        type="text"
+                                                        value={data.color}
+                                                        onChange={(e) => setData('color', e.target.value)}
+                                                        placeholder="#3b82f6 or rgb(59, 130, 246)"
+                                                        className="form-control text-sm"
+                                                    />
+                                                </div>
+                                            </div>
+                                            
+
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm text-gray-500">Preview:</span>
