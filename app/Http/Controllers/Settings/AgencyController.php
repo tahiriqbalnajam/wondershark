@@ -168,16 +168,27 @@ class AgencyController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'url' => ['nullable', 'url', 'max:255'],
             'logo' => ['nullable', 'image', 'max:2048'], // 2MB max
-            'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'color' => ['nullable', 'string', 'regex:/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/'],
         ]);
 
         /** @var User $user */
         $user = Auth::user();
 
+        // Normalize color value to 6-digit lowercase hex
+        $normalizedColor = null;
+        if ($request->color) {
+            $color = strtolower(trim($request->color));
+            // Convert 3-digit hex to 6-digit hex
+            if (strlen($color) === 4 && $color[0] === '#') {
+                $color = '#' . $color[1] . $color[1] . $color[2] . $color[2] . $color[3] . $color[3];
+            }
+            $normalizedColor = $color;
+        }
+
         $updateData = [
             'name' => $request->name,
             'url' => $request->url,
-            'agency_color' => $request->color ?: null,
+            'agency_color' => $normalizedColor,
         ];
 
         // Handle logo upload

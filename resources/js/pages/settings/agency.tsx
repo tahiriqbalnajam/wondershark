@@ -91,6 +91,32 @@ const submitPassword: FormEventHandler = (e) => {
     };
 
 
+    // Helper function to normalize color values
+    const normalizeColor = (color: string): string => {
+        if (!color) return '';
+        
+        // Remove any whitespace
+        color = color.trim();
+        
+        // If it doesn't start with #, add it
+        if (!color.startsWith('#')) {
+            color = '#' + color;
+        }
+        
+        // Convert 3-digit hex to 6-digit hex
+        if (color.length === 4 && color.startsWith('#')) {
+            color = '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3];
+        }
+        
+        // Ensure it's lowercase for consistency
+        return color.toLowerCase();
+    };
+
+    const handleColorChange = (value: string) => {
+        const normalizedColor = normalizeColor(value);
+        setData('color', normalizedColor);
+    };
+
     const pickColorFromScreen = async () => {
         if (!('EyeDropper' in window)) {
             alert('Eyedropper is not supported in this browser.');
@@ -101,7 +127,7 @@ const submitPassword: FormEventHandler = (e) => {
             // @ts-ignore
             const eyeDropper = new window.EyeDropper();
             const result = await eyeDropper.open();
-            setData('color', result.sRGBHex);
+            handleColorChange(result.sRGBHex);
         } catch {
             // user cancelled
         }
@@ -167,7 +193,7 @@ const submitPassword: FormEventHandler = (e) => {
                 <input
                     type="color"
                     value={data.color}
-                    onChange={(e) => setData('color', e.target.value)}
+                    onChange={(e) => handleColorChange(e.target.value)}
                     className="w-10 h-10 border border-gray-300 rounded cursor-pointer"
                     title="Select agency color"
                 />
@@ -180,8 +206,8 @@ const submitPassword: FormEventHandler = (e) => {
                     <Input
                         type="text"
                         value={data.color}
-                        onChange={(e) => setData('color', e.target.value)}
-                        placeholder="#3b82f6 or rgb(59, 130, 246)"
+                        onChange={(e) => handleColorChange(e.target.value)}
+                        placeholder="#3b82f6 or #abc"
                         className="form-control text-sm"
                     />
                 </div>
