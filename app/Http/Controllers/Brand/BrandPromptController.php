@@ -174,7 +174,7 @@ class BrandPromptController extends Controller
                 ->where('is_active', false)
                 ->count();
 
-            if ($currentActiveCount + $newActivations > 10) {
+            if ($currentActiveCount + $newActivations > 25) {
                 return redirect()->back()->withErrors(['error' => 'You can only have a maximum of 10 active prompts. Currently have '.$currentActiveCount.' active.']);
             }
         }
