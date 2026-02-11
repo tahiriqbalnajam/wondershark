@@ -45,6 +45,7 @@ interface ExportDashboardPDFProps {
     prompts: Prompt[];
     fileName?: string;
     autoTrigger?: boolean;
+    onBeforeCapture?: () => Promise<(() => void) | null>;
 }
 
 export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
@@ -56,6 +57,7 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
     prompts,
     fileName = 'dashboard-report.pdf',
     autoTrigger = false,
+    onBeforeCapture,
 }) => {
     const [isClient, setIsClient] = useState(false);
     const [PDFDownloadLink, setPDFDownloadLink] = useState<any>(null);
@@ -83,6 +85,8 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
     }, []);
 
     const handleManualExport = () => {
+        if (isGenerating) return;
+        
         setIsGenerating(true);
         setIsManualGeneration(true);
         
@@ -98,9 +102,19 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
             setIsGenerating(true);
             setIsManualGeneration(manual);
         }
-        const images: any = {};
+
+        let restoreFunction: (() => void) | null = null;
 
         try {
+            // Handle citation expansion before capture
+            if (onBeforeCapture) {
+                console.log('Calling onBeforeCapture to expand citations...');
+                restoreFunction = await onBeforeCapture();
+                console.log('Citations expanded, proceeding with capture');
+            }
+
+            const images: any = {};
+
             // Hide "Show All" buttons and other elements before screenshot
             const hideElements = document.querySelectorAll('.pdf-export-hidden, .print\\:hidden');
             console.log('Hiding', hideElements.length, 'elements for PDF export');
@@ -113,7 +127,7 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
             });
 
             // Small delay to ensure elements are hidden
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise(resolve => setTimeout(resolve, 100));
 
             // Capture Visibility Chart
             const visibilityElement = document.querySelector('[data-chart="visibility"]') as HTMLElement;
@@ -157,6 +171,12 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
                 }
             });
 
+            // Restore citation pagination if needed
+            if (restoreFunction) {
+                console.log('Restoring citation pagination...');
+                setTimeout(() => restoreFunction!(), 50);
+            }
+
             setChartImages(images);
             setIsGenerating(false);
             setIsManualGeneration(false);
@@ -168,6 +188,13 @@ export const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({
             }, 100);
         } catch (error) {
             console.error('Error capturing screenshots:', error);
+            
+            // Restore citation pagination even on error
+            if (restoreFunction) {
+                console.log('Restoring citation pagination due to error...');
+                restoreFunction();
+            }
+            
             setIsGenerating(false);
             setIsManualGeneration(false);
             alert('Error generating PDF: ' + (error as Error).message);

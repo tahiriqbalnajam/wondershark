@@ -705,6 +705,30 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                         prompts={filteredPrompts}
                         fileName={`${brand.name.toLowerCase().replace(/\s+/g, '-')}-dashboard-report-${new Date().toISOString().split('T')[0]}.pdf`}
                         autoTrigger={true}
+                        onBeforeCapture={() => {
+                            // Auto-click "Load More" until all citations are visible
+                            return new Promise((resolve) => {
+                                const originalPage = currentPage;
+                                const totalPages = Math.ceil(filteredPrompts.length / 9);
+                                
+                                if (currentPage < totalPages) {
+                                    console.log(`Expanding citations: ${currentPage} -> ${totalPages} pages`);
+                                    setCurrentPage(totalPages);
+                                    
+                                    // Wait for UI to update
+                                    setTimeout(() => {
+                                        resolve(() => {
+                                            // Restore function
+                                            console.log(`Restoring pagination to page ${originalPage}`);
+                                            setCurrentPage(originalPage);
+                                        });
+                                    }, 300);
+                                } else {
+                                    // Already showing all, no restore needed
+                                    resolve(null);
+                                }
+                            });
+                        }}
                     />
                 </div>
 
@@ -780,7 +804,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                             onPromptClick={handlePromptClick}
                         />
                         {currentPage * 9 < filteredPrompts.length && (
-                            <div className="flex justify-center mt-4 pdf-export-hidden print:hidden">
+                            <div className="flex justify-center mt-4 print:hidden" id="load-more-citations">
                                 <Button className='primary-btn' onClick={() => setCurrentPage(prev => prev + 1)}>
                                     Load More Citations
                                 </Button>
