@@ -183,63 +183,63 @@ const submitPassword: FormEventHandler = (e) => {
                                     <InputError className="mt-2" message={errors.logo} />
                                 </div>
                                 <div className="grid gap-2">
-    <Label>Agency Color</Label>
+                                    <Label>Agency Color</Label>
 
-    <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-4">
-            {/* Native color picker */}
-            <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Color Picker:</span>
-                <input
-                    type="color"
-                    value={data.color}
-                    onChange={(e) => handleColorChange(e.target.value)}
-                    className="w-10 h-10 border border-gray-300 rounded cursor-pointer"
-                    title="Select agency color"
-                />
-            </div>
+                                    <div className="space-y-3">
+                                        <div className="flex flex-wrap items-center gap-4">
+                                            {/* Native color picker */}
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm text-gray-600">Color Picker:</span>
+                                                <input
+                                                    type="color"
+                                                    value={data.color}
+                                                    onChange={(e) => handleColorChange(e.target.value)}
+                                                    className="w-10 h-10 border border-gray-300 rounded cursor-pointer"
+                                                    title="Select agency color"
+                                                />
+                                            </div>
 
-            {/* Manual input */}
-            <div className="flex-1 max-w-xs">
-                <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">Or enter color code:</span>
-                    <Input
-                        type="text"
-                        value={data.color}
-                        onChange={(e) => handleColorChange(e.target.value)}
-                        placeholder="#3b82f6 or #abc"
-                        className="form-control text-sm"
-                    />
-                </div>
-            </div>
+                                            {/* Manual input */}
+                                            <div className="flex-1 max-w-xs">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-gray-600">Or enter color code:</span>
+                                                    <Input
+                                                        type="text"
+                                                        value={data.color}
+                                                        onChange={(e) => handleColorChange(e.target.value)}
+                                                        placeholder="#3b82f6 or #abc"
+                                                        className="form-control text-sm"
+                                                    />
+                                                </div>
+                                            </div>
 
-            {/* Eyedropper */}
-            <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Pick from screen:</span>
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={pickColorFromScreen}
-                    className="text-sm"
-                >
-                    🎨 Eyedropper
-                </Button>
-            </div>
-        </div>
+                                            {/* Eyedropper */}
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm text-gray-600">Pick from screen:</span>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={pickColorFromScreen}
+                                                    className="text-sm"
+                                                >
+                                                    🎨 Eyedropper
+                                                </Button>
+                                            </div>
+                                        </div>
 
-        {/* Preview */}
-        <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">Preview:</span>
-            <div
-                className="w-16 h-6 rounded border border-gray-300"
-                style={{ backgroundColor: data.color }}
-                title={`Color: ${data.color}`}
-            />
-        </div>
-    </div>
+                                        {/* Preview */}
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-gray-500">Preview:</span>
+                                            <div
+                                                className="w-16 h-6 rounded border border-gray-300"
+                                                style={{ backgroundColor: data.color }}
+                                                title={`Color: ${data.color}`}
+                                            />
+                                        </div>
+                                    </div>
 
-    <InputError className="mt-2" message={errors.color} />
-</div>
+                                    <InputError className="mt-2" message={errors.color} />
+                                </div>
 
                                 <div className="flex items-center justify-end">
                                     <div className="lg:flex block items-center gap-4 w-full">
