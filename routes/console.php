@@ -34,3 +34,10 @@ Schedule::job(new \App\Jobs\TestAiModels)
     ->dailyAt('04:00')
     ->withoutOverlapping()
     ->onOneServer();
+
+// Recalculate Brand Visibility - Runs daily at 5 AM UTC
+Schedule::command('brand:recalculate-visibility --regenerate')
+    ->dailyAt('05:00')
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->runInBackground();
