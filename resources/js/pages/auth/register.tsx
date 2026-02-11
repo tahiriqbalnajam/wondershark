@@ -30,7 +30,7 @@ type ValidationErrors = {
 };
 
 export default function Register() {
-    const { data, setData, post, processing, errors, reset } = useForm<Required<RegisterForm>>({
+    const { data, setData, post, processing, errors, reset, transform } = useForm<Required<RegisterForm>>({
         name: '',
         email: '',
         password: '',
@@ -72,9 +72,6 @@ export default function Register() {
         if (data.role === 'brand' && !website.trim()) {
             return 'Website URL is required';
         }
-        if (website.trim() && !website.startsWith('http://') && !website.startsWith('https://')) {
-            return 'Website URL should start with https://';
-        }
         return undefined;
     };
 
@@ -111,13 +108,8 @@ export default function Register() {
     };
 
     const handleWebsiteChange = (value: string) => {
-        let processedValue = value;
-        
-        // Auto-add https:// if user starts typing without protocol
-        if (value && !value.startsWith('http://') && !value.startsWith('https://')) {
-            processedValue = 'https://' + value;
-        }
-        
+        const processedValue = value.replace(/^https?:\/\//, '');
+
         setData('website', processedValue);
         const error = validateWebsite(processedValue);
         setValidationErrors((prev) => ({ ...prev, website: error }));
@@ -127,7 +119,7 @@ export default function Register() {
         setData('password', value);
         const error = validatePassword(value);
         setValidationErrors((prev) => ({ ...prev, password: error }));
-        
+
         // Revalidate confirmation if it exists
         if (data.password_confirmation) {
             const confirmError = validatePasswordConfirmation(value, data.password_confirmation);
@@ -170,6 +162,11 @@ export default function Register() {
             alert(firstError);
             return;
         }
+
+        transform((data) => ({
+            ...data,
+            website: data.role === 'brand' && data.website ? `https://${data.website}` : data.website,
+        }));
 
         post(route('register'), {
             onFinish: () => reset('password', 'password_confirmation'),
@@ -253,18 +250,21 @@ export default function Register() {
                         <>
                             <div className="grid gap-2 mb-5">
                                 <Label htmlFor="website">Website/URL</Label>
-                                <Input
-                                    className='form-control !mb-0'
-                                    id="website"
-                                    type="text"
-                                    required
-                                    tabIndex={3}
-                                    autoComplete="url"
-                                    value={data.website}
-                                    onChange={(e) => handleWebsiteChange(e.target.value)}
-                                    disabled={processing}
-                                    placeholder="example.com"
-                                />
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">https://</span>
+                                    <Input
+                                        className='form-control !mb-0 pl-16'
+                                        id="website"
+                                        type="text"
+                                        required
+                                        tabIndex={3}
+                                        autoComplete="url"
+                                        value={data.website}
+                                        onChange={(e) => handleWebsiteChange(e.target.value)}
+                                        disabled={processing}
+                                        placeholder="example.com"
+                                    />
+                                </div>
                                 <InputError message={validationErrors.website || errors.website} className="-mt-1" />
                             </div>
 
