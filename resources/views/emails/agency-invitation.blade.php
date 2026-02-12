@@ -87,9 +87,9 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
+         <div class="header">
             <div class="logo">
-                <img src="{{ asset('wondershark_short_logo_black.svg') }}" alt="WonderShark Logo" style="width: 40px; height: 30px; display: inline-block; vertical-align: middle; margin-right: 10px;">
+                <img src="{{ asset('android-chrome-192x192.png') }}" alt="WonderShark Logo" style="width: 40px; height: 30px; display: inline-block; vertical-align: middle; margin-right: 10px;">
                 WonderShark
             </div>
         </div>
