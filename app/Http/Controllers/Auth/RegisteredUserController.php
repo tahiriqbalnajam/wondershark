@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\WelcomeEmail;
 
 class RegisteredUserController extends Controller
 {
@@ -73,6 +75,13 @@ class RegisteredUserController extends Controller
             event(new Registered($user));
 
             Auth::login($user);
+
+            // Send welcome email
+            try {
+                Mail::to($user)->send(new WelcomeEmail($user));
+            } catch (\Exception $e) {
+                \Log::error('Failed to send welcome email: ' . $e->getMessage());
+            }
 
             // Redirect brand users to multi-step creation process
             if ($validated['role'] === 'brand' && isset($brand)) {
