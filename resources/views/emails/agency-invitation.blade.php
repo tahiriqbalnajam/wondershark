@@ -88,7 +88,10 @@
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">🦈 WonderShark</div>
+            <div class="logo">
+                <img src="{{ asset('wondershark_short_logo_black.svg') }}" alt="WonderShark Logo" style="width: 40px; height: 30px; display: inline-block; vertical-align: middle; margin-right: 10px;">
+                WonderShark
+            </div>
         </div>
 
         <h1>You've been invited!</h1>
