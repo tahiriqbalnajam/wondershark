@@ -14,7 +14,7 @@ export default function Step6AccountSetup({ }: StepProps) {
 
                 <h3 className="text-2xl font-semibold mb-3">Ready to Complete Setup!</h3>
                 <p className="text-muted-foreground text-lg mb-6">
-                    You've successfully configured your brand. Click "Finish" below to activate your brand and start using the platform.
+                    You've successfully configured your brand. Click "Create Brand" below to activate your brand and start using the platform.
                 </p>
 
                 <Card className="max-w-2xl mx-auto">
