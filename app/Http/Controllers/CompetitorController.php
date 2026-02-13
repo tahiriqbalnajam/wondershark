@@ -476,12 +476,8 @@ class CompetitorController extends Controller
     {
         $user = Auth::user();
 
-        // Check if user has access to the brand and can manage competitors
+        // Check if user has access to the brand
         if (! $user->canAccessBrand($brand)) {
-            abort(403, 'You do not have permission to access this brand.');
-        }
-        
-        if (! $user->canManageCompetitors()) {
             abort(403, 'You do not have permission to add competitors to this brand.');
         }
 
@@ -511,10 +507,6 @@ class CompetitorController extends Controller
         // Load brand relationship and check if user has access
         $competitor->load('brand');
         if (! $user->canAccessBrand($competitor->brand)) {
-            abort(403, 'You do not have permission to access this competitor.');
-        }
-        
-        if (! $user->canManageCompetitors()) {
             abort(403, 'You do not have permission to update this competitor.');
         }
 
@@ -578,10 +570,6 @@ class CompetitorController extends Controller
         // Load brand relationship and check if user has access
         $competitor->load('brand');
         if (! $user->canAccessBrand($competitor->brand)) {
-            abort(403, 'You do not have permission to access this competitor.');
-        }
-        
-        if (! $user->canManageCompetitors()) {
             abort(403, 'You do not have permission to delete this competitor.');
         }
 
@@ -608,10 +596,6 @@ class CompetitorController extends Controller
         // Load brand relationship and check if user has access
         $competitor->load('brand');
         if (! $user->canAccessBrand($competitor->brand)) {
-            abort(403, 'You do not have permission to access this competitor.');
-        }
-        
-        if (! $user->canManageCompetitors()) {
             abort(403, 'You do not have permission to fetch stats for this competitor.');
         }
 
