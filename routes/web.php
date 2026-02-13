@@ -166,6 +166,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/clear', [\App\Http\Controllers\Admin\JobMonitorController::class, 'clear'])->name('clear');
         });
 
+        // Console Commands - Admin only
+        Route::prefix('admin/console')->name('admin.console.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\ConsoleController::class, 'index'])->name('index');
+            Route::post('/run', [\App\Http\Controllers\Admin\ConsoleController::class, 'run'])->name('run');
+        });
+
+
         // System Settings - Admin only (requires additional manage-system permission)
         Route::prefix('admin/settings')->name('admin.settings.')->middleware('role.permission:manage-system')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'index'])->name('index');

@@ -653,7 +653,7 @@ CRITICAL INSTRUCTIONS:
                 'sentiment' => $competitiveStat->sentiment ?? 50,
                 'position' => round($positionScore, 1),
                 'analyzed_at' => now()->toDateTimeString(),
-                'trends' => $this->calculateTrendsForEntity($brand, $stat->entity_type, $stat->competitor_id, $days, $aiModelId),
+                'trends' => $this->calculateTrendsForEntity($brand, $stat->entity_type, $stat->competitor_id, $days, $aiModelId, $competitiveStat),
                 'visibility_percentage' => round($visibility, 1).'%',
                 'position_formatted' => '#'.round($positionScore, 1),
                 'sentiment_level' => $competitiveStat ? $competitiveStat->sentiment_level : 'Neutral',
@@ -676,11 +676,31 @@ CRITICAL INSTRUCTIONS:
     /**
      * Calculate trends for an entity based on mention data
      */
-    protected function calculateTrendsForEntity(Brand $brand, string $entityType, ?int $competitorId, int $days = 30, ?int $aiModelId = null): array
+    protected function calculateTrendsForEntity(Brand $brand, string $entityType, ?int $competitorId, int $days = 30, ?int $aiModelId = null, ?BrandCompetitiveStat $latestStat = null): array
     {
         $currentPeriodStart = now()->subDays($days);
         $previousPeriodStart = now()->subDays($days * 2);
         $previousPeriodEnd = now()->subDays($days);
+
+        // Check if we have sufficient data points (dates) to show a meaningful trend
+        // User requested: "if there is a single day data don't show the trends, show trends if there is atleast more than two dates data present"
+        $datesCount = BrandMention::where('brand_id', $brand->id)
+            ->where('entity_type', $entityType)
+            ->when($competitorId, fn ($q) => $q->where('competitor_id', $competitorId))
+            ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
+            ->selectRaw('COUNT(DISTINCT DATE(analyzed_at)) as count')
+            ->value('count');
+
+        if ($datesCount <= 2) {
+            return [
+                'visibility_trend' => 'new',
+                'sentiment_trend' => 'stable',
+                'position_trend' => 'stable',
+                'visibility_change' => 0,
+                'sentiment_change' => 0,
+                'position_change' => 0,
+            ];
+        }
 
         // Current period stats
         $currentQuery = BrandMention::where('brand_id', $brand->id)
@@ -727,14 +747,24 @@ CRITICAL INSTRUCTIONS:
             ];
         }
 
-        return [
+        $trends = [
             'visibility_trend' => $visibilityChange > 1 ? 'up' : ($visibilityChange < -1 ? 'down' : 'stable'),
-            'sentiment_trend' => 'stable', // Sentiment is not tracked via mentions
-            'position_trend' => 'stable', // Position tracking would need more complex logic
+            'sentiment_trend' => 'stable', 
+            'position_trend' => 'stable', 
             'visibility_change' => round($visibilityChange, 2),
             'sentiment_change' => 0,
             'position_change' => 0,
         ];
+
+        if ($latestStat) {
+            $statTrends = $latestStat->getTrends();
+            $trends['sentiment_trend'] = $statTrends['sentiment_trend'];
+            $trends['sentiment_change'] = $statTrends['sentiment_change'];
+            $trends['position_trend'] = $statTrends['position_trend'];
+            $trends['position_change'] = $statTrends['position_change'];
+        }
+
+        return $trends;
     }
 
     /**

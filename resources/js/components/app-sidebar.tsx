@@ -4,18 +4,19 @@ import { Sidebar, SidebarContent, SidebarHeader } from '@/components/ui/sidebar'
 import { type NavItem } from '@/types';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { LogOut } from 'lucide-react';
-import { Link, router} from '@inertiajs/react';
-import { 
-    LayoutGrid, 
-    Users, 
-    Shield, 
-    Settings, 
-    FileText, 
-    Clock, 
-    BarChart3, 
-    MessageSquare, 
-    Package, 
-    Building2
+import { Link, router } from '@inertiajs/react';
+import {
+    LayoutGrid,
+    Users,
+    Shield,
+    Settings,
+    FileText,
+    Clock,
+    BarChart3,
+    MessageSquare,
+    Package,
+    Building2,
+    Terminal
 } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { usePage } from '@inertiajs/react';
@@ -204,6 +205,12 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
                     permission: 'view-admin-panel',
                 },
                 {
+                    title: 'Console Commands',
+                    href: '/admin/console',
+                    icon: Terminal,
+                    permission: 'view-admin-panel',
+                },
+                {
                     title: 'System Settings',
                     href: '/admin/settings',
                     icon: Settings,
@@ -244,9 +251,9 @@ const getOrderNavItems = (permissions: ReturnType<typeof usePermissions>, select
 export function AppSidebar() {
     const cleanup = useMobileNavigation();
     const handleLogout = () => {
-            cleanup();
-            // router.flushAll();
-        };
+        cleanup();
+        // router.flushAll();
+    };
     const permissions = usePermissions();
     const page = usePage<SharedData>();
     const isRankingPage = page.url.includes('/ranking');
@@ -256,12 +263,12 @@ export function AppSidebar() {
         const match = path.match(/\/brands\/(\d+)/);
         return match ? parseInt(match[1], 10) : undefined;
     };
-    
+
     const currentBrandId = getCurrentBrandId();
     const selectedBrand = page.props.selectedBrand;
     const user = page.props.auth.user;
     const brands = page.props.brands || [];
-    
+
     // For brand role users, use their assigned brand (first brand in the list)
     // For agency/admin users, prioritize currentBrandId from URL over selectedBrand from session
     let brandIdForMenu: number | undefined;
@@ -270,7 +277,7 @@ export function AppSidebar() {
     } else {
         brandIdForMenu = currentBrandId || selectedBrand?.id;
     }
-    
+
     const generalNavItems = getGeneralNavItems(permissions, brandIdForMenu, isRankingPage);
     const preferenceNavItems = getPreferenceNavItems(permissions, brandIdForMenu);
     const settingsNavItems = getSettingsNavItems(permissions, brandIdForMenu);
@@ -281,7 +288,7 @@ export function AppSidebar() {
         <Sidebar>
             <SidebarHeader>
                 <NavUser />
-                
+
                 {/* New Brand Button for Agency Users */}
                 {/* {permissions.hasRole('agency') && (
                     <div className="px-2 mt-2">
@@ -304,17 +311,17 @@ export function AppSidebar() {
                 {generalNavItems.length > 0 && (
                     <NavMain items={generalNavItems} label="General" />
                 )}
-                
+
                 {/* Preference Section */}
                 {preferenceNavItems.length > 0 && (
                     <NavMain items={preferenceNavItems} label="Preference" />
                 )}
-                
+
                 {/* Docs & Files Section */}
                 {docsFilesNavItems.length > 0 && (
                     <NavMain items={docsFilesNavItems} label="Docs & Files" />
                 )}
-                
+
                 {/* Settings Section */}
                 {settingsNavItems.length > 0 && (
                     <NavMain items={settingsNavItems} label="Settings" />

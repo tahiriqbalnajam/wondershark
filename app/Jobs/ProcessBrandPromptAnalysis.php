@@ -139,7 +139,7 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
                 'brand_prompt_id' => $this->brandPrompt->id,
                 'sentiment' => $result['analysis']['sentiment'],
                 'position' => $result['analysis']['position'],
-                'visibility' => $result['analysis']['visibility'],
+                'visibility' => $result['analysis']['visibility'] ?? null,
                 'resources_count' => count($result['resources']),
                 'ai_model_id_saved' => $this->brandPrompt->ai_model_id,
             ]);

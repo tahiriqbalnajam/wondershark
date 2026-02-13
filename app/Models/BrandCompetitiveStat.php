@@ -66,6 +66,25 @@ class BrandCompetitiveStat extends Model
      */
     public function getTrends(): array
     {
+        // Check data sufficiency - user requested trends only if > 2 dates of data
+        $datesCount = static::where('brand_id', $this->brand_id)
+            ->where('entity_type', $this->entity_type)
+            ->where('competitor_id', $this->competitor_id)
+            ->where('ai_model_id', $this->ai_model_id)
+            ->selectRaw('COUNT(DISTINCT DATE(analyzed_at)) as count')
+            ->value('count');
+
+        if ($datesCount <= 2) {
+            return [
+                'visibility_trend' => 'new',
+                'sentiment_trend' => 'new',
+                'position_trend' => 'new',
+                'visibility_change' => 0,
+                'sentiment_change' => 0,
+                'position_change' => 0,
+            ];
+        }
+
         $previous = $this->getPreviousStats();
 
         if (! $previous) {

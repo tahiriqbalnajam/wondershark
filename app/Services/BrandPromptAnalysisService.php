@@ -944,6 +944,7 @@ class BrandPromptAnalysisService
         return [
             'sentiment' => $sentiment,
             'position' => $position,
+            'visibility' => null, // Ensure visibility key exists to prevent errors
             'competitor_mentions' => $competitorMentions,
         ];
     }
