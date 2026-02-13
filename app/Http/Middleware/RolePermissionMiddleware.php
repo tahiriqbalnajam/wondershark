@@ -31,7 +31,6 @@ class RolePermissionMiddleware
         // Check for specific role (skip if role is 'null' string)
         if ($role && $role !== 'null') {
             // Support multiple roles separated by pipe |
-            $role = 'agency|brand';
             $roles = explode('|', $role);
 
 
