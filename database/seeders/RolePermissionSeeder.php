@@ -39,6 +39,12 @@ class RolePermissionSeeder extends Seeder
             'manage-system',
             'manage-ai-models',
             'manage-citation-check',
+
+
+            // Agency manager permissions
+            'view-all-brands',
+            'manage-competitors', 
+            'manage-prompts',
         ];
 
         foreach ($permissions as $permission) {
