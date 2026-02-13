@@ -33,7 +33,7 @@ class RolePermissionMiddleware
 
             // Admin users have access to all roles
             if (! $user->hasRole('admin') && ! $user->hasAnyRole($roles)) {
-                abort(403, 'Access denied. You do not have the required role.');
+                abort(403, 'Access denied. You do not have the required role. role: '.$role);
             }
         }
 
