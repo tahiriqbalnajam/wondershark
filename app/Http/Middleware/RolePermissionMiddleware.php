@@ -26,21 +26,14 @@ class RolePermissionMiddleware
             abort(403, 'Access denied. You do not have the required permission.');
         }
 
-
-         $userRoles = $user->getRoleNames()->implode(', ');
         // Check for specific role (skip if role is 'null' string)
         if ($role && $role !== 'null') {
             // Support multiple roles separated by pipe |
             $roles = explode('|', $role);
 
-
             // Admin users have access to all roles
             if (! $user->hasRole('admin') && ! $user->hasAnyRole($roles)) {
-                abort(
-                    403,
-                    'Access denied. Required role: '.implode(' or ', $roles)
-                    .'. Your role: '.($userRoles ?: 'none')
-                );
+                abort(403, 'Access denied. You do not have the required role.');
             }
         }
 

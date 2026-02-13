@@ -60,6 +60,11 @@ class BrandPromptController extends Controller
         if (! Auth::user()->canAccessBrand($brand)) {
             abort(403);
         }
+        
+        // Check if user can manage prompts
+        if (! Auth::user()->canManagePrompts()) {
+            abort(403, 'You do not have permission to add prompts to this brand.');
+        }
 
         $request->validate([
             'prompt' => 'required|string|max:2000',
@@ -95,6 +100,11 @@ class BrandPromptController extends Controller
         // Check if user has access to this brand
         if (! Auth::user()->canAccessBrand($brand)) {
             abort(403);
+        }
+        
+        // Check if user can manage prompts
+        if (! Auth::user()->canManagePrompts()) {
+            abort(403, 'You do not have permission to update prompts for this brand.');
         }
 
         // Check if prompt belongs to this brand
@@ -137,6 +147,11 @@ class BrandPromptController extends Controller
         if (! Auth::user()->canAccessBrand($brand)) {
             abort(403);
         }
+        
+        // Check if user can manage prompts
+        if (! Auth::user()->canManagePrompts()) {
+            abort(403, 'You do not have permission to delete prompts from this brand.');
+        }
 
         // Check if prompt belongs to this brand
         if ($prompt->brand_id !== $brand->id) {
@@ -153,6 +168,11 @@ class BrandPromptController extends Controller
         // Check if user has access to this brand
         if (! Auth::user()->canAccessBrand($brand)) {
             abort(403);
+        }
+        
+        // Check if user can manage prompts
+        if (! Auth::user()->canManagePrompts()) {
+            abort(403, 'You do not have permission to bulk update prompts for this brand.');
         }
 
         $request->validate([
@@ -227,6 +247,11 @@ class BrandPromptController extends Controller
                 'user_id' => Auth::id(),
             ]);
             abort(403);
+        }
+        
+        // Check if user can manage prompts
+        if (! Auth::user()->canManagePrompts()) {
+            abort(403, 'You do not have permission to generate AI prompts for this brand.');
         }
 
         // Check if brand has required information
