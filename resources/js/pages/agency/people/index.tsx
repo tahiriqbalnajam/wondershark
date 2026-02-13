@@ -43,12 +43,22 @@ interface Props {
     pendingInvitations: PendingInvitation[];
 }
 
-const availableRights = [
-    { id: 'view-brands', label: 'View Brands' },
-    { id: 'manage-brands', label: 'Manage Brands' },
-    { id: 'view-analytics', label: 'View Analytics' },
-    { id: 'manage-content', label: 'Manage Content' },
-    { id: 'invite-members', label: 'Invite Members' },
+const availablePermissions = [
+    { 
+        id: 'agency_admin', 
+        label: 'Agency Admin', 
+        description: 'Full access to all brands\'dashboard and posts, plus control of preferences and settings'
+    },
+    { 
+        id: 'agency_manager', 
+        label: 'Agency Manager', 
+        description: 'Can view all brands\' dashboards and posts, and can manage competitors and prompts'
+    },
+    { 
+        id: 'brand_user', 
+        label: 'Brand User Access', 
+        description: 'Can view all brands\' dashboards and posts'
+    },
 ];
 
 const breadcrumbs = [
@@ -65,7 +75,7 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
         name: '',
         email: '',
         role: 'agency_member',
-        rights: [] as string[],
+        rights: ['brand_user'] as string[],
     });
 
     const { data: rightsData, setData: setRightsData, put: updateRights, processing: updatingRights } = useForm({
@@ -98,14 +108,6 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
         setSelectedMember(member);
         setRightsData('rights', member.rights || []);
         setIsRightsDialogOpen(true);
-    };
-
-    const handleRightChange = (rightId: string, checked: boolean) => {
-        if (checked) {
-            setRightsData('rights', [...rightsData.rights, rightId]);
-        } else {
-            setRightsData('rights', rightsData.rights.filter(r => r !== rightId));
-        }
     };
 
     const deleteMember = (memberId: number) => {
@@ -165,17 +167,22 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
                             </DialogHeader>
                             <form onSubmit={submit}>
                                 <div className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        <Label htmlFor="name">Full Name</Label>
-                                        <Input
-                                            id="name"
-                                            value={data.name}
-                                            onChange={(e) => setData('name', e.target.value)}
-                                            placeholder="Enter full name"
-                                            required
-                                        />
-                                        <InputError message={errors.name} />
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
+                                        <Label htmlFor="name" className="md:col-span-1">
+                                            Full Name:
+                                        </Label>
+                                        <div className="md:col-span-3">
+                                            <Input
+                                                id="name"
+                                                value={data.name}
+                                                onChange={(e) => setData('name', e.target.value)}
+                                                placeholder="Enter full name"
+                                                required
+                                            />
+                                            <InputError message={errors.name} />
+                                        </div>
                                     </div>
+
 
                                     <div className="grid gap-4">
                                         <Label htmlFor="email">Email Address</Label>
@@ -195,23 +202,29 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
 
                                     <div className="grid gap-4">
                                         <Label>Permissions</Label>
-                                        <div className="space-y-2">
-                                            {availableRights.map((right) => (
-                                                <div key={right.id} className="flex items-center space-x-2">
+                                        <div className="space-y-3">
+                                            {availablePermissions.map((permission) => (
+                                                <div key={permission.id} className="flex items-start space-x-3">
                                                     <Checkbox
-                                                        id={right.id}
-                                                        checked={data.rights.includes(right.id)}
+                                                        id={permission.id}
+                                                        checked={data.rights.includes(permission.id)}
                                                         onCheckedChange={(checked) => {
                                                             if (checked) {
-                                                                setData('rights', [...data.rights, right.id]);
+                                                                setData('rights', [...data.rights, permission.id]);
                                                             } else {
-                                                                setData('rights', data.rights.filter(r => r !== right.id));
+                                                                setData('rights', data.rights.filter(r => r !== permission.id));
                                                             }
                                                         }}
+                                                        className="mt-1"
                                                     />
-                                                    <Label htmlFor={right.id} className="text-sm font-normal">
-                                                        {right.label}
-                                                    </Label>
+                                                    <div className="flex-1">
+                                                        <Label htmlFor={permission.id} className="text-sm font-medium cursor-pointer">
+                                                            {permission.label}
+                                                        </Label>
+                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                            {permission.description}
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -290,13 +303,19 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
                                             </div>
                                             {invitation.rights && invitation.rights.length > 0 && (
                                                 <div>
-                                                    <h4 className="text-sm font-medium mb-2">Assigned Permissions:</h4>
+                                                    <h4 className="text-sm font-medium mb-2">Permissions:</h4>
                                                     <div className="flex flex-wrap gap-1">
-                                                        {invitation.rights.map((right) => (
-                                                            <Badge key={right} variant="outline" className="text-xs">
-                                                                {availableRights.find(r => r.id === right)?.label || right}
+                                                        {invitation.rights && invitation.rights.length > 0 ? (
+                                                            invitation.rights.map((right) => (
+                                                                <Badge key={right} variant="outline" className="text-xs">
+                                                                    {availablePermissions.find(r => r.id === right)?.label || right}
+                                                                </Badge>
+                                                            ))
+                                                        ) : (
+                                                            <Badge variant="outline" className="text-xs">
+                                                                Brand User Access
                                                             </Badge>
-                                                        ))}
+                                                        )}
                                                     </div>
                                                 </div>
                                             )}
@@ -362,11 +381,13 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
                                             {member.rights && member.rights.length > 0 ? (
                                                 member.rights.map((right) => (
                                                     <Badge key={right} variant="outline" className="text-xs">
-                                                        {availableRights.find(r => r.id === right)?.label || right}
+                                                        {availablePermissions.find(r => r.id === right)?.label || right}
                                                     </Badge>
                                                 ))
                                             ) : (
-                                                <span className="text-sm text-muted-foreground">No permissions assigned</span>
+                                                <Badge variant="outline" className="text-xs">
+                                                    Brand User Access
+                                                </Badge>
                                             )}
                                         </div>
                                     </div>
@@ -407,17 +428,29 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
                             <div className="space-y-4">
                                 <div className="grid gap-4">
                                     <Label>Permissions</Label>
-                                    <div className="space-y-2">
-                                        {availableRights.map((right) => (
-                                            <div key={right.id} className="flex items-center space-x-2">
+                                    <div className="space-y-3">
+                                        {availablePermissions.map((permission) => (
+                                            <div key={permission.id} className="flex items-start space-x-3">
                                                 <Checkbox
-                                                    id={`rights-${right.id}`}
-                                                    checked={rightsData.rights.includes(right.id)}
-                                                    onCheckedChange={(checked) => handleRightChange(right.id, !!checked)}
+                                                    id={`edit-${permission.id}`}
+                                                    checked={rightsData.rights.includes(permission.id)}
+                                                    onCheckedChange={(checked) => {
+                                                        if (checked) {
+                                                            setRightsData('rights', [...rightsData.rights, permission.id]);
+                                                        } else {
+                                                            setRightsData('rights', rightsData.rights.filter(r => r !== permission.id));
+                                                        }
+                                                    }}
+                                                    className="mt-1"
                                                 />
-                                                <Label htmlFor={`rights-${right.id}`} className="text-sm font-normal">
-                                                    {right.label}
-                                                </Label>
+                                                <div className="flex-1">
+                                                    <Label htmlFor={`edit-${permission.id}`} className="text-sm font-medium cursor-pointer">
+                                                        {permission.label}
+                                                    </Label>
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        {permission.description}
+                                                    </p>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
