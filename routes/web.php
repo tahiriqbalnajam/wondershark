@@ -29,13 +29,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Working import routes - using controllers to get proper data
     Route::get('posts/agency-import', [\App\Http\Controllers\PostImportController::class, 'index'])
         ->name('posts.agency-import')
-        ->middleware('role.permission:null,agency');
+        ->middleware('role.permission:null,agency|agency_member');
     Route::post('posts/agency-import', [\App\Http\Controllers\PostImportController::class, 'import'])
         ->name('posts.agency-import.store')
-        ->middleware('role.permission:null,agency');
+        ->middleware('role.permission:null,agency|agency_member');
     Route::get('posts/agency-import/template', [\App\Http\Controllers\PostImportController::class, 'downloadTemplate'])
         ->name('posts.agency-import.template')
-        ->middleware('role.permission:null,agency');
+        ->middleware('role.permission:null,agency|agency_member');
 
     Route::get('posts/admin-import', [\App\Http\Controllers\Admin\PostImportController::class, 'index'])
         ->name('posts.admin-import')
@@ -250,8 +250,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('api/competitors/save-bulk', [App\Http\Controllers\CompetitorController::class, 'saveBulkForCreation'])->name('competitors.save-bulk');
     });
 
-    // Brand Management Routes - For agency and brand users
-    Route::middleware('role.permission:null,agency|brand')->group(function () {
+    // Brand Management Routes - For agency, brand, and agency_member users
+    Route::middleware('role.permission:null,agency|brand|agency_member')->group(function () {
         Route::resource('brands', BrandController::class);
         Route::put('brands/{brand}/status', [BrandController::class, 'updateStatus'])->name('brands.status');
         Route::post('brands/generate-prompts', [BrandController::class, 'generatePrompts'])->name('brands.generatePrompts');
