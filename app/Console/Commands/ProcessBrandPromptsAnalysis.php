@@ -34,12 +34,18 @@ class ProcessBrandPromptsAnalysis extends Command
     public function handle()
     {
         $brandIds = $this->option('brand');
+        
+        // Ensure brandIds is an array (handle single value or comma-separated string)
+        if (! is_array($brandIds)) {
+            $brandIds = explode(',', (string) $brandIds);
+        }
+
         $processAll = $this->option('all');
         $forceRegenerate = $this->option('force');
         $sessionId = $this->option('session') ?: Str::uuid()->toString();
         $verbose = $this->option('verbose');
 
-        if (! $brandIds && ! $processAll) {
+        if (empty($brandIds) && ! $processAll) {
             $this->error('Please specify either --brand=ID or --all option');
 
             return 1;
@@ -49,6 +55,9 @@ class ProcessBrandPromptsAnalysis extends Command
             $brands = Brand::all();
             $this->info('Processing prompts for all '.$brands->count().' brands...');
         } else {
+            // Filter out empty values
+            $brandIds = array_filter($brandIds);
+            
             $brands = Brand::whereIn('id', $brandIds)->get();
             $notFound = array_diff($brandIds, $brands->pluck('id')->toArray());
 
