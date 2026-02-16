@@ -24,9 +24,9 @@ import {
 import AppLayout from '@/layouts/app-layout';
 import { countries } from '@/data/countries';
 import getUnicodeFlagIcon from 'country-flag-icons/unicode';
-import { 
-    Building2, 
-    Eye, 
+import {
+    Building2,
+    Eye,
     Smile,
     ChevronsUpDown,
     Trophy,
@@ -34,7 +34,9 @@ import {
     Power,
     CircleAlert,
     CircleCheckBig,
-    Sparkles
+    Sparkles,
+    Info,
+    Loader2
 } from 'lucide-react';
 
 type Brand = {
@@ -65,16 +67,17 @@ type Props = {
 };
 
 export default function BrandPromptsIndex({ brand, prompts }: Props) {
-    const { auth, errors } = usePage().props as any;
+    const { auth, errors, flash } = usePage().props as any;
     const userRoles = auth?.roles || [];
     const isAdmin = userRoles.includes('admin');
     const isBrandOrAgency = userRoles.includes('brand') || userRoles.includes('agency');
-    
+
     const [selectedPrompts, setSelectedPrompts] = useState<number[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [currentTab, setCurrentTab] = useState<'suggested' | 'active' | 'inactive'>('active');
     const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [analysisMessage, setAnalysisMessage] = useState<string | null>(null);
 
     useEffect(() => {
         if (errors?.error) {
@@ -83,7 +86,17 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
             const timeout = setTimeout(() => setErrorMessage(null), 5000);
             return () => clearTimeout(timeout);
         }
-    }, [errors]);
+
+        // Check for success message that indicates analysis is running
+        if (flash?.success) {
+            if (String(flash.success).includes('System is re-analyzing')) {
+                setAnalysisMessage(String(flash.success));
+                // Keep this message for 60 seconds to let user know it takes time
+                const timeout = setTimeout(() => setAnalysisMessage(null), 60000);
+                return () => clearTimeout(timeout);
+            }
+        }
+    }, [errors, flash]);
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -161,7 +174,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                 currentPrompts = inactivePrompts;
                 break;
         }
-        
+
         if (checked) {
             setSelectedPrompts(currentPrompts.map(p => p.id));
         } else {
@@ -218,7 +231,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
     const handleBulkDelete = async () => {
         if (selectedPrompts.length === 0) return;
         if (!confirm('Are you sure you want to delete the selected prompts?')) return;
-        
+
         setIsLoading(true);
         try {
             await router.post(`/brands/${brand.id}/prompts/bulk-update`, {
@@ -277,10 +290,28 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
             <TooltipProvider>
                 <div className="space-y-6 relative mt-15">
                     {errorMessage && (
-                        <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+                        <div className="p-4 bg-red-50 border border-red-200 rounded-md flex items-center gap-2">
+                            <CircleAlert className="h-5 w-5 text-red-600" />
                             <p className="text-sm text-red-700 font-medium">{errorMessage}</p>
                         </div>
                     )}
+
+                    {analysisMessage && (
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-md flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className="relative">
+                                <Info className="h-5 w-5 text-blue-600" />
+                                <div className="absolute top-0 right-0 -mr-1 -mt-1 w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-semibold text-blue-800">Analysis in Progress</h4>
+                                <p className="text-sm text-blue-700">
+                                    The system is re-analyzing prompts and recalculating visibility. This may take a few minutes to complete.
+                                </p>
+                            </div>
+                            <Loader2 className="h-4 w-4 text-blue-500 animate-spin ml-auto" />
+                        </div>
+                    )}
+
                     <div className="flex items-center justify-between">
                         <div className="space-y-1">
                             <h3 className="text-xl font-semibold">{brand.name} Prompts <small className="text-gray-400 text-sm"> - {prompts.length} Total</small></h3>
@@ -315,18 +346,18 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-[20px] text-center p-0">
-                                            <Checkbox 
-                                                id="active-select-all" 
-                                                checked={allSelected} 
-                                                onCheckedChange={(val) => handleSelectAll(!!val)} 
+                                            <Checkbox
+                                                id="active-select-all"
+                                                checked={allSelected}
+                                                onCheckedChange={(val) => handleSelectAll(!!val)}
                                             />
                                         </TableHead>
                                         <TableHead>Prompt</TableHead>
-                                        <TableHead><div className="flex items-center"><Eye className="w-4 mr-2"/> Visibility</div></TableHead>
-                                        <TableHead><div className="flex items-center"><Smile className="w-4 mr-2"/> Sentiment</div></TableHead>
-                                        <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2"/> Position</div></TableHead>
-                                        <TableHead><div className="flex items-center"><Trophy className="w-4 mr-2"/> Mentions</div></TableHead>
-                                        <TableHead><div className="flex items-center"><MapPin className="w-4 mr-2"/> Location</div></TableHead>
+                                        <TableHead><div className="flex items-center"><Eye className="w-4 mr-2" /> Visibility</div></TableHead>
+                                        <TableHead><div className="flex items-center"><Smile className="w-4 mr-2" /> Sentiment</div></TableHead>
+                                        <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2" /> Position</div></TableHead>
+                                        <TableHead><div className="flex items-center"><Trophy className="w-4 mr-2" /> Mentions</div></TableHead>
+                                        <TableHead><div className="flex items-center"><MapPin className="w-4 mr-2" /> Location</div></TableHead>
                                         <TableHead>Created</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -345,10 +376,10 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                             return (
                                                 <TableRow key={prompt.id}>
                                                     <TableHead className="w-[70px] text-center p-0">
-                                                        <Checkbox 
-                                                            id={`active-${prompt.id}`} 
-                                                            checked={selectedPrompts.includes(prompt.id)} 
-                                                            onCheckedChange={(val) => handleSelectPrompt(prompt.id, !!val)} 
+                                                        <Checkbox
+                                                            id={`active-${prompt.id}`}
+                                                            checked={selectedPrompts.includes(prompt.id)}
+                                                            onCheckedChange={(val) => handleSelectPrompt(prompt.id, !!val)}
                                                         />
                                                     </TableHead>
                                                     <TableCell>
@@ -391,9 +422,9 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                     </TableCell>
                                                     <TableCell>
                                                         <div className="text-sm text-muted-foreground">
-                                                            {Math.floor(prompt.days_ago) === 0 ? 'Today' : 
-                                                             Math.floor(prompt.days_ago) === 1 ? '1 day' : 
-                                                             `${Math.floor(prompt.days_ago)} days`}
+                                                            {Math.floor(prompt.days_ago) === 0 ? 'Today' :
+                                                                Math.floor(prompt.days_ago) === 1 ? '1 day' :
+                                                                    `${Math.floor(prompt.days_ago)} days`}
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
@@ -409,14 +440,14 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-[70px] text-center p-0">
-                                            <Checkbox 
-                                                id="inactive-select-all" 
-                                                checked={allSelected} 
-                                                onCheckedChange={(val) => handleSelectAll(!!val)} 
+                                            <Checkbox
+                                                id="inactive-select-all"
+                                                checked={allSelected}
+                                                onCheckedChange={(val) => handleSelectAll(!!val)}
                                             />
                                         </TableHead>
                                         <TableHead>Prompt</TableHead>
-                                        <TableHead><div className="flex items-center"><MapPin className="w-4 mr-2"/> Location</div></TableHead>
+                                        <TableHead><div className="flex items-center"><MapPin className="w-4 mr-2" /> Location</div></TableHead>
                                         <TableHead>Created</TableHead>
                                         <TableHead></TableHead>
                                     </TableRow>
@@ -436,10 +467,10 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                             return (
                                                 <TableRow key={prompt.id}>
                                                     <TableHead className="w-[70px] text-center p-0">
-                                                        <Checkbox 
-                                                            id={`inactive-${prompt.id}`} 
-                                                            checked={selectedPrompts.includes(prompt.id)} 
-                                                            onCheckedChange={(val) => handleSelectPrompt(prompt.id, !!val)} 
+                                                        <Checkbox
+                                                            id={`inactive-${prompt.id}`}
+                                                            checked={selectedPrompts.includes(prompt.id)}
+                                                            onCheckedChange={(val) => handleSelectPrompt(prompt.id, !!val)}
                                                         />
                                                     </TableHead>
                                                     <TableCell>
@@ -457,14 +488,14 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                     </TableCell>
                                                     <TableCell>
                                                         <div className="text-sm text-muted-foreground">
-                                                            {Math.floor(prompt.days_ago) === 0 ? 'Today' : 
-                                                             Math.floor(prompt.days_ago) === 1 ? '1 day' : 
-                                                             `${Math.floor(prompt.days_ago)} days`}
+                                                            {Math.floor(prompt.days_ago) === 0 ? 'Today' :
+                                                                Math.floor(prompt.days_ago) === 1 ? '1 day' :
+                                                                    `${Math.floor(prompt.days_ago)} days`}
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
                                                         <div className="flex justify-center">
-                                                            <button 
+                                                            <button
                                                                 type="button"
                                                                 onClick={() => handleUpdatePrompt(prompt.id, 'is_active', true)}
                                                                 className="border px-4 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-orange-600 hover:text-white"
@@ -484,150 +515,150 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                         {(isAdmin || isBrandOrAgency) && (
                             <TabsContent value="suggested" className="active-table-prompt">
                                 <div className="suggested-prompts-box flex justify-between items-center p-4 border rounded-sm mb-5">
-                                    <p className='flex items-center gap-3 text-sm'><Sparkles className='text-orange-600'/><b>Suggested prompts.</b> Expand your brand's presence with suggested prompts.</p>
-                                    <button 
-                                    onClick={handleGeneratePrompts}
-                                    disabled={isGeneratingPrompts}
-                                    className='py-2 px-4 bg-gray-200 text-gray-950 rounded-sm text-sm hover:bg-orange-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed'
-                                >
-                                    {isGeneratingPrompts ? (
-                                        <>
-                                            <Sparkles className="w-4 h-4 mr-2 inline-block animate-spin" />
-                                            Generating...
-                                        </>
-                                    ) : (
-                                        'Suggest More'
-                                    )}
-                                </button>
-                            </div>
-                            {suggestedPrompts.length === 0 && !isGeneratingPrompts ? (
-                                <div className="text-center py-12 border rounded-lg">
-                                    <Sparkles className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                                    <p className="text-gray-500 mb-2">No suggested prompts yet</p>
-                                    <p className="text-gray-400 text-sm">Click "Suggest More" to generate AI-powered prompts</p>
+                                    <p className='flex items-center gap-3 text-sm'><Sparkles className='text-orange-600' /><b>Suggested prompts.</b> Expand your brand's presence with suggested prompts.</p>
+                                    <button
+                                        onClick={handleGeneratePrompts}
+                                        disabled={isGeneratingPrompts}
+                                        className='py-2 px-4 bg-gray-200 text-gray-950 rounded-sm text-sm hover:bg-orange-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed'
+                                    >
+                                        {isGeneratingPrompts ? (
+                                            <>
+                                                <Sparkles className="w-4 h-4 mr-2 inline-block animate-spin" />
+                                                Generating...
+                                            </>
+                                        ) : (
+                                            'Suggest More'
+                                        )}
+                                    </button>
                                 </div>
-                            ) : (
-                                <Table className="flexible-table">
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-[70px] text-center p-0">
-                                                <Checkbox 
-                                                    id="suggested-select-all" 
-                                                    checked={allSelected} 
-                                                    onCheckedChange={(val) => handleSelectAll(!!val)} 
-                                                />
-                                            </TableHead>
-                                            <TableHead>Prompt</TableHead>
-                                            <TableHead><div className="flex items-center"><Eye className="w-4 mr-2"/> Visibility</div></TableHead>
-                                            <TableHead><div className="flex items-center"><Smile className="w-4 mr-2"/> Sentiment</div></TableHead>
-                                            <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2"/> Position</div></TableHead>
-                                            <TableHead><div className="flex items-center"><Trophy className="w-4 mr-2"/> Mentions</div></TableHead>
-                                            <TableHead><div className="flex items-center"><MapPin className="w-4 mr-2"/> Location</div></TableHead>
-                                            <TableHead>Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {suggestedPrompts.map((prompt) => {
-                                            const countryData = getCountryData(prompt.country_code);
-                                            return (
-                                                <TableRow key={prompt.id}>
-                                                    <TableHead className="w-[70px] text-center p-0">
-                                                        <Checkbox 
-                                                            id={`suggested-${prompt.id}`} 
-                                                            checked={selectedPrompts.includes(prompt.id)} 
-                                                            onCheckedChange={(val) => handleSelectPrompt(prompt.id, !!val)} 
-                                                        />
-                                                    </TableHead>
-                                                    <TableCell>{prompt.prompt}</TableCell>
-                                                    <TableCell>
-                                                        <TooltipProvider>
-                                                            <Tooltip>
-                                                                <TooltipTrigger>
-                                                                    <Eye className="w-4 h-4" />
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>
-                                                                    <p>Visibility data will be available after tracking</p>
-                                                                </TooltipContent>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge className="sentiment-td">
-                                                            <span></span> --
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge className="position-td">
-                                                            <span>#</span> --
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>--</TableCell>
-                                                    <TableCell>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-lg">{countryData.flag}</span>
-                                                            <span className="text-sm">{countryData.name}</span>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className="flex gap-2">
-                                                            <button 
-                                                                type="button"
-                                                                onClick={() => handleUpdatePrompt(prompt.id, 'is_active', true)}
-                                                                className="border px-4 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-green-600 hover:text-white"
-                                                            >
-                                                                Track
-                                                            </button>
-                                                            <button 
-                                                                type="button"
-                                                                onClick={() => handleDeletePrompt(prompt.id)}
-                                                                className="border px-4 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-red-600 hover:text-white"
-                                                            >
-                                                                Reject
-                                                            </button>
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            );
-                                        })}
-                                    </TableBody>
-                                </Table>
-                            )}
+                                {suggestedPrompts.length === 0 && !isGeneratingPrompts ? (
+                                    <div className="text-center py-12 border rounded-lg">
+                                        <Sparkles className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                                        <p className="text-gray-500 mb-2">No suggested prompts yet</p>
+                                        <p className="text-gray-400 text-sm">Click "Suggest More" to generate AI-powered prompts</p>
+                                    </div>
+                                ) : (
+                                    <Table className="flexible-table">
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-[70px] text-center p-0">
+                                                    <Checkbox
+                                                        id="suggested-select-all"
+                                                        checked={allSelected}
+                                                        onCheckedChange={(val) => handleSelectAll(!!val)}
+                                                    />
+                                                </TableHead>
+                                                <TableHead>Prompt</TableHead>
+                                                <TableHead><div className="flex items-center"><Eye className="w-4 mr-2" /> Visibility</div></TableHead>
+                                                <TableHead><div className="flex items-center"><Smile className="w-4 mr-2" /> Sentiment</div></TableHead>
+                                                <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2" /> Position</div></TableHead>
+                                                <TableHead><div className="flex items-center"><Trophy className="w-4 mr-2" /> Mentions</div></TableHead>
+                                                <TableHead><div className="flex items-center"><MapPin className="w-4 mr-2" /> Location</div></TableHead>
+                                                <TableHead>Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {suggestedPrompts.map((prompt) => {
+                                                const countryData = getCountryData(prompt.country_code);
+                                                return (
+                                                    <TableRow key={prompt.id}>
+                                                        <TableHead className="w-[70px] text-center p-0">
+                                                            <Checkbox
+                                                                id={`suggested-${prompt.id}`}
+                                                                checked={selectedPrompts.includes(prompt.id)}
+                                                                onCheckedChange={(val) => handleSelectPrompt(prompt.id, !!val)}
+                                                            />
+                                                        </TableHead>
+                                                        <TableCell>{prompt.prompt}</TableCell>
+                                                        <TableCell>
+                                                            <TooltipProvider>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger>
+                                                                        <Eye className="w-4 h-4" />
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        <p>Visibility data will be available after tracking</p>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            </TooltipProvider>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge className="sentiment-td">
+                                                                <span></span> --
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge className="position-td">
+                                                                <span>#</span> --
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>--</TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-lg">{countryData.flag}</span>
+                                                                <span className="text-sm">{countryData.name}</span>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleUpdatePrompt(prompt.id, 'is_active', true)}
+                                                                    className="border px-4 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-green-600 hover:text-white"
+                                                                >
+                                                                    Track
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeletePrompt(prompt.id)}
+                                                                    className="border px-4 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-red-600 hover:text-white"
+                                                                >
+                                                                    Reject
+                                                                </button>
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                )}
                             </TabsContent>
                         )}
                     </Tabs>
 
                     <div className={`prompts-action ${selectedPrompts.length > 0 ? "active" : ""}`}>
                         <p>{selectedPrompts.length > 0
-                        ? `${selectedPrompts.length} Selected`
-                        : "0 Select"}</p>
+                            ? `${selectedPrompts.length} Selected`
+                            : "0 Select"}</p>
                         <div className="prompts-action-btns">
                             {currentTab !== 'active' && (
-                                <button 
+                                <button
                                     type="button"
                                     onClick={handleBulkActivate}
                                     disabled={isLoading}
                                     className="active-ch"
                                 >
-                                    <CircleCheckBig/> {currentTab === 'suggested' ? 'Track' : 'Active'}
+                                    <CircleCheckBig /> {currentTab === 'suggested' ? 'Track' : 'Active'}
                                 </button>
                             )}
                             {currentTab === 'active' && (
-                                <button 
+                                <button
                                     type="button"
                                     onClick={handleBulkDeactivate}
                                     disabled={isLoading}
                                     className="deactive-ch"
                                 >
-                                    <CircleAlert/>Deactive
+                                    <CircleAlert />Deactive
                                 </button>
                             )}
-                            <button 
+                            <button
                                 type="button"
                                 onClick={handleBulkDelete}
                                 disabled={isLoading}
                                 className="delete-ch"
                             >
-                                <Power/>{currentTab === 'suggested' ? 'Reject' : 'Delete'}
+                                <Power />{currentTab === 'suggested' ? 'Reject' : 'Delete'}
                             </button>
                         </div>
                     </div>

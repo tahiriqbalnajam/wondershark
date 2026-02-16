@@ -87,7 +87,31 @@ class BrandPromptController extends Controller
             'country_code' => $request->country_code ?? 'US',
         ]);
 
-        return redirect()->back()->with('success', 'Prompt added successfully');
+        $message = 'Prompt added successfully.';
+
+        // Trigger immediate analysis and recalculation ONLY if the prompt is active
+        if ($isActive) {
+            try {
+                \Illuminate\Support\Facades\Artisan::call('brand:analyze-prompts', [
+                    '--brand' => [$brand->id],
+                    '--force' => true,
+                ]);
+                
+                \Illuminate\Support\Facades\Artisan::call('brand:recalculate-visibility', [
+                    '--brand' => $brand->id,
+                    '--regenerate' => true,
+                ]);
+
+                $message .= ' System is re-analyzing prompts and recalculating visibility.';
+            } catch (\Exception $e) {
+                Log::error('Failed to trigger immediate analysis', [
+                    'brand_id' => $brand->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        return redirect()->back()->with('success', $message);
     }
 
     public function update(Request $request, Brand $brand, BrandPrompt $prompt)
@@ -110,6 +134,8 @@ class BrandPromptController extends Controller
         ]);
 
         $data = $request->only(['position', 'sentiment', 'visibility', 'is_active']);
+        $wasActive = $prompt->is_active;
+        $becomingActive = false;
 
         // If trying to activate a prompt, check if brand already has 25 active prompts
         if (isset($data['is_active']) && $data['is_active'] === true && ! $prompt->is_active) {
@@ -122,13 +148,39 @@ class BrandPromptController extends Controller
             }
 
             $data['status'] = 'active';
+            $becomingActive = true;
         } elseif (isset($data['is_active']) && $data['is_active'] === false) {
             $data['status'] = 'inactive';
         }
 
         $prompt->update($data);
 
-        return redirect()->back()->with('success', 'Prompt updated successfully');
+        $message = 'Prompt updated successfully.';
+
+        // Trigger analysis if it was active, is becoming active, or stays active
+        // Basically if it involves an active prompt in any way
+        if ($wasActive || $becomingActive || (isset($data['is_active']) && $data['is_active'])) {
+            try {
+                \Illuminate\Support\Facades\Artisan::call('brand:analyze-prompts', [
+                    '--brand' => [$brand->id],
+                    '--force' => true,
+                ]);
+                
+                \Illuminate\Support\Facades\Artisan::call('brand:recalculate-visibility', [
+                    '--brand' => $brand->id,
+                    '--regenerate' => true,
+                ]);
+
+                $message .= ' System is re-analyzing prompts and recalculating visibility.';
+            } catch (\Exception $e) {
+                Log::error('Failed to trigger immediate analysis', [
+                    'brand_id' => $brand->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        return redirect()->back()->with('success', $message);
     }
 
     public function destroy(Brand $brand, BrandPrompt $prompt)
@@ -143,9 +195,34 @@ class BrandPromptController extends Controller
             abort(404);
         }
 
+        $wasActive = $prompt->is_active;
         $prompt->delete();
 
-        return redirect()->back()->with('success', 'Prompt deleted successfully');
+        $message = 'Prompt deleted successfully.';
+
+        // Trigger immediate analysis and recalculation ONLY if the deleted prompt was active
+        if ($wasActive) {
+            try {
+                \Illuminate\Support\Facades\Artisan::call('brand:analyze-prompts', [
+                    '--brand' => [$brand->id],
+                    '--force' => true,
+                ]);
+                
+                \Illuminate\Support\Facades\Artisan::call('brand:recalculate-visibility', [
+                    '--brand' => $brand->id,
+                    '--regenerate' => true,
+                ]);
+                
+                $message .= ' System is re-analyzing prompts and recalculating visibility.';
+            } catch (\Exception $e) {
+                Log::error('Failed to trigger immediate analysis', [
+                    'brand_id' => $brand->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        return redirect()->back()->with('success', $message);
     }
 
     public function bulkUpdate(Request $request, Brand $brand)
@@ -182,11 +259,21 @@ class BrandPromptController extends Controller
         $prompts = BrandPrompt::whereIn('id', $request->prompt_ids)
             ->where('brand_id', $brand->id)
             ->get();
+            
+        $shouldTriggerAnalysis = false;
 
         foreach ($prompts as $prompt) {
+            // Check if this operation affects an active prompt
+            if ($prompt->is_active) {
+                // If we are deleting or deactivating an active prompt, or modifying it
+                $shouldTriggerAnalysis = true;
+            }
+            
             switch ($request->action) {
                 case 'activate':
                     $prompt->update(['is_active' => true, 'status' => 'active']);
+                    // Activating a prompt should trigger analysis
+                    $shouldTriggerAnalysis = true;
                     break;
                 case 'deactivate':
                     $prompt->update(['is_active' => false, 'status' => 'inactive']);
@@ -207,7 +294,31 @@ class BrandPromptController extends Controller
             }
         }
 
-        return redirect()->back()->with('success', 'Prompts updated successfully');
+        $message = 'Prompts updated successfully.';
+
+        // Trigger immediate analysis and recalculation if needed
+        if ($shouldTriggerAnalysis) {
+            try {
+                \Illuminate\Support\Facades\Artisan::call('brand:analyze-prompts', [
+                    '--brand' => [$brand->id],
+                    '--force' => true,
+                ]);
+                
+                \Illuminate\Support\Facades\Artisan::call('brand:recalculate-visibility', [
+                    '--brand' => $brand->id,
+                    '--regenerate' => true,
+                ]);
+                
+                $message .= ' System is re-analyzing prompts and recalculating visibility.';
+            } catch (\Exception $e) {
+                Log::error('Failed to trigger immediate analysis', [
+                    'brand_id' => $brand->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        return redirect()->back()->with('success', $message);
     }
 
     public function generateAI(Request $request, Brand $brand)
@@ -337,7 +448,18 @@ class BrandPromptController extends Controller
                 'analysis_distribution' => $distributionStats,
             ]);
 
-            return redirect()->back()->with('success', count($brandPrompts).' AI prompts generated successfully. Analysis in progress...');
+            // Note: AI generated prompts are inactive by default, so we generally don't trigger analysis unless requested?
+            // The original logic triggered it for all generated prompts, but they are inactive.
+            // If the user wants to keep logic consistent, inactive prompts are skipped by `brand:analyze-prompts` anyway.
+            // However, the `ProcessBrandPromptAnalysis` dispatched above handles the *initial* analysis for these prompts regardless of active status?
+            // Actually, `ProcessBrandPromptAnalysis` job might check for active status or just run.
+            // If `brand:analyze-prompts` command filters for `is_active=true` (which it does based on previous read), then running the command here won't do anything for these new inactive prompts.
+            // But `ProcessBrandPromptAnalysis::dispatch` is already called for each prompt above.
+            
+            // So we don't need to run the console command here because the prompts are inactive.
+            // And recalculating visibility is not needed for inactive prompts.
+            
+            return redirect()->back()->with('success', count($brandPrompts).' AI prompts generated successfully.');
 
         } catch (\Exception $e) {
             Log::error('Failed to generate AI prompts for brand', [
