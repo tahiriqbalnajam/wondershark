@@ -51,6 +51,12 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
         cleanText = cleanText.replace(/HTML_RESPONSE_START/gi, '');
         cleanText = cleanText.replace(/HTML_RESPONSE_END/gi, '');
 
+        // Remove markdown code fence markers
+        // Patterns like: ** ```html, **```html, ** ```javascript, etc.
+        cleanText = cleanText.replace(/\*\*\s*```\w*/gi, '');
+        cleanText = cleanText.replace(/```\w*\s*\*\*/gi, '');
+        cleanText = cleanText.replace(/```\w*/gi, '');
+
         // Remove CSS style blocks (both <style> tags and inline styles in text)
         cleanText = cleanText.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
         cleanText = cleanText.replace(/\{[^}]*font-family[^}]*\}[\s\S]*?\{[^}]*\}/gi, '');

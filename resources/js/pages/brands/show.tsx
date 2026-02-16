@@ -133,6 +133,28 @@ const breadcrumbs = (brand: Brand) => [
     { name: brand.name, href: '', title: brand.name },
 ];
 
+// Helper function to clean up markdown code fence markers from AI responses
+const cleanAiResponse = (response: string | undefined): string => {
+    if (!response) return '';
+    
+    let cleaned = response;
+    
+    // Remove HTML_RESPONSE_START and HTML_RESPONSE_END markers
+    cleaned = cleaned.replace(/HTML_RESPONSE_START/gi, '');
+    cleaned = cleaned.replace(/HTML_RESPONSE_END/gi, '');
+    
+    // Remove markdown code fence markers at the beginning:
+    // Patterns like: ** ```html, **```html, ** ```javascript, etc.
+    cleaned = cleaned.replace(/^\*\*\s*```\w*\s*/g, '');
+    cleaned = cleaned.replace(/^```\w*\s*/g, '');
+    
+    // Remove closing code fence markers at the end: ``` or ``` **
+    cleaned = cleaned.replace(/```\s*\*\*\s*$/g, '');
+    cleaned = cleaned.replace(/```\s*$/g, '');
+    
+    return cleaned.trim();
+};
+
 export default function BrandShow({ brand, competitiveStats, historicalStats, aiModels, allBrands }: Props) {
     const [selectedCompetitorDomain, setSelectedCompetitorDomain] = useState<string | null>(null);
     const [triggeringAnalysis, setTriggeringAnalysis] = useState(false);
@@ -915,7 +937,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                                                 {selectedPrompt.ai_response ? (
                                                     <div
                                                         className="prose prose-sm max-w-none"
-                                                        dangerouslySetInnerHTML={{ __html: selectedPrompt.ai_response }}
+                                                        dangerouslySetInnerHTML={{ __html: cleanAiResponse(selectedPrompt.ai_response) }}
                                                     />
                                                 ) : (
                                                     <p className="text-muted-foreground italic">No AI response available yet.</p>
