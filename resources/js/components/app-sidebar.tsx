@@ -55,6 +55,10 @@ const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, sele
     //     });
     // }
 
+
+
+const agency_member_rights = permissions.user?.agency_membership?.rights;
+
     // Posts - for agency and brand users, brand users must have brand ID
     if (permissions.hasAnyRole(['agency', 'brand']) && selectedBrandId) {
         items.push({
@@ -63,6 +67,18 @@ const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, sele
             icon: FileText,
         });
     }
+
+    if (permissions.hasAnyRole(['agency_manager', 'agency_member']) && selectedBrandId) { //// role is only agency_member
+        if(agency_member_rights == "agency_manager"){
+            items.push({
+                title: 'Posts',
+                href: `/brands/${selectedBrandId}/posts`,
+                icon: FileText,
+            });
+        }
+    }
+
+
 
     // Search Analytics - for admin users
     if (permissions.hasRole('admin')) {
@@ -78,7 +94,7 @@ const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, sele
 
 const getPreferenceNavItems = (permissions: ReturnType<typeof usePermissions>, selectedBrandId?: number): NavItem[] => {
     const items: NavItem[] = [];
-
+    const agency_member_rights = permissions.user?.agency_membership?.rights;
     // Show for agency and brand users, brand users must have brand ID
     if (permissions.hasAnyRole(['agency', 'brand']) && selectedBrandId) {
         items.push({
@@ -92,6 +108,23 @@ const getPreferenceNavItems = (permissions: ReturnType<typeof usePermissions>, s
             href: `/brands/${selectedBrandId}/prompts`,
             icon: MessageSquare,
         });
+    }
+
+
+     if (permissions.hasAnyRole(['agency_manager', 'agency_member']) && selectedBrandId) { //// role is only agency_member
+        if(agency_member_rights == "agency_manager"){
+            items.push({
+                title: 'Competitors',
+                href: `/brands/${selectedBrandId}/competitors`,
+                icon: Shield,
+            });
+
+            items.push({
+                title: 'Prompts',
+                href: `/brands/${selectedBrandId}/prompts`,
+                icon: MessageSquare,
+            });
+        }
     }
 
     return items;
@@ -255,6 +288,14 @@ export function AppSidebar() {
         // router.flushAll();
     };
     const permissions = usePermissions();
+
+    //console.log('permissions:', permissions);
+
+    //const membership_rights = permissions.user?.agency_membership?.rights);
+
+
+
+
     const page = usePage<SharedData>();
     const isRankingPage = page.url.includes('/ranking');
     // Extract brand ID from current URL path
