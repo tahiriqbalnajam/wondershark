@@ -80,13 +80,13 @@ class BrandPromptAnalysisService
 
         $additionalContext = '';
         if (! empty($subreddits)) {
-            $additionalContext .= "\n\n**CRITICAL REQUIREMENT**: You MUST include AT LEAST 2-3 relevant Reddit posts/discussions from these target subreddits: {$subredditsString}. Include actual Reddit URLs (e.g., https://reddit.com/r/subreddit/comments/...) that discuss topics related to [{$phrase}] in these communities.";
+            $additionalContext .= "\n\n**IMPORTANT**: If available, please include the best and most relevant Reddit posts/discussions from these target subreddits: {$subredditsString}. Include actual Reddit URLs (e.g., https://reddit.com/r/subreddit/comments/...) that discuss topics related to [{$phrase}] in these communities.";
         }
 
         // Always emphasize Reddit/YouTube inclusion
-        $additionalContext .= "\n\n**MANDATORY**: Include at least 1-2 YouTube videos (youtube.com or youtu.be URLs) related to [{$phrase}].";
+        $additionalContext .= "\n\n**RECOMMENDED**: If available, include best and most relevant YouTube videos (youtube.com or youtu.be URLs) related to [{$phrase}].";
         if (empty($subreddits)) {
-            $additionalContext .= " Also include at least 1-2 Reddit discussions (reddit.com URLs) from relevant subreddits discussing [{$phrase}].";
+            $additionalContext .= " Also, if available, include the best and most relevant Reddit discussions (reddit.com URLs) from relevant subreddits discussing [{$phrase}].";
         }
 
         return "You are an AI assistant. Your task is to generate a natural response to a user question, and then analyze that response.
