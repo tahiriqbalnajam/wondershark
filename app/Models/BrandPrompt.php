@@ -40,6 +40,7 @@ class BrandPrompt extends Model
         'is_selected' => 'boolean',
         'order' => 'integer',
         'position' => 'integer',
+        'sentiment' => 'integer',
         'resources' => 'array',
         'competitor_mentions' => 'array',
         'analysis_completed_at' => 'datetime',

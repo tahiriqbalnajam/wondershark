@@ -49,7 +49,7 @@ class VisibilityCalculationService
                 'context' => $brandMentionData['context'],
                 'session_id' => $sessionId,
                 'analyzed_at' => $analyzedAt,
-                'sentiment' => $this->getSentimentScore($brandPrompt->sentiment),
+                'sentiment' => $brandPrompt->sentiment ?? 50,
             ]);
             $mentions[] = $mention;
         }
@@ -77,7 +77,7 @@ class VisibilityCalculationService
                     'context' => $competitorMentionData['context'],
                     'session_id' => $sessionId,
                     'analyzed_at' => $analyzedAt,
-                    'sentiment' => 50, // Default to neutral for competitors for now
+                    'sentiment' => null, // Competitors have no individual sentiment score from the AI prompt
                 ]);
                 $mentions[] = $mention;
             }
@@ -228,7 +228,7 @@ class VisibilityCalculationService
                 'entity_name' => $stat['entity_name'],
                 'entity_url' => $entityUrl,
                 'visibility' => $stat['visibility'],
-                'sentiment' => round($stat['avg_sentiment'] ?? 50),
+                'sentiment' => $stat['avg_sentiment'] !== null ? (int) round($stat['avg_sentiment']) : null,
                 'position' => $position,
                 'analysis_session_id' => $sessionId,
                 'analyzed_at' => $analyzedAt,
@@ -483,24 +483,36 @@ class VisibilityCalculationService
         return $parts[0] ?? null;
     }
     /**
-     * Convert sentiment string to numeric score (0-100)
+     * Convert sentiment value to a clean 0-100 integer score.
+     * Sentiment is now stored as an integer (0-100) in BrandPrompt.
+     * This method is kept for backward compatibility with any legacy string values.
+     *
+     * @deprecated Use $brandPrompt->sentiment directly (already an integer cast).
      */
-    protected function getSentimentScore(?string $sentiment): int
+    protected function getSentimentScore(mixed $sentiment): int
     {
-        if (! $sentiment) {
+        if ($sentiment === null) {
             return 50;
         }
 
-        $sentiment = strtolower($sentiment);
-
-        if (str_contains($sentiment, 'positive')) {
-            return 100;
+        // Already a number — just clamp and return
+        if (is_numeric($sentiment)) {
+            $score = (float) $sentiment;
+            // If it looks like a 1-10 scale, convert
+            if ($score <= 10) {
+                $score *= 10;
+            }
+            return (int) max(0, min(100, round($score)));
         }
 
-        if (str_contains($sentiment, 'negative')) {
-            return 0;
-        }
-
-        return 50;
+        // Legacy text label fallback
+        $lower = strtolower(trim((string) $sentiment));
+        return match (true) {
+            str_contains($lower, 'very positive') || str_contains($lower, 'excellent') => 90,
+            str_contains($lower, 'positive')                                            => 75,
+            str_contains($lower, 'very negative') || str_contains($lower, 'poor')      => 15,
+            str_contains($lower, 'negative')                                            => 30,
+            default                                                                      => 50,
+        };
     }
 }

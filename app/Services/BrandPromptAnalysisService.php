@@ -123,7 +123,7 @@ class BrandPromptAnalysisService
             - Description: [brief description]
             ]
             
-            Brand_Sentiment: [Positive/Neutral/Negative score 1-10 for [{$brandName}] if mentioned]
+            Brand_Sentiment: [Numeric score 0-100 for [{$brandName}] sentiment if mentioned. 0=very negative, 50=neutral, 100=very positive. Use ONLY a number, no text labels.]
             Brand_Position: [Percentage prominence of [{$brandName}], 0 if not mentioned]
             Competitor_Mentions: [JSON object of mentioned competitors]
             ANALYSIS_END";
@@ -909,25 +909,20 @@ class BrandPromptAnalysisService
      */
     protected function parseAnalysisText(string $analysisText, Brand $brand, array $competitors): array
     {
-        $sentiment = 'neutral';
+        $sentiment = 50; // Default neutral score
         $position = 0;
         $competitorMentions = [];
 
-        // Extract sentiment
+        // Extract sentiment - expect a numeric 0-100 value
         if (preg_match('/Brand_Sentiment:\s*([^\n]+)/i', $analysisText, $matches)) {
-            $sentimentText = strtolower(trim($matches[1]));
-            if (strpos($sentimentText, 'positive') !== false) {
-                $sentiment = 'positive';
-            } elseif (strpos($sentimentText, 'negative') !== false) {
-                $sentiment = 'negative';
-            }
+            $rawSentiment = trim($matches[1]);
+            $sentiment = $this->normalizeSentimentToScore($rawSentiment);
         }
 
         // Extract position percentage
         if (preg_match('/Brand_Position:\s*(\d+)%?/i', $analysisText, $matches)) {
             $position = (int) $matches[1];
         }
-
 
         // Extract competitor mentions
         if (preg_match('/Competitor_Mentions:\s*(\{.*?\})/s', $analysisText, $matches)) {
@@ -947,6 +942,34 @@ class BrandPromptAnalysisService
             'visibility' => null, // Ensure visibility key exists to prevent errors
             'competitor_mentions' => $competitorMentions,
         ];
+    }
+
+    /**
+     * Normalize a raw sentiment value (text or number) to a 0-100 integer score.
+     * Handles both numeric strings ("72") and legacy text labels ("positive", "negative", "neutral").
+     */
+    protected function normalizeSentimentToScore(string $raw): int
+    {
+        $raw = strtolower(trim($raw));
+
+        // If it's already a number (possibly with /100 or % suffix), extract it
+        if (preg_match('/^(\d+(?:\.\d+)?)/', $raw, $m)) {
+            $score = (float) $m[1];
+            // If it looks like a 1-10 scale (old format), convert to 0-100
+            if ($score <= 10) {
+                $score = $score * 10;
+            }
+            return (int) max(0, min(100, round($score)));
+        }
+
+        // Fallback: map legacy text labels to numeric scores
+        return match (true) {
+            str_contains($raw, 'very positive') || str_contains($raw, 'excellent') => 90,
+            str_contains($raw, 'positive')                                          => 75,
+            str_contains($raw, 'very negative') || str_contains($raw, 'poor')      => 15,
+            str_contains($raw, 'negative')                                          => 30,
+            default                                                                  => 50, // neutral
+        };
     }
 
     /**

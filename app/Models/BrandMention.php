@@ -27,9 +27,10 @@ class BrandMention extends Model
     ];
 
     protected $casts = [
-        'analyzed_at' => 'datetime',
+        'analyzed_at'   => 'datetime',
         'mention_count' => 'integer',
-        'position' => 'integer',
+        'position'      => 'integer',
+        'sentiment'     => 'integer',
     ];
 
     public function brandPrompt(): BelongsTo

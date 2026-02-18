@@ -1,23 +1,23 @@
 import { CardContent } from "@/components/ui/card";
 import { Link } from "@inertiajs/react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import {
-  Info,
-  ArrowUpRight,
-  ArrowDownRight,
+    Info,
+    ArrowUpRight,
+    ArrowDownRight,
 } from "lucide-react";
 import { CHART_COLORS } from "@/components/chart/visibility";
 
@@ -56,7 +56,7 @@ interface BrandVisibilityIndexProps {
 export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, limit, hoveredDomain, onDomainHover, entities }: BrandVisibilityIndexProps) {
     // Sort by visibility (higher is better)
     const sortedStats = [...competitiveStats].sort((a, b) => (b.visibility ?? 0) - (a.visibility ?? 0));
-    
+
     // Apply limit if specified
     const displayStats = limit ? sortedStats.slice(0, limit) : sortedStats;
     const hasMore = limit && sortedStats.length > limit;
@@ -77,57 +77,56 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                             <TableHead className="w-12 border-r border-gray-200 text-center">#</TableHead>
                             <TableHead className="w-48 border-r border-gray-200">Brand</TableHead>
                             <TableHead className="border-r border-gray-200">
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    className="p-0 border-0 text-xs shadow-none bg-transparent hover:border-0"
-                                >
-                                    Visibility <Info className="h-3 w-3 inline-block" />
-                                </Button>
-                                </TooltipTrigger>
-                                <TooltipContent className="w-50">
-                                <p className="text-xs text-center">
-                                    Percentage of chats mentioning the brand in the last 30 days
-                                </p>
-                                </TooltipContent>
-                            </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className="p-0 border-0 text-xs shadow-none bg-transparent hover:border-0"
+                                        >
+                                            Visibility <Info className="h-3 w-3 inline-block" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="w-50">
+                                        <p className="text-xs text-center">
+                                            Percentage of chats mentioning the brand in the last 30 days
+                                        </p>
+                                    </TooltipContent>
+                                </Tooltip>
                             </TableHead>
                             <TableHead className="w-28 border-r border-gray-200">
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    className="p-0 border-0 text-xs shadow-none bg-transparent hover:border-0"
-                                >
-                                    Sentiment <Info className="h-3 w-3 inline-block" />
-                                </Button>
-                                </TooltipTrigger>
-                                <TooltipContent className="w-50">
-                                <p className="text-xs text-center">
-                                    The average sentiment score of the brand when mentioned in
-                                    the last 30 days
-                                </p>
-                                </TooltipContent>
-                            </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className="p-0 border-0 text-xs shadow-none bg-transparent hover:border-0"
+                                        >
+                                            Sentiment <Info className="h-3 w-3 inline-block" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="w-50">
+                                        <p className="text-xs text-center">
+                                            Sentiment score 0–100 (0 = very negative, 50 = neutral, 100 = very positive) based on how the brand is discussed in AI responses
+                                        </p>
+                                    </TooltipContent>
+                                </Tooltip>
                             </TableHead>
                             <TableHead className="w-28">
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    className="p-0 border-0 text-xs shadow-none bg-transparent hover:border-0"
-                                >
-                                    Position <Info className="h-3 w-3 inline-block" />
-                                </Button>
-                                </TooltipTrigger>
-                                <TooltipContent className="w-50">
-                                <p className="text-xs text-center">
-                                    The average position of the brand when mentioned in the
-                                    last 30 days
-                                </p>
-                                </TooltipContent>
-                            </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className="p-0 border-0 text-xs shadow-none bg-transparent hover:border-0"
+                                        >
+                                            Position <Info className="h-3 w-3 inline-block" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="w-50">
+                                        <p className="text-xs text-center">
+                                            The average position of the brand when mentioned in the
+                                            last 30 days
+                                        </p>
+                                    </TooltipContent>
+                                </Tooltip>
                             </TableHead>
                         </TableRow>
                     </TableHeader>
@@ -135,13 +134,13 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                     <TableBody>
                         {displayStats.map((stat, index) => {
                             // Clean domain for display - remove protocol, www and any path
-                                const cleanDomain = stat.entity_url
-                                    .replace(/^https?:\/\//, '')
-                                    .replace(/^www\./, '')
-                                    .split('/')[0];
-                                const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
+                            const cleanDomain = stat.entity_url
+                                .replace(/^https?:\/\//, '')
+                                .replace(/^www\./, '')
+                                .split('/')[0];
+                            const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
                             return (
-                                <TableRow 
+                                <TableRow
                                     key={stat.id}
                                     onClick={() => onRowClick?.(cleanDomain)}
                                     onMouseEnter={() => onDomainHover?.(cleanDomain)}
@@ -151,8 +150,8 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                     <TableCell className="font-medium border-r border-gray-200 text-center">
                                         <div className="flex items-center justify-center">
                                             {hoveredDomain === cleanDomain ? (
-                                                <div 
-                                                    className="w-3 h-3 rounded-full" 
+                                                <div
+                                                    className="w-3 h-3 rounded-full"
                                                     style={{ backgroundColor: getColorForDomain(cleanDomain) }}
                                                 />
                                             ) : (
@@ -199,10 +198,12 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                                     <ArrowDownRight className="h-4 w-4 text-red-600" />
                                                 )}
                                                 {stat.trends.sentiment_change !== 0 && stat.trends.sentiment_trend !== 'stable' && stat.trends.sentiment_trend !== 'new' && (
-                                                    <span className="whitespace-nowrap">{Math.abs(stat.trends.sentiment_change)}%</span>
+                                                    <span className="whitespace-nowrap">{Math.abs(stat.trends.sentiment_change)}</span>
                                                 )}
                                             </span>
-                                            <span className="text-xs font-bold flex-shrink-0">{stat.sentiment != null ? stat.sentiment : 'N/A'}</span>
+                                            <span className="text-xs font-bold flex-shrink-0">
+                                                {stat.sentiment != null ? `${stat.sentiment}/100` : 'N/A'}
+                                            </span>
                                         </div>
                                     </TableCell>
                                     <TableCell className="border-r border-gray-200 w-28">
@@ -226,7 +227,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                         })}
                     </TableBody>
                 </Table>
-                
+
                 {hasMore && brandId && (
                     <div className="flex justify-end mt-4 px-4 print:hidden pdf-export-hidden">
                         <Link href={`/brands/${brandId}/ranking`}>

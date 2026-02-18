@@ -439,7 +439,7 @@ CRITICAL INSTRUCTIONS:
                     'entity_name' => $competitor->name,
                     'entity_url' => $competitor->domain,
                     'visibility' => 0,
-                    'sentiment' => 0,
+                    'sentiment' => null,
                     'position' => 0,
                     'analyzed_at' => null,
                     'trends' => [
@@ -452,7 +452,7 @@ CRITICAL INSTRUCTIONS:
                     ],
                     'visibility_percentage' => '0%',
                     'position_formatted' => '0',
-                    'sentiment_level' => 'Neutral',
+                    'sentiment_level' => 'N/A',
                 ];
             }
 
@@ -650,13 +650,13 @@ CRITICAL INSTRUCTIONS:
                 'entity_name' => $stat->entity_name,
                 'entity_url' => $entityUrl,
                 'visibility' => round($visibility, 2),
-                'sentiment' => $competitiveStat->sentiment ?? 50,
+                'sentiment' => $competitiveStat?->sentiment, // null for competitors (AI doesn't score them individually)
                 'position' => round($positionScore, 1),
                 'analyzed_at' => now()->toDateTimeString(),
                 'trends' => $this->calculateTrendsForEntity($brand, $stat->entity_type, $stat->competitor_id, $days, $aiModelId, $competitiveStat),
                 'visibility_percentage' => round($visibility, 1).'%',
                 'position_formatted' => '#'.round($positionScore, 1),
-                'sentiment_level' => $competitiveStat ? $competitiveStat->sentiment_level : 'Neutral',
+                'sentiment_level' => ($competitiveStat && $competitiveStat->sentiment !== null) ? $competitiveStat->sentiment_level : 'N/A',
                 'mention_data' => [
                     'prompts_mentioned' => $stat->prompts_mentioned,
                     'total_prompts' => $totalPrompts,
@@ -666,6 +666,16 @@ CRITICAL INSTRUCTIONS:
                 ],
             ];
         }
+
+        // Remove duplicates based on entity_name AND domain, preferring 'brand' type
+        $visibilityStats = collect($visibilityStats)
+            ->sortByDesc(fn ($item) => $item['entity_type'] === 'brand')
+            // First unique by domain (if valid url exists and not generic)
+            ->unique(fn ($item) => $item['entity_url'] ? strtolower(parse_url($item['entity_url'], PHP_URL_HOST) ?? $item['entity_url']) : 'no-domain-'.$item['id'])
+            // Then unique by name
+            ->unique(fn ($item) => strtolower(trim($item['entity_name'])))
+            ->values()
+            ->all();
 
         // Sort by visibility descending
         usort($visibilityStats, fn ($a, $b) => $b['visibility'] <=> $a['visibility']);
@@ -678,12 +688,11 @@ CRITICAL INSTRUCTIONS:
      */
     protected function calculateTrendsForEntity(Brand $brand, string $entityType, ?int $competitorId, int $days = 30, ?int $aiModelId = null, ?BrandCompetitiveStat $latestStat = null): array
     {
-        $currentPeriodStart = now()->subDays($days);
+        $currentPeriodStart  = now()->subDays($days);
         $previousPeriodStart = now()->subDays($days * 2);
-        $previousPeriodEnd = now()->subDays($days);
+        $previousPeriodEnd   = now()->subDays($days);
 
         // Check if we have sufficient data points (dates) to show a meaningful trend
-        // User requested: "if there is a single day data don't show the trends, show trends if there is atleast more than two dates data present"
         $datesCount = BrandMention::where('brand_id', $brand->id)
             ->where('entity_type', $entityType)
             ->when($competitorId, fn ($q) => $q->where('competitor_id', $competitorId))
@@ -693,16 +702,16 @@ CRITICAL INSTRUCTIONS:
 
         if ($datesCount <= 2) {
             return [
-                'visibility_trend' => 'new',
-                'sentiment_trend' => 'stable',
-                'position_trend' => 'stable',
+                'visibility_trend'  => 'new',
+                'sentiment_trend'   => 'stable',
+                'position_trend'    => 'stable',
                 'visibility_change' => 0,
-                'sentiment_change' => 0,
-                'position_change' => 0,
+                'sentiment_change'  => 0,
+                'position_change'   => 0,
             ];
         }
 
-        // Current period stats
+        // ── Current period ───────────────────────────────────────────────────
         $currentQuery = BrandMention::where('brand_id', $brand->id)
             ->where('entity_type', $entityType)
             ->when($competitorId, fn ($q) => $q->where('competitor_id', $competitorId))
@@ -710,6 +719,7 @@ CRITICAL INSTRUCTIONS:
             ->whereBetween('analyzed_at', [$currentPeriodStart, now()]);
 
         $currentPrompts = (clone $currentQuery)->distinct('brand_prompt_id')->count('brand_prompt_id');
+
         $currentTotal = BrandMention::where('brand_id', $brand->id)
             ->whereBetween('analyzed_at', [$currentPeriodStart, now()])
             ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
@@ -718,7 +728,10 @@ CRITICAL INSTRUCTIONS:
 
         $currentVisibility = $currentTotal > 0 ? ($currentPrompts / $currentTotal) * 100 : 0;
 
-        // Previous period stats
+        // Average sentiment for current period (from BrandMention.sentiment)
+        $currentSentiment = (clone $currentQuery)->avg('sentiment') ?? 50;
+
+        // ── Previous period ──────────────────────────────────────────────────
         $previousQuery = BrandMention::where('brand_id', $brand->id)
             ->where('entity_type', $entityType)
             ->when($competitorId, fn ($q) => $q->where('competitor_id', $competitorId))
@@ -726,6 +739,7 @@ CRITICAL INSTRUCTIONS:
             ->whereBetween('analyzed_at', [$previousPeriodStart, $previousPeriodEnd]);
 
         $previousPrompts = (clone $previousQuery)->distinct('brand_prompt_id')->count('brand_prompt_id');
+
         $previousTotal = BrandMention::where('brand_id', $brand->id)
             ->whereBetween('analyzed_at', [$previousPeriodStart, $previousPeriodEnd])
             ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
@@ -734,34 +748,43 @@ CRITICAL INSTRUCTIONS:
 
         $previousVisibility = $previousTotal > 0 ? ($previousPrompts / $previousTotal) * 100 : 0;
 
-        $visibilityChange = $currentVisibility - $previousVisibility;
+        // Average sentiment for previous period
+        $previousSentiment = (clone $previousQuery)->avg('sentiment') ?? 50;
 
         if ($previousTotal === 0 && $currentTotal === 0) {
             return [
-                'visibility_trend' => 'new',
-                'sentiment_trend' => 'stable',
-                'position_trend' => 'stable',
+                'visibility_trend'  => 'new',
+                'sentiment_trend'   => 'stable',
+                'position_trend'    => 'stable',
                 'visibility_change' => 0,
-                'sentiment_change' => 0,
-                'position_change' => 0,
+                'sentiment_change'  => 0,
+                'position_change'   => 0,
             ];
         }
 
+        $visibilityChange = $currentVisibility - $previousVisibility;
+        $sentimentChange  = round($currentSentiment - $previousSentiment, 1);
+
         $trends = [
-            'visibility_trend' => $visibilityChange > 1 ? 'up' : ($visibilityChange < -1 ? 'down' : 'stable'),
-            'sentiment_trend' => 'stable', 
-            'position_trend' => 'stable', 
+            'visibility_trend'  => $visibilityChange > 1 ? 'up' : ($visibilityChange < -1 ? 'down' : 'stable'),
+            'sentiment_trend'   => $sentimentChange > 2 ? 'up' : ($sentimentChange < -2 ? 'down' : 'stable'),
+            'position_trend'    => 'stable',
             'visibility_change' => round($visibilityChange, 2),
-            'sentiment_change' => 0,
-            'position_change' => 0,
+            'sentiment_change'  => $sentimentChange,
+            'position_change'   => 0,
         ];
 
+        // Override position trend from BrandCompetitiveStat if available
         if ($latestStat) {
             $statTrends = $latestStat->getTrends();
-            $trends['sentiment_trend'] = $statTrends['sentiment_trend'];
-            $trends['sentiment_change'] = $statTrends['sentiment_change'];
-            $trends['position_trend'] = $statTrends['position_trend'];
+            $trends['position_trend']  = $statTrends['position_trend'];
             $trends['position_change'] = $statTrends['position_change'];
+
+            // Only override sentiment from stat if mention data has no previous period
+            if ($previousTotal === 0) {
+                $trends['sentiment_trend']  = $statTrends['sentiment_trend'];
+                $trends['sentiment_change'] = $statTrends['sentiment_change'];
+            }
         }
 
         return $trends;
