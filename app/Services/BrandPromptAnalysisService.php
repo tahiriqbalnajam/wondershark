@@ -123,7 +123,7 @@ class BrandPromptAnalysisService
             - Description: [brief description]
             ]
             
-            Brand_Sentiment: [Numeric score 0-100 for [{$brandName}] sentiment if mentioned. 0=very negative, 50=neutral, 100=very positive. Use ONLY a number, no text labels.]
+            Brand_Sentiment: [CRITICAL: Output ONLY a single integer between 0 and 100. NO words, NO labels, NO explanations. Examples of CORRECT output: 72  |  45  |  88  |  30. Examples of WRONG output: positive | neutral | negative | good | bad. Scale: 0=very negative, 50=neutral, 100=very positive. If [{$brandName}] is not mentioned, output: 50]
             Brand_Position: [Percentage prominence of [{$brandName}], 0 if not mentioned]
             Competitor_Mentions: [JSON object of mentioned competitors]
             ANALYSIS_END";

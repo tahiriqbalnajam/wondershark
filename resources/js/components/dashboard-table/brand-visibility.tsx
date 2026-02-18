@@ -202,7 +202,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                                 )}
                                             </span>
                                             <span className="text-xs font-bold flex-shrink-0">
-                                                {stat.sentiment != null ? `${stat.sentiment}/100` : 'N/A'}
+                                                {stat.sentiment != null ? stat.sentiment : 'N/A'}
                                             </span>
                                         </div>
                                     </TableCell>

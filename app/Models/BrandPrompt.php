@@ -36,16 +36,54 @@ class BrandPrompt extends Model
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
-        'is_selected' => 'boolean',
-        'order' => 'integer',
-        'position' => 'integer',
-        'sentiment' => 'integer',
-        'resources' => 'array',
-        'competitor_mentions' => 'array',
-        'analysis_completed_at' => 'datetime',
-        'analysis_failed_at' => 'datetime',
+        'is_active'              => 'boolean',
+        'is_selected'            => 'boolean',
+        'order'                  => 'integer',
+        'position'               => 'integer',
+        // Note: 'sentiment' is NOT cast here — handled by getSentimentAttribute() accessor
+        // to correctly convert legacy text labels ('positive','neutral','negative') to numeric scores.
+        'resources'              => 'array',
+        'competitor_mentions'    => 'array',
+        'analysis_completed_at'  => 'datetime',
+        'analysis_failed_at'     => 'datetime',
     ];
+
+    /**
+     * Normalize the raw sentiment value from the DB to a 0-100 integer.
+     * Handles both new numeric values ("72") and legacy text labels ("positive", "neutral", "negative").
+     * This prevents the old text values from being silently cast to 0 by PHP's integer coercion.
+     */
+    public function getSentimentAttribute(mixed $value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        // Already a clean integer stored in DB
+        if (is_int($value)) {
+            return max(0, min(100, $value));
+        }
+
+        $raw = strtolower(trim((string) $value));
+
+        // Numeric string (e.g. "72", "72/100")
+        if (preg_match('/^(\d+(?:\.\d+)?)/', $raw, $m)) {
+            $score = (float) $m[1];
+            if ($score <= 10) {
+                $score *= 10; // Convert old 1-10 scale
+            }
+            return (int) max(0, min(100, round($score)));
+        }
+
+        // Legacy text labels
+        return match (true) {
+            str_contains($raw, 'very positive') || str_contains($raw, 'excellent') => 90,
+            str_contains($raw, 'positive')                                          => 75,
+            str_contains($raw, 'very negative') || str_contains($raw, 'poor')      => 15,
+            str_contains($raw, 'negative')                                          => 30,
+            default                                                                  => 50, // neutral
+        };
+    }
 
     /**
      * The "booted" method of the model.
