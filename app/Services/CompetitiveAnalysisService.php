@@ -718,15 +718,14 @@ CRITICAL INSTRUCTIONS:
             ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
             ->whereBetween('analyzed_at', [$currentPeriodStart, now()]);
 
-        $currentPrompts = (clone $currentQuery)->distinct('brand_prompt_id')->count('brand_prompt_id');
+        $currentEntityMentions = (clone $currentQuery)->sum('mention_count');
 
-        $currentTotal = BrandMention::where('brand_id', $brand->id)
+        $currentTotalAllMentions = BrandMention::where('brand_id', $brand->id)
             ->whereBetween('analyzed_at', [$currentPeriodStart, now()])
             ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
-            ->distinct('brand_prompt_id')
-            ->count('brand_prompt_id');
+            ->sum('mention_count');
 
-        $currentVisibility = $currentTotal > 0 ? ($currentPrompts / $currentTotal) * 100 : 0;
+        $currentVisibility = $currentTotalAllMentions > 0 ? ($currentEntityMentions / $currentTotalAllMentions) * 100 : 0;
 
         // Average sentiment for current period (from BrandMention.sentiment)
         $currentSentiment = (clone $currentQuery)->avg('sentiment') ?? 50;
@@ -738,20 +737,19 @@ CRITICAL INSTRUCTIONS:
             ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
             ->whereBetween('analyzed_at', [$previousPeriodStart, $previousPeriodEnd]);
 
-        $previousPrompts = (clone $previousQuery)->distinct('brand_prompt_id')->count('brand_prompt_id');
+        $previousEntityMentions = (clone $previousQuery)->sum('mention_count');
 
-        $previousTotal = BrandMention::where('brand_id', $brand->id)
+        $previousTotalAllMentions = BrandMention::where('brand_id', $brand->id)
             ->whereBetween('analyzed_at', [$previousPeriodStart, $previousPeriodEnd])
             ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
-            ->distinct('brand_prompt_id')
-            ->count('brand_prompt_id');
+            ->sum('mention_count');
 
-        $previousVisibility = $previousTotal > 0 ? ($previousPrompts / $previousTotal) * 100 : 0;
+        $previousVisibility = $previousTotalAllMentions > 0 ? ($previousEntityMentions / $previousTotalAllMentions) * 100 : 0;
 
         // Average sentiment for previous period
         $previousSentiment = (clone $previousQuery)->avg('sentiment') ?? 50;
 
-        if ($previousTotal === 0 && $currentTotal === 0) {
+        if ($previousTotalAllMentions === 0 && $currentTotalAllMentions === 0) {
             return [
                 'visibility_trend'  => 'new',
                 'sentiment_trend'   => 'stable',
@@ -781,7 +779,7 @@ CRITICAL INSTRUCTIONS:
             $trends['position_change'] = $statTrends['position_change'];
 
             // Only override sentiment from stat if mention data has no previous period
-            if ($previousTotal === 0) {
+            if ($previousTotalAllMentions === 0) {
                 $trends['sentiment_trend']  = $statTrends['sentiment_trend'];
                 $trends['sentiment_change'] = $statTrends['sentiment_change'];
             }
@@ -798,7 +796,7 @@ CRITICAL INSTRUCTIONS:
         $startDate = now()->subDays($days);
         $endDate = now();
 
-        // Get daily aggregated mention data with total_mentions for share of voice
+        // Get daily aggregated mention data
         $dailyStatsQuery = BrandMention::where('brand_id', $brand->id)
             ->whereBetween('analyzed_at', [$startDate, $endDate])
             ->select(
@@ -821,47 +819,27 @@ CRITICAL INSTRUCTIONS:
             return $this->getHistoricalStatsForChart($brand, $days, $aiModelId, $timezone);
         }
 
-        // Get daily competitor-only totals for fair comparison
-        $dailyCompetitorTotalsQuery = BrandMention::where('brand_id', $brand->id)
-            ->where('entity_type', 'competitor')
-            ->whereBetween('analyzed_at', [$startDate, $endDate])
-            ->select(
-                DB::raw("DATE(CONVERT_TZ(analyzed_at, '+00:00', '{$timezone}')) as date"),
-                DB::raw('SUM(mention_count) as total_mentions'),
-                DB::raw('COUNT(DISTINCT entity_name) as competitor_count')
-            )
-            ->groupBy(DB::raw("DATE(CONVERT_TZ(analyzed_at, '+00:00', '{$timezone}'))"));
-
-        if ($aiModelId) {
-            $dailyCompetitorTotalsQuery->where('ai_model_id', $aiModelId);
+        // Calculate Daily Totals (Brand + All Competitors) for Share of Voice
+        $dailyTotals = [];
+        foreach ($dailyStats as $stat) {
+            $date = $stat->date;
+            if (!isset($dailyTotals[$date])) {
+                $dailyTotals[$date] = 0;
+            }
+            $dailyTotals[$date] += $stat->total_mentions;
         }
-
-        $dailyCompetitorTotals = $dailyCompetitorTotalsQuery->get()->keyBy('date');
 
         // Calculate daily visibility percentages
         $historicalData = [];
 
         foreach ($dailyStats as $stat) {
             $date = $stat->date;
-            $competitorData = $dailyCompetitorTotals[$date] ?? null;
-            $totalCompetitorMentions = $competitorData->total_mentions ?? 0;
-            $competitorCount = $competitorData->competitor_count ?? 0;
-            $avgCompetitorMentions = $competitorCount > 0 ? $totalCompetitorMentions / $competitorCount : 0;
+            $totalDailyMentions = $dailyTotals[$date] ?? 0;
 
-            if ($stat->entity_type === 'brand') {
-                // For brand: visibility relative to average competitor
-                if ($avgCompetitorMentions > 0) {
-                    $ratio = $stat->total_mentions / $avgCompetitorMentions;
-                    $visibility = 100 * ($ratio / ($ratio + 1));
-                } else {
-                    $visibility = 50;
-                }
-            } else {
-                // For competitors: share of voice among competitors
-                $visibility = $totalCompetitorMentions > 0
-                    ? ($stat->total_mentions / $totalCompetitorMentions) * 100
-                    : 0;
-            }
+            // Share of Voice calculation: (Entity Mentions / Total Market Mentions) * 100
+            $visibility = $totalDailyMentions > 0
+                ? ($stat->total_mentions / $totalDailyMentions) * 100
+                : 0;
 
             $domain = $stat->entity_domain ?? $stat->entity_name;
 
@@ -882,7 +860,7 @@ CRITICAL INSTRUCTIONS:
 
         // If we have mention-based data, merge with existing stats for sentiment/position
         if (! empty($historicalData)) {
-            $existingStats = $this->getHistoricalStatsForChart($brand, $days, $aiModelId);
+            $existingStats = $this->getHistoricalStatsForChart($brand, $days, $aiModelId, $timezone);
 
             // First, merge missing dates/domains from existing stats
             foreach ($existingStats as $date => $domains) {
