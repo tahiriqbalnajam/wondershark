@@ -1,5 +1,5 @@
 import { type BreadcrumbItem } from '@/types';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 import { useState, FormEventHandler, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { getCsrfToken } from '@/utils/csrf';
@@ -23,6 +23,9 @@ import StepNavigation from './step-navigation';
 
 // Import types
 import { BrandForm, BrandPrompt, AiModel, Competitor } from './types';
+// GeneratedPrompt is the same shape as BrandPrompt
+type GeneratedPrompt = BrandPrompt;
+
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -210,7 +213,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                 if (!response.ok) {
                     // If Laravel returned validation errors (422)
                     if (response.status === 422) {
-                        const errorData = await response.json();
+                        const errorData = await response.json() as { errors: Record<string, string[]> };
                         const firstError = Object.values(errorData.errors)[0][0]; // get first error message
                         toast.error(firstError);
                         return;
@@ -222,7 +225,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                 const result = await response.json();
 
                 if (result.success && result.redirect_url) {
-                    window.location.href = result.redirect_url;
+                    router.visit(result.redirect_url);
                 } else {
                     toast.error(result.message || 'Failed to create brand');
                 }
@@ -255,7 +258,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                 const result = await response.json();
 
                 if (result.success && result.redirect_url) {
-                    window.location.href = result.redirect_url;
+                    router.visit(result.redirect_url);
                 } else {
                     toast.error(result.message || 'Failed to update competitors');
                 }
@@ -280,7 +283,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                 const result = await response.json();
 
                 if (result.success && result.redirect_url) {
-                    window.location.href = result.redirect_url;
+                    router.visit(result.redirect_url);
                 } else {
                     toast.error(result.message || 'Failed to update prompts');
                 }
@@ -305,7 +308,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                 const result = await response.json();
 
                 if (result.success && result.redirect_url) {
-                    window.location.href = result.redirect_url;
+                    router.visit(result.redirect_url);
                 } else {
                     toast.error(result.message || 'Failed to update monthly posts');
                 }
@@ -327,7 +330,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
         if (currentStep > 1) {
             if (brandId) {
                 // For all steps (1-5), use the step-based route with brand ID to load existing data
-                window.location.href = route('brands.create.step', { brand: brandId, step: currentStep - 1 });
+                router.visit(route('brands.create.step', { brand: brandId, step: currentStep - 1 }));
             } else {
                 setCurrentStep(currentStep - 1);
             }
@@ -366,7 +369,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
 
             if (result.success && result.redirect_url) {
                 toast.success(result.message || 'Brand created successfully!');
-                window.location.href = result.redirect_url;
+                router.visit(result.redirect_url);
             } else {
                 toast.error(result.message || 'Failed to finalize brand');
             }
@@ -457,7 +460,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
             toast.error('Maximum 10 prompts allowed');
             return;
         }
-        setData('prompts', [...data.prompts, prompt.prompt]);
+        setData('prompts', [...(data.prompts as string[]), prompt.prompt]);
     };
 
     const rejectPrompt = (prompt: GeneratedPrompt) => {
@@ -465,11 +468,11 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
     };
 
     const removeAcceptedPrompt = (promptText: string) => {
-        setData('prompts', data.prompts.filter(p => p !== promptText));
+        setData('prompts', data.prompts.filter((p: string) => p !== promptText));
     };
 
     const isPromptAccepted = (prompt: GeneratedPrompt): boolean => {
-        return data.prompts.includes(prompt.prompt);
+        return (data.prompts as string[]).includes(prompt.prompt);
     };
 
     const isPromptRejected = (prompt: GeneratedPrompt): boolean => {
@@ -481,11 +484,11 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
             toast.error('Maximum 25 prompts allowed');
             return;
         }
-        setData('prompts', [...data.prompts, prompt]);
+        setData('prompts', [...(data.prompts as string[]), prompt]);
     };
 
     const removePrompt = (index: number) => {
-        const newPrompts = [...data.prompts];
+        const newPrompts = [...(data.prompts as string[])];
         newPrompts.splice(index, 1);
         setData('prompts', newPrompts);
     };

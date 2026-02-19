@@ -463,6 +463,23 @@ class BrandController extends Controller
             $brand->update(['status' => 'active']);
         });
 
+        // Dispatch prompt analysis jobs for all active prompts
+        $sessionId = (string) \Illuminate\Support\Str::uuid();
+        $activePrompts = BrandPrompt::where('brand_id', $brand->id)
+            ->where('is_active', true)
+            ->whereNull('analysis_completed_at') // Only unanalyzed prompts
+            ->get();
+
+        foreach ($activePrompts as $prompt) {
+            \App\Jobs\ProcessBrandPromptAnalysis::dispatch($prompt, $sessionId, false);
+        }
+
+        Log::info('Dispatched prompt analysis jobs for new brand', [
+            'brand_id' => $brand->id,
+            'brand_name' => $brand->name,
+            'jobs_dispatched' => $activePrompts->count(),
+        ]);
+
         // Store the brand in session
         session(['selected_brand_id' => $brand->id]);
 
@@ -470,7 +487,8 @@ class BrandController extends Controller
             'success' => true,
             'brand_id' => $brand->id,
             'redirect_url' => route('brands.dashboard', $brand),
-            'message' => 'Brand created successfully!',
+            'message' => 'Brand created successfully! Analysis is running in the background.',
+            'analysis_queued' => $activePrompts->count(),
         ]);
     }
 
@@ -769,12 +787,38 @@ class BrandController extends Controller
                 ];
             });
 
+        // Compute analysis status: how many active prompts are still pending analysis
+        $totalActivePrompts = BrandPrompt::where('brand_id', $brand->id)
+            ->where('is_active', true)
+            ->count();
+        $pendingPrompts = BrandPrompt::where('brand_id', $brand->id)
+            ->where('is_active', true)
+            ->whereNull('analysis_completed_at')
+            ->count();
+        $failedPrompts = BrandPrompt::where('brand_id', $brand->id)
+            ->where('is_active', true)
+            ->whereNotNull('analysis_failed_at')
+            ->whereNull('analysis_completed_at')
+            ->count();
+
+        $analysisStatus = [
+            'total'   => $totalActivePrompts,
+            'pending' => $pendingPrompts,
+            'failed'  => $failedPrompts,
+            'done'    => $totalActivePrompts - $pendingPrompts,
+            'has_pending' => $pendingPrompts > 0,
+            'progress_pct' => $totalActivePrompts > 0
+                ? (int) round((($totalActivePrompts - $pendingPrompts) / $totalActivePrompts) * 100)
+                : 100,
+        ];
+
         return Inertia::render('brands/show', [
             'brand' => $brand,
             'competitiveStats' => $competitiveStats,
             'historicalStats' => $historicalStats,
             'aiModels' => $aiModels,
             'allBrands' => $allBrands,
+            'analysisStatus' => $analysisStatus,
         ]);
     }
 
@@ -834,24 +878,12 @@ class BrandController extends Controller
     /**
      * Display the brand-specific dashboard.
      */
-    public function dashboard(Brand $brand): Response
+    public function dashboard(Request $request, Brand $brand): Response
     {
-        /** @var User $user */
-        $user = Auth::user();
-
-        // Ensure the brand belongs to the authenticated agency or user is admin
-        if (! $user->canAccessBrand($brand)) {
-            abort(403);
-        }
-
-        // Store selected brand in session
-        session(['selected_brand_id' => $brand->id]);
-
-        // You can add brand-specific dashboard data here
-        // For now, just render the dashboard with brand context
-        return Inertia::render('dashboard', [
-            'brand' => $brand,
-        ]);
+        // Delegate to show() so the brand-specific visibility dashboard
+        // (brands/show with analysis banner, competitive stats, etc.) is rendered
+        // instead of the generic empty dashboard page.
+        return $this->show($request, $brand);
     }
 
     /**

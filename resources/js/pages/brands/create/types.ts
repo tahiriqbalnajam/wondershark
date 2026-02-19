@@ -2,10 +2,10 @@ export type BrandForm = {
     name: string;
     website: string;
     description: string;
-    trackedName : string;
-    allies : string[];
+    trackedName: string;
+    allies: string[];
     country: string;
-    prompts: string[] | BrandPrompt[];
+    prompts: string[];
     subreddits: string[];
     competitors: Competitor[];
     monthly_posts: number;
@@ -19,8 +19,8 @@ export type Competitor = {
     id: number;
     name: string;
     domain: string;
-    trackedName : string;
-    allies : string[];
+    trackedName: string;
+    allies: string[];
     mentions: number;
     status: 'suggested' | 'accepted' | 'rejected';
     source: 'ai' | 'manual';

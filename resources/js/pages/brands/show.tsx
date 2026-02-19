@@ -1,12 +1,12 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
 import HeadingSmall from '@/components/heading-small';
-import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Calendar, Trophy, TrendingUp, TrendingDown, Bot, User, Download } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Calendar, Trophy, TrendingUp, TrendingDown, Bot, User, Download, RefreshCw } from 'lucide-react';
 import { VisibilityChart } from '@/components/chart/visibility';
 import { BrandVisibilityIndex } from '@/components/dashboard-table/brand-visibility';
 import { AiCitations } from '@/components/chat/ai-citations';
@@ -113,6 +113,15 @@ interface AllBrand {
     created_at?: string;
 }
 
+interface AnalysisStatus {
+    total: number;
+    pending: number;
+    failed: number;
+    done: number;
+    has_pending: boolean;
+    progress_pct: number;
+}
+
 interface Props {
     brand: Brand;
     competitiveStats: CompetitiveStat[];
@@ -125,6 +134,7 @@ interface Props {
         provider?: string;
     }>;
     allBrands: AllBrand[];
+    analysisStatus: AnalysisStatus;
 }
 
 const breadcrumbs = (brand: Brand) => [
@@ -136,28 +146,42 @@ const breadcrumbs = (brand: Brand) => [
 // Helper function to clean up markdown code fence markers from AI responses
 const cleanAiResponse = (response: string | undefined): string => {
     if (!response) return '';
-    
+
     let cleaned = response;
-    
+
     // Remove HTML_RESPONSE_START and HTML_RESPONSE_END markers
     cleaned = cleaned.replace(/HTML_RESPONSE_START/gi, '');
     cleaned = cleaned.replace(/HTML_RESPONSE_END/gi, '');
-    
+
     // Remove markdown code fence markers at the beginning:
     // Patterns like: ** ```html, **```html, ** ```javascript, etc.
     cleaned = cleaned.replace(/^\*\*\s*```\w*\s*/g, '');
     cleaned = cleaned.replace(/^```\w*\s*/g, '');
-    
+
     // Remove closing code fence markers at the end: ``` or ``` **
     cleaned = cleaned.replace(/```\s*\*\*\s*$/g, '');
     cleaned = cleaned.replace(/```\s*$/g, '');
-    
+
     return cleaned.trim();
 };
 
-export default function BrandShow({ brand, competitiveStats, historicalStats, aiModels, allBrands }: Props) {
+export default function BrandShow({ brand, competitiveStats, historicalStats, aiModels, allBrands, analysisStatus }: Props) {
     const [selectedCompetitorDomain, setSelectedCompetitorDomain] = useState<string | null>(null);
     const [triggeringAnalysis, setTriggeringAnalysis] = useState(false);
+    const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Auto-refresh every 30s while analysis is still running
+    useEffect(() => {
+        if (!analysisStatus?.has_pending) return;
+
+        refreshTimerRef.current = setInterval(() => {
+            router.reload({ only: ['competitiveStats', 'historicalStats', 'analysisStatus', 'brand'] });
+        }, 30_000);
+
+        return () => {
+            if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
+        };
+    }, [analysisStatus?.has_pending]);
 
     // Initialize from URL params
     const queryParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
@@ -595,6 +619,51 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
     return (
         <AppLayout title={brand.name}>
             <Head title={brand.name} />
+
+            {/* ── Analysis-in-progress banner ─────────────────────────────── */}
+            {analysisStatus?.has_pending && (
+                <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-950/40 dark:border-blue-800 px-5 py-4">
+                    <div className="flex items-start gap-3">
+                        {/* Spinning icon */}
+                        <div className="mt-0.5 flex-shrink-0">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-600 dark:text-blue-400" />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+                                AI Analysis in Progress
+                            </p>
+                            <p className="mt-0.5 text-xs text-blue-700 dark:text-blue-300">
+                                {analysisStatus.done} of {analysisStatus.total} prompt{analysisStatus.total !== 1 ? 's' : ''} analyzed.
+                                {' '}Dashboard data will update automatically every 30 seconds.
+                                {analysisStatus.failed > 0 && (
+                                    <span className="ml-1 text-amber-600 dark:text-amber-400">
+                                        ({analysisStatus.failed} failed)
+                                    </span>
+                                )}
+                            </p>
+
+                            {/* Progress bar */}
+                            <div className="mt-2 h-1.5 w-full rounded-full bg-blue-200 dark:bg-blue-800 overflow-hidden">
+                                <div
+                                    className="h-full rounded-full bg-blue-500 dark:bg-blue-400 transition-all duration-700"
+                                    style={{ width: `${analysisStatus.progress_pct}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Manual refresh button */}
+                        <button
+                            onClick={() => router.reload({ only: ['competitiveStats', 'historicalStats', 'analysisStatus', 'brand'] })}
+                            className="flex-shrink-0 flex items-center gap-1.5 rounded-lg border border-blue-300 dark:border-blue-700 bg-white dark:bg-blue-900 px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors"
+                        >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Filters Section */}
             <div className="flex flex-wrap gap-4 items-end mb-10 justify-between">
                 <div className="flex flex-wrap gap-4 items-end">
@@ -732,11 +801,11 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                             return new Promise((resolve) => {
                                 const originalPage = currentPage;
                                 const totalPages = Math.ceil(filteredPrompts.length / 9);
-                                
+
                                 if (currentPage < totalPages) {
                                     console.log(`Expanding citations: ${currentPage} -> ${totalPages} pages`);
                                     setCurrentPage(totalPages);
-                                    
+
                                     // Wait for UI to update
                                     setTimeout(() => {
                                         resolve(() => {
