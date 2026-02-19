@@ -80,23 +80,27 @@ class BrandPromptAnalysisService
 
         $additionalContext = '';
         if (! empty($subreddits)) {
-            $additionalContext .= "\n\n**IMPORTANT**: If available, please include the best and most relevant Reddit posts/discussions from these target subreddits: {$subredditsString}. Include actual Reddit URLs (e.g., https://reddit.com/r/subreddit/comments/...) that discuss topics related to [{$phrase}] in these communities.";
+            $additionalContext .= "\n\n**IMPORTANT**: If available, please include ALL relevant Reddit posts/discussions from these target subreddits: {$subredditsString}. Include actual Reddit URLs (e.g., https://reddit.com/r/subreddit/comments/...) that discuss topics related to [{$phrase}] in these communities. Do not artificially limit the quantity.";
         }
 
         // Always emphasize Reddit/YouTube inclusion
-        $additionalContext .= "\n\n**RECOMMENDED**: If available, include best and most relevant YouTube videos (youtube.com or youtu.be URLs) related to [{$phrase}].";
+        $additionalContext .= "\n\n**RECOMMENDED**: If available, include ALL relevant YouTube videos (youtube.com or youtu.be URLs) related to [{$phrase}]. Do not artificially limit to two videos.";
         if (empty($subreddits)) {
-            $additionalContext .= " Also, if available, include the best and most relevant Reddit discussions (reddit.com URLs) from relevant subreddits discussing [{$phrase}].";
+            $additionalContext .= " Also, if available, include ALL relevant Reddit discussions (reddit.com URLs) from relevant subreddits discussing [{$phrase}]. Do not artificially limit to two discussions.";
         }
 
+        $timestamp = now()->toIso8601String();
+
         return "You are an AI assistant. Your task is to generate a natural response to a user question, and then analyze that response.
+
+            IMPORTANT: Generate a fresh, unique, and up-to-date response. Do not provide a cached, repetitive, or pre-calculated answer. Request time: {$timestamp}
 
             USER QUESTION: [{$phrase}]
 
             INSTRUCTIONS:
             
             STEP 1: GENERATE STANDARD RESPONSE
-            Generate a natural, helpful, and objective HTML-formatted response to the question above.
+            Generate a fresh, natural, helpful, and objective HTML-formatted response to the question above.
             - Answer EXACTLY as you would if a normal user asked this on your platform.
             - Do NOT force mentions of [{$brandName}] or its competitors unless they are naturally the best answer.
             - Do NOT interpret the analysis requirements below as instructions for this response text.
@@ -125,7 +129,7 @@ class BrandPromptAnalysisService
             
             Brand_Sentiment: [CRITICAL: Output ONLY a single integer between 0 and 100. NO words, NO labels, NO explanations. Examples of CORRECT output: 72  |  45  |  88  |  30. Examples of WRONG output: positive | neutral | negative | good | bad. Scale: 0=very negative, 50=neutral, 100=very positive. If [{$brandName}] is not mentioned, output: 50]
             Brand_Position: [Percentage prominence of [{$brandName}], 0 if not mentioned]
-            Competitor_Mentions: [JSON object of mentioned competitors]
+            Competitor_Mentions: [JSON object of mentioned competitors, format must be exactly: {\"Competitor Name\": {\"mentions\": count, \"sentiment\": 0_to_100_integer}}]
             ANALYSIS_END";
     }
 
@@ -1100,12 +1104,24 @@ class BrandPromptAnalysisService
         $domain = parse_url($url, PHP_URL_HOST);
         $isCompetitorUrl = $this->isCompetitorUrl($url, $domain, $competitors);
 
-        // Auto-detect Reddit and YouTube URLs if not already categorized
-        if ($type === 'other' || $type === 'social_media' || $type === 'social') {
-            if ($domain && (strpos($domain, 'reddit.com') !== false || strpos($domain, 'redd.it') !== false)) {
+        // Auto-detect type based on domain
+        if ($domain) {
+            if (strpos($domain, 'reddit.com') !== false || strpos($domain, 'redd.it') !== false) {
                 $type = 'reddit';
-            } elseif ($domain && (strpos($domain, 'youtube.com') !== false || strpos($domain, 'youtu.be') !== false)) {
+            } elseif (strpos($domain, 'youtube.com') !== false || strpos($domain, 'youtu.be') !== false) {
                 $type = 'youtube';
+            } elseif (strpos($domain, 'twitter.com') !== false || 
+                      strpos($domain, 'x.com') !== false || 
+                      strpos($domain, 'facebook.com') !== false || 
+                      strpos($domain, 'linkedin.com') !== false || 
+                      strpos($domain, 'instagram.com') !== false || 
+                      strpos($domain, 'tiktok.com') !== false || 
+                      strpos($domain, 'pinterest.com') !== false) {
+                $type = 'social';
+            } elseif (strpos($domain, 'wikipedia.org') !== false) {
+                $type = 'documentation';
+            } elseif (strpos($domain, 'quora.com') !== false || strpos($domain, 'stackoverflow.com') !== false) {
+                $type = 'community';
             }
         }
 
@@ -1175,6 +1191,8 @@ class BrandPromptAnalysisService
             'marketplace' => 'marketplace',
             'review_site' => 'reviews',
             'reviews' => 'reviews',
+            'community' => 'community',
+            'forum' => 'community',
             'other' => 'other',
         ];
 

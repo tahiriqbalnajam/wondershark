@@ -599,7 +599,8 @@ CRITICAL INSTRUCTIONS:
                 'competitor_id',
                 DB::raw('COUNT(DISTINCT brand_prompt_id) as prompts_mentioned'),
                 DB::raw('SUM(mention_count) as total_mentions'),
-                DB::raw('AVG(position) as avg_position')
+                DB::raw('AVG(position) as avg_position'),
+                DB::raw('AVG(sentiment) as avg_mention_sentiment')
             )
             ->groupBy('entity_type', 'entity_name', 'entity_domain', 'competitor_id');
 
@@ -644,19 +645,38 @@ CRITICAL INSTRUCTIONS:
             $avgPosition = $stat->avg_position ?? 5000;
             $positionScore = min(10, max(1, round($avgPosition / 500, 1)));
 
+            // Determine sentiment: prefer avg from brand_mentions (populated after our fix),
+            // fall back to the competitive stat (from CompetitiveAnalysisService), then null.
+            $mentionSentiment = isset($stat->avg_mention_sentiment) && $stat->avg_mention_sentiment !== null
+                ? (int) round($stat->avg_mention_sentiment)
+                : null;
+            $displaySentiment = $mentionSentiment ?? $competitiveStat?->sentiment;
+
+            // Build a temporary accessor-compatible object for sentiment_level
+            $sentimentLevel = 'N/A';
+            if ($displaySentiment !== null) {
+                $sentimentLevel = match(true) {
+                    $displaySentiment >= 80 => 'Very Positive',
+                    $displaySentiment >= 60 => 'Positive',
+                    $displaySentiment >= 40 => 'Neutral',
+                    $displaySentiment >= 20 => 'Negative',
+                    default => 'Very Negative',
+                };
+            }
+
             $visibilityStats[] = [
                 'id' => $competitiveStat->id ?? 0,
                 'entity_type' => $stat->entity_type,
                 'entity_name' => $stat->entity_name,
                 'entity_url' => $entityUrl,
                 'visibility' => round($visibility, 2),
-                'sentiment' => $competitiveStat?->sentiment, // null for competitors (AI doesn't score them individually)
+                'sentiment' => $displaySentiment,
                 'position' => round($positionScore, 1),
                 'analyzed_at' => now()->toDateTimeString(),
                 'trends' => $this->calculateTrendsForEntity($brand, $stat->entity_type, $stat->competitor_id, $days, $aiModelId, $competitiveStat),
                 'visibility_percentage' => round($visibility, 1).'%',
                 'position_formatted' => '#'.round($positionScore, 1),
-                'sentiment_level' => ($competitiveStat && $competitiveStat->sentiment !== null) ? $competitiveStat->sentiment_level : 'N/A',
+                'sentiment_level' => $sentimentLevel,
                 'mention_data' => [
                     'prompts_mentioned' => $stat->prompts_mentioned,
                     'total_prompts' => $totalPrompts,

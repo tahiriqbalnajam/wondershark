@@ -1023,7 +1023,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                                             <div className="flex items-center gap-3 mb-2">
                                                 <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center p-1.5">
                                                     <img
-                                                        src={`https://img.logo.dev/${brand.domain?.replace(/^www\./, '') || brand.website?.replace(/^www\./, '')}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`}
+                                                        src={brand.logo ? `/storage/${brand.logo}` : `https://img.logo.dev/${(brand.domain || brand.website || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`}
                                                         alt={brand.name}
                                                         className="w-full h-full object-contain"
                                                         onError={(e) => {

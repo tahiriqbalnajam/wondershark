@@ -57,6 +57,9 @@ class VisibilityCalculationService
         // Get accepted competitors and check their mentions
         $competitors = $brand->competitors()->accepted()->get();
 
+        $compMentionsRaw = $brandPrompt->competitor_mentions;
+        $compMentionsData = is_string($compMentionsRaw) ? json_decode($compMentionsRaw, true) : (is_array($compMentionsRaw) ? $compMentionsRaw : []);
+
         foreach ($competitors as $competitor) {
             $competitorDomain = $this->extractDomain($competitor->domain);
             $competitorNames = $this->getCompetitorSearchTerms($competitor);
@@ -64,6 +67,14 @@ class VisibilityCalculationService
             $competitorMentionData = $this->findMentionsInText($aiResponse, $competitorNames, $competitorDomain);
 
             if ($competitorMentionData['found']) {
+                $compSentiment = null;
+                if ($compMentionsData && isset($compMentionsData[$competitor->name]) && isset($compMentionsData[$competitor->name]['sentiment'])) {
+                    $compSentimentVal = $compMentionsData[$competitor->name]['sentiment'];
+                    if (is_numeric($compSentimentVal)) {
+                        $compSentiment = (int)$compSentimentVal;
+                    }
+                }
+
                 $mention = BrandMention::create([
                     'brand_prompt_id' => $brandPrompt->id,
                     'brand_id' => $brand->id,
@@ -77,7 +88,7 @@ class VisibilityCalculationService
                     'context' => $competitorMentionData['context'],
                     'session_id' => $sessionId,
                     'analyzed_at' => $analyzedAt,
-                    'sentiment' => null, // Competitors have no individual sentiment score from the AI prompt
+                    'sentiment' => $compSentiment, // Assigned from AI analysis if available
                 ]);
                 $mentions[] = $mention;
             }

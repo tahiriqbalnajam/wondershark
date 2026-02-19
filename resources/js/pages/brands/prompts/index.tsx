@@ -549,10 +549,10 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                     />
                                                 </TableHead>
                                                 <TableHead>Prompt</TableHead>
-                                                <TableHead><div className="flex items-center"><Eye className="w-4 mr-2" /> Visibility</div></TableHead>
+                                                {/* <TableHead><div className="flex items-center"><Eye className="w-4 mr-2" /> Visibility</div></TableHead>
                                                 <TableHead><div className="flex items-center"><Smile className="w-4 mr-2" /> Sentiment</div></TableHead>
-                                                <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2" /> Position</div></TableHead>
-                                                <TableHead><div className="flex items-center"><Trophy className="w-4 mr-2" /> Mentions</div></TableHead>
+                                                <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2" /> Position</div></TableHead> */}
+                                                <TableHead><div className="flex items-center"><Trophy className="w-4 mr-2" /> Volume</div></TableHead>
                                                 <TableHead><div className="flex items-center"><MapPin className="w-4 mr-2" /> Location</div></TableHead>
                                                 <TableHead>Actions</TableHead>
                                             </TableRow>
@@ -570,7 +570,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                             />
                                                         </TableHead>
                                                         <TableCell>{prompt.prompt}</TableCell>
-                                                        <TableCell>
+                                                        {/* <TableCell>
                                                             <TooltipProvider>
                                                                 <Tooltip>
                                                                     <TooltipTrigger>
@@ -591,7 +591,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                             <Badge className="position-td">
                                                                 <span>#</span> --
                                                             </Badge>
-                                                        </TableCell>
+                                                        </TableCell> */}
                                                         <TableCell>--</TableCell>
                                                         <TableCell>
                                                             <div className="flex items-center gap-2">
