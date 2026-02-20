@@ -197,6 +197,10 @@ class ProcessBrandPromptsAnalysis extends Command
                     $this->line("  Queueing prompt #{$prompt->id} → {$assignedModel->name}: ".substr($prompt->prompt, 0, 50).'...');
                 }
 
+                // Delete previous resources to ensure old data isn't displayed while processing
+                \App\Models\BrandPromptResource::where('brand_prompt_id', $prompt->id)->delete();
+                $prompt->update(['resources' => []]);
+
                 // Dispatch with assigned model
                 ProcessBrandPromptAnalysis::dispatch($prompt, $sessionId, $forceRegenerate, $assignedModel->name)
                     ->onQueue('default');

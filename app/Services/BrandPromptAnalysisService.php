@@ -40,6 +40,9 @@ class BrandPromptAnalysisService
             'session_id' => $sessionId,
         ]);
 
+        // Delete existing resources early so that we always start with a clean slate
+        BrandPromptResource::where('brand_prompt_id', $brandPrompt->id)->delete();
+
         // Generate the natural language response
         $generationPrompt = $this->buildAnalysisPrompt(
             $brand->name,
