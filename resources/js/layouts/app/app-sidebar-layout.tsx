@@ -14,9 +14,6 @@ export default function AppSidebarLayout({ children, breadcrumbs = [], title, lo
 // const main_agencyId = auth.user?.agency_membership?.agency_id;
          // const agencyColor1 = auth.user?.agencyMembership?.agency?.agency_color;
         // console.log('Agency Color from membership:', auth.user);
-
-
-
         const agencyColor = auth.user?.agency_color;
         if (agencyColor) {
             document.documentElement.style.setProperty('--agency-color', agencyColor);

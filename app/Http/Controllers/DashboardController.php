@@ -87,6 +87,25 @@ class DashboardController extends Controller
             ->orderBy('updated_at', 'desc')
             ->first();
 
+      
+   
+        if($user->agencyMembership && $user->agencyMembership->role && $user->agencyMembership->role == "agency_member" ){
+            if ($user->agencyMembership && $user->agencyMembership->rights && in_array('agency_manager', $user->agencyMembership->rights)) {
+             $main_agencyId = $user->agencyMembership?->agency_id;
+                 $main_agencyId_user = User::find($main_agencyId);
+                 $main_user_agency_color = $main_agencyId_user->agency_color;
+                 if($main_user_agency_color){
+                    $user->agency_color  = $main_user_agency_color;
+                    $user->save();
+                 }
+            }
+        } 
+       
+       // echo '<pre>';
+       // print_r($user->agencyMembership->agency_color);
+       // echo '</pre>';
+       // die;
+
         // If user has active brands, redirect to the first brand's show page
         if ($firstBrand && $firstBrand->status === 'active') {
             // Verify user can actually access this brand before redirecting
