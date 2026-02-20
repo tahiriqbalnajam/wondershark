@@ -175,6 +175,9 @@ class BrandCompetitiveStat extends Model
     public function getSentimentLevelAttribute(): string
     {
         $sentiment = $this->sentiment;
+        if ($sentiment === null) {
+            return 'N/A';
+        }
         if ($sentiment >= 80) {
             return 'Excellent';
         }

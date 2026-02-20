@@ -68,7 +68,7 @@ class VisibilityCalculationService
 
             if ($competitorMentionData['found']) {
                 $compSentiment = null;
-                if ($compMentionsData && isset($compMentionsData[$competitor->name]) && isset($compMentionsData[$competitor->name]['sentiment'])) {
+                if ($compMentionsData && isset($compMentionsData[$competitor->name]) && is_array($compMentionsData[$competitor->name]) && isset($compMentionsData[$competitor->name]['sentiment'])) {
                     $compSentimentVal = $compMentionsData[$competitor->name]['sentiment'];
                     if (is_numeric($compSentimentVal)) {
                         $compSentiment = (int)$compSentimentVal;

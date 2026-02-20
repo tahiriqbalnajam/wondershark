@@ -84,9 +84,9 @@ class BrandPromptAnalysisService
         }
 
         // Always emphasize Reddit/YouTube inclusion
-        $additionalContext .= "\n\n**RECOMMENDED**: If available, include ALL relevant YouTube videos (youtube.com or youtu.be URLs) related to [{$phrase}]. Do not artificially limit to two videos.";
+        $additionalContext .= "\n\n**RECOMMENDED**: If available, include a comprehensive list of at least 5 to 10 relevant YouTube videos (youtube.com or youtu.be URLs) related to [{$phrase}].";
         if (empty($subreddits)) {
-            $additionalContext .= " Also, if available, include ALL relevant Reddit discussions (reddit.com URLs) from relevant subreddits discussing [{$phrase}]. Do not artificially limit to two discussions.";
+            $additionalContext .= " Also, if available, include a comprehensive list of at least 5 to 10 relevant Reddit discussions (reddit.com URLs) from relevant subreddits discussing [{$phrase}].";
         }
 
         $timestamp = now()->toIso8601String();
