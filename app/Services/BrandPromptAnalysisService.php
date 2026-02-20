@@ -40,25 +40,47 @@ class BrandPromptAnalysisService
             'session_id' => $sessionId,
         ]);
 
-        // Generate the enhanced prompt
-        $enhancedPrompt = $this->buildAnalysisPrompt(
+        // Generate the natural language response
+        $generationPrompt = $this->buildAnalysisPrompt(
             $brand->name,
             $competitors,
             $brandPrompt->prompt,
             $subreddits
         );
 
-        // Get AI response with preferred model and session-based distribution
-        $aiResponseData = $this->generateAIResponse($enhancedPrompt, $preferredModelName, $sessionId);
+        // Get AI response for HTML generation
+        $generationResponseData = $this->generateAIResponse($generationPrompt, $preferredModelName, $sessionId);
+        
+        // Extract HTML response (handle cases where markers are missing)
+        $htmlText = $generationResponseData['text'];
+        preg_match('/HTML_RESPONSE_START(.*?)HTML_RESPONSE_END/s', $htmlText, $htmlMatches);
+        $htmlResponse = isset($htmlMatches[1]) ? trim($htmlMatches[1]) : $htmlText;
 
-        // Parse the response to extract resources and analysis
-        $parsedResponse = $this->parseAIResponse($aiResponseData['text'], $brand, $competitors, $brandPrompt);
+        // Generate the extraction analysis prompt based on the HTML result
+        $extractionPrompt = $this->buildExtractionPrompt(
+            $brand->name,
+            $competitors,
+            $htmlResponse,
+            $brandPrompt->prompt,
+            $subreddits
+        );
+
+        Log::info('Extraction Prompt', ['prompt' => $extractionPrompt]);
+
+        // Get AI response for extraction
+        $extractionResponseData = $this->generateAIResponse($extractionPrompt, $preferredModelName, $sessionId);
+
+        // Combine the results into a single pseudo-response for existing parsing logic to handle seamlessly
+        $combinedResponseText = "HTML_RESPONSE_START\n" . $htmlResponse . "\nHTML_RESPONSE_END\n\n" . $extractionResponseData['text'];
+
+        // Parse the combined response to extract resources and analysis
+        $parsedResponse = $this->parseAIResponse($combinedResponseText, $brand, $competitors, $brandPrompt);
 
         $result = [
             'ai_response' => $parsedResponse['html_response'],
             'resources' => $parsedResponse['resources'],
             'analysis' => $parsedResponse['analysis'],
-            'ai_model_id' => $aiResponseData['ai_model_id'] ?? null,
+            'ai_model_id' => $generationResponseData['ai_model_id'] ?? null,
         ];
 
         Log::info('Analysis result prepared', [
@@ -75,23 +97,16 @@ class BrandPromptAnalysisService
      */
     protected function buildAnalysisPrompt(string $brandName, array $competitors, string $phrase, array $subreddits = []): string
     {
-        $competitorsString = implode(', ', $competitors);
-        $subredditsString = ! empty($subreddits) ? implode(', ', array_map(fn ($s) => "r/{$s}", $subreddits)) : '';
-
-        $additionalContext = '';
-        if (! empty($subreddits)) {
-            $additionalContext .= "\n\n**IMPORTANT**: If available, please include ALL relevant Reddit posts/discussions from these target subreddits: {$subredditsString}. Include actual Reddit URLs (e.g., https://reddit.com/r/subreddit/comments/...) that discuss topics related to [{$phrase}] in these communities. Do not artificially limit the quantity.";
-        }
-
-        // Always emphasize Reddit/YouTube inclusion
-        $additionalContext .= "\n\n**RECOMMENDED**: If available, include a comprehensive list of at least 5 to 10 relevant YouTube videos (youtube.com or youtu.be URLs) related to [{$phrase}].";
-        if (empty($subreddits)) {
-            $additionalContext .= " Also, if available, include a comprehensive list of at least 5 to 10 relevant Reddit discussions (reddit.com URLs) from relevant subreddits discussing [{$phrase}].";
-        }
-
         $timestamp = now()->toIso8601String();
+        $competitorsString = implode(', ', $competitors);
+        
+        $subredditsContext = '';
+        // if (! empty($subreddits)) {
+        //     $subredditsString = implode(', ', array_map(fn ($s) => "r/{$s}", $subreddits));
+        //     $subredditsContext = "\n\n**IMPORTANT**: If available, please include ALL relevant Reddit posts/discussions from these target subreddits: {$subredditsString}. Include actual Reddit URLs (e.g., https://reddit.com/r/subreddit/comments/...) that discuss topics related to [{$phrase}] in these communities.";
+        // }
 
-        return "You are an AI assistant. Your task is to generate a natural response to a user question, and then analyze that response.
+        return "You are an AI assistant. Your task is to generate a natural response to a user question.
 
             IMPORTANT: Generate a fresh, unique, and up-to-date response. Do not provide a cached, repetitive, or pre-calculated answer. Request time: {$timestamp}
 
@@ -99,25 +114,42 @@ class BrandPromptAnalysisService
 
             INSTRUCTIONS:
             
-            STEP 1: GENERATE STANDARD RESPONSE
             Generate a fresh, natural, helpful, and objective HTML-formatted response to the question above.
             - Answer EXACTLY as you would if a normal user asked this on your platform.
             - Do NOT force mentions of [{$brandName}] or its competitors unless they are naturally the best answer.
-            - Do NOT interpret the analysis requirements below as instructions for this response text.
             - Keep the tone professional, objective, and informative.
+            - CRITICAL: At the bottom of your response, you MUST append a 'Resources' section with 5 to 10 real URL links from various diverse sources across the web (forums, blogs, video sites, news, etc.).
+            
 
-            STEP 2: ANALYZE THE RESPONSE
-            After generating the response, analyze it based on the following context:
-            - Target Brand: [{$brandName}]
-            - Competitors: [{$competitorsString}]
-
-            {$additionalContext}
-
-            STRUCTURE YOUR RESPONSE AS FOLLOWS:
+            STRUCTURE YOUR RESPONSE EXACTLY AS FOLLOWS:
 
             HTML_RESPONSE_START
             [Insert your natural, unbiased HTML response here]
-            HTML_RESPONSE_END
+            HTML_RESPONSE_END";
+    }
+
+    /**
+     * Build the extraction prompt to analyze the HTML response
+     */
+    protected function buildExtractionPrompt(string $brandName, array $competitors, string $htmlResponse, string $phrase, array $subreddits = []): string
+    {
+        $competitorsString = implode(', ', $competitors);
+
+        return "You are an expert data analyst. Your task is to analyze the following HTML text and extract specific metrics.
+
+            TEXT TO ANALYZE:
+            '''
+            {$htmlResponse}
+            '''
+
+            INSTRUCTIONS:
+            Analyze the text above based on the following context:
+            - Target Brand: [{$brandName}]
+            - Competitors: [{$competitorsString}]
+            
+            Ensure you extract all requested resources present in the provided HTML. Do NOT arbitrarily limit your resource list if the HTML contains more.
+
+            STRUCTURE YOUR RESPONSE EXACTLY AS FOLLOWS:
 
             ANALYSIS_START
             Resources: [List referenced or relevant resources here. Format:
@@ -127,9 +159,9 @@ class BrandPromptAnalysisService
             - Description: [brief description]
             ]
             
-            Brand_Sentiment: [CRITICAL: Output ONLY a single integer between 0 and 100. NO words, NO labels, NO explanations. Examples of CORRECT output: 72  |  45  |  88  |  30. Examples of WRONG output: positive | neutral | negative | good | bad. Scale: 0=very negative, 50=neutral, 100=very positive. If [{$brandName}] is not mentioned, output: 50]
+            Brand_Sentiment: [CRITICAL: Output ONLY a single integer between 0 and 100. NO words, NO labels, NO explanations. Examples of CORRECT output: 72  |  45  |  88  |  30. Scale: 0=very negative, 50=neutral, 100=very positive. If [{$brandName}] is not mentioned, output: 50]
             Brand_Position: [Percentage prominence of [{$brandName}], 0 if not mentioned]
-            Competitor_Mentions: [JSON object. CRITICAL: For each competitor, the value MUST be a nested object with exactly two keys: \"mentions\" (integer count) and \"sentiment\" (0-100 integer). Correct example: {\"Brand Y\": {\"mentions\": 2, \"sentiment\": 60}}. Wrong example: {\"Brand Y\": 2} or {\"Brand Y\": \"Good\"}. If no competitors mentioned, output: {}]
+            Competitor_Mentions: [JSON object. CRITICAL: For each competitor, the value MUST be a nested object with exactly two keys: \"mentions\" (integer count) and \"sentiment\" (0-100 integer). Correct example: {\"Brand Y\": {\"mentions\": 2, \"sentiment\": 60}}. If no competitors mentioned, output: {}]
             ANALYSIS_END";
     }
 
@@ -415,7 +447,6 @@ class BrandPromptAnalysisService
                 'model' => $model,
                 'max_tokens' => $maxTokens,
                 'temperature' => $temperature,
-                'system' => "You are a specialized AI designed to output exactly two components in your response: HTML_RESPONSE and ANALYSIS. You **must** include the literal markers HTML_RESPONSE_START, HTML_RESPONSE_END, ANALYSIS_START, and ANALYSIS_END. Never skip the analysis step.",
                 'messages' => [
                     ['role' => 'user', 'content' => $prompt],
                 ],
