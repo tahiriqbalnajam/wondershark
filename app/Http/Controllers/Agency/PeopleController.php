@@ -24,11 +24,22 @@ class PeopleController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-
-        $members = AgencyMember::where('agency_id', $user->id)
+        //$agencyId = $user->hasRole('agency') ? $user->id : ($user->agencyMembership?->agency_id ?? null);
+        if ($user->hasRole('agency_member')) {
+            $agencyId = $user->agencyMembership?->agency_id ?? null;
+             $members = AgencyMember::where('agency_id', $agencyId)
             ->with('user')
             ->orderBy('created_at', 'desc')
             ->get();
+        }
+        else{
+            $members = AgencyMember::where('agency_id', $user->id)
+            ->with('user')
+            ->orderBy('created_at', 'desc')
+            ->get();
+        }
+        //$members = AgencyMember::where('agency_id', $user->id)
+       
 
         // Get pending invitations
         $pendingInvitations = AgencyInvitation::where('agency_id', $user->id)

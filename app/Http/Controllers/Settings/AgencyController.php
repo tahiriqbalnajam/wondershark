@@ -149,6 +149,9 @@ class AgencyController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
+        //$agencyId = $user->hasRole('agency') ? $user->id : ($user->agencyMembership?->agency_id ?? null);
+        //$user = User::find($agencyId);
+
         return Inertia::render('settings/agency', [
             'agency' => [
                 'name' => $user->name,
@@ -173,6 +176,9 @@ class AgencyController extends Controller
 
         /** @var User $user */
         $user = Auth::user();
+
+        //$agencyId = $user->hasRole('agency') ? $user->id : ($user->agencyMembership?->agency_id ?? null);
+        //$user = User::find($agencyId);
 
         // Normalize color value to 6-digit lowercase hex
         $normalizedColor = null;

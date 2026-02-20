@@ -69,7 +69,7 @@ const agency_member_rights = permissions.user?.agency_membership?.rights;
     }
 
     if (permissions.hasAnyRole(['agency_manager', 'agency_member']) && selectedBrandId) { //// role is only agency_member
-        if(agency_member_rights == "agency_manager"){
+        if(agency_member_rights == "agency_manager" || agency_member_rights == "agency_admin" || agency_member_rights == "brand_user"){
             items.push({
                 title: 'Posts',
                 href: `/brands/${selectedBrandId}/posts`,
@@ -77,6 +77,7 @@ const agency_member_rights = permissions.user?.agency_membership?.rights;
             });
         }
     }
+
 
 
 
@@ -112,7 +113,7 @@ const getPreferenceNavItems = (permissions: ReturnType<typeof usePermissions>, s
 
 
      if (permissions.hasAnyRole(['agency_manager', 'agency_member']) && selectedBrandId) { //// role is only agency_member
-        if(agency_member_rights == "agency_manager"){
+        if(agency_member_rights == "agency_manager" || agency_member_rights == "agency_admin"){
             items.push({
                 title: 'Competitors',
                 href: `/brands/${selectedBrandId}/competitors`,
@@ -126,6 +127,10 @@ const getPreferenceNavItems = (permissions: ReturnType<typeof usePermissions>, s
             });
         }
     }
+
+
+   
+
 
     return items;
 };
@@ -142,6 +147,19 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
         });
     }
 
+
+     const agency_member_rights = permissions.user?.agency_membership?.rights;
+     if (permissions.hasAnyRole(['agency_admin', 'agency_member']) && selectedBrandId) { //// role is only agency_member
+        if(agency_member_rights == "agency_admin"){
+            items.push({
+                title: 'People',
+                href: '/agency/people',
+                icon: Users,
+            });
+        }
+    }
+
+
     // Brand - for agency and brand users, brand users must have brand ID
     if (permissions.hasAnyRole(['agency', 'brand']) && selectedBrandId) {
         items.push({
@@ -149,6 +167,17 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
             href: `/brands/${selectedBrandId}/edit`,
             icon: Package,
         });
+    }
+
+
+     if (permissions.hasAnyRole(['agency_admin', 'agency_member']) && selectedBrandId) { //// role is only agency_member
+        if(agency_member_rights == "agency_admin"){
+            items.push({
+                title: 'Brand',
+                href: `/brands/${selectedBrandId}/edit`,
+                icon: Package,
+            });
+        }
     }
 
     // Agency settings - only for agency users
@@ -159,6 +188,17 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
             icon: Building2,
         });
     }
+
+ 
+     //if (permissions.hasAnyRole(['agency_admin', 'agency_member']) && selectedBrandId) { //// role is only agency_member
+   //     if(agency_member_rights == "agency_admin"){
+    //        items.push({
+    //            title: 'Agency',
+    //            href: '/settings/agency',
+      //          icon: Building2,
+     //       });
+      //  }
+   // }
 
     // User Management - only for admin users (skip for agency and brand)
     if (permissions.can('viewUsers') && permissions.hasRole('admin')) {
