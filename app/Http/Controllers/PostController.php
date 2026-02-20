@@ -19,6 +19,7 @@ class PostController extends Controller
      */
     public function index(Request $request)
     {
+        
         /** @var User $user */
         $user = Auth::user();
 
@@ -76,9 +77,17 @@ class PostController extends Controller
         // Ensure the brand belongs to the authenticated user (agency or brand owner)
         $hasAccess = $user->hasRole('admin') ||
                      $brand->agency_id === $user->id ||
-                     $brand->user_id === $user->id || $user->hasRole('agency_member');
+                     $brand->user_id === $user->id || $user->hasRole('agency_member')
+                     || $user->hasRole('agency_admin')
+                     || $user->hasRole('brand_user');
 
-        if( $user->hasRole('agency_member') && ! in_array('agency_manager', $user->agencyMembership?->rights ?? [])){
+                     
+
+        if ( $user->hasRole('agency_member') &&
+            !in_array('agency_manager', $user->agencyMembership?->rights ?? []) &&
+            !in_array('agency_admin', $user->agencyMembership?->rights ?? []) &&
+            !in_array('brand_user', $user->agencyMembership?->rights ?? [] )
+        ) {
             abort(403, 'You do not have permission to access this brand.');
         }
 

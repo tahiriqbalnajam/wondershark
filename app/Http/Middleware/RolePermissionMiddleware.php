@@ -31,6 +31,14 @@ class RolePermissionMiddleware
             // Support multiple roles separated by pipe |
             $roles = explode('|', $role);
 
+
+           // if ($user->hasRole('agency_member')  && ! in_array('agency_admin', $user->agencyMembership?->rights ?? [] )  ) {
+           //     abort(403, 'Access deniedvgg. You do not have the required role.');
+           // }
+            // Admin users have access to all roles
+           // if (! $user->hasRole('admin') && ! $user->hasAnyRole($roles) && ! $user->hasRole('agency_member')) {
+           //     abort(403, 'Access denied. You do not have the required role.');
+           // }
             // Admin users have access to all roles
             if (! $user->hasRole('admin') && ! $user->hasAnyRole($roles)) {
                 abort(403, 'Access denied. You do not have the required role.');
