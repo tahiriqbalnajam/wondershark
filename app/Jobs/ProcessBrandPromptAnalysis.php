@@ -91,10 +91,10 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
             // Update the brand prompt with results
             $updateData = [
                 'ai_response' => $result['ai_response'],
-                'resources' => json_encode($result['resources']),
+                'resources' => $result['resources'],
                 'sentiment' => $result['analysis']['sentiment'],
                 'position' => $result['analysis']['position'],
-                'competitor_mentions' => json_encode($result['analysis']['competitor_mentions']),
+                'competitor_mentions' => $result['analysis']['competitor_mentions'],
                 'analysis_completed_at' => now(),
                 'analysis_failed_at' => null, // Clear any previous failure
                 'analysis_error' => null, // Clear any previous error

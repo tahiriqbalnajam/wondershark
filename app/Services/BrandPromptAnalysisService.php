@@ -129,7 +129,7 @@ class BrandPromptAnalysisService
             
             Brand_Sentiment: [CRITICAL: Output ONLY a single integer between 0 and 100. NO words, NO labels, NO explanations. Examples of CORRECT output: 72  |  45  |  88  |  30. Examples of WRONG output: positive | neutral | negative | good | bad. Scale: 0=very negative, 50=neutral, 100=very positive. If [{$brandName}] is not mentioned, output: 50]
             Brand_Position: [Percentage prominence of [{$brandName}], 0 if not mentioned]
-            Competitor_Mentions: [JSON object of mentioned competitors, format must be exactly: {\"Competitor Name\": {\"mentions\": count, \"sentiment\": 0_to_100_integer}}]
+            Competitor_Mentions: [JSON object. CRITICAL: For each competitor, the value MUST be a nested object with exactly two keys: \"mentions\" (integer count) and \"sentiment\" (0-100 integer). Correct example: {\"Brand Y\": {\"mentions\": 2, \"sentiment\": 60}}. Wrong example: {\"Brand Y\": 2} or {\"Brand Y\": \"Good\"}. If no competitors mentioned, output: {}]
             ANALYSIS_END";
     }
 
@@ -415,6 +415,7 @@ class BrandPromptAnalysisService
                 'model' => $model,
                 'max_tokens' => $maxTokens,
                 'temperature' => $temperature,
+                'system' => "You are a specialized AI designed to output exactly two components in your response: HTML_RESPONSE and ANALYSIS. You **must** include the literal markers HTML_RESPONSE_START, HTML_RESPONSE_END, ANALYSIS_START, and ANALYSIS_END. Never skip the analysis step.",
                 'messages' => [
                     ['role' => 'user', 'content' => $prompt],
                 ],
@@ -892,8 +893,13 @@ class BrandPromptAnalysisService
         $htmlResponse = isset($htmlMatches[1]) ? trim($htmlMatches[1]) : $response;
 
         // Extract analysis section
-        preg_match('/ANALYSIS_START(.*?)ANALYSIS_END/s', $response, $analysisMatches);
-        $analysisText = isset($analysisMatches[1]) ? trim($analysisMatches[1]) : '';
+        if (preg_match('/ANALYSIS_START(.*?)ANALYSIS_END/s', $response, $analysisMatches)) {
+            $analysisText = trim($analysisMatches[1]);
+        } else {
+            // Fallback: Claude/certain models sometimes omit the ANALYSIS_START tags
+            // and just append the data at the end of the HTML.
+            $analysisText = $response;
+        }
 
         // Parse analysis components
         $analysis = $this->parseAnalysisText($analysisText, $brand, $competitors);
@@ -908,9 +914,6 @@ class BrandPromptAnalysisService
         ];
     }
 
-    /**
-     * Parse the analysis text to extract metrics
-     */
     protected function parseAnalysisText(string $analysisText, Brand $brand, array $competitors): array
     {
         $sentiment = 50; // Default neutral score
@@ -928,8 +931,8 @@ class BrandPromptAnalysisService
             $position = (int) $matches[1];
         }
 
-        // Extract competitor mentions
-        if (preg_match('/Competitor_Mentions:\s*(\{.*?\})/s', $analysisText, $matches)) {
+        // Extract competitor mentions - use greedy .* to capture the full nested JSON object until the final closing brace
+        if (preg_match('/Competitor_Mentions:\s*(\{.*\})/s', $analysisText, $matches)) {
             try {
                 $competitorMentions = json_decode($matches[1], true) ?: [];
             } catch (\Exception $e) {

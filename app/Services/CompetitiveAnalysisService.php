@@ -646,11 +646,12 @@ CRITICAL INSTRUCTIONS:
             $positionScore = min(10, max(1, round($avgPosition / 500, 1)));
 
             // Determine sentiment: prefer avg from brand_mentions (populated after our fix),
-            // fall back to the competitive stat (from CompetitiveAnalysisService), then null.
+            // fall back to the competitive stat ONLY for the main brand. 
+            // For competitors, if mention sentiment is missing, explicitly leave as null so UI shows "N/A" instead of false 50 default.
             $mentionSentiment = isset($stat->avg_mention_sentiment) && $stat->avg_mention_sentiment !== null
                 ? (int) round($stat->avg_mention_sentiment)
                 : null;
-            $displaySentiment = $mentionSentiment ?? $competitiveStat?->sentiment;
+            $displaySentiment = $mentionSentiment ?? ($stat->entity_type === 'brand' ? $competitiveStat?->sentiment : null);
 
             // Build a temporary accessor-compatible object for sentiment_level
             $sentimentLevel = 'N/A';
