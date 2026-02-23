@@ -165,9 +165,15 @@ export default function CompetitorSelector({
                             {suggestedCompetitors.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     {suggestedCompetitors.map((competitor) => {
+                                        //const cleanDomain = competitor.domain
+                                        //.replace(/^https?:\/\//, '')
+                                        //.replace(/^www\./, '');
+
                                         const cleanDomain = competitor.domain
                                         .replace(/^https?:\/\//, '')
-                                        .replace(/^www\./, '');
+                                        .replace(/^www\./, '')
+                                        .split('/')[0];
+
                                         const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
                                         const isLimitReached = acceptedCompetitors.length >= 10;
                                         return (
@@ -252,9 +258,13 @@ export default function CompetitorSelector({
                             {acceptedCompetitors.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     {acceptedCompetitors.map((competitor) => {
+                                       // const cleanDomain = competitor.domain
+                                       // .replace(/^https?:\/\//, '')
+                                        //.replace(/^www\./, '');
                                         const cleanDomain = competitor.domain
                                         .replace(/^https?:\/\//, '')
-                                        .replace(/^www\./, '');
+                                        .replace(/^www\./, '')
+                                        .split('/')[0];
                                         const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
                                         return (
                                         
