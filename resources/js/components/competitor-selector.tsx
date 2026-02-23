@@ -128,9 +128,9 @@ export default function CompetitorSelector({
                             <div className="lg:flex items-center justify-between block">
                                 <h2 className="text-2xl font-bold lg:mb-0 mb-5">
                                     Suggested Competitors &nbsp;
-                                    <span className='text-gray-400 font-normal text-sm'>
+                                    {/*  <span className='text-gray-400 font-normal text-sm'>
                                         {suggestedCompetitors.length > 0 ? `- ${suggestedCompetitors.length}` : ''}
-                                    </span>
+                                    </span>*/}
                                 </h2>
                                 {/* {totalCompetitors > 0 && onRefreshCompetitors && (
                                     <Button 
