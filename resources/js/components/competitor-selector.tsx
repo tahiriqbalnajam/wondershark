@@ -127,7 +127,7 @@ export default function CompetitorSelector({
                         <CardHeader>
                             <div className="lg:flex items-center justify-between block">
                                 <h2 className="text-2xl font-bold lg:mb-0 mb-5">
-                                    Suggested Competitors
+                                    Suggested Competitors &nbsp;
                                     <span className='text-gray-400 font-normal text-sm'>
                                         {suggestedCompetitors.length > 0 ? `- ${suggestedCompetitors.length}` : ''}
                                     </span>
@@ -240,7 +240,7 @@ export default function CompetitorSelector({
                         <CardHeader>
                             <div className="flex items-center justify-between">
                                 <h2 className="text-2xl font-bold">
-                                    Your Competitors 
+                                    Your Competitors &nbsp;
                                     {/* <span className='text-gray-400 font-normal text-sm'>
                                         {acceptedCompetitors.length > 0 ? `- ${acceptedCompetitors.length}` : ''}+
                                     </span> */}
