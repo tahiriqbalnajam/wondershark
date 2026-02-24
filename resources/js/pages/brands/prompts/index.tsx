@@ -71,6 +71,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
     const userRoles = auth?.roles || [];
     const isAdmin = userRoles.includes('admin');
     const isBrandOrAgency = userRoles.includes('brand') || userRoles.includes('agency');
+    const isAgencyMember = userRoles.includes('agency_member');
 
     const [selectedPrompts, setSelectedPrompts] = useState<number[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -331,12 +332,12 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                         <div className="flex justify-between items-center mb-10">
                             <TabsList className="add-prompt-lists border">
                                 <TabsTrigger value="active">Active ({activePrompts.length})</TabsTrigger>
-                                {(isAdmin || isBrandOrAgency) && (
+                                {(isAdmin || isBrandOrAgency || isAgencyMember) && (
                                     <TabsTrigger value="suggested">Suggested ({suggestedPrompts.length})</TabsTrigger>
                                 )}
                                 <TabsTrigger value="inactive">Inactive ({inactivePrompts.length})</TabsTrigger>
                             </TabsList>
-                            {(isAdmin || isBrandOrAgency) && (
+                            {(isAdmin || isBrandOrAgency || isAgencyMember) && (
                                 <AddPromptDialog brandId={brand.id} className="add-prompt-btn" onPromptAdd={handleManualPromptAdd} />
                             )}
                         </div>
@@ -512,7 +513,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                             </Table>
                         </TabsContent>
 
-                        {(isAdmin || isBrandOrAgency) && (
+                        {(isAdmin || isBrandOrAgency || isAgencyMember) && (
                             <TabsContent value="suggested" className="active-table-prompt">
                                 <div className="suggested-prompts-box flex justify-between items-center p-4 border rounded-sm mb-5">
                                     <p className='flex items-center gap-3 text-sm'><Sparkles className='text-orange-600' /><b>Suggested prompts.</b> Expand your brand's presence with suggested prompts.</p>

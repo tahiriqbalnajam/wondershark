@@ -448,30 +448,29 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
                                 <div className="grid gap-4">
                                     <Label>Permissions</Label>
                                     <div className="space-y-3">
-                                        {availablePermissions.map((permission) => (
-                                            <div key={permission.id} className="flex items-start space-x-3">
-                                                <Checkbox
-                                                    id={`edit-${permission.id}`}
-                                                    checked={rightsData.rights.includes(permission.id)}
-                                                    onCheckedChange={(checked) => {
-                                                        if (checked) {
-                                                            setRightsData('rights', [...rightsData.rights, permission.id]);
-                                                        } else {
-                                                            setRightsData('rights', rightsData.rights.filter(r => r !== permission.id));
-                                                        }
-                                                    }}
-                                                    className="mt-1"
-                                                />
-                                                <div className="flex-1">
-                                                    <Label htmlFor={`edit-${permission.id}`} className="text-sm font-medium cursor-pointer">
-                                                        {permission.label}
-                                                    </Label>
-                                                    <p className="text-xs text-muted-foreground mt-1">
-                                                        {permission.description}
-                                                    </p>
+                                        <RadioGroup
+                                            value={rightsData.rights[0] || ''}
+                                            onValueChange={(value) => setRightsData('rights', [value])}
+                                            className="space-y-3"
+                                        >
+                                            {availablePermissions.map((permission) => (
+                                                <div key={permission.id} className="flex items-start space-x-3">
+                                                    <RadioGroupItem
+                                                        value={permission.id}
+                                                        id={`edit-${permission.id}`}
+                                                        className="mt-1"
+                                                    />
+                                                    <div className="flex-1">
+                                                        <Label htmlFor={`edit-${permission.id}`} className="text-sm font-medium cursor-pointer">
+                                                            {permission.label}
+                                                        </Label>
+                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                            {permission.description}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </RadioGroup>
                                     </div>
                                 </div>
                             </div>
