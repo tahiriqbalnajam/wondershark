@@ -157,8 +157,12 @@ class InvitationController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
+
+
         // Ensure the invitation belongs to the authenticated agency
-        if ($invitation->agency_id !== $user->id) {
+        if( $user->hasRole('agency_member')) {
+        }
+        else if ($invitation->agency_id !== $user->id) {
             abort(403);
         }
 

@@ -42,11 +42,23 @@ class PeopleController extends Controller
        
 
         // Get pending invitations
-        $pendingInvitations = AgencyInvitation::where('agency_id', $user->id)
+
+        if ($user->hasRole('agency_member')) {
+            $agencyId = $user->agencyMembership?->agency_id ?? null;
+            $pendingInvitations = AgencyInvitation::where('agency_id', $agencyId ?? $user->id)
             ->whereNull('accepted_at')
             ->where('expires_at', '>', now())
             ->orderBy('created_at', 'desc')
             ->get();
+        }
+        else{
+           $pendingInvitations = AgencyInvitation::where('agency_id', $user->id)
+            ->whereNull('accepted_at')
+            ->where('expires_at', '>', now())
+            ->orderBy('created_at', 'desc')
+            ->get();
+        }
+        
 
         return Inertia::render('agency/people/index', [
             'members' => $members,
@@ -85,10 +97,14 @@ class PeopleController extends Controller
         if ($existingInvitation) {
             return back()->withErrors(['email' => 'An invitation has already been sent to this email address.']);
         }
-
+        $agencyId1 = $agency->id;
+         $user1 = Auth::user();
+         if ($user1->hasRole('agency_member')) {
+            $agencyId1  = $user1->agencyMembership?->agency_id;
+         }
         // Create the invitation
         $invitation = AgencyInvitation::create([
-            'agency_id' => $agency->id,
+            'agency_id' => $agencyId1,
             'name' => $request->name,
             'email' => $request->email,
             'token' => AgencyInvitation::generateToken(),
@@ -130,7 +146,9 @@ class PeopleController extends Controller
         $user = Auth::user();
 
         // Ensure the member belongs to the authenticated agency
-        if ($member->agency_id !== $user->id) {
+        if( $user->hasRole('agency_member')) {
+        }
+        else if ($member->agency_id !== $user->id) {
             abort(403);
         }
 
@@ -154,8 +172,11 @@ class PeopleController extends Controller
         $user = Auth::user();
 
         // Ensure the member belongs to the authenticated agency
-        if ($member->agency_id !== $user->id) {
-            abort(403);
+        if( $user->hasRole('agency_member')) {
+            print_r($user);
+        }
+        else if ($member->agency_id !== $user->id) {
+            abort(403333);
         }
 
         DB::transaction(function () use ($member) {
