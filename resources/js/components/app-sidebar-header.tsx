@@ -33,7 +33,7 @@ export function AppSidebarHeader({ breadcrumbs = [], title, logo, website }: { b
 
     // Pick icon based on current URL, fallback to a default
     const pageIcon = finalLogo ? (
-        <img src={finalLogo.startsWith('http') ? finalLogo : `/storagee/${finalLogo}`}  alt="Brand logo" className="w-5 h-5 rounded object-contain" />
+        <img src={finalLogo.startsWith('http') ? finalLogo : `/storage/${finalLogo}`}  alt="Brand logo" className="w-5 h-5 rounded object-contain" />
     ) : finalWebsite ? (
         <img 
             src={generateApiLogoUrl(finalWebsite)} 
