@@ -476,15 +476,13 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
     const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
 
     const handleBrandRowClick = (domain: string) => {
-        // // Scroll to Recent AI Citations section
-        // const citationsSection = document.getElementById('recent-citations');
-        // if (citationsSection) {
-        //     citationsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        // }
-        // // Set the competitor filter
-        // setSelectedCompetitorDomain(domain);
-        setSelectedBrand(domain);
-        setSelectedCompetitorDomain(domain);
+        if (selectedBrand === domain) {
+            setSelectedBrand('all');
+            setSelectedCompetitorDomain(null);
+        } else {
+            setSelectedBrand(domain);
+            setSelectedCompetitorDomain(domain);
+        }
     };
 
     // Helper function to render trend indicators (only for up/down changes)
