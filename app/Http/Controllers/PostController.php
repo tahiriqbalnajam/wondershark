@@ -141,7 +141,9 @@ class PostController extends Controller
         // Ensure the brand belongs to the authenticated user (agency or brand owner)
         $hasAccess = $user->hasRole('admin') ||
                      $brand->agency_id === $user->id ||
-                     $brand->user_id === $user->id;
+                     $brand->user_id === $user->id || $user->hasRole('agency_member')
+                     || $user->hasRole('agency_admin')
+                     || $user->hasRole('brand_user');
 
         if (! $hasAccess) {
             abort(403, 'You do not have permission to access this brand.');
@@ -194,7 +196,9 @@ class PostController extends Controller
         // Ensure the brand belongs to the authenticated user (agency or brand owner)
         $hasAccess = $user->hasRole('admin') ||
                      $brand->agency_id === $user->id ||
-                     $brand->user_id === $user->id;
+                     $brand->user_id === $user->id || $user->hasRole('agency_member')
+                     || $user->hasRole('agency_admin')
+                     || $user->hasRole('brand_user');
 
         if (! $hasAccess) {
             abort(403, 'You do not have permission to access this brand.');
