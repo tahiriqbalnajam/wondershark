@@ -190,15 +190,15 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
     }
 
  
-     //if (permissions.hasAnyRole(['agency_admin', 'agency_member']) && selectedBrandId) { //// role is only agency_member
-   //     if(agency_member_rights == "agency_admin"){
-    //        items.push({
-    //            title: 'Agency',
-    //            href: '/settings/agency',
-      //          icon: Building2,
-     //       });
-      //  }
-   // }
+     if (permissions.hasAnyRole(['agency_admin', 'agency_member']) && selectedBrandId) { //// role is only agency_member
+        if(agency_member_rights == "agency_admin"){
+            items.push({
+                title: 'Agency',
+                href: '/settings/agency',
+                icon: Building2,
+            });
+        }
+    }
 
     // User Management - only for admin users (skip for agency and brand)
     if (permissions.can('viewUsers') && permissions.hasRole('admin')) {

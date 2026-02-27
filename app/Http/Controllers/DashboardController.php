@@ -100,6 +100,25 @@ class DashboardController extends Controller
                  }
             }
         } 
+
+         if($user->agencyMembership && $user->agencyMembership->role && $user->agencyMembership->role == "agency_member" ){
+           // if ($user->agencyMembership && $user->agencyMembership->rights && in_array('agency_manager', $user->agencyMembership->rights)) {
+                 $main_agencyId = $user->agencyMembership?->agency_id;
+                 $main_agencyId_user = User::find($main_agencyId);
+                 $main_user_agency_color = $main_agencyId_user->agency_color;
+       
+                 //if($main_user_agency_color){
+                  //  $user->agency_color  = 'http://wondershark.test/storage/'.$main_user_agency_color;
+               //  }
+                 if($main_agencyId_user->logo){
+                    $user->logo  = 'http://wondershark.test/storage/'.$main_agencyId_user->logo;
+                 }
+                 if($main_agencyId_user->logo_thumbnail){
+                    $user->logo_thumbnail  = 'http://wondershark.test/storage/'.$main_agencyId_user->logo_thumbnail;
+                 }
+                 $user->save();
+         //   }
+        } 
        
        // echo '<pre>';
        // print_r($user->agencyMembership->agency_color);
