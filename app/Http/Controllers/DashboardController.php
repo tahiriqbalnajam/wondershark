@@ -90,16 +90,20 @@ class DashboardController extends Controller
       
    
         if($user->agencyMembership && $user->agencyMembership->role && $user->agencyMembership->role == "agency_member" ){
-            if ($user->agencyMembership && $user->agencyMembership->rights && in_array('agency_manager', $user->agencyMembership->rights)) {
-             $main_agencyId = $user->agencyMembership?->agency_id;
+           // if ($user->agencyMembership && $user->agencyMembership->rights && in_array('agency_manager', $user->agencyMembership->rights)) {
+                 $main_agencyId = $user->agencyMembership?->agency_id;
                  $main_agencyId_user = User::find($main_agencyId);
                  $main_user_agency_color = $main_agencyId_user->agency_color;
                  if($main_user_agency_color){
                     $user->agency_color  = $main_user_agency_color;
                     $user->save();
                  }
-            }
+           // }
         } 
+
+      //  echo '<pre>';
+       // print_r($user);
+       // echo '</pre>'; die;
 
          if($user->agencyMembership && $user->agencyMembership->role && $user->agencyMembership->role == "agency_member" ){
            // if ($user->agencyMembership && $user->agencyMembership->rights && in_array('agency_manager', $user->agencyMembership->rights)) {
