@@ -478,10 +478,8 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
     const handleBrandRowClick = (domain: string) => {
         if (selectedBrand === domain) {
             setSelectedBrand('all');
-            setSelectedCompetitorDomain(null);
         } else {
             setSelectedBrand(domain);
-            setSelectedCompetitorDomain(domain);
         }
     };
 
@@ -545,9 +543,14 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                 }
             }
 
+            // Only show prompts that contain at least one resource
+            if (!item.prompt_resources || item.prompt_resources.length === 0) {
+                return false;
+            }
+
             // Competitor filter
             if (selectedCompetitorDomain) {
-                return item.prompt_resources?.some(resource =>
+                return item.prompt_resources.some(resource =>
                     resource.domain.replace(/^www\./, '') === selectedCompetitorDomain
                 );
             }

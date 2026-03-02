@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Save, Users, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -15,6 +16,9 @@ interface Settings {
         allow_brand_post_creation: boolean;
         enforce_brand_post_limits: boolean;
         default_monthly_post_limit: number;
+    };
+    analytics?: {
+        use_relative_trend_calculation: boolean;
     };
 }
 
@@ -28,6 +32,7 @@ export default function AdminSettings({ settings }: Props) {
         allow_brand_post_creation: settings.post_creation.allow_brand_post_creation,
         enforce_brand_post_limits: settings.post_creation.enforce_brand_post_limits,
         default_monthly_post_limit: settings.post_creation.default_monthly_post_limit,
+        use_relative_trend_calculation: settings.analytics?.use_relative_trend_calculation ?? false,
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -45,7 +50,7 @@ export default function AdminSettings({ settings }: Props) {
     return (
         <AppLayout>
             <Head title="System Settings" />
-            
+
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex justify-between items-center">
@@ -133,6 +138,35 @@ export default function AdminSettings({ settings }: Props) {
                         </CardContent>
                     </Card>
 
+                    {/* Analytics Settings */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <BarChart3 className="w-5 h-5" />
+                                Analytics Settings
+                            </CardTitle>
+                            <CardDescription>
+                                Configure how analytics and trends are calculated across the platform
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            {/* Trend Calculation Method */}
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5 max-w-[85%]">
+                                    <Label htmlFor="relative-trend" className="text-base">Use Point-to-Point Relative Growth for Trends</Label>
+                                    <p className="text-sm text-muted-foreground">
+                                        If enabled, trends calculate growth directly between the first and last day of the selected period (Client request). If disabled, it uses the industry-standard Period-over-Period absolute difference (e.g. This Week's Average vs. Last Week's Average).
+                                    </p>
+                                </div>
+                                <Switch
+                                    id="relative-trend"
+                                    checked={data.use_relative_trend_calculation}
+                                    onCheckedChange={(checked: boolean) => setData('use_relative_trend_calculation', checked)}
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     {/* Settings Status Overview */}
                     <Card>
                         <CardHeader>
@@ -147,17 +181,17 @@ export default function AdminSettings({ settings }: Props) {
                                     <div className={`w-3 h-3 rounded-full ${data.allow_agency_post_creation ? 'bg-green-500' : 'bg-red-500'}`}></div>
                                     <span className="text-sm">Agency Creation: {data.allow_agency_post_creation ? 'Enabled' : 'Disabled'}</span>
                                 </div>
-                                
+
                                 <div className="flex items-center space-x-2">
                                     <div className={`w-3 h-3 rounded-full ${data.allow_brand_post_creation ? 'bg-green-500' : 'bg-red-500'}`}></div>
                                     <span className="text-sm">Brand Creation: {data.allow_brand_post_creation ? 'Enabled' : 'Disabled'}</span>
                                 </div>
-                                
+
                                 <div className="flex items-center space-x-2">
                                     <div className={`w-3 h-3 rounded-full ${data.enforce_brand_post_limits ? 'bg-orange-500' : 'bg-gray-500'}`}></div>
                                     <span className="text-sm">Limits: {data.enforce_brand_post_limits ? 'Enforced' : 'Disabled'}</span>
                                 </div>
-                                
+
                                 <div className="flex items-center space-x-2">
                                     <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                                     <span className="text-sm">Default Limit: {data.default_monthly_post_limit === 0 ? 'Unlimited' : data.default_monthly_post_limit}</span>

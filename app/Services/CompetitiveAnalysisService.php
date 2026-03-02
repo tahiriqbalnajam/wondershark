@@ -781,8 +781,56 @@ CRITICAL INSTRUCTIONS:
             ];
         }
 
-        $visibilityChange = $currentVisibility - $previousVisibility;
-        $sentimentChange  = round($currentSentiment - $previousSentiment, 1);
+        // Check if we use the new Relative Growth calculation or default Period-over-Period
+        $useRelativeCalculation = \App\Models\SystemSetting::getBoolean('use_relative_trend_calculation', false);
+        
+        $visibilityChange = 0;
+        $sentimentChange  = 0;
+
+        if ($useRelativeCalculation) {
+            // Find the earliest and latest dates with data in the current period
+            $firstDate = (clone $currentQuery)->min(DB::raw('DATE(analyzed_at)'));
+            $lastDate = (clone $currentQuery)->max(DB::raw('DATE(analyzed_at)'));
+
+            if ($firstDate && $lastDate && $firstDate !== $lastDate) {
+                // First Day Stats
+                $firstDayEntityMentions = (clone $currentQuery)->whereDate('analyzed_at', $firstDate)->sum('mention_count');
+                $firstDayTotalAllMentions = BrandMention::where('brand_id', $brand->id)
+                    ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
+                    ->whereDate('analyzed_at', $firstDate)
+                    ->sum('mention_count');
+                $firstDayVisibility = $firstDayTotalAllMentions > 0 ? ($firstDayEntityMentions / $firstDayTotalAllMentions) * 100 : 0;
+                $firstDaySentiment = (clone $currentQuery)->whereDate('analyzed_at', $firstDate)->avg('sentiment') ?? 50;
+
+                // Last Day Stats
+                $lastDayEntityMentions = (clone $currentQuery)->whereDate('analyzed_at', $lastDate)->sum('mention_count');
+                $lastDayTotalAllMentions = BrandMention::where('brand_id', $brand->id)
+                    ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
+                    ->whereDate('analyzed_at', $lastDate)
+                    ->sum('mention_count');
+                $lastDayVisibility = $lastDayTotalAllMentions > 0 ? ($lastDayEntityMentions / $lastDayTotalAllMentions) * 100 : 0;
+                $lastDaySentiment = (clone $currentQuery)->whereDate('analyzed_at', $lastDate)->avg('sentiment') ?? 50;
+
+                // Relative calculations: (Last - First) / First
+                if ($firstDayVisibility > 0) {
+                    $visibilityChange = (($lastDayVisibility - $firstDayVisibility) / $firstDayVisibility) * 100;
+                } elseif ($lastDayVisibility > 0) {
+                    $visibilityChange = 100;
+                }
+
+                if ($firstDaySentiment > 0) {
+                    $sentimentChange = (($lastDaySentiment - $firstDaySentiment) / $firstDaySentiment) * 100;
+                } elseif ($lastDaySentiment > 0) {
+                    $sentimentChange = 100;
+                }
+                
+                $sentimentChange = round($sentimentChange, 1);
+            }
+        } else {
+            // Default: Period-over-Period Absolute Difference
+            $visibilityChange = $currentVisibility - $previousVisibility;
+            $sentimentChange  = round($currentSentiment - $previousSentiment, 1);
+        }
 
         $trends = [
             'visibility_trend'  => $visibilityChange > 1 ? 'up' : ($visibilityChange < -1 ? 'down' : 'stable'),

@@ -18,6 +18,9 @@ class SystemSettingsController extends Controller
                 'enforce_brand_post_limits' => SystemSetting::getBoolean('enforce_brand_post_limits', true),
                 'default_monthly_post_limit' => SystemSetting::getInteger('default_monthly_post_limit', 50),
             ],
+            'analytics' => [
+                'use_relative_trend_calculation' => SystemSetting::getBoolean('use_relative_trend_calculation', false),
+            ],
         ];
 
         return Inertia::render('admin/settings/index', [
@@ -32,6 +35,7 @@ class SystemSettingsController extends Controller
             'allow_brand_post_creation' => 'boolean',
             'enforce_brand_post_limits' => 'boolean',
             'default_monthly_post_limit' => 'integer|min:0',
+            'use_relative_trend_calculation' => 'boolean',
         ]);
 
         // Update post creation settings
@@ -68,6 +72,15 @@ class SystemSettingsController extends Controller
                 $request->integer('default_monthly_post_limit'),
                 'integer',
                 'Default monthly post limit for new brands'
+            );
+        }
+
+        if ($request->has('use_relative_trend_calculation')) {
+            SystemSetting::set(
+                'use_relative_trend_calculation',
+                $request->boolean('use_relative_trend_calculation') ? 'true' : 'false',
+                'boolean',
+                'Use Point-A to Point-B relative growth calculation for trends instead of Period-over-Period absolute change'
             );
         }
 
