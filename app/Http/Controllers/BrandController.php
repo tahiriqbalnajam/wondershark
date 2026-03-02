@@ -741,6 +741,10 @@ class BrandController extends Controller
             },
             'prompts.promptResources',
             'prompts.aiModel',
+            'prompts.mentions' => function ($query) {
+                // Only load entity_domain (small payload)
+                $query->select('id', 'brand_prompt_id', 'entity_domain', 'entity_type', 'mention_count');
+            },
             'subreddits',
             'user',
             'competitors' => function ($query) {
@@ -752,6 +756,16 @@ class BrandController extends Controller
                     ->take(10);
             },
         ]);
+
+        // Add mentioned_domains to each prompt for frontend filtering
+        $brand->prompts->each(function ($prompt) {
+            $prompt->mentioned_domains = $prompt->mentions
+                ->filter(fn ($m) => $m->mention_count > 0 && $m->entity_domain)
+                ->pluck('entity_domain')
+                ->unique()
+                ->values()
+                ->toArray();
+        });
 
         // Filter parameters
         $days = (int) $request->input('date_range', 30);

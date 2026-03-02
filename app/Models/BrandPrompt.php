@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\BrandMention;
 
 class BrandPrompt extends Model
 {
@@ -128,6 +129,14 @@ class BrandPrompt extends Model
     public function competitorResources(): HasMany
     {
         return $this->hasMany(BrandPromptResource::class)->competitorUrls();
+    }
+
+    /**
+     * Get all brand mentions for this prompt
+     */
+    public function mentions(): HasMany
+    {
+        return $this->hasMany(BrandMention::class);
     }
 
     /**

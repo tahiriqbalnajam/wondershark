@@ -93,6 +93,7 @@ interface Brand {
             domain: string;
             is_competitor_url: boolean;
         }>;
+        mentioned_domains?: string[];
     }>;
     subreddits: Array<{
         id: number;
@@ -555,6 +556,31 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                 );
             }
 
+            // Brand filter
+            if (selectedBrand !== 'all') {
+                const brandOption = brands.find(b => b.value === selectedBrand);
+                const entityName = brandOption ? brandOption.label : null;
+                const isMainBrand = entityName === brand.name;
+
+                // If the user selected the main brand itself, show all prompts
+                // (main brand visibility is tracked at prompt level, not per-competitor)
+                if (isMainBrand) return true;
+
+                // For competitors: use competitor_mentions JSON from the AI analysis.
+                // The key is the competitor's entity name (e.g. "Everbridge 360"),
+                // and we only show prompts where that competitor was explicitly mentioned (mentions > 0).
+                if (entityName) {
+                    const mentions = (item as any).competitor_mentions;
+                    // competitor_mentions can be [] (empty array) or {} (object) — handle both
+                    const isObject = mentions && typeof mentions === 'object' && !Array.isArray(mentions);
+                    if (isObject && mentions[entityName] && (mentions[entityName].mentions ?? 0) > 0) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
             return true;
         });
     }, [
@@ -563,6 +589,8 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
         selectedAIModel,
         selectedDateRange,
         customDateRange,
+        selectedBrand,
+        brands,
     ]);
 
     // const visiblePrompts = filteredPrompts.slice((currentPage - 1) * 9, currentPage * 9);
