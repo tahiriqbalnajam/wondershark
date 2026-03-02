@@ -75,7 +75,21 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
 
     const [selectedPrompts, setSelectedPrompts] = useState<number[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [currentTab, setCurrentTab] = useState<'suggested' | 'active' | 'inactive'>('active');
+    const [currentTab, setCurrentTab] = useState<'suggested' | 'active' | 'inactive'>(() => {
+        if (typeof window !== 'undefined') {
+            const savedTab = localStorage.getItem('brand-prompts-currentTab');
+            if (savedTab === 'suggested' || savedTab === 'active' || savedTab === 'inactive') {
+                return savedTab;
+            }
+        }
+        return 'active';
+    });
+        // Persist tab state to localStorage
+        useEffect(() => {
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('brand-prompts-currentTab', currentTab);
+            }
+        }, [currentTab]);
     const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [analysisMessage, setAnalysisMessage] = useState<string | null>(null);
@@ -328,7 +342,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                         )}
                     </div>
 
-                    <Tabs defaultValue="active" className="add-prompts-wrapp" onValueChange={(value) => setCurrentTab(value as 'suggested' | 'active' | 'inactive')}>
+                    <Tabs value={currentTab} defaultValue="active" className="add-prompts-wrapp" onValueChange={(value) => setCurrentTab(value as 'suggested' | 'active' | 'inactive')}>
                         <div className="flex justify-between items-center mb-10">
                             <TabsList className="add-prompt-lists border">
                                 <TabsTrigger value="active">Active ({activePrompts.length})</TabsTrigger>
