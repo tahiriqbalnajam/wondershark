@@ -24,7 +24,7 @@ class RolePermissionMiddleware
 
         
         if($user->agencyMembership && $user->agencyMembership->role && $user->agencyMembership->role == "agency_member" ){
-            if ($user->agencyMembership && $user->agencyMembership->rights && in_array('agency_manager', $user->agencyMembership->rights)) {
+            //if ($user->agencyMembership && $user->agencyMembership->rights && in_array('agency_manager', $user->agencyMembership->rights)) {
              $main_agencyId = $user->agencyMembership?->agency_id;
                  $main_agencyId_user = User::find($main_agencyId);
                  $main_user_agency_color = $main_agencyId_user->agency_color;
@@ -32,7 +32,7 @@ class RolePermissionMiddleware
                     $user->agency_color  = $main_user_agency_color;
                     $user->save();
                  }
-            }
+           // }
         } 
 
 
