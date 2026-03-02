@@ -24,10 +24,22 @@ export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: 
     
     // Use thumbnail for sidebar (smaller), full logo for other places
     // Priority: brand avatar > agency thumbnail > agency logo > avatar
-    const displayImage = selectedBrand 
+    var displayImage = selectedBrand 
         ? user.avatar 
-        : (user.logo_thumbnail || user.logo || user.avatar);
+        : (user.logo || user.logo_thumbnail || user.avatar);
+        
+        if(!displayImage && user.logo) {
+             displayImage = user.logo.replace(
+            'http://wondershark.test/storage/http',
+            'http');
 
+            displayImage = displayImage.replace(
+            'https://app.wondershark.ai/storage/http',
+            'http');
+        }
+
+        
+       // console.log('Selected Brand:', user.logo);
     // For brand logo, use stored logo if available, otherwise use the logo.dev API
     const brandLogoUrl = selectedBrand?.logo 
         ? `/storage/${selectedBrand.logo}`

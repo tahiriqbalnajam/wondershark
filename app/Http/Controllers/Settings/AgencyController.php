@@ -149,8 +149,13 @@ class AgencyController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        //$agencyId = $user->hasRole('agency') ? $user->id : ($user->agencyMembership?->agency_id ?? null);
-        //$user = User::find($agencyId);
+      //  $agencyId = $user->hasRole('agency') ? $user->id : ($user->agencyMembership?->agency_id ?? null);
+      //  $user = User::find($agencyId);
+
+        if($user->hasRole('agency_member')){
+             $agencyId = $user->agencyMembership?->agency_id;
+             $user = User::find($agencyId);
+        }
 
         return Inertia::render('settings/agency', [
             'agency' => [
@@ -179,6 +184,12 @@ class AgencyController extends Controller
 
         //$agencyId = $user->hasRole('agency') ? $user->id : ($user->agencyMembership?->agency_id ?? null);
         //$user = User::find($agencyId);
+
+        if($user->hasRole('agency_member')){
+             $agencyId = $user->agencyMembership?->agency_id;
+             $user = User::find($agencyId);
+        }
+        
 
         // Normalize color value to 6-digit lowercase hex
         $normalizedColor = null;

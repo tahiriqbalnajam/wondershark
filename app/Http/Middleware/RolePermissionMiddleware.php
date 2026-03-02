@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use App\Models\User;
 
 class RolePermissionMiddleware
 {
@@ -21,6 +22,45 @@ class RolePermissionMiddleware
 
         $user = $request->user();
 
+        
+        if($user->agencyMembership && $user->agencyMembership->role && $user->agencyMembership->role == "agency_member" ){
+            if ($user->agencyMembership && $user->agencyMembership->rights && in_array('agency_manager', $user->agencyMembership->rights)) {
+             $main_agencyId = $user->agencyMembership?->agency_id;
+                 $main_agencyId_user = User::find($main_agencyId);
+                 $main_user_agency_color = $main_agencyId_user->agency_color;
+                 if($main_user_agency_color){
+                    $user->agency_color  = $main_user_agency_color;
+                    $user->save();
+                 }
+            }
+        } 
+
+
+
+
+
+        if($user->agencyMembership && $user->agencyMembership->role && $user->agencyMembership->role == "agency_member" ){
+           // if ($user->agencyMembership && $user->agencyMembership->rights && in_array('agency_manager', $user->agencyMembership->rights)) {
+                 $main_agencyId = $user->agencyMembership?->agency_id;
+                 $main_agencyId_user = User::find($main_agencyId);
+                 $main_user_agency_color = $main_agencyId_user->agency_color;
+       
+                 //if($main_user_agency_color){
+                  //  $user->agency_color  = 'http://wondershark.test/storage/'.$main_user_agency_color;
+               //  }
+                 if($main_agencyId_user->logo){
+                    //$user->logo  = 'http://wondershark.test/storage/'.$main_agencyId_user->logo;
+                    $user->logo  = $main_agencyId_user->logo;
+                 }
+                 if($main_agencyId_user->logo_thumbnail){
+                    $user->logo_thumbnail  = 'http://wondershark.test/storage/'.$main_agencyId_user->logo_thumbnail;
+                 }
+
+                
+                 $user->save();
+         //   }
+        } 
+
         // Check for specific permission (skip if permission is 'null' string)
         if ($permission && $permission !== 'null' && ! $user->hasPermissionTo($permission)) {
             abort(403, 'Access denied. You do not have the required permission.');
@@ -32,17 +72,16 @@ class RolePermissionMiddleware
             $roles = explode('|', $role);
 
 
-           // if ($user->hasRole('agency_member')  && ! in_array('agency_admin', $user->agencyMembership?->rights ?? [] )  ) {
-           //     abort(403, 'Access deniedvgg. You do not have the required role.');
-           // }
-            // Admin users have access to all roles
-           // if (! $user->hasRole('admin') && ! $user->hasAnyRole($roles) && ! $user->hasRole('agency_member')) {
-           //     abort(403, 'Access denied. You do not have the required role.');
-           // }
-            // Admin users have access to all roles
-            if (! $user->hasRole('admin') && ! $user->hasAnyRole($roles)) {
+            if ($user->hasRole('agency_member')  && ! in_array('agency_admin', $user->agencyMembership?->rights ?? [] )  ) {
+                abort(403, 'Access deniedvgg. You do not have the required role.');
+            }
+            if (! $user->hasRole('admin') && ! $user->hasAnyRole($roles) && ! $user->hasRole('agency_member')) {
                 abort(403, 'Access denied. You do not have the required role.');
             }
+            // Admin users have access to all roles
+            //if (! $user->hasRole('admin') && ! $user->hasAnyRole($roles)) {
+            //    abort(403, 'Access denied. You do not have the required role.');
+           // }
         }
 
         return $next($request);
