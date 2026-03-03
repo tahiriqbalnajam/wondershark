@@ -3,6 +3,7 @@ import { useInitials } from '@/hooks/use-initials';
 import { type User } from '@/types';
 import { usePage } from '@inertiajs/react';
 import { type SharedData } from '@/types';
+import { router } from '@inertiajs/react';
 
 export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: boolean }) {
     const getInitials = useInitials();
@@ -24,22 +25,49 @@ export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: 
     
     // Use thumbnail for sidebar (smaller), full logo for other places
     // Priority: brand avatar > agency thumbnail > agency logo > avatar
-    var displayImage = selectedBrand 
-        ? user.avatar 
+    let displayImage = selectedBrand
+        ? user.avatar
         : (user.logo || user.logo_thumbnail || user.avatar);
-        
-        if(!displayImage && user.logo) {
-             displayImage = user.logo.replace(
+
+    if(!displayImage && user.logo) {
+         displayImage = user.logo.replace(
             'http://wondershark.test/storage/http',
             'http');
 
-            displayImage = displayImage.replace(
+        displayImage = displayImage.replace(
             'https://app.wondershark.ai/storage/http',
             'http');
-        }
+    }
 
-        
-       // console.log('Selected Brand:', user.logo);
+    // Function to check if image is accessible
+    const checkImageAccessibility = (url: string | null): Promise<boolean> => {
+        return new Promise((resolve) => {
+            if (!url) {
+                resolve(false);
+                return;
+            }
+
+            const img = new Image();
+            img.onload = () => resolve(true);
+            img.onerror = () => resolve(false);
+            img.src = url;
+        });
+    };
+
+    // Check image accessibility (optional - for debugging)
+    if (displayImage) {
+        checkImageAccessibility(displayImage).then(isAccessible => {
+           // console.log('Display image accessible:', isAccessible, 'URL:', displayImage);
+            if (!isAccessible) {
+                //console.log(user.agencyMembership.logo);
+                window.location.reload();
+            }
+        });
+    }
+
+    //console.log('Selected Brand displayImage:', displayImage);
+    //console.log('User logo:', user.logo);
+    //console.log('User logo_thumbnail:', user.logo_thumbnail);
     // For brand logo, use stored logo if available, otherwise use the logo.dev API
     const brandLogoUrl = selectedBrand?.logo 
         ? `/storage/${selectedBrand.logo}`
