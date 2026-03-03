@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -187,9 +188,64 @@ class AgencyController extends Controller
 
         if($user->hasRole('agency_member')){
              $agencyId = $user->agencyMembership?->agency_id;
+
+
+
+             $normalizedColor = null;
+            if ($request->color) {
+                $color = strtolower(trim($request->color));
+                // Convert 3-digit hex to 6-digit hex
+                if (strlen($color) === 4 && $color[0] === '#') {
+                    $color = '#' . $color[1] . $color[1] . $color[2] . $color[2] . $color[3] . $color[3];
+                }
+                $normalizedColor = $color;
+            }
+
+            $updateData = [
+                'name' => $request->name,
+                'url' => $request->url,
+                'agency_color' => $normalizedColor,
+            ];
+
+            // Handle logo upload
+            if ($request->hasFile('logo')) {
+                // Delete old logo and thumbnail if exists
+                if ($user->logo) {
+                    Storage::disk('public')->delete($user->logo);
+                }
+                if ($user->logo_thumbnail) {
+                    Storage::disk('public')->delete($user->logo_thumbnail);
+                }
+
+                $logo = $request->file('logo');
+                $extension = $logo->getClientOriginalExtension();
+                $filename = 'agency_'.$user->id.'_'.time();
+
+                // Store original logo
+                $logoPath = $logo->storeAs('agency-logos', $filename.'.'.$extension, 'public');
+                $updateData['logo'] = $logoPath;
+
+                // Create thumbnail (80x80)
+                $thumbnailPath = $this->createThumbnail($logo, $filename, $extension);
+                if ($thumbnailPath) {
+                    $updateData['logo_thumbnail'] = $thumbnailPath;
+                }
+            }
+
+            $user->update($updateData);
+
+
+
+
+        
              $user = User::find($agencyId);
         }
+
+
         
+
+
+
 
         // Normalize color value to 6-digit lowercase hex
         $normalizedColor = null;
@@ -234,6 +290,27 @@ class AgencyController extends Controller
         }
 
         $user->update($updateData);
+
+        if($user->hasRole('agency')){
+            $agencyMembers = DB::table('agency_members')
+                ->where('agency_id', $user->id)
+                ->where('role', 'agency_member')
+                ->pluck('user_id');
+
+            foreach ($agencyMembers as $memberId) {
+                $member = User::find($memberId);
+                if ($member) {
+                    // Update member's agency color and logo to match the agency
+                    $member->update([
+                        'agency_color' => $user->agency_color,
+                        'logo' => $user->logo,
+                        'logo_thumbnail' => $user->logo_thumbnail,
+                    ]);
+                }
+            }          
+        }
+
+
 
         return back()->with('status', 'Agency information updated successfully!');
     }

@@ -36,9 +36,6 @@ class RolePermissionMiddleware
         } 
 
 
-
-
-
         if($user->agencyMembership && $user->agencyMembership->role && $user->agencyMembership->role == "agency_member" ){
            // if ($user->agencyMembership && $user->agencyMembership->rights && in_array('agency_manager', $user->agencyMembership->rights)) {
                  $main_agencyId = $user->agencyMembership?->agency_id;
@@ -55,11 +52,13 @@ class RolePermissionMiddleware
                  if($main_agencyId_user->logo_thumbnail){
                     $user->logo_thumbnail  = 'http://wondershark.test/storage/'.$main_agencyId_user->logo_thumbnail;
                  }
-
-                
                  $user->save();
          //   }
         } 
+
+        
+
+
 
         // Check for specific permission (skip if permission is 'null' string)
         if ($permission && $permission !== 'null' && ! $user->hasPermissionTo($permission)) {
@@ -72,10 +71,10 @@ class RolePermissionMiddleware
             $roles = explode('|', $role);
 
 
-            if ($user->hasRole('agency_member')  && ! in_array('agency_admin', $user->agencyMembership?->rights ?? [] )  ) {
+            if ($user->hasRole('agency_member') ) {
                // abort(403, 'Access deniedvgg. You do not have the required role.'.$role );
             }
-            if (! $user->hasRole('admin') && ! $user->hasAnyRole($roles) && ! $user->hasRole('agency_member')) {
+            else if (! $user->hasRole('admin') && ! $user->hasAnyRole($roles) && ! $user->hasRole('agency_member')) {
                 abort(403, 'Access denied. You do not have the required role.');
             }
             // Admin users have access to all roles
