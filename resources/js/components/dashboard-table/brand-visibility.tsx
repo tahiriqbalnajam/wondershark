@@ -51,15 +51,21 @@ interface BrandVisibilityIndexProps {
     hoveredDomain?: string | null;
     onDomainHover?: (domain: string | null) => void;
     entities?: Array<{ name: string; domain: string }>;
+    onShowAllBrands?: () => void;
+    showAllBrandsButton?: boolean;
+    totalBrandsCount?: number;
 }
 
-export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, limit, hoveredDomain, onDomainHover, entities }: BrandVisibilityIndexProps) {
+export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, limit, hoveredDomain, onDomainHover, entities, onShowAllBrands, showAllBrandsButton, totalBrandsCount }: BrandVisibilityIndexProps) {
     // Sort by visibility (higher is better)
     const sortedStats = [...competitiveStats].sort((a, b) => (b.visibility ?? 0) - (a.visibility ?? 0));
 
     // Apply limit if specified
     const displayStats = limit ? sortedStats.slice(0, limit) : sortedStats;
     const hasMore = limit && sortedStats.length > limit;
+
+
+    console.log('hasMore', sortedStats.length);
 
     // Helper function to get the color for a domain based on its index in entities array (same as chart)
     const getColorForDomain = (domain: string) => {
@@ -235,6 +241,13 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                 Show All
                             </Button>
                         </Link>
+                    </div>
+                )}
+                {showAllBrandsButton && totalBrandsCount && totalBrandsCount > 1 && (
+                    <div className="flex justify-end mt-4 px-4 print:hidden pdf-export-hidden">
+                        <Button variant="outline" size="sm" onClick={onShowAllBrands}>
+                            Show all brands
+                        </Button>
                     </div>
                 )}
             </div>

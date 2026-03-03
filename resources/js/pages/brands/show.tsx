@@ -197,6 +197,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
     const [hoveredDomain, setHoveredDomain] = useState<string | null>(null);
     const [brandFilter, setBrandFilter] = useState<'all' | 'with-agency' | 'without-agency'>('all');
     const [currentPage, setCurrentPage] = useState(1);
+    const [tableLimit, setTableLimit] = useState<number | undefined>(5);
 
     const fetchDashboardData = (days: string, model: string) => {
         const offset = -new Date().getTimezoneOffset();
@@ -824,7 +825,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                         }))}
                         prompts={filteredPrompts}
                         fileName={`${brand.name.toLowerCase().replace(/\s+/g, '-')}-dashboard-report-${new Date().toISOString().split('T')[0]}.pdf`}
-                        autoTrigger={true}
+                        autoTrigger={false}
                         onBeforeCapture={() => {
                             // Auto-click "Load More" until all citations are visible
                             return new Promise((resolve) => {
@@ -873,6 +874,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                             entities={filteredVisibilityChartData.entities}
                             granularity={filteredVisibilityChartData.granularity}
                             hoveredDomain={hoveredDomain}
+                            onShowAllBrands={() => setSelectedBrand('all')}
                         />
                         {/* <VisibilityChart
                             data={visibilityChartData.data}
@@ -897,6 +899,9 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                             hoveredDomain={hoveredDomain}
                             onDomainHover={setHoveredDomain}
                             entities={filteredVisibilityChartData.entities}
+                            onShowAllBrands={() => { setSelectedBrand('all'); setTableLimit(undefined); }}
+                            showAllBrandsButton={selectedBrand !== 'all'}
+                            totalBrandsCount={competitiveStats.length}
                         />
                     </Card>
                 </div>

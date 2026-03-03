@@ -15,6 +15,7 @@ interface VisibilityChartProps {
     entities?: Array<{ name: string; domain: string }>;
     granularity?: 'month' | 'day';
     hoveredDomain?: string | null;
+    onShowAllBrands?: () => void;
 }
 
 export const CHART_COLORS = [
@@ -30,7 +31,7 @@ export const CHART_COLORS = [
     '#CC0000', // Dark Red
 ];
 
-export function VisibilityChart({ data, entities, granularity = 'month', hoveredDomain }: VisibilityChartProps) {
+export function VisibilityChart({ data, entities, granularity = 'month', hoveredDomain, onShowAllBrands }: VisibilityChartProps) {
     // Use provided data or show empty state
     const visibilityData = data && data.length > 0 ? data : [];
     const chartEntities = entities && entities.length > 0 ? entities : [];
