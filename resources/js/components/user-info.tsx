@@ -60,7 +60,7 @@ export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: 
            // console.log('Display image accessible:', isAccessible, 'URL:', displayImage);
             if (!isAccessible) {
                 //console.log(user.agencyMembership.logo);
-                window.location.reload();
+                //window.location.reload();
             }
         });
     }

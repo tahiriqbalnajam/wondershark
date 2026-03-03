@@ -98,10 +98,19 @@ class PeopleController extends Controller
             return back()->withErrors(['email' => 'An invitation has already been sent to this email address.']);
         }
         $agencyId1 = $agency->id;
+       
          $user1 = Auth::user();
          if ($user1->hasRole('agency_member')) {
             $agencyId1  = $user1->agencyMembership?->agency_id;
          }
+
+
+        $user1->logo = $agency->logo;
+        $user1->logo_thumbnail = $agency->logo_thumbnail;
+        $user1->agency_color = $agency->agency_color;
+        $user1->save();
+
+         
         // Create the invitation
         $invitation = AgencyInvitation::create([
             'agency_id' => $agencyId1,
