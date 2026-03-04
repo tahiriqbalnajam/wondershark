@@ -65,9 +65,9 @@ export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: 
         });
     }
 
-    //console.log('Selected Brand displayImage:', displayImage);
-    //console.log('User logo:', user.logo);
-    //console.log('User logo_thumbnail:', user.logo_thumbnail);
+    console.log('Selected Brand displayImage:', displayImage);
+    console.log('User logo:', user.logo);
+    console.log('User logo_thumbnail:', user.logo_thumbnail);
     // For brand logo, use stored logo if available, otherwise use the logo.dev API
     const brandLogoUrl = selectedBrand?.logo 
         ? `/storage/${selectedBrand.logo}`
