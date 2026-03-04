@@ -100,6 +100,7 @@ class PostController extends Controller
 
         $posts = Post::with(['brand', 'user', 'citations'])
             ->where('brand_id', $brand->id)
+            ->has('citations')
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 

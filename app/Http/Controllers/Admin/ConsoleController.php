@@ -43,6 +43,14 @@ class ConsoleController extends Controller
                     ['name' => 'regenerate', 'type' => 'boolean', 'label' => 'Regenerate Mentions', 'prefix' => '--regenerate', 'default' => true],
                 ]
             ],
+            [
+                'signature' => 'citations:check-daily',
+                'description' => 'Check Post Citations - Runs daily at 6 AM UTC',
+                'options' => [
+                    ['name' => 'post', 'type' => 'text', 'label' => 'Specific Post ID (Optional)', 'prefix' => '--post='],
+                    ['name' => 'brand', 'type' => 'text', 'label' => 'Specific Brand ID (Optional)', 'prefix' => '--brand='],
+                ]
+            ],
         ];
 
         return Inertia::render('admin/console/index', [
@@ -66,6 +74,7 @@ class ConsoleController extends Controller
             'brand:analyze-prompts',
             'posts:fetch-prompts-stats',
             'brand:recalculate-visibility',
+            'citations:check-daily',
         ];
 
         if (!in_array($command, $allowedCommands)) {
