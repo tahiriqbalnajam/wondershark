@@ -114,14 +114,15 @@ class DashboardController extends Controller
                  //if($main_user_agency_color){
                   //  $user->agency_color  = 'http://wondershark.test/storage/'.$main_user_agency_color;
                //  }
-                 if($main_agencyId_user->logo){
-                    $user->logo  = 'http://wondershark.test/storage/'.$main_agencyId_user->logo;
+               //  if($main_agencyId_user->logo){
+               //     $user->logo  = 'http://wondershark.test/storage/'.$main_agencyId_user->logo;
                     
-                 }
-                 if($main_agencyId_user->logo_thumbnail){
-                    $user->logo_thumbnail  = 'http://wondershark.test/storage/'.$main_agencyId_user->logo_thumbnail;
-                 }
-                 $user->save();
+               //  }
+              //   if($main_agencyId_user->logo_thumbnail){
+               //     $user->logo_thumbnail  = 'http://wondershark.test/storage/'.$main_agencyId_user->logo_thumbnail;
+               //  }
+                // $user->save();
+               
          //   }
         } 
        
