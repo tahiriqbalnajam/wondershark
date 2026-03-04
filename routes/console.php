@@ -41,3 +41,10 @@ Schedule::command('brand:recalculate-visibility --regenerate')
     ->withoutOverlapping()
     ->onOneServer()
     ->runInBackground();
+
+// Check Post Citations - Runs daily at 6 AM UTC
+Schedule::command('citations:check-daily')
+    ->dailyAt('06:00')
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->runInBackground();

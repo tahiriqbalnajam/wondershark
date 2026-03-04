@@ -158,10 +158,13 @@ class PostController extends Controller
             'post_type' => $request->post_type,
         ]);
 
+        // Dispatch background job to generate 5 prompts and get citations
+        \App\Jobs\GeneratePostPromptsJob::dispatch($post);
+
         // Redirect to the same create page with the post_id parameter
-        // Prompts will be generated via API call from frontend
+        // Prompts will be generated asynchronously in the background
         return redirect()->route('admin.posts.create', ['post_id' => $post->id])
-            ->with('success', 'Post created successfully!');
+            ->with('success', 'Post created successfully! Prompts and citations will be generated in the background.');
     }
 
     /**

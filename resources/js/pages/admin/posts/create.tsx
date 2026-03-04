@@ -454,7 +454,8 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
                                                                         {filteredBrands.map((brand) => (
                                                                             <CommandItem
                                                                                 key={brand.id}
-                                                                                value={brand.name}
+                                                                                value={brand.id.toString()}
+                                                                                keywords={[brand.name]}
                                                                                 onSelect={(currentValue) => {
                                                                                     setData('brand_id', brand.id.toString())
                                                                                     setOpenBrand(false)
