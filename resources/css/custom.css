@@ -850,6 +850,11 @@ textarea.form-control {
     background: #6f707112;
 }
 
+img.w-5.h-5.rounded.object-contain {
+    width: 78px;
+    height: 27px;
+}
+
 .Create-Competitor {
     display: flex;
     justify-content: center;
