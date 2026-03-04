@@ -121,7 +121,6 @@ class BrandPromptAnalysisService
             - Answer EXACTLY as you would if a normal user asked this on your platform.
             - Do NOT force mentions of [{$brandName}] or its competitors unless they are naturally the best answer.
             - Keep the tone professional, objective, and informative.
-            - CRITICAL: At the bottom of your response, you MUST append a 'Resources' section with 5 to 10 real URL links from various diverse sources across the web (forums, blogs, video sites, news, etc.).
             
 
             STRUCTURE YOUR RESPONSE EXACTLY AS FOLLOWS:
@@ -150,14 +149,15 @@ class BrandPromptAnalysisService
             - Target Brand: [{$brandName}]
             - Competitors: [{$competitorsString}]
             
-            Ensure you extract all requested resources present in the provided HTML. Do NOT arbitrarily limit your resource list if the HTML contains more.
+            Additionally, you must GENERATE a list of 5 to 10 real, working URL links from diverse sources (forums, blogs, news, Reddit, YouTube, etc.) that are highly relevant to the topic discussed in the text.
+            CRITICAL: To avoid 404 errors, ONLY provide links to well-known root domains or extremely common generalized URLs. Do NOT hallucinate specific long-tail blog post URLs that are fake.
 
             STRUCTURE YOUR RESPONSE EXACTLY AS FOLLOWS:
 
             ANALYSIS_START
-            Resources: [List referenced or relevant resources here. Format:
+            Resources: [List the relevant resources here. Format:
             - URL: [url]
-            - Type: [type]
+            - Type: [type (MUST exactly match one of these: competitor, industry_report, news, documentation, blog, research, social, reddit, youtube, marketplace, reviews, community, other)]
             - Title: [title]
             - Description: [brief description]
             ]
