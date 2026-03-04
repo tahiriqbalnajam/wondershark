@@ -96,6 +96,7 @@ button {
 .site-logo-box button {
     background: transparent !important;
     cursor: pointer;
+    height: 80px;
 }
 
 /** Main Content **/
@@ -108,6 +109,7 @@ button {
 /** Main Navbar **/
 .site-logo-box button>span {
     width: 40px;
+    height: 66px;
 }
 
 .main-menu-links {
