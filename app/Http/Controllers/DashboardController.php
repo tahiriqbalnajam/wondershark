@@ -116,6 +116,7 @@ class DashboardController extends Controller
                //  }
                  if($main_agencyId_user->logo){
                     $user->logo  = 'http://wondershark.test/storage/'.$main_agencyId_user->logo;
+                    
                  }
                  if($main_agencyId_user->logo_thumbnail){
                     $user->logo_thumbnail  = 'http://wondershark.test/storage/'.$main_agencyId_user->logo_thumbnail;
