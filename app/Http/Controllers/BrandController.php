@@ -939,7 +939,6 @@ class BrandController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-
         // Ensure the brand belongs to the authenticated agency or user is admin
         if (! $user->canAccessBrand($brand)) {
             abort(403);
@@ -954,7 +953,6 @@ class BrandController extends Controller
             }
             $request->merge(['website' => $website]);
         }
-
         $request->validate([
             'name' => 'required|string|max:255|unique:brands,name,'.$brand->id,
             'website' => 'nullable|url|max:255',
@@ -968,6 +966,7 @@ class BrandController extends Controller
             'subreddits.*' => 'required|string|max:100',
             'logo' => 'nullable|image|max:2048',
         ]);
+
         if ($request->hasFile('logo') && $request->file('logo')->isValid()) {
             // Delete old logo and thumbnail if exists
             if ($brand->logo) {
@@ -1000,6 +999,17 @@ class BrandController extends Controller
                 $brand->logo_thumbnail = $thumbnailPath;
             }
         }
+
+
+
+        ///for brand users, update their logo to keep in sync with brand logo
+        $branduser = User::find( Auth::id());
+        if ($branduser->hasRole('brand')) {
+            $branduser->logo = $brand->logo;
+            $branduser->logo_thumbnail = $brand->logo_thumbnail;
+            $branduser->save();
+        }
+
 
         // $brand->update($request->except('logo'));
         DB::transaction(function () use ($request, $brand) {
