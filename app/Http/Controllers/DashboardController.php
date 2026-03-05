@@ -75,7 +75,7 @@ class DashboardController extends Controller
 
         // Get user's first brand (for agency or brand users) for active brand redirect
         $firstBrand = Brand::where(function ($query) use ($user) {
-            $query->where('user_id', $user->id)
+             $query->where('user_id', $user->id)
                 ->orWhere('agency_id', $user->id);
             
             // Also include brands from user's agency if they are an agency member
@@ -84,6 +84,7 @@ class DashboardController extends Controller
                 $query->orWhere('agency_id', $membership->agency_id);
             }
         })
+            ->where('status', 'active')
             ->orderBy('updated_at', 'desc')
             ->first();
 
