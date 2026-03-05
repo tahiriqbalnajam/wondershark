@@ -14,6 +14,8 @@ export function AppSidebarHeader({ breadcrumbs = [], title, logo, website }: { b
     // Get brand from page props if available
     const brand = (props as any).brand;
 
+    const branduser = (props as any).auth?.user;
+
     // Map route → icon
     const iconMap: Record<string, JSX.Element> = {
         '/dashboard': <LayoutDashboard className="w-5 h-5" />,
@@ -32,9 +34,13 @@ export function AppSidebarHeader({ breadcrumbs = [], title, logo, website }: { b
     const finalWebsite = website || brand?.website;
 
     // Pick icon based on current URL, fallback to a default
-    const pageIcon = finalLogo ? (
+
+    // console.log('branduser:', branduser.roles);
+    const hasBrandRole = branduser.roles?.some((role: any) => role.name === 'brand');
+    
+    const pageIcon = finalLogo && !hasBrandRole ? (
         <img src={finalLogo.startsWith('http') ? finalLogo : `/storage/${finalLogo}`}  alt="Brand logo" className="w-5 h-5 rounded object-contain" />
-    ) : finalWebsite ? (
+    ) : finalWebsite && !hasBrandRole ? (
         <img 
             src={generateApiLogoUrl(finalWebsite)} 
             alt="Brand logo from API" 
@@ -43,9 +49,9 @@ export function AppSidebarHeader({ breadcrumbs = [], title, logo, website }: { b
                 e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%233b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
             }}
         />
-    ) : (
+    ) : !hasBrandRole ? (
         iconMap[url] || <UserCheck className="w-5 h-5 text-muted-foreground" />
-    );
+    ) : null;
 
     const isDashboard = url === '/dashboard';
 
