@@ -158,7 +158,7 @@ class PostController extends Controller
             'post_type' => $request->post_type,
         ]);
 
-        // Dispatch background job to generate 5 prompts and get citations
+        // Dispatch background job to generate 10 prompts and get citations
         \App\Jobs\GeneratePostPromptsJob::dispatch($post);
 
         // Redirect to the same create page with the post_id parameter

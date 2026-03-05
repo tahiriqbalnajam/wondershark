@@ -27,7 +27,7 @@ class GeneratePostPromptsJob implements ShouldQueue
         try {
             Log::info('Generating prompts via queued job', ['post_id' => $this->post->id]);
             
-            // Generate prompts. Service handles the limit of 5.
+            // Generate prompts. Service handles the limit of 10.
             $service->generatePromptsFromMultipleModelsForPost(
                 $this->post,
                 'job-' . uniqid(),

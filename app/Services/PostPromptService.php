@@ -111,13 +111,43 @@ class PostPromptService extends AIPromptService
     {
         $aiModels = $this->getEnabledAiModels();
         $allGeneratedPrompts = [];
+        $targetLimit = 10;
+        
+        if ($aiModels->isEmpty()) {
+            return [];
+        }
+
+        // Calculate distribution based on 'prompts_per_brand' weight mapping to total limit
+        $totalWeight = $aiModels->sum('prompts_per_brand') ?: $aiModels->count();
+        $allocations = [];
+        $remainingPrompts = $targetLimit;
+        
+        foreach ($aiModels as $aiModel) {
+            $weight = $aiModel->prompts_per_brand > 0 ? $aiModel->prompts_per_brand : 1;
+            // Floor division to allocate proportional amount
+            $allocated = (int) floor(($weight / $totalWeight) * $targetLimit);
+            $allocations[$aiModel->id] = $allocated;
+            $remainingPrompts -= $allocated;
+        }
+        
+        // Distribute any remainder to highest weight models
+        if ($remainingPrompts > 0) {
+            $sortedModels = $aiModels->sortByDesc('prompts_per_brand')->values();
+            for ($i = 0; $i < $remainingPrompts; $i++) {
+                $modelId = $sortedModels[$i % $sortedModels->count()]->id;
+                $allocations[$modelId]++;
+            }
+        }
 
         foreach ($aiModels as $aiModel) {
             try {
-                // Generate based on AI model configuration
-                $promptCount = $this->getPromptCountForModel($aiModel);
-                $prompts = $this->generatePromptsForPost($post, $sessionId, $aiModel->name, $description, $promptCount);
-                $allGeneratedPrompts = array_merge($allGeneratedPrompts, $prompts);
+                // Generate based on AI model calculated configuration distribution limit
+                $promptCount = $allocations[$aiModel->id] ?? 0;
+                
+                if ($promptCount > 0) {
+                    $prompts = $this->generatePromptsForPost($post, $sessionId, $aiModel->name, $description, $promptCount);
+                    $allGeneratedPrompts = array_merge($allGeneratedPrompts, $prompts);
+                }
             } catch (\Exception $e) {
                 Log::warning("Failed to generate prompts from {$aiModel->display_name} for post", [
                     'error' => $e->getMessage(),
@@ -131,16 +161,17 @@ class PostPromptService extends AIPromptService
         // Remove duplicates and similar prompts
         $uniquePrompts = $this->removeDuplicatePostPrompts($allGeneratedPrompts);
 
-        // Limit to maximum 5 prompts
-        $limitedPrompts = array_slice($uniquePrompts, 0, 5);
+        // Limit to exactly the limit asked
+        $limitedPrompts = array_slice($uniquePrompts, 0, $targetLimit);
 
-        // Delete any prompts beyond the limit
-        if (count($uniquePrompts) > 5) {
-            $promptsToDelete = array_slice($uniquePrompts, 5);
-            foreach ($promptsToDelete as $prompt) {
-                if (isset($prompt->id)) {
-                    PostPrompt::where('id', $prompt->id)->delete();
-                }
+        // Gather IDs of the prompts we are keeping
+        $keptPromptIds = collect($limitedPrompts)->pluck('id')->filter()->toArray();
+
+        // Delete ALL other prompts (including ones discarded for duplication or limit caps)
+        foreach ($allGeneratedPrompts as $prompt) {
+            $promptId = $prompt->id ?? ($prompt['id'] ?? null);
+            if ($promptId && !in_array($promptId, $keptPromptIds)) {
+                PostPrompt::where('id', $promptId)->delete();
             }
         }
 
@@ -311,25 +342,12 @@ class PostPromptService extends AIPromptService
         }
     }
 
-    /**
-     * Get prompt count based on AI model configuration
-     */
-    protected function getPromptCountForModel(AiModel $aiModel): int
-    {
-        // Check if this is one of the main AI models (OpenAI, Gemini, Perplexity)
-        $mainAiModels = ['openai', 'gemini', 'perplexity'];
 
-        if (in_array(strtolower($aiModel->name), $mainAiModels)) {
-            return 25;
-        }
-
-        return 5; // For other AI models
-    }
 
     /**
      * Build prompt specifically for post citation checking
      */
-    protected function buildPostPrompt(Post $post, string $description = '', int $promptCount = 25): string
+    protected function buildPostPrompt(Post $post, string $description = '', int $promptCount = 10): string
     {
         $postContext = $description ? "\n\nAdditional context about this post: {$description}" : '';
 
