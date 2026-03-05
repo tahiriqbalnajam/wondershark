@@ -1005,9 +1005,13 @@ class BrandController extends Controller
         ///for brand users, update their logo to keep in sync with brand logo
         $branduser = User::find( Auth::id());
         if ($branduser->hasRole('brand')) {
-            $branduser->logo = $brand->logo;
-            $branduser->logo_thumbnail = $brand->logo_thumbnail;
-            $branduser->save();
+            if($brand->logo) {
+                $branduser->logo = $brand->logo;
+            }
+            if($brand->logo_thumbnail) {
+                $branduser->logo_thumbnail = $brand->logo_thumbnail;
+            }
+             $branduser->save();
         }
 
 
