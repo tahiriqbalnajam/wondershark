@@ -131,6 +131,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
         trackedName: existingData.brand?.trackedName || '',
         allies: existingData.brand?.allies || [],
         country: existingData.brand?.country || '',
+        region: existingData.brand?.region || '',
         prompts: [], // Don't load prompts here - they're passed separately to Step2Prompts
         subreddits: [],
         competitors: [],
@@ -208,6 +209,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                         trackedName: data.trackedName,
                         allies: data.allies,
                         country: data.country,
+                        region: data.region,
                     }),
                 });
                 if (!response.ok) {

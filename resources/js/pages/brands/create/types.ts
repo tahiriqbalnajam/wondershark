@@ -5,6 +5,7 @@ export type BrandForm = {
     trackedName: string;
     allies: string[];
     country: string;
+    region: string;
     prompts: string[];
     subreddits: string[];
     competitors: Competitor[];

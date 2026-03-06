@@ -40,6 +40,7 @@ class RegisteredUserController extends Controller
             'role' => 'required|string|in:admin,agency,brand',
             'website' => 'required_if:role,brand|nullable|url|max:255',
             'country' => 'required_if:role,brand|nullable|string|max:2',
+            'region' => 'nullable|string|max:255',
         ]);
 
         try {
@@ -63,6 +64,7 @@ class RegisteredUserController extends Controller
                     'name' => $validated['name'],
                     'website' => $validated['website'],
                     'country' => $validated['country'],
+                    'region' => $validated['region'] ?? null,
                     'status' => 'pending',
                     'is_completed' => false,
                     'current_step' => 1,

@@ -117,6 +117,18 @@ export default function Step1BasicInfo({ data, setData, errors }: StepProps) {
                     </div>
 
                     <div className="grid gap-2">
+                        <Label htmlFor="region">Region</Label>
+                        <Input
+                            id="region"
+                            value={data.region}
+                            onChange={(e) => setData('region', e.target.value)}
+                            placeholder="Specify States, Provinces, cities, custom areas within the country )"
+                            className="form-control"
+                        />
+                        <InputError message={errors.region} />
+                    </div>
+
+                    <div className="grid gap-2">
                         <Label htmlFor="description">Keywords <small className='text-xs font-normal text-muted-foreground'>( Optional )</small></Label>
                         <Textarea
                             id="description"

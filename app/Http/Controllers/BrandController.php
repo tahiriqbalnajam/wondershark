@@ -94,6 +94,7 @@ class BrandController extends Controller
             'website' => 'nullable|url|max:255',
             'description' => 'nullable|string|max:1000',
             'country' => 'nullable|string|max:100',
+            'region' => 'nullable|string|max:100',
             'prompts' => 'array|max:25',
             'prompts.*' => 'required|string|max:500',
             'subreddits' => 'array|max:20',
@@ -140,6 +141,7 @@ class BrandController extends Controller
                 'website' => $request->website,
                 'description' => $request->description,
                 'country' => $request->country,
+                'region' => $request->region,
                 'monthly_posts' => $request->monthly_posts,
                 'status' => 'active',
             ]);
@@ -212,6 +214,7 @@ class BrandController extends Controller
             'website' => 'nullable|url|max:255',
             'description' => 'nullable|string|max:1000',
             'country' => 'nullable|string|max:100',
+            'region' => 'nullable|string|max:100',
         ]);
 
         /** @var User $agency */
@@ -223,6 +226,7 @@ class BrandController extends Controller
             'website' => $request->website,
             'description' => $request->description,
             'country' => $request->country,
+            'region' => $request->region,
             'monthly_posts' => 10, // Default value
             'status' => 'pending',
         ]);
@@ -265,6 +269,7 @@ class BrandController extends Controller
                 'website' => $brand->website,
                 'description' => $brand->description,
                 'country' => $brand->country,
+                'region' => $brand->region,
                 'monthly_posts' => $brand->monthly_posts,
             ],
             'competitors' => [],

@@ -19,6 +19,7 @@ type RegisterForm = {
     role: string;
     website?: string;
     country?: string;
+    region?: string;
 };
 
 type ValidationErrors = {
@@ -38,6 +39,7 @@ export default function Register() {
         role: 'brand', // Default to brand role
         website: '',
         country: '',
+        region: '',
     });
 
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
@@ -278,6 +280,32 @@ export default function Register() {
                                 />
                                 <InputError message={errors.country} className="-mt-1" />
                             </div>
+
+
+                            <div className="grid gap-2 mb-5">
+                                <Label htmlFor="region">Region</Label>
+                                <Input
+                                    id="region"
+                                    value={data.region}
+                                    onChange={(e) => setData('region', e.target.value)}
+                                    placeholder="Specify States, Provinces, cities, custom areas within the country"
+                                    className="form-control !mb-0"
+                                    tabIndex={4}
+                                />
+                                <InputError message={errors.region} className="-mt-1" />
+                            </div>
+
+
+
+
+
+
+
+
+
+
+
+                            
                         </>
                     )}
 
