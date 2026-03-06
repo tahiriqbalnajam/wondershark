@@ -1275,6 +1275,15 @@ img.w-5.h-5.rounded.object-contain {
     word-break: break-word;
 }
 
+.v-line {
+	height: 80px;
+	border: none;
+	width: 1px;
+	background: #ccc;
+	flex: 0 0 1px;
+	margin: 0 30px;
+}
+
 @media(max-width:991px) {
     .add-prompt-lists button {
         padding: 10px 15px;
