@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import { Building2, LogOut, } from 'lucide-react';
+import { Building2, LogOut,Pipette } from 'lucide-react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 
@@ -163,7 +163,7 @@ const submitPassword: FormEventHandler = (e) => {
                                 </div>
                                 <div className="grid gap-2">
                                     <Label>Agency Logo</Label>
-                                    <div className="height=[150px] rounded-md border border-solid border-gray-300 flex items-center gap-4 flex-col justify-center min-h-50">
+                                    <div className="height=[150px] rounded-md border border-solid border-gray-300 flex gap-4 flex-col justify-center min-h-70 px-10">
                                         <p className="text-xs text-muted-foreground"> PNG, JPG or SVG (max 2MB) </p>
                                         <div className='relative lg:flex block items-center gap-4'>
                                             <input type="file" id="logo" accept="image/*" className="hidden" onChange={(e) => setData('logo', e.target.files ? e.target.files[0] : null) } />
@@ -179,79 +179,89 @@ const submitPassword: FormEventHandler = (e) => {
                                                 <img src={logoPreview} alt="Logo Preview" className="h-14 w-14 rounded-md object-contain border" />
                                             )}
                                         </div>
+                                        <div className="flex items-center justify-end">
+                                            <div className="lg:flex block items-center gap-4 w-full">
+                                                <Link href="/" className="cancle-btn primary-btn lg:mb-0 mb-5">
+                                                    Cancel
+                                                </Link>
+                                                <Button type="submit" disabled={processing} className='primary-btn lg:w-auto w-full'>
+                                                    Save Changes
+                                                </Button>
+                                                <Transition show={recentlySuccessful} enter="transition ease-in-out" enterFrom="opacity-0" leave="transition ease-in-out" leaveTo="opacity-0" >
+                                                    <p className="text-sm text-muted-foreground">Saved.</p>
+                                                </Transition>
+                                            </div>
+                                        </div>
                                     </div>
                                     <InputError className="mt-2" message={errors.logo} />
                                 </div>
                                 <div className="grid gap-2">
                                     <Label>Agency Color</Label>
+                                    <div className="height=[150px] rounded-md border border-solid border-gray-300 flex gap-4 flex-col justify-center min-h-70 px-10">
 
-                                    <div className="space-y-3">
-                                        <div className="flex flex-wrap items-center gap-4">
-                                            {/* Native color picker */}
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm text-gray-600">Color Picker:</span>
-                                                <input
-                                                    type="color"
-                                                    value={data.color}
-                                                    onChange={(e) => handleColorChange(e.target.value)}
-                                                    className="w-10 h-10 border border-gray-300 rounded cursor-pointer"
-                                                    title="Select agency color"
-                                                />
-                                            </div>
-
-                                            {/* Manual input */}
-                                            <div className="flex-1 max-w-xs">
+                                        <div className="space-y-3">
+                                            <div className="flex flex-wrap items-center gap-4">
+                                                
+                                                {/* Eyedropper */}
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-sm text-gray-600">Or enter color code:</span>
-                                                    <Input
-                                                        type="text"
+                                                    {/* <span className="text-sm text-gray-600">Pick from screen:</span> */}
+                                                    <Button type="button" variant="outline" onClick={pickColorFromScreen} className="text-sm h-20 w-20" ><Pipette/> </Button>
+                                                </div>
+                                                {/* Native color picker */}
+                                                {/* <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-gray-600">Color Picker:</span>
+                                                    <input
+                                                        type="color"
                                                         value={data.color}
                                                         onChange={(e) => handleColorChange(e.target.value)}
-                                                        placeholder="#3b82f6 or #abc"
-                                                        className="form-control text-sm"
+                                                        className="w-10 h-10 border border-gray-300 rounded cursor-pointer"
+                                                        title="Select agency color"
                                                     />
+                                                </div> */}
+                                                <hr className='v-line'/>
+
+                                                {/* Manual input */}
+                                                <div className="flex gap-10">
+                                                    <div className="gap-2">
+                                                        <span className="text-sm text-gray-600">Color Picker:</span>
+                                                        <Input
+                                                            type="text"
+                                                            value={data.color}
+                                                            onChange={(e) => handleColorChange(e.target.value)}
+                                                            placeholder="#3b82f6 or #abc"
+                                                            className="form-control text-sm"
+                                                        />
+                                                    </div>
+                                                    {/* Preview */}
+                                                    <div className="gap-2">
+                                                        <span className="text-sm text-gray-500">Preview:</span>
+                                                        <div
+                                                            className="w-16 h-12 rounded-md border border-gray-300"
+                                                            style={{ backgroundColor: data.color }}
+                                                            title={`Color: ${data.color}`}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            {/* Eyedropper */}
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm text-gray-600">Pick from screen:</span>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    onClick={pickColorFromScreen}
-                                                    className="text-sm"
-                                                >
-                                                    🎨 Eyedropper
+                                           
+                                        </div>
+
+                                        <InputError className="mt-2" message={errors.color} />
+                                        
+                                        <div className="flex items-center justify-end">
+                                            <div className="lg:flex block items-center gap-4 w-full">
+                                                <Link href="/" className="cancle-btn primary-btn lg:mb-0 mb-5">
+                                                    Cancel
+                                                </Link>
+                                                <Button type="submit" disabled={processing} className='primary-btn lg:w-auto w-full'>
+                                                    Save Changes
                                                 </Button>
+                                                <Transition show={recentlySuccessful} enter="transition ease-in-out" enterFrom="opacity-0" leave="transition ease-in-out" leaveTo="opacity-0" >
+                                                    <p className="text-sm text-muted-foreground">Saved.</p>
+                                                </Transition>
                                             </div>
                                         </div>
-
-                                        {/* Preview */}
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm text-gray-500">Preview:</span>
-                                            <div
-                                                className="w-16 h-6 rounded border border-gray-300"
-                                                style={{ backgroundColor: data.color }}
-                                                title={`Color: ${data.color}`}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <InputError className="mt-2" message={errors.color} />
-                                </div>
-
-                                <div className="flex items-center justify-end">
-                                    <div className="lg:flex block items-center gap-4 w-full">
-                                        <Link href="/" className="cancle-btn primary-btn lg:mb-0 mb-5">
-                                            Cancel
-                                        </Link>
-                                        <Button type="submit" disabled={processing} className='primary-btn lg:w-auto w-full'>
-                                            Save Changes
-                                        </Button>
-                                        <Transition show={recentlySuccessful} enter="transition ease-in-out" enterFrom="opacity-0" leave="transition ease-in-out" leaveTo="opacity-0" >
-                                            <p className="text-sm text-muted-foreground">Saved.</p>
-                                        </Transition>
                                     </div>
                                 </div>
                             </CardContent>
