@@ -389,6 +389,7 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
                             Back to Posts
                         </Link>
                         <TabsTrigger value="create-post">{createdPost ? 'Edit Post' : 'Create Post'}</TabsTrigger>
+                        
                         <TabsTrigger value="propmts" disabled={!createdPostId}>Prompts</TabsTrigger>
                     </TabsList>
                     <TabsContent value="create-post">

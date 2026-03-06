@@ -177,26 +177,33 @@ class PeopleController extends Controller
     /**
      * Remove agency member.
      */
-    public function destroy(AgencyMember $member): RedirectResponse
+    public function destroy(AgencyMember $person): RedirectResponse
     {
         /** @var User $user */
         $user = Auth::user();
 
         // Ensure the member belongs to the authenticated agency
         if( $user->hasRole('agency_member')) {
-            print_r($user);
+           
+        }
+        else if( $user->hasRole('agency')) {
+           
         }
         else if ($member->agency_id !== $user->id) {
-            abort(403333);
+            abort(403);
         }
 
-        DB::transaction(function () use ($member) {
-            // Remove the user account
-            $member->user->delete();
+         if($person->role == 'agency_member'){
+             DB::transaction(function () use ($person) {
+                // Remove the user account
+                $person->user->delete();
 
-            // Remove the agency member relationship
-            $member->delete();
-        });
+                // Remove the agency member relationship
+                $person->delete();
+            });
+         }
+
+       
 
         return redirect()->route('agency.people.index')->with('success', 'Agency member removed successfully!');
     }
