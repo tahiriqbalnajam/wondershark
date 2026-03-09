@@ -1,9 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
-
 :root {
     --inter-font: "Inter", sans-serif;
 }
-
 /** Some Custome Style **/
 body,
 html {
@@ -40,7 +38,7 @@ button {
     min-height: 40px;
     min-width: 140px;
     padding: 10px;
-    border-radius: 30px;
+    border-radius:5px;
 }
 
 .pageheading {
@@ -1283,6 +1281,53 @@ img.w-5.h-5.rounded.object-contain {
 	flex: 0 0 1px;
 	margin: 0 30px;
 }
+.plan-box {
+	border: 1px solid #EAEAEA;
+	border-radius: 10px;
+	box-shadow: 0 0 10px 0 rgba(0,0,0,0.15);
+	padding: 15px 30px 25px 30px;
+	text-align: center;
+	display: flex;
+	justify-content: space-between;
+	flex-direction: column;
+}
+.plan-box.feature-plan{
+	border-top-width:15px;
+    border-top-color:var(--orange-1);
+}
+.plan-box h3 {
+	font-size: 18px;
+	font-weight: bold;
+	color: var(--orange-1);
+	border-bottom: 1px solid #EAEAEA;
+	padding-bottom: 15px;
+	margin-bottom: 15px;
+	line-height: 20px;
+	min-height: 66px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.plan-box h2{
+    font-size:22px;
+    font-weight:bold;
+    color:var(--primary);
+}
+.plan-box h2 small{font-weight:400;font-size:10px;}
+.plan-box ul {
+	margin: 24px 0;
+}
+.plan-box ul li {
+	font-size: 14px;
+	padding:8px 0;
+}
+.plan-box ul li small{
+    font-size:10px;
+    display:block;
+}
+.plan-wrapp .primary-btn{background:#000;}
+.plan-wrapp .plan-box.feature-plan .primary-btn,
+.plan-wrapp .primary-btn:hover{background:var(--orange-1);}
 
 @media(max-width:991px) {
     .add-prompt-lists button {

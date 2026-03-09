@@ -13,51 +13,69 @@ export default function Step6AccountSetup({ }: StepProps) {
                 </div>
 
                 <h3 className="text-2xl font-semibold mb-3">Ready to Complete Setup!</h3>
-                <p className="text-muted-foreground text-lg mb-6">
-                    You've successfully configured your brand. Click "Create Brand" below to activate your brand and start using the platform.
+                <p className="text-muted-foreground text-lg mb-6 max-w-[900px] mx-auto">
+                    You’ve successfully configured your brand. Select your plan and click “<b>Get Started</b>” below to activate your brand and start using the platform. An invoice will be sent to your email shortly.
                 </p>
 
-                <Card className="max-w-2xl mx-auto">
-                    <CardContent className="pt-6">
-                        <div className="space-y-4 text-left">
-                            <div className="flex items-start gap-3">
-                                <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                                <div>
-                                    <p className="font-medium">Basic Information</p>
-                                    <p className="text-sm text-muted-foreground">Brand name, website, and details configured</p>
-                                </div>
+                <div className="plan-wrapp mt-20">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="plan-box">
+                            <div>
+                                <h3>Premium Plan</h3>
+                                <h2>$10,000<small>/month</small></h2>
+                                <ul>
+                                    <li>Popdasts</li>
+                                    <li>Niche Blog Posts</li>
+                                    <li>Top Publications <small>(Forbes, USA Today, ETC...)</small></li>
+                                    <li>Local News Sites</li>
+                                    <li>Wikipedia Links and Pages</li>
+                                    <li>Reddit Posts</li>
+                                </ul>
                             </div>
-
-                            <div className="flex items-start gap-3">
-                                <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                                <div>
-                                    <p className="font-medium">Competitors</p>
-                                    <p className="text-sm text-muted-foreground">Competitive analysis setup complete</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-3">
-                                <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                                <div>
-                                    <p className="font-medium">Marketing Prompts</p>
-                                    <p className="text-sm text-muted-foreground">AI-generated prompts configured</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-3">
-                                <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                                <div>
-                                    <p className="font-medium">Monthly Posts Settings</p>
-                                    <p className="text-sm text-muted-foreground">Post creation limits configured</p>
-                                </div>
-                            </div>
+                            <button className="primary-btn btn-sm">Get Started</button>
                         </div>
-                    </CardContent>
-                </Card>
-
-                <p className="text-sm text-muted-foreground mt-6">
-                    Click "Create Brand" to activate your brand and access the dashboard.
-                </p>
+                        <div className="plan-box feature-plan">
+                            <div>
+                                <h3>Base Plan</h3>
+                                <h2>$5,000<small>/month</small></h2>
+                                <ul>
+                                    <li>Niche Blog Posts</li>
+                                    <li>Local News Sites</li>
+                                    <li>Wikipedia Links</li>
+                                    <li>Reddit Posts</li>
+                                </ul>
+                            </div>
+                            <button className="primary-btn btn-sm">Get Started</button>
+                        </div>
+                        <div className="plan-box">
+                            <div>
+                                <h3>100% Approved Reddit Strategy Plan</h3>
+                                <h2>$2,500<small>/month</small></h2>
+                                <ul>
+                                    <li>10 Reddit Posts</li>
+                                    <li>You Approve All Posts</li>
+                                    <li>You Approve sub Reddits</li>
+                                </ul>
+                            </div>
+                            <button className="primary-btn btn-sm">Get Started</button>
+                        </div>
+                        <div className="plan-box">
+                            <div>
+                                <h3>Full Services Reddit</h3>
+                                <h2>$1,500<small>/month</small></h2>
+                                <ul>
+                                    <li>5 Reddit Posts</li>
+                                    <li>No Approval Required</li>
+                                    <li>100% on Autopilot</li>
+                                </ul>
+                            </div>
+                            <button className="primary-btn btn-sm">Get Started</button>
+                        </div>
+                    </div>
+                    <div className='flex justify-center mt-15'>
+                        <button className="primary-btn">Contact Us</button>
+                    </div>
+                </div>
             </div>
         </div>
     );
