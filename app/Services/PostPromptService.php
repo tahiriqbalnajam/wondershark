@@ -349,14 +349,21 @@ class PostPromptService extends AIPromptService
      */
     protected function buildPostPrompt(Post $post, string $description = '', int $promptCount = 10): string
     {
-        $postContext = $description ? "\n\nAdditional context about this post: {$description}" : '';
+        $titleContext = !empty($post->title) ? " and the post title '{$post->title}'" : '';
+        $descriptionContext = !empty($description) ? "\n\nAdditional context about this post: {$description}" : '';
+        $brandContext = !empty($post->brand->name) ? "\n\nBrand: {$post->brand->name}" : '';
+        $brandregion = !empty($post->brand->region) ? "{$post->brand->region}" : '';
+        $localityContext = !empty($post->brand->country) ? "\n\nTarget Locality: {$post->brand->country} {$brandregion}. The questions should be relevant to users in this location." : '';
 
-        return "Analyze the post URL {$post->url} and the post title '{$post->title}' and generate {$promptCount} questions that people would search for where this specific post/article would be a valuable and relevant source or reference.{$postContext}
+        return "Analyze the post URL {$post->url}{$titleContext} and generate {$promptCount} questions that people would search for where this specific post/article would be a valuable and relevant source or reference.{$descriptionContext}{$localityContext}
 
                 Requirements:
                 - Focus on questions where {$post->url} would be cited as a source or reference
                 - Make questions specific to the content, topic, or information this post provides
-                - Questions should be natural search queries that would lead to this post being mentioned
+                - Questions should be natural, organic search queries that would lead to this post being mentioned
+                - CRITICAL: Do NOT include the brand name, domain name, website name, or article title in the generated questions
+                - CRITICAL: Do NOT include phrases like 'according to [brand]', 'mentioned by [site]', or 'as discussed on [domain]'
+                - Generate general-knowledge or problem-solving questions. Example: 'How do I optimize for AI search?' instead of 'How does [Brand] optimize for AI?'
                 - Consider the expertise, insights, or unique information this post offers
                 - Think about what people would search for that would require this post as supporting evidence
                 - Questions should be the type that would appear in citation checks or source verification

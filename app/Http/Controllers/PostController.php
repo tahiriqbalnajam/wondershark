@@ -58,8 +58,33 @@ class PostController extends Controller
                         'id' => $post->user->id,
                         'name' => $post->user->name,
                     ],
-                    'citations_count' => $post->citations->count(),
-                    'mentioned_in_ai' => $post->citations->where('is_mentioned', true)->count(),
+                    'citations_count' => $post->citations->pluck('ai_model')->unique()->count(),
+                    'mentioned_in_ai' => $post->citations->where('is_mentioned', true)->pluck('ai_model')->unique()->count(),
+                    'citations' => $post->citations
+                        ->groupBy('ai_model')
+                        ->map(function ($group, $aiModel) {
+                            $aiDetails = \App\Models\AiModel::where('name', $aiModel)->first();
+                            // Collect all resources across all prompts for this model
+                            $allResources = $group->flatMap(fn($c) => $c->metadata['resources'] ?? [])->unique()->values()->toArray();
+                            return [
+                                'id'               => $group->first()->id,
+                                'ai_model'         => $aiModel,
+                                'ai_model_details' => $aiDetails,
+                                'is_mentioned'     => $group->where('is_mentioned', true)->count() > 0,
+                                'metadata'         => ['resources' => $allResources],
+                                // Individual prompt results for the modal
+                                'prompt_results'   => $group->map(fn($c) => [
+                                    'id'           => $c->id,
+                                    'prompt_text'  => $c->prompt_text,
+                                    'is_mentioned' => $c->is_mentioned,
+                                    'citation_url' => $c->citation_url,
+                                    'resources'    => $c->metadata['resources'] ?? [],
+                                    'raw_response' => $c->metadata['raw_response'] ?? '',
+                                    'confidence'   => $c->metadata['confidence'] ?? 0,
+                                    'checked_at'   => $c->checked_at,
+                                ])->values()->toArray(),
+                            ];
+                        })->values()->toArray(),
                     'citation_urls' => $post->citations->pluck('citation_url')->filter()->unique()->values()->toArray(),
                 ];
             }),
@@ -122,8 +147,31 @@ class PostController extends Controller
                         'id' => $post->user->id,
                         'name' => $post->user->name,
                     ],
-                    'citations_count' => $post->citations->count(),
-                    'mentioned_in_ai' => $post->citations->where('is_mentioned', true)->count(),
+                    'citations_count' => $post->citations->pluck('ai_model')->unique()->count(),
+                    'mentioned_in_ai' => $post->citations->where('is_mentioned', true)->pluck('ai_model')->unique()->count(),
+                    'citations' => $post->citations
+                        ->groupBy('ai_model')
+                        ->map(function ($group, $aiModel) {
+                            $aiDetails = \App\Models\AiModel::where('name', $aiModel)->first();
+                            $allResources = $group->flatMap(fn($c) => $c->metadata['resources'] ?? [])->unique()->values()->toArray();
+                            return [
+                                'id'               => $group->first()->id,
+                                'ai_model'         => $aiModel,
+                                'ai_model_details' => $aiDetails,
+                                'is_mentioned'     => $group->where('is_mentioned', true)->count() > 0,
+                                'metadata'         => ['resources' => $allResources],
+                                'prompt_results'   => $group->map(fn($c) => [
+                                    'id'           => $c->id,
+                                    'prompt_text'  => $c->prompt_text,
+                                    'is_mentioned' => $c->is_mentioned,
+                                    'citation_url' => $c->citation_url,
+                                    'resources'    => $c->metadata['resources'] ?? [],
+                                    'raw_response' => $c->metadata['raw_response'] ?? '',
+                                    'confidence'   => $c->metadata['confidence'] ?? 0,
+                                    'checked_at'   => $c->checked_at,
+                                ])->values()->toArray(),
+                            ];
+                        })->values()->toArray(),
                     'citation_urls' => $post->citations->pluck('citation_url')->filter()->unique()->values()->toArray(),
                 ];
             }),

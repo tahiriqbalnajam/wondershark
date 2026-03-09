@@ -13,6 +13,8 @@ class PostCitation extends Model
     protected $fillable = [
         'post_id',
         'ai_model',
+        'prompt_text',
+        'prompt_hash',
         'citation_text',
         'citation_url',
         'position',
