@@ -1396,3 +1396,14 @@ img.w-5.h-5.rounded.object-contain {
         width: 110px;
     }
 }
+
+
+
+
+
+
+
+.clorsvg svg:not([class*=size-]) {
+    width: calc(var(--spacing)*6);
+    height: calc(var(--spacing)*6);
+}

@@ -181,11 +181,12 @@ const submitPassword: FormEventHandler = (e) => {
                                         </div>
                                         <div className="flex items-center justify-end">
                                             <div className="lg:flex block items-center gap-4 w-full">
-                                                <Link href="/" className="cancle-btn primary-btn lg:mb-0 mb-5">
+                                              {/*   <Link href="/" className="cancle-btn primary-btn lg:mb-0 mb-5">
                                                     Cancel
-                                                </Link>
+                                                </Link>*/}
+
                                                 <Button type="submit" disabled={processing} className='primary-btn lg:w-auto w-full'>
-                                                    Save Changes
+                                                    Update logo
                                                 </Button>
                                                 <Transition show={recentlySuccessful} enter="transition ease-in-out" enterFrom="opacity-0" leave="transition ease-in-out" leaveTo="opacity-0" >
                                                     <p className="text-sm text-muted-foreground">Saved.</p>
@@ -203,9 +204,9 @@ const submitPassword: FormEventHandler = (e) => {
                                             <div className="flex flex-wrap items-center gap-4">
                                                 
                                                 {/* Eyedropper */}
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 clorsvg">
                                                     {/* <span className="text-sm text-gray-600">Pick from screen:</span> */}
-                                                    <Button type="button" variant="outline" onClick={pickColorFromScreen} className="text-sm h-20 w-20" ><Pipette/> </Button>
+                                                    <Button type="button" variant="outline" onClick={pickColorFromScreen} className="text-sm h-20 w-20 " ><Pipette/> </Button>
                                                 </div>
                                                 {/* Native color picker */}
                                                 {/* <div className="flex items-center gap-2">
@@ -251,11 +252,11 @@ const submitPassword: FormEventHandler = (e) => {
                                         
                                         <div className="flex items-center justify-end">
                                             <div className="lg:flex block items-center gap-4 w-full">
-                                                <Link href="/" className="cancle-btn primary-btn lg:mb-0 mb-5">
+                                               {/* <Link href="/" className="cancle-btn primary-btn lg:mb-0 mb-5">
                                                     Cancel
-                                                </Link>
+                                                </Link> */}
                                                 <Button type="submit" disabled={processing} className='primary-btn lg:w-auto w-full'>
-                                                    Save Changes
+                                                    Update color   
                                                 </Button>
                                                 <Transition show={recentlySuccessful} enter="transition ease-in-out" enterFrom="opacity-0" leave="transition ease-in-out" leaveTo="opacity-0" >
                                                     <p className="text-sm text-muted-foreground">Saved.</p>

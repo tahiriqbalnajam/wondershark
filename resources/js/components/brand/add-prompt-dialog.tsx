@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -50,6 +51,7 @@ export function AddPromptDialog({ brandId, className, onPromptAdd }: AddPromptDi
           setCountryCode('');
           setOpen(false);
           setError(null);
+          toast.success('Prompt added successfully', { duration: 2000 });
         },
         onError: (errors) => {
           if (errors && errors.error) {
@@ -67,6 +69,7 @@ export function AddPromptDialog({ brandId, className, onPromptAdd }: AddPromptDi
         setPrompt('');
         setCountryCode('');
         setOpen(false);
+        toast.success('Prompt added successfully', { duration: 2000 });
       }
     }
   };

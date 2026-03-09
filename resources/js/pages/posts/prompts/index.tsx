@@ -158,7 +158,7 @@ export default function PostPromptsIndex({ post, prompts, stats, availableProvid
                 prompt: newPromptText.trim()
             });
             setNewPromptText('');
-            setShowAddDialog(false);
+            setShowAddDialog(true);
             // Success message will be shown via flash message from backend
         } catch {
             toast.error('Failed to add custom prompt');
