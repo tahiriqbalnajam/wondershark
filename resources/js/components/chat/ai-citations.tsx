@@ -5,11 +5,17 @@ interface Prompt {
     id: number;
     prompt: string;
     ai_response?: string;
-    sentiment?: string;
+    sentiment?: string | number;
     position?: number;
     visibility?: number;
     is_active: boolean;
     analysis_completed_at?: string;
+    prompt_type?: 'brand' | 'post'; // type of prompt
+    post?: {
+        id: number;
+        title?: string;
+        url?: string;
+    } | null;
     ai_model?: {
         id: number;
         name: string;
@@ -61,17 +67,17 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
         cleanText = cleanText.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
         cleanText = cleanText.replace(/\{[^}]*font-family[^}]*\}[\s\S]*?\{[^}]*\}/gi, '');
         cleanText = cleanText.replace(/body\s*\{[^}]*\}/gi, '');
-        
+
         // Remove script tags
         cleanText = cleanText.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
 
         // Create a temporary div element to parse HTML
         const tmp = document.createElement('DIV');
         tmp.innerHTML = cleanText;
-        
+
         // Get text content
         let textContent = tmp.textContent || tmp.innerText || '';
-        
+
         // Remove excessive whitespace and newlines
         textContent = textContent.replace(/\s+/g, ' ').trim();
 
@@ -114,6 +120,8 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
                             : `${daysAgo} days ago`
                     : 'Not analyzed';
 
+                const isPostPrompt = prompt.prompt_type === 'post';
+
                 return (
                     <Card
                         key={prompt.id}
@@ -154,6 +162,23 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
 
                                 {/* Second Column: Prompt Title and Text */}
                                 <div className="flex-1 flex flex-col gap-1">
+                                    {/* Type badge + optional post title */}
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <Badge
+                                            variant="outline"
+                                            className={`text-[10px] px-1.5 py-0 font-medium ${isPostPrompt
+                                                ? 'border-purple-300 bg-purple-50 text-purple-700'
+                                                : 'border-blue-300 bg-blue-50 text-blue-700'
+                                                }`}
+                                        >
+                                            {isPostPrompt ? 'Post' : 'Brand'}
+                                        </Badge>
+                                        {isPostPrompt && prompt.post?.title && (
+                                            <span className="text-[10px] text-muted-foreground truncate max-w-[120px]" title={prompt.post.title}>
+                                                {prompt.post.title}
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="text-sm font-semibold leading-snug text-foreground line-clamp-2">
                                         {prompt.prompt}
                                     </div>

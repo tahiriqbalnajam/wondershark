@@ -73,11 +73,13 @@ interface Brand {
         id: number;
         prompt: string;
         ai_response?: string;
-        sentiment?: string;
+        sentiment?: string | number;
         position?: number;
         visibility?: number;
         is_active: boolean;
         analysis_completed_at?: string;
+        prompt_type?: 'brand' | 'post';
+        post?: { id: number; title?: string; url?: string } | null;
         ai_model?: {
             id: number;
             name: string;
@@ -94,6 +96,7 @@ interface Brand {
             is_competitor_url: boolean;
         }>;
         mentioned_domains?: string[];
+        competitor_mentions?: Record<string, { mentions: number }>;
     }>;
     subreddits: Array<{
         id: number;
@@ -123,6 +126,35 @@ interface AnalysisStatus {
     progress_pct: number;
 }
 
+interface PostPromptItem {
+    id: number;
+    prompt: string;
+    ai_response?: string;
+    sentiment?: string | number;
+    position?: number;
+    visibility?: number;
+    is_active: boolean;
+    is_mentioned?: boolean;
+    analysis_completed_at?: string;
+    prompt_type: 'post';
+    post?: { id: number; title?: string; url?: string } | null;
+    ai_model?: {
+        id: number;
+        name: string;
+        display_name: string;
+        icon?: string;
+        provider?: string;
+    };
+    prompt_resources?: Array<{
+        url: string;
+        type: string;
+        title: string;
+        description: string;
+        domain: string;
+        is_competitor_url: boolean;
+    }>;
+}
+
 interface Props {
     brand: Brand;
     competitiveStats: CompetitiveStat[];
@@ -136,6 +168,7 @@ interface Props {
     }>;
     allBrands: AllBrand[];
     analysisStatus: AnalysisStatus;
+    postPrompts?: PostPromptItem[];
 }
 
 const breadcrumbs = (brand: Brand) => [
@@ -166,7 +199,7 @@ const cleanAiResponse = (response: string | undefined): string => {
     return cleaned.trim();
 };
 
-export default function BrandShow({ brand, competitiveStats, historicalStats, aiModels, allBrands, analysisStatus }: Props) {
+export default function BrandShow({ brand, competitiveStats, historicalStats, aiModels, allBrands, analysisStatus, postPrompts = [] }: Props) {
     const [selectedCompetitorDomain, setSelectedCompetitorDomain] = useState<string | null>(null);
     const [triggeringAnalysis, setTriggeringAnalysis] = useState(false);
     const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -474,7 +507,8 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
         };
     }, [historicalStats, selectedDateRange, customDateRange, selectedBrand]);
 
-    const [selectedPrompt, setSelectedPrompt] = useState<Brand['prompts'][0] | null>(null);
+    type AnyPrompt = Brand['prompts'][0] | PostPromptItem;
+    const [selectedPrompt, setSelectedPrompt] = useState<AnyPrompt | null>(null);
     const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
 
     const handleBrandRowClick = (domain: string) => {
@@ -529,7 +563,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
     //         });
     //     });
     // }, [brand.prompts, selectedCompetitorDomain]);
-    const filteredPrompts = useMemo(() => {
+    const filteredBrandPrompts = useMemo(() => {
         return (brand.prompts || []).filter(item => {
             if (!item.is_active) return false;
 
@@ -563,16 +597,10 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                 const entityName = brandOption ? brandOption.label : null;
                 const isMainBrand = entityName === brand.name;
 
-                // If the user selected the main brand itself, show all prompts
-                // (main brand visibility is tracked at prompt level, not per-competitor)
                 if (isMainBrand) return true;
 
-                // For competitors: use competitor_mentions JSON from the AI analysis.
-                // The key is the competitor's entity name (e.g. "Everbridge 360"),
-                // and we only show prompts where that competitor was explicitly mentioned (mentions > 0).
                 if (entityName) {
-                    const mentions = (item as any).competitor_mentions;
-                    // competitor_mentions can be [] (empty array) or {} (object) — handle both
+                    const mentions = item.competitor_mentions;
                     const isObject = mentions && typeof mentions === 'object' && !Array.isArray(mentions);
                     if (isObject && mentions[entityName] && (mentions[entityName].mentions ?? 0) > 0) {
                         return true;
@@ -583,7 +611,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
             }
 
             return true;
-        });
+        }).map(p => ({ ...p, prompt_type: 'brand' as const }));
     }, [
         brand.prompts,
         selectedCompetitorDomain,
@@ -594,10 +622,50 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
         brands,
     ]);
 
+    // Filter post prompts - only those that were checked (have checked_at = analysis_completed_at)
+    const filteredPostPrompts = useMemo(() => {
+        return (postPrompts || []).filter(item => {
+            // Must have a prompt text
+            if (!item.prompt) return false;
+
+            // Date range filter
+            if (item.analysis_completed_at && !isWithinDateRange(item.analysis_completed_at)) {
+                return false;
+            }
+
+            // AI model filter
+            if (selectedAIModel !== 'all') {
+                if (item.ai_model?.name !== selectedAIModel) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+    }, [
+        postPrompts,
+        selectedAIModel,
+        selectedDateRange,
+        customDateRange,
+    ]);
+
+    // Merge brand and post prompts, sorted by analysis date (newest first)
+    const filteredPrompts = useMemo(() => {
+        const combined = [
+            ...filteredBrandPrompts,
+            ...filteredPostPrompts,
+        ];
+        return combined.sort((a, b) => {
+            const aDate = a.analysis_completed_at ? new Date(a.analysis_completed_at).getTime() : 0;
+            const bDate = b.analysis_completed_at ? new Date(b.analysis_completed_at).getTime() : 0;
+            return bDate - aDate;
+        });
+    }, [filteredBrandPrompts, filteredPostPrompts]);
+
     // const visiblePrompts = filteredPrompts.slice((currentPage - 1) * 9, currentPage * 9);
     const visiblePrompts = filteredPrompts.slice(0, currentPage * 9);
 
-    const handlePromptClick = (prompt: Brand['prompts'][0]) => {
+    const handlePromptClick = (prompt: AnyPrompt) => {
         setSelectedPrompt(prompt);
         setIsPromptModalOpen(true);
     };
@@ -823,7 +891,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                             sentiment: stat.sentiment_level,
                             visibility: stat.visibility_percentage
                         }))}
-                        prompts={filteredPrompts}
+                        prompts={filteredPrompts as any}
                         fileName={`${brand.name.toLowerCase().replace(/\s+/g, '-')}-dashboard-report-${new Date().toISOString().split('T')[0]}.pdf`}
                         autoTrigger={false}
                         onBeforeCapture={() => {
@@ -925,8 +993,8 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                     </CardHeader>
                     <CardContent>
                         <AiCitations
-                            prompts={visiblePrompts}
-                            onPromptClick={handlePromptClick}
+                            prompts={visiblePrompts as any}
+                            onPromptClick={handlePromptClick as any}
                         />
                         {currentPage * 9 < filteredPrompts.length && (
                             <div className="flex justify-center mt-4 print:hidden" id="load-more-citations">
@@ -979,25 +1047,39 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                     {selectedPrompt && (
                         <>
                             {/* AI Model Header - at the very top */}
-                            {selectedPrompt.ai_model && (
-                                <div className="flex items-center gap-2 mb-4 pb-3 border-b">
-                                    {selectedPrompt.ai_model.icon ? (
-                                        <img
-                                            src={`/storage/${selectedPrompt.ai_model.icon}`}
-                                            alt={selectedPrompt.ai_model.display_name}
-                                            className="w-5 h-5 object-contain rounded"
-                                            onError={(e) => {
-                                                e.currentTarget.style.display = 'none';
-                                            }}
-                                        />
-                                    ) : (
-                                        <Bot className="h-5 w-5 text-primary" />
-                                    )}
-                                    <span className="font-medium text-sm">
-                                        Analyzed by {selectedPrompt.ai_model.display_name}
-                                    </span>
-                                </div>
-                            )}
+                            <div className="flex items-center gap-2 mb-4 pb-3 border-b">
+                                {selectedPrompt.ai_model ? (
+                                    <>
+                                        {selectedPrompt.ai_model.icon ? (
+                                            <img
+                                                src={`/storage/${selectedPrompt.ai_model.icon}`}
+                                                alt={selectedPrompt.ai_model.display_name}
+                                                className="w-5 h-5 object-contain rounded"
+                                                onError={(e) => {
+                                                    e.currentTarget.style.display = 'none';
+                                                }}
+                                            />
+                                        ) : (
+                                            <Bot className="h-5 w-5 text-primary" />
+                                        )}
+                                        <span className="font-medium text-sm">
+                                            Analyzed by {selectedPrompt.ai_model.display_name}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <Bot className="h-5 w-5 text-primary" />
+                                )}
+                                {/* Prompt type badge */}
+                                <Badge
+                                    variant="outline"
+                                    className={`ml-auto text-xs px-2 py-0.5 font-medium ${selectedPrompt.prompt_type === 'post'
+                                        ? 'border-purple-300 bg-purple-50 text-purple-700'
+                                        : 'border-blue-300 bg-blue-50 text-blue-700'
+                                        }`}
+                                >
+                                    {selectedPrompt.prompt_type === 'post' ? 'Post Prompt' : 'Brand Prompt'}
+                                </Badge>
+                            </div>
 
                             <div className="grid grid-cols-12 gap-6">
                                 <div className="lg:col-span-9 col-span-12 space-y-4">
@@ -1036,14 +1118,41 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                                             )}
                                         </div>
                                         <Card className="flex-1">
-                                            <CardContent className="pt-6">
-                                                {selectedPrompt.ai_response ? (
-                                                    <div
-                                                        className="prose prose-sm max-w-none"
-                                                        dangerouslySetInnerHTML={{ __html: cleanAiResponse(selectedPrompt.ai_response) }}
-                                                    />
+                                            <CardContent className="pt-4">
+                                                {selectedPrompt.prompt_type === 'post' ? (
+                                                    // Post citation: show citation status + search context
+                                                    <div className="space-y-3">
+                                                        {/* Citation status */}
+                                                        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${(selectedPrompt as PostPromptItem).is_mentioned
+                                                                ? 'bg-green-50 text-green-700 border border-green-200'
+                                                                : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                                            }`}>
+                                                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${(selectedPrompt as PostPromptItem).is_mentioned ? 'bg-green-500' : 'bg-amber-400'
+                                                                }`} />
+                                                            {(selectedPrompt as PostPromptItem).is_mentioned
+                                                                ? 'Your URL was cited in the AI response'
+                                                                : 'Your URL was not cited in this response'}
+                                                        </div>
+                                                        {/* Search context */}
+                                                        {selectedPrompt.ai_response && selectedPrompt.ai_response !== 'Failed to parse AI response' ? (
+                                                            <div>
+                                                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">AI Search Context</p>
+                                                                <p className="text-sm text-gray-700">{selectedPrompt.ai_response}</p>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-sm text-muted-foreground italic">No AI search context available.</p>
+                                                        )}
+                                                    </div>
                                                 ) : (
-                                                    <p className="text-muted-foreground italic">No AI response available yet.</p>
+                                                    // Brand prompt: show full prose response
+                                                    selectedPrompt.ai_response ? (
+                                                        <div
+                                                            className="prose prose-sm max-w-none"
+                                                            dangerouslySetInnerHTML={{ __html: cleanAiResponse(selectedPrompt.ai_response) }}
+                                                        />
+                                                    ) : (
+                                                        <p className="text-muted-foreground italic">No AI response available yet.</p>
+                                                    )
                                                 )}
                                             </CardContent>
                                         </Card>
@@ -1052,30 +1161,64 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                                 <div className="lg:col-span-3 col-span-12">
                                     <h3 className="text-lg font-semibold mb-3">Resources</h3>
                                     <div className="space-y-3">
-                                        {/* Brand Icon */}
-                                        <div className="border rounded-lg p-3 bg-gradient-to-br from-blue-50 to-indigo-50">
-                                            <div className="flex items-center gap-3 mb-2">
-                                                <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center p-1.5">
-                                                    <img
-                                                        src={brand.logo ? `/storage/${brand.logo}` : `https://img.logo.dev/${(brand.domain || brand.website || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`}
-                                                        alt={brand.name}
-                                                        className="w-full h-full object-contain"
-                                                        onError={(e) => {
-                                                            e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="%233b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <h4 className="font-semibold text-sm">{brand.name}</h4>
-                                                    <p className="text-xs text-muted-foreground">Your Brand</p>
+                                        {/* Post Source (for post prompts) OR Brand icon (for brand prompts) */}
+                                        {selectedPrompt.prompt_type === 'post' ? (
+                                            /* Post Title & Link */
+                                            <div className="border rounded-lg p-3 bg-gradient-to-br from-purple-50 to-violet-50">
+                                                <div className="flex items-start gap-3 mb-2">
+                                                    <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center p-1.5 flex-shrink-0">
+                                                        <ExternalLink className="w-5 h-5 text-purple-500" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-xs font-semibold text-purple-700 mb-0.5 uppercase tracking-wide">Post</p>
+                                                        {selectedPrompt.post?.title ? (
+                                                            <h4 className="font-semibold text-sm text-gray-900 line-clamp-2 mb-1">
+                                                                {selectedPrompt.post.title}
+                                                            </h4>
+                                                        ) : (
+                                                            <h4 className="font-semibold text-sm text-gray-500 italic mb-1">No title</h4>
+                                                        )}
+                                                        {selectedPrompt.post?.url && (
+                                                            <a
+                                                                href={selectedPrompt.post.url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-xs text-purple-600 hover:text-purple-800 hover:underline flex items-center gap-1 truncate"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                                                <span className="truncate">{selectedPrompt.post.url.replace(/^https?:\/\//, '')}</span>
+                                                            </a>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        ) : (
+                                            /* Brand Icon */
+                                            <div className="border rounded-lg p-3 bg-gradient-to-br from-blue-50 to-indigo-50">
+                                                <div className="flex items-center gap-3 mb-2">
+                                                    <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center p-1.5">
+                                                        <img
+                                                            src={brand.logo ? `/storage/${brand.logo}` : `https://img.logo.dev/${(brand.domain || brand.website || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`}
+                                                            alt={brand.name}
+                                                            className="w-full h-full object-contain"
+                                                            onError={(e) => {
+                                                                e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="%233b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h4 className="font-semibold text-sm">{brand.name}</h4>
+                                                        <p className="text-xs text-muted-foreground">Your Brand</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {/* Competitor Resources */}
                                         {selectedPrompt.prompt_resources && selectedPrompt.prompt_resources.length > 0 ? (
                                             selectedPrompt.prompt_resources.map((resource: { url: string; type: string; title: string; description: string; domain: string; is_competitor_url: boolean; }, index: number) => {
-                                                const cleanDomain = resource.domain.replace(/^www\./, '');
+                                                const cleanDomain = resource.domain?.replace(/^www\./, '') || '';
                                                 return (
                                                     <div
                                                         key={index}

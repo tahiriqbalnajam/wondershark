@@ -831,6 +831,116 @@ class BrandController extends Controller
                 : 100,
         ];
 
+        // Load post citations — these come from post_citations table, NOT brand_prompts.ai_response
+        // post_citations stores: prompt_text, is_mentioned, metadata (raw_response + resources), checked_at
+        // We join with posts to get title/url, and with ai_models to get icon/display_name
+        $postCitations = \App\Models\PostCitation::query()
+            ->join('posts', 'post_citations.post_id', '=', 'posts.id')
+            ->where('posts.brand_id', $brand->id)
+            ->whereNotNull('post_citations.checked_at')
+            ->whereNotNull('post_citations.prompt_text')
+            ->where('post_citations.is_mentioned', true)
+            ->orderByDesc('post_citations.checked_at')
+            ->select(
+                'post_citations.id',
+                'post_citations.post_id',
+                'post_citations.ai_model',
+                'post_citations.prompt_text',
+                'post_citations.is_mentioned',
+                'post_citations.position',
+                'post_citations.metadata',
+                'post_citations.checked_at',
+                'posts.title as post_title',
+                'posts.url as post_url'
+            )
+            ->get();
+
+        // Load ai_models keyed by name for efficient lookup
+        $aiModelsByName = \App\Models\AiModel::all()->keyBy('name');
+
+        $postPrompts = $postCitations->map(function ($citation) use ($aiModelsByName) {
+            $metadata  = is_array($citation->metadata) ? $citation->metadata : json_decode($citation->metadata ?? '{}', true) ?? [];
+            $resources = $metadata['resources'] ?? [];
+
+            // Use search_context as the readable AI response.
+            // raw_response is the literal JSON string returned by the AI API (not human-readable).
+            // search_context is the readable "what was searched" summary extracted from the JSON.
+            $searchContext = $metadata['search_context'] ?? null;
+            $rawResponse   = $metadata['raw_response']   ?? null;
+
+            // Try to parse raw_response as JSON to get a better response text
+            $parsedRaw = null;
+            if ($rawResponse && is_string($rawResponse)) {
+                $decoded = json_decode($rawResponse, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $parsedRaw = $decoded['search_context'] ?? null;
+                }
+            }
+
+            // Best readable response: search_context from parsed inner JSON, then outer search_context, then null
+            $aiResponse = $parsedRaw ?? $searchContext ?? null;
+
+            $aiModelRecord = $aiModelsByName->get($citation->ai_model);
+
+            // Normalise resources array into uniform shape
+            $promptResources = collect($resources)->map(function ($r) {
+                if (is_string($r)) {
+                    $domain = parse_url($r, PHP_URL_HOST) ?? '';
+                    $domain = preg_replace('/^www\./', '', $domain);
+                    return [
+                        'url'               => $r,
+                        'type'              => 'web',
+                        'title'             => $domain,
+                        'description'       => '',
+                        'domain'            => $domain,
+                        'is_competitor_url' => false,
+                    ];
+                }
+                $domain = $r['domain'] ?? (parse_url($r['url'] ?? '', PHP_URL_HOST) ?? '');
+                $domain = preg_replace('/^www\./', '', $domain);
+                return [
+                    'url'               => $r['url']   ?? '',
+                    'type'              => $r['type']   ?? 'web',
+                    'title'             => $r['title']  ?? $domain,
+                    'description'       => $r['description'] ?? '',
+                    'domain'            => $domain,
+                    'is_competitor_url' => $r['is_competitor_url'] ?? false,
+                ];
+            })->filter(fn($r) => !empty($r['url']))->values()->toArray();
+
+            return [
+                'id'                    => $citation->id,
+                'prompt'                => $citation->prompt_text,
+                'ai_response'           => $aiResponse,
+                'sentiment'             => null,
+                'position'              => $citation->position,
+                'visibility'            => null,
+                'is_active'             => true,
+                'is_mentioned'          => (bool) $citation->is_mentioned,
+                'analysis_completed_at' => $citation->checked_at,
+                'prompt_type'           => 'post',
+                'ai_model'              => $aiModelRecord ? [
+                    'id'           => $aiModelRecord->id,
+                    'name'         => $aiModelRecord->name,
+                    'display_name' => $aiModelRecord->display_name,
+                    'icon'         => $aiModelRecord->icon,
+                    'provider'     => $aiModelRecord->provider,
+                ] : [
+                    'id'           => null,
+                    'name'         => $citation->ai_model,
+                    'display_name' => ucfirst($citation->ai_model),
+                    'icon'         => null,
+                    'provider'     => $citation->ai_model,
+                ],
+                'post'                  => [
+                    'id'    => $citation->post_id,
+                    'title' => $citation->post_title,
+                    'url'   => $citation->post_url,
+                ],
+                'prompt_resources'      => $promptResources,
+            ];
+        })->values()->toArray();
+
         return Inertia::render('brands/show', [
             'brand' => $brand,
             'competitiveStats' => $competitiveStats,
@@ -838,6 +948,7 @@ class BrandController extends Controller
             'aiModels' => $aiModels,
             'allBrands' => $allBrands,
             'analysisStatus' => $analysisStatus,
+            'postPrompts' => $postPrompts,
         ]);
     }
 
