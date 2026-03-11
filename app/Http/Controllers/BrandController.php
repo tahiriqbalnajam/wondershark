@@ -90,7 +90,7 @@ class BrandController extends Controller
         }
 
         $validationRules = [
-            'name' => 'required|string|max:255|unique:brands,name',
+            'name' => 'required|string|max:255',
             'website' => 'nullable|url|max:255',
             'description' => 'nullable|string|max:1000',
             'country' => 'nullable|string|max:100',
@@ -210,7 +210,7 @@ class BrandController extends Controller
         }
 
         $request->validate([
-            'name' => 'required|string|max:255|unique:brands,name',
+            'name' => 'required|string|max:255',
             'website' => 'nullable|url|max:255',
             'description' => 'nullable|string|max:1000',
             'country' => 'nullable|string|max:100',

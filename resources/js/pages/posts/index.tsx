@@ -213,9 +213,9 @@ export default function PostsIndex({ posts, brand }: Props) {
                             ) : (
                                 <Bot className="h-5 w-5 text-gray-500" />
                             )}
-                            <span className="text-xs font-medium text-gray-700">
+                          {/*   <span className="text-xs font-medium text-gray-700">
                                 {aiDetails?.display_name || citation.ai_model}
-                            </span>
+                            </span> */}
                         </div>
                     );
                 })}
