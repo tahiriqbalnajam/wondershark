@@ -294,10 +294,10 @@ export default function PostsIndex({ posts, brand }: Props) {
 
                     <div className="flex gap-3">
                         <Button asChild>
-                            <Link href={createPostUrl} className='primary-btn'>
+                           {/* <Link href={createPostUrl} className='primary-btn'>
                                 <CirclePlus className="h-4 w-4 mr-2" />
                                 Create Post
-                            </Link>
+                            </Link> */}
                         </Button>
                     </div>
                 </div>

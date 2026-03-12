@@ -56,13 +56,14 @@ const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, sele
     // }
 
     // Posts - for agency and brand users, brand users must have brand ID
-    if (permissions.hasAnyRole(['agency', 'brand']) && selectedBrandId) {
+
+   if (permissions.hasAnyRole(['agency', 'brand']) && selectedBrandId) {
         items.push({
             title: 'Posts',
             href: `/brands/${selectedBrandId}/posts`,
             icon: FileText,
             alwaysOpenSubmenu: true,
-            items: [
+            /* items: [
                 {
                     title: 'All Posts',
                     href: `/brands/${selectedBrandId}/posts`,
@@ -73,7 +74,7 @@ const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, sele
                     href: `/brands/${selectedBrandId}/posts/create`,
                     icon: CirclePlus,
                 },
-            ],
+            ], */
         });
     }
 
