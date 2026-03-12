@@ -293,18 +293,12 @@ export default function PostsIndex({ posts, brand }: Props) {
                     />
 
                     <div className="flex gap-3">
-                        {/* <Button variant="outline" asChild>
-                            <Link href="/posts/agency-import">
-                                <Upload className="h-4 w-4 mr-2" />
-                                Import CSV
-                            </Link>
-                        </Button> */}
-                        {/* <Button asChild>
+                        <Button asChild>
                             <Link href={createPostUrl} className='primary-btn'>
                                 <CirclePlus className="h-4 w-4 mr-2" />
-                                Add Post
+                                Create Post
                             </Link>
-                        </Button> */}
+                        </Button>
                     </div>
                 </div>
 

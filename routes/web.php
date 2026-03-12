@@ -172,7 +172,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/run', [\App\Http\Controllers\Admin\ConsoleController::class, 'run'])->name('run');
         });
 
-
         // System Settings - Admin only (requires additional manage-system permission)
         Route::prefix('admin/settings')->name('admin.settings.')->middleware('role.permission:manage-system')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'index'])->name('index');
@@ -308,6 +307,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('brands/{brand}/posts', [PostController::class, 'brandIndex'])->name('brands.posts.index');
         Route::get('brands/{brand}/posts/create', [PostController::class, 'brandCreate'])->name('brands.posts.create');
         Route::post('brands/{brand}/posts', [PostController::class, 'brandStore'])->name('brands.posts.store');
+
+        // Brand post prompt routes (mirrors admin prompt API for brand users)
+        Route::get('brands/{brand}/posts/{post}/prompts', [PostController::class, 'brandGetPrompts'])->name('brands.posts.prompts');
+        Route::post('brands/{brand}/posts/{post}/prompts/generate', [PostController::class, 'brandGeneratePrompts'])->name('brands.posts.prompts.generate');
+        Route::post('brands/{brand}/posts/{post}/prompts/bulk-update', [PostController::class, 'brandBulkUpdatePrompts'])->name('brands.posts.prompts.bulk-update');
 
         Route::post('posts/{post}/citations', [PostController::class, 'storeCitation'])->name('posts.citations.store');
         Route::get('posts/{post}/prompts', [PostController::class, 'showPrompts'])->name('posts.prompts');

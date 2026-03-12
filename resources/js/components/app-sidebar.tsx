@@ -4,19 +4,19 @@ import { Sidebar, SidebarContent, SidebarHeader } from '@/components/ui/sidebar'
 import { type NavItem } from '@/types';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { LogOut } from 'lucide-react';
-import { Link, router } from '@inertiajs/react';
-import {
-    LayoutGrid,
-    Users,
-    Shield,
-    Settings,
-    FileText,
-    Clock,
-    BarChart3,
-    MessageSquare,
-    Package,
+import { Link, router} from '@inertiajs/react';
+import { 
+    LayoutGrid, 
+    Users, 
+    Shield, 
+    Settings, 
+    FileText, 
+    Clock, 
+    BarChart3, 
+    MessageSquare, 
+    Package, 
     Building2,
-    Terminal
+    CirclePlus
 } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { usePage } from '@inertiajs/react';
@@ -55,31 +55,27 @@ const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, sele
     //     });
     // }
 
-
-
-const agency_member_rights = permissions.user?.agency_membership?.rights;
-
     // Posts - for agency and brand users, brand users must have brand ID
     if (permissions.hasAnyRole(['agency', 'brand']) && selectedBrandId) {
         items.push({
             title: 'Posts',
             href: `/brands/${selectedBrandId}/posts`,
             icon: FileText,
+            alwaysOpenSubmenu: true,
+            items: [
+                {
+                    title: 'All Posts',
+                    href: `/brands/${selectedBrandId}/posts`,
+                    icon: FileText,
+                },
+                {
+                    title: 'Create Post',
+                    href: `/brands/${selectedBrandId}/posts/create`,
+                    icon: CirclePlus,
+                },
+            ],
         });
     }
-
-    if (permissions.hasAnyRole(['agency_manager', 'agency_member']) && selectedBrandId) { //// role is only agency_member
-        if(agency_member_rights == "agency_manager" || agency_member_rights == "agency_admin" || agency_member_rights == "brand_user"){
-            items.push({
-                title: 'Posts',
-                href: `/brands/${selectedBrandId}/posts`,
-                icon: FileText,
-            });
-        }
-    }
-
-
-
 
     // Search Analytics - for admin users
     if (permissions.hasRole('admin')) {
@@ -95,7 +91,7 @@ const agency_member_rights = permissions.user?.agency_membership?.rights;
 
 const getPreferenceNavItems = (permissions: ReturnType<typeof usePermissions>, selectedBrandId?: number): NavItem[] => {
     const items: NavItem[] = [];
-    const agency_member_rights = permissions.user?.agency_membership?.rights;
+
     // Show for agency and brand users, brand users must have brand ID
     if (permissions.hasAnyRole(['agency', 'brand']) && selectedBrandId) {
         items.push({
@@ -110,27 +106,6 @@ const getPreferenceNavItems = (permissions: ReturnType<typeof usePermissions>, s
             icon: MessageSquare,
         });
     }
-
-
-     if (permissions.hasAnyRole(['agency_manager', 'agency_member']) && selectedBrandId) { //// role is only agency_member
-        if(agency_member_rights == "agency_manager" || agency_member_rights == "agency_admin"){
-            items.push({
-                title: 'Competitors',
-                href: `/brands/${selectedBrandId}/competitors`,
-                icon: Shield,
-            });
-
-            items.push({
-                title: 'Prompts',
-                href: `/brands/${selectedBrandId}/prompts`,
-                icon: MessageSquare,
-            });
-        }
-    }
-
-
-   
-
 
     return items;
 };
@@ -147,19 +122,6 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
         });
     }
 
-
-     const agency_member_rights = permissions.user?.agency_membership?.rights;
-     if (permissions.hasAnyRole(['agency_admin', 'agency_member']) && selectedBrandId) { //// role is only agency_member
-        if(agency_member_rights == "agency_admin"){
-            items.push({
-                title: 'People',
-                href: '/agency/people',
-                icon: Users,
-            });
-        }
-    }
-
-
     // Brand - for agency and brand users, brand users must have brand ID
     if (permissions.hasAnyRole(['agency', 'brand']) && selectedBrandId) {
         items.push({
@@ -169,17 +131,6 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
         });
     }
 
-
-     if (permissions.hasAnyRole(['agency_admin', 'agency_member']) && selectedBrandId) { //// role is only agency_member
-        if(agency_member_rights == "agency_admin"){
-            items.push({
-                title: 'Brand',
-                href: `/brands/${selectedBrandId}/edit`,
-                icon: Package,
-            });
-        }
-    }
-
     // Agency settings - only for agency users
     if (permissions.hasRole('agency')) {
         items.push({
@@ -187,17 +138,6 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
             href: '/settings/agency',
             icon: Building2,
         });
-    }
-
- 
-     if (permissions.hasAnyRole(['agency_admin', 'agency_member']) && selectedBrandId) { //// role is only agency_member
-        if(agency_member_rights == "agency_admin"){
-            items.push({
-                title: 'Agency',
-                href: '/settings/agency',
-                icon: Building2,
-            });
-        }
     }
 
     // User Management - only for admin users (skip for agency and brand)
@@ -278,12 +218,6 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
                     permission: 'view-admin-panel',
                 },
                 {
-                    title: 'Console Commands',
-                    href: '/admin/console',
-                    icon: Terminal,
-                    permission: 'view-admin-panel',
-                },
-                {
                     title: 'System Settings',
                     href: '/admin/settings',
                     icon: Settings,
@@ -324,18 +258,10 @@ const getOrderNavItems = (permissions: ReturnType<typeof usePermissions>, select
 export function AppSidebar() {
     const cleanup = useMobileNavigation();
     const handleLogout = () => {
-        cleanup();
-        // router.flushAll();
-    };
+            cleanup();
+            // router.flushAll();
+        };
     const permissions = usePermissions();
-
-    //console.log('permissions:', permissions);
-
-    //const membership_rights = permissions.user?.agency_membership?.rights);
-
-
-
-
     const page = usePage<SharedData>();
     const isRankingPage = page.url.includes('/ranking');
     // Extract brand ID from current URL path
@@ -344,12 +270,12 @@ export function AppSidebar() {
         const match = path.match(/\/brands\/(\d+)/);
         return match ? parseInt(match[1], 10) : undefined;
     };
-
+    
     const currentBrandId = getCurrentBrandId();
     const selectedBrand = page.props.selectedBrand;
     const user = page.props.auth.user;
     const brands = page.props.brands || [];
-
+    
     // For brand role users, use their assigned brand (first brand in the list)
     // For agency/admin users, prioritize currentBrandId from URL over selectedBrand from session
     let brandIdForMenu: number | undefined;
@@ -358,7 +284,7 @@ export function AppSidebar() {
     } else {
         brandIdForMenu = currentBrandId || selectedBrand?.id;
     }
-
+    
     const generalNavItems = getGeneralNavItems(permissions, brandIdForMenu, isRankingPage);
     const preferenceNavItems = getPreferenceNavItems(permissions, brandIdForMenu);
     const settingsNavItems = getSettingsNavItems(permissions, brandIdForMenu);
@@ -369,7 +295,7 @@ export function AppSidebar() {
         <Sidebar>
             <SidebarHeader>
                 <NavUser />
-
+                
                 {/* New Brand Button for Agency Users */}
                 {/* {permissions.hasRole('agency') && (
                     <div className="px-2 mt-2">
@@ -392,17 +318,17 @@ export function AppSidebar() {
                 {generalNavItems.length > 0 && (
                     <NavMain items={generalNavItems} label="General" />
                 )}
-
+                
                 {/* Preference Section */}
                 {preferenceNavItems.length > 0 && (
                     <NavMain items={preferenceNavItems} label="Preference" />
                 )}
-
+                
                 {/* Docs & Files Section */}
                 {docsFilesNavItems.length > 0 && (
                     <NavMain items={docsFilesNavItems} label="Docs & Files" />
                 )}
-
+                
                 {/* Settings Section */}
                 {settingsNavItems.length > 0 && (
                     <NavMain items={settingsNavItems} label="Settings" />

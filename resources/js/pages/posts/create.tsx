@@ -1,11 +1,16 @@
-import { type BreadcrumbItem } from '@/types';
+﻿import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
+
 import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
     Select,
     SelectContent,
@@ -15,9 +20,16 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
-import { ArrowLeft, FileText, ExternalLink, Check } from 'lucide-react';
-
-import { Calendar } from "@/components/ui/calendar";
+import { ArrowLeft, FileText, AlertCircle, Save, X, CircleCheckBig, Power, Check } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
+} from '@/components/ui/tabs';
+import { PromptGenerationLoader } from '@/components/loaders/prompt-generation-loader';
+import { Calendar } from '@/components/ui/calendar';
 
 type Brand = {
     id: number;
@@ -35,6 +47,15 @@ type Props = {
     userPostCreationNote?: string;
     brand?: Brand;
     selectedBrandId?: number;
+    post?: {
+        id: number;
+        title: string;
+        url: string;
+        description: string;
+        status: string;
+        posted_at: string;
+        brand_id: number;
+    };
 };
 
 type FormData = {
@@ -47,175 +68,243 @@ type FormData = {
     post_type: string;
 };
 
-export default function PostsCreate({ 
-    brands, 
-    canCreatePosts, 
-    adminEmail, 
-    userCanCreatePosts, 
+type PromptData = {
+    id: number;
+    prompt_text: string;
+    visibility: string;
+    sentiment: number;
+    position: number;
+    location: string;
+    volume: string;
+    status: string;
+    created_at: string;
+};
+
+export default function PostsCreate({
+    brands,
+    canCreatePosts,
+    adminEmail,
+    userCanCreatePosts,
     userPostCreationNote,
     brand,
-    selectedBrandId
+    selectedBrandId,
+    post: createdPost,
 }: Props) {
     const { url } = usePage();
     const urlParams = new URLSearchParams(url.split('?')[1] || '');
     const brandIdFromUrl = urlParams.get('brand_id') || selectedBrandId?.toString() || '';
 
-    // Dynamic breadcrumbs based on whether we're creating for a specific brand
-    const breadcrumbs: BreadcrumbItem[] = brand ? [
-        {
-            title: 'Brands',
-            href: '/brands',
-        },
-        {
-            title: brand.name,
-            href: `/brands/${brand.id}`,
-        },
-        {
-            title: 'Posts',
-            href: `/brands/${brand.id}/posts`,
-        },
-        {
-            title: 'Create Post',
-            href: `/brands/${brand.id}/posts/create`,
-        },
-    ] : [
-        {
-            title: 'Posts',
-            href: '/posts',
-        },
-        {
-            title: 'Create Post',
-            href: '/posts/create',
-        },
-    ];
+    const breadcrumbs: BreadcrumbItem[] = brand
+        ? [
+              { title: 'Brands', href: '/brands' },
+              { title: brand.name, href: `/brands/${brand.id}` },
+              { title: 'Posts', href: `/brands/${brand.id}/posts` },
+              { title: 'Create Post', href: `/brands/${brand.id}/posts/create` },
+          ]
+        : [
+              { title: 'Posts', href: '/posts' },
+              { title: 'Create Post', href: '/posts/create' },
+          ];
 
-    const { data, setData, post, processing, errors } = useForm<FormData>({
-        title: '',
-        url: '',
-        description: '',
-        brand_id: brandIdFromUrl,
-        status: 'draft',
-        posted_at: new Date().toISOString().split('T')[0],
+    const { data, setData, post, patch, processing, errors } = useForm<FormData>({
+        title: createdPost?.title || '',
+        url: createdPost?.url || '',
+        description: createdPost?.description || '',
+        brand_id: createdPost?.brand_id?.toString() || brandIdFromUrl,
+        status: createdPost?.status || 'draft',
+        posted_at: createdPost?.posted_at
+            ? new Date(createdPost.posted_at).toISOString().split('T')[0]
+            : new Date().toISOString().split('T')[0],
         post_type: 'blog',
     });
 
-    const [urlPreview, setUrlPreview] = useState('');
+    const [activeMainTab, setActiveMainTab] = useState(createdPost?.id ? 'prompts' : 'create-post');
+    const [activePromptTab, setActivePromptTab] = useState('prompt-suggested');
+    const [createdPostId, setCreatedPostId] = useState<number | null>(createdPost?.id || null);
+    const [prompts, setPrompts] = useState<PromptData[]>([]);
+    const [loadingPrompts, setLoadingPrompts] = useState(false);
+    const [selectedPrompts, setSelectedPrompts] = useState<number[]>([]);
+    const [isUpdatingPrompts, setIsUpdatingPrompts] = useState(false);
+
+    const polledPostIdRef = useRef<number | null>(null);
+
+    const brandId = brand?.id || (createdPost?.brand_id ?? 0);
+
+    useEffect(() => {
+        if (createdPost?.id && polledPostIdRef.current !== createdPost.id) {
+            polledPostIdRef.current = createdPost.id;
+            setCreatedPostId(createdPost.id);
+            setActiveMainTab('prompts');
+            setLoadingPrompts(true);
+            checkExistingPrompts(createdPost.id);
+        }
+    }, [createdPost?.id]);
+
+    const checkExistingPrompts = async (postId: number) => {
+        try {
+            const response = await axios.get(`/brands/${brandId}/posts/${postId}/prompts`);
+            const promptsData = response.data.prompts || [];
+
+            if (promptsData.length > 0) {
+                setPrompts(promptsData);
+                setLoadingPrompts(false);
+                const hasActive = promptsData.some((p: PromptData) => p.status === 'active');
+                setActivePromptTab(hasActive ? 'prompt-active' : 'prompt-suggested');
+            } else {
+                generatePrompts(postId);
+            }
+        } catch {
+            generatePrompts(postId);
+        }
+    };
+
+    const generatePrompts = async (postId: number) => {
+        setLoadingPrompts(true);
+        const description = createdPost?.description || data.description || data.url;
+
+        if (!description) {
+            setLoadingPrompts(false);
+            return;
+        }
+
+        try {
+            const response = await axios.post(`/brands/${brandId}/posts/${postId}/prompts/generate`, { description });
+
+            if (response.data.success && response.data.prompts) {
+                setPrompts(response.data.prompts);
+                const hasActive = response.data.prompts.some((p: PromptData) => p.status === 'active');
+                setActivePromptTab(hasActive ? 'prompt-active' : 'prompt-suggested');
+            } else {
+                setPrompts([]);
+            }
+        } catch {
+            setPrompts([]);
+        } finally {
+            setLoadingPrompts(false);
+        }
+    };
+
+    const handleSelectPrompt = (promptId: number, checked: boolean) => {
+        setSelectedPrompts((prev) => (checked ? [...prev, promptId] : prev.filter((id) => id !== promptId)));
+    };
+
+    const handleBulkAction = async (action: 'activate' | 'reject' | 'delete') => {
+        if (selectedPrompts.length === 0 || !createdPostId) return;
+        setIsUpdatingPrompts(true);
+        try {
+            await axios.post(`/brands/${brandId}/posts/${createdPostId}/prompts/bulk-update`, {
+                prompt_ids: selectedPrompts,
+                action,
+            });
+            await checkExistingPrompts(createdPostId);
+            setSelectedPrompts([]);
+        } catch {
+            // handle silently
+        } finally {
+            setIsUpdatingPrompts(false);
+        }
+    };
+
+    const formErrors = errors as typeof errors & { permission?: string; limit?: string };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // Use brand-specific route if brand is present, otherwise generic route
-        const submitRoute = brand ? `/brands/${brand.id}/posts` : '/posts';
-        post(submitRoute);
-    };
-
-    const handleUrlChange = (url: string) => {
-        // Auto-add https:// if user starts typing without protocol
-        let processedUrl = url.trim();
-        if (processedUrl && !processedUrl.match(/^https?:\/\//i)) {
-            // Check if user is typing a domain-like string (contains a dot or starts with www)
-            if (processedUrl.includes('.') || processedUrl.toLowerCase().startsWith('www')) {
-                processedUrl = 'https://' + processedUrl;
-            }
-        }
-        
-        setData('url', processedUrl);
-        setUrlPreview(processedUrl);
-        
-        // Auto-generate title from URL if title is empty
-        if (!data.title && processedUrl) {
-            try {
-                const urlObj = new URL(processedUrl);
-                const pathParts = urlObj.pathname.split('/').filter(Boolean);
-                const lastPart = pathParts[pathParts.length - 1] || urlObj.hostname;
-                const title = lastPart
-                    .replace(/[-_]/g, ' ')
-                    .replace(/\b\w/g, l => l.toUpperCase());
-                setData('title', title);
-            } catch {
-                // Invalid URL, ignore auto-title generation
-            }
+        if (createdPost?.id) {
+            patch(brand ? `/brands/${brand.id}/posts/${createdPost.id}` : `/posts/${createdPost.id}`, {
+                preserveScroll: true,
+            });
+        } else {
+            post(brand ? `/brands/${brand.id}/posts` : '/posts');
         }
     };
 
-    const isValidUrl = (url: string) => {
-        try {
-            new URL(url);
-            return true;
-        } catch {
-            return false;
+    const handleUrlChange = (value: string) => {
+        let processed = value.trim();
+        if (processed && !processed.match(/^https?:\/\//i)) {
+            if (processed.includes('.') || processed.toLowerCase().startsWith('www')) {
+                processed = 'https://' + processed;
+            }
         }
+        setData('url', processed);
     };
-    
+
     const [date, setDate] = useState<Date | undefined>(new Date());
-    const handleDateSelect = (selectedDate: Date | undefined) => {
-        setDate(selectedDate);
-    };
 
-    // Check if user or brand can create posts
-    if (!userCanCreatePosts || !canCreatePosts) {
+    // No-permission view — only block if the user themselves lacks permission
+    if (!userCanCreatePosts && !canCreatePosts) {
         return (
             <AppLayout breadcrumbs={breadcrumbs}>
                 <Head title="Create Post" />
-                
                 <div className="space-y-6">
                     <div className="flex items-center gap-4">
                         <Button variant="outline" size="sm" asChild>
-                            <Link href="/posts">
-                                <ArrowLeft className="h-4 w-4 mr-2" />
+                            <Link href={brand ? `/brands/${brand.id}/posts` : '/posts'}>
+                                <ArrowLeft className="mr-2 h-4 w-4" />
                                 Back to Posts
                             </Link>
                         </Button>
-                        
-                        <HeadingSmall 
-                            title="Post Creation Not Available" 
-                            description="Contact administrator for permissions"
-                        />
+                        <HeadingSmall title="Post Creation Not Available" description="Contact administrator for permissions" />
                     </div>
-
                     <Card>
                         <CardContent className="pt-6 space-y-4">
                             {!userCanCreatePosts && (
                                 <div className="p-4 bg-red-50 border border-red-200 rounded-md">
                                     <h3 className="font-semibold text-red-800 mb-2">User Permission Required</h3>
-                                    <p className="text-red-700 mb-2">
-                                        You don't have permission to create posts.
-                                    </p>
+                                    <p className="text-red-700 mb-2">You don't have permission to create posts.</p>
                                     {userPostCreationNote && (
-                                        <p className="text-red-600 text-sm mb-2">
-                                            Note: {userPostCreationNote}
-                                        </p>
+                                        <p className="text-red-600 text-sm mb-2">Note: {userPostCreationNote}</p>
                                     )}
                                     <p className="text-red-700">
                                         Please contact the administrator at{' '}
-                                        <a 
-                                            href={`mailto:${adminEmail}`} 
-                                            className="text-blue-600 hover:underline"
-                                        >
+                                        <a href={`mailto:${adminEmail}`} className="text-blue-600 hover:underline">
                                             {adminEmail}
-                                        </a>
-                                        {' '}to request post creation permissions.
+                                        </a>{' '}
+                                        to request post creation permissions.
                                     </p>
                                 </div>
                             )}
-
                             {!canCreatePosts && (
                                 <div className="anwser-ai">
-                                    <h2>Unlock visibility in AI answers for your brand/agency with wondershark.ai​</h2>
+                                    <h2>Unlock visibility in AI answers for your brand/agency with wondershark.ai</h2>
                                     <div className="ai-answer-img">
                                         <img src="/images/graph1.png" alt="" />
                                     </div>
-                                    <h3>Turn AI search into a predictable source of customers with done-for-you  prompts, content, and optimization tailored to your brand.​ </h3>
+                                    <h3>
+                                        Turn AI search into a predictable source of customers with done-for-you prompts, content,
+                                        and optimization tailored to your brand.
+                                    </h3>
                                     <ul>
-                                        <li><span><Check/></span> Wondershark.ai researches the exact prompts your ideal customers are asking tools like ChatGPT and Gemini, then builds content that positions your brand as  the default answer.​ </li>
-                                        <li><span><Check/></span> You get performance-focused posts every month, with a dedicated creative  strategist, scriptwriting, and full transparency on content and  creators.​</li>
-                                        <li><span><Check/></span> Campaign performance is tracked and optimized, and you can receive updates and scheduling notifications by SMS if enabled in your account.​ </li>
+                                        <li>
+                                            <span>
+                                                <Check />
+                                            </span>{' '}
+                                            Wondershark.ai researches the exact prompts your ideal customers are asking tools like
+                                            ChatGPT and Gemini, then builds content that positions your brand as the default answer.
+                                        </li>
+                                        <li>
+                                            <span>
+                                                <Check />
+                                            </span>{' '}
+                                            You get performance-focused posts every month, with a dedicated creative strategist,
+                                            scriptwriting, and full transparency on content and creators.
+                                        </li>
+                                        <li>
+                                            <span>
+                                                <Check />
+                                            </span>{' '}
+                                            Campaign performance is tracked and optimized, and you can receive updates and scheduling
+                                            notifications by SMS if enabled in your account.
+                                        </li>
                                     </ul>
                                     <div className="ai-answer-heading">
                                         <h4>Ready to see what AI visibility could do for your brand?</h4>
                                     </div>
-                                    <h5>“Pick a time on the calendar below and our team will walk you through how  Wondershark.ai can grow your brand with AI-driven visibility and  content.” </h5>
+                                    <h5>
+                                        "Pick a time on the calendar below and our team will walk you through how Wondershark.ai can
+                                        grow your brand with AI-driven visibility and content."
+                                    </h5>
                                     <div className="anwser-ai-calendar">
-                                        <Calendar mode="single" selected={date} onSelect={handleDateSelect} />
+                                        <Calendar mode="single" selected={date} onSelect={setDate} />
                                     </div>
                                 </div>
                             )}
@@ -226,210 +315,438 @@ export default function PostsCreate({
         );
     }
 
+    const backHref = brand ? `/brands/${brand.id}/posts` : '/posts';
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            {/* <Head title="Create Post" /> */}
-            
+            <Head title="Create Post" />
 
             <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                    <Button variant="outline" size="sm" asChild>
-                        <Link href={brand ? `/brands/${brand.id}/posts` : '/posts'}>
-                            <ArrowLeft className="h-4 w-4 mr-2" />
+                <Tabs value={activeMainTab} onValueChange={setActiveMainTab}>
+                    <TabsList className="add-prompt-lists border inline-flex mb-3">
+                        <Link href={backHref} className="post-bsck-btn flex items-center">
+                            <ArrowLeft className="mr-2 h-4 w-4" />
                             Back to Posts
                         </Link>
-                    </Button>
-                    
-                    <HeadingSmall 
-                        title="Create New Post"
-                        description="Add a new post to track AI citations"
-                    />
-                </div>
+                        <TabsTrigger value="create-post">{createdPost ? 'Edit Post' : 'Create Post'}</TabsTrigger>
+                        <TabsTrigger value="prompts" disabled={!createdPostId}>
+                            Prompts
+                        </TabsTrigger>
+                    </TabsList>
 
-                <div className="max-w-2xl">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <FileText className="h-5 w-5" />
-                                Post Information
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                {/* URL Field */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="url" className="text-sm font-medium">
-                                        Post URL *
-                                    </Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="url"
-                                            type="url"
-                                            placeholder="https://example.com/article"
-                                            value={data.url}
-                                            onChange={(e) => handleUrlChange(e.target.value)}
-                                            className={errors.url ? 'border-destructive' : ''}
-                                        />
-                                        {data.url && isValidUrl(data.url) && (
-                                            <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                                                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                    <TabsContent value="create-post">
+                        <div className="grid gap-6 lg:grid-cols-3">
+                            <div className="lg:col-span-2">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <FileText className="h-5 w-5" />
+                                            {createdPost ? 'Edit Post Details' : 'Post Details'}
+                                        </CardTitle>
+                                        {createdPost && (
+                                            <p className="text-sm text-muted-foreground mt-2">
+                                                Edit post details and manage prompts in the Prompts tab.
+                                            </p>
+                                        )}
+                                    </CardHeader>
+                                    <CardContent>
+                                        <form onSubmit={handleSubmit} className="space-y-6">
+                                            {/* Brand selector (only if multiple brands available) */}
+                                            {brands.length > 1 && (
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="brand_id">Brand *</Label>
+                                                    <Select
+                                                        value={data.brand_id}
+                                                        onValueChange={(v) => setData('brand_id', v)}
+                                                    >
+                                                        <SelectTrigger className="form-control">
+                                                            <SelectValue placeholder="Select brand" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {brands.map((b) => (
+                                                                <SelectItem key={b.id} value={b.id.toString()}>
+                                                                    <div className="flex items-center gap-2">
+                                                                        {b.name}
+                                                                        {!b.can_create_posts && (
+                                                                            <Badge variant="destructive" className="text-xs">
+                                                                                Restricted
+                                                                            </Badge>
+                                                                        )}
+                                                                    </div>
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    {errors.brand_id && (
+                                                        <p className="text-sm text-red-500">{errors.brand_id}</p>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="url">URL *</Label>
+                                                <Input
+                                                    id="url"
+                                                    type="url"
+                                                    value={data.url}
+                                                    onChange={(e) => handleUrlChange(e.target.value)}
+                                                    placeholder="https://example.com/post"
+                                                    className={errors.url ? 'border-red-500 form-control' : 'form-control'}
+                                                />
+                                                {errors.url && <p className="text-sm text-red-500">{errors.url}</p>}
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="post_type">Post Type *</Label>
+                                                <Select
+                                                    value={data.post_type}
+                                                    onValueChange={(v) => setData('post_type', v)}
+                                                >
+                                                    <SelectTrigger className="form-control">
+                                                        <SelectValue placeholder="Select post type" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="blog">Blog</SelectItem>
+                                                        <SelectItem value="forum">Forum</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                {errors.post_type && (
+                                                    <p className="text-sm text-red-500">{errors.post_type}</p>
+                                                )}
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="title">Title (optional)</Label>
+                                                <Input
+                                                    id="title"
+                                                    type="text"
+                                                    value={data.title}
+                                                    onChange={(e) => setData('title', e.target.value)}
+                                                    placeholder="Post title"
+                                                    className={errors.title ? 'border-red-500 form-control' : 'form-control'}
+                                                />
+                                                {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="description">Description (optional)</Label>
+                                                <Textarea
+                                                    id="description"
+                                                    value={data.description}
+                                                    onChange={(e) => setData('description', e.target.value)}
+                                                    placeholder="Brief description of the post content"
+                                                    rows={4}
+                                                    className={errors.description ? 'border-red-500 form-control' : 'form-control'}
+                                                />
+                                                {errors.description && (
+                                                    <p className="text-sm text-red-500">{errors.description}</p>
+                                                )}
+                                            </div>
+
+                                            <div className="grid gap-4 md:grid-cols-2">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="status">Status</Label>
+                                                    <Select
+                                                        value={data.status}
+                                                        onValueChange={(v) => setData('status', v)}
+                                                    >
+                                                        <SelectTrigger className="form-control">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="draft">Draft</SelectItem>
+                                                            <SelectItem value="published">Published</SelectItem>
+                                                            <SelectItem value="archived">Archived</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="posted_at">Posted Date</Label>
+                                                    <Input
+                                                        id="posted_at"
+                                                        type="date"
+                                                        value={data.posted_at}
+                                                        onChange={(e) => setData('posted_at', e.target.value)}
+                                                        className="form-control"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {formErrors.permission && (
+                                                <Alert variant="destructive">
+                                                    <AlertCircle className="h-4 w-4" />
+                                                    <AlertDescription>{formErrors.permission}</AlertDescription>
+                                                </Alert>
+                                            )}
+
+                                            {formErrors.limit && (
+                                                <Alert variant="destructive">
+                                                    <AlertCircle className="h-4 w-4" />
+                                                    <AlertDescription>{formErrors.limit}</AlertDescription>
+                                                </Alert>
+                                            )}
+
+                                            <div className="flex gap-2 pt-4">
+                                                <Button type="submit" disabled={processing} className="primary-btn">
+                                                    <Save />{' '}
+                                                    {processing
+                                                        ? createdPost
+                                                            ? 'Updating...'
+                                                            : 'Creating...'
+                                                        : createdPost
+                                                          ? 'Update Post'
+                                                          : 'Create Post'}
+                                                </Button>
+                                                <Link href={backHref}>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        className="cancle-btn primary-btn border-0"
+                                                    >
+                                                        <X /> Cancel
+                                                    </Button>
+                                                </Link>
+                                            </div>
+                                        </form>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            <div className="space-y-6">
+                                {brand && (
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="text-sm">Selected Brand</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-3">
+                                            <p className="font-medium">{brand.name}</p>
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <span>Post Creation:</span>
+                                                    <Badge variant={brand.can_create_posts ? 'default' : 'destructive'}>
+                                                        {brand.can_create_posts ? 'Allowed' : 'Restricted'}
+                                                    </Badge>
+                                                </div>
+                                                {brand.monthly_posts ? (
+                                                    <div className="flex items-center justify-between text-sm">
+                                                        <span>Monthly Limit:</span>
+                                                        <span>{brand.monthly_posts} posts</span>
+                                                    </div>
+                                                ) : null}
+                                                {brand.post_creation_note && (
+                                                    <div className="p-2 bg-muted rounded-md">
+                                                        <p className="text-xs text-muted-foreground">{brand.post_creation_note}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                )}
+
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-sm">How it works</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3 text-sm text-muted-foreground">
+                                        <div className="flex items-start gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
+                                            <p>Enter the post URL and details below</p>
+                                        </div>
+                                        <div className="flex items-start gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
+                                            <p>Brand post creation permissions and limits are checked</p>
+                                        </div>
+                                        <div className="flex items-start gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
+                                            <p>AI prompts will be generated automatically in the background</p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="prompts">
+                        <Card>
+                            <CardContent>
+                                {loadingPrompts ? (
+                                    <PromptGenerationLoader />
+                                ) : prompts.length === 0 ? (
+                                    <div className="py-12 text-center space-y-4">
+                                        <p className="text-muted-foreground">No prompts generated yet</p>
+                                        {!createdPost?.description && !data.description && (
+                                            <div className="max-w-md mx-auto p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                                <p className="text-sm text-blue-800">
+                                                    <strong>Tip:</strong> Add a description to the post in the "Create Post" tab to
+                                                    automatically generate AI prompts.
+                                                </p>
                                             </div>
                                         )}
                                     </div>
-                                    {errors.url && (
-                                        <p className="text-sm text-destructive">{errors.url}</p>
-                                    )}
-                                    {urlPreview && isValidUrl(urlPreview) && (
-                                        <div className="text-sm text-muted-foreground">
-                                            <a 
-                                                href={urlPreview} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer"
-                                                className="hover:text-primary flex items-center gap-1"
+                                ) : (
+                                    <Tabs value={activePromptTab} onValueChange={setActivePromptTab}>
+                                        <TabsList className="add-prompt-lists border inline-flex mb-3">
+                                            <TabsTrigger value="prompt-active">Active</TabsTrigger>
+                                            <TabsTrigger value="prompt-suggested">Suggested</TabsTrigger>
+                                            <TabsTrigger value="prompt-inactive">Inactive</TabsTrigger>
+                                        </TabsList>
+
+                                        {(['active', 'suggested', 'inactive'] as const).map((statusKey) => (
+                                            <TabsContent key={statusKey} value={`prompt-${statusKey}`}>
+                                                <Table className="default-table">
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead className="w-10">
+                                                                <Checkbox
+                                                                    onCheckedChange={(checked) => {
+                                                                        const filtered = prompts.filter(
+                                                                            (p) => p.status === statusKey,
+                                                                        );
+                                                                        setSelectedPrompts(
+                                                                            checked ? filtered.map((p) => p.id) : [],
+                                                                        );
+                                                                    }}
+                                                                />
+                                                            </TableHead>
+                                                            <TableHead>Prompt</TableHead>
+                                                            {statusKey === 'active' && (
+                                                                <>
+                                                                    <TableHead>Visibility</TableHead>
+                                                                    <TableHead>Sentiment</TableHead>
+                                                                    <TableHead>Position</TableHead>
+                                                                    <TableHead>Location</TableHead>
+                                                                    <TableHead>Volume</TableHead>
+                                                                </>
+                                                            )}
+                                                            {statusKey !== 'active' && (
+                                                                <>
+                                                                    <TableHead>Location</TableHead>
+                                                                    <TableHead>Created</TableHead>
+                                                                </>
+                                                            )}
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {prompts.filter((p) => p.status === statusKey).length > 0 ? (
+                                                            prompts
+                                                                .filter((p) => p.status === statusKey)
+                                                                .map((row) => (
+                                                                    <TableRow key={row.id}>
+                                                                        <TableCell>
+                                                                            <Checkbox
+                                                                                checked={selectedPrompts.includes(row.id)}
+                                                                                onCheckedChange={(checked) =>
+                                                                                    handleSelectPrompt(row.id, !!checked)
+                                                                                }
+                                                                            />
+                                                                        </TableCell>
+                                                                        <TableCell className="max-w-md">
+                                                                            {row.prompt_text}
+                                                                        </TableCell>
+                                                                        {statusKey === 'active' && (
+                                                                            <>
+                                                                                <TableCell>
+                                                                                    {row.visibility || 'N/A'}
+                                                                                </TableCell>
+                                                                                <TableCell>
+                                                                                    <Badge
+                                                                                        variant="secondary"
+                                                                                        className="bg-green-100 text-green-700"
+                                                                                    >
+                                                                                        â— {row.sentiment || 0}
+                                                                                    </Badge>
+                                                                                </TableCell>
+                                                                                <TableCell>
+                                                                                    #{row.position || 'N/A'}
+                                                                                </TableCell>
+                                                                                <TableCell>
+                                                                                    {row.location || 'N/A'}
+                                                                                </TableCell>
+                                                                                <TableCell>
+                                                                                    <div className="flex gap-1">
+                                                                                        {Array.from({ length: 4 }).map(
+                                                                                            (_, i) => (
+                                                                                                <span
+                                                                                                    key={i}
+                                                                                                    className={`h-3 w-1 rounded ${row.volume === 'high' ? 'bg-green-500' : row.volume === 'medium' ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                                                                                />
+                                                                                            ),
+                                                                                        )}
+                                                                                    </div>
+                                                                                </TableCell>
+                                                                            </>
+                                                                        )}
+                                                                        {statusKey !== 'active' && (
+                                                                            <>
+                                                                                <TableCell>
+                                                                                    {row.location || 'N/A'}
+                                                                                </TableCell>
+                                                                                <TableCell>
+                                                                                    {new Date(
+                                                                                        row.created_at,
+                                                                                    ).toLocaleDateString()}
+                                                                                </TableCell>
+                                                                            </>
+                                                                        )}
+                                                                    </TableRow>
+                                                                ))
+                                                        ) : (
+                                                            <TableRow>
+                                                                <TableCell
+                                                                    colSpan={statusKey === 'active' ? 7 : 4}
+                                                                    className="text-center py-8 text-muted-foreground"
+                                                                >
+                                                                    No {statusKey} prompts found
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )}
+                                                    </TableBody>
+                                                </Table>
+                                            </TabsContent>
+                                        ))}
+                                    </Tabs>
+                                )}
+
+                                {prompts.length > 0 && (
+                                    <div className={`prompts-action ${selectedPrompts.length > 0 ? 'active' : ''}`}>
+                                        <p>{selectedPrompts.length > 0 ? `${selectedPrompts.length} Selected` : '0 Select'}</p>
+                                        <div className="prompts-action-btns">
+                                            {activePromptTab !== 'prompt-active' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleBulkAction('activate')}
+                                                    disabled={isUpdatingPrompts || selectedPrompts.length === 0}
+                                                    className="active-ch"
+                                                >
+                                                    <CircleCheckBig /> Activate
+                                                </button>
+                                            )}
+                                            {activePromptTab === 'prompt-active' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleBulkAction('reject')}
+                                                    disabled={isUpdatingPrompts || selectedPrompts.length === 0}
+                                                    className="delete-ch"
+                                                >
+                                                    <Power /> Inactive
+                                                </button>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={() => handleBulkAction('delete')}
+                                                disabled={isUpdatingPrompts || selectedPrompts.length === 0}
+                                                className="delete-ch"
                                             >
-                                                <ExternalLink className="h-3 w-3" />
-                                                Preview URL
-                                            </a>
+                                                <Power /> Reject
+                                            </button>
                                         </div>
-                                    )}
-                                </div>
-
-                                {/* Post Type Field */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="post_type" className="text-sm font-medium">
-                                        Post Type *
-                                    </Label>
-                                    <Select 
-                                        value={data.post_type} 
-                                        onValueChange={(value) => setData('post_type', value)}
-                                    >
-                                        <SelectTrigger className={errors.post_type ? 'border-destructive' : ''}>
-                                            <SelectValue placeholder="Select post type" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="blog">Blog</SelectItem>
-                                            <SelectItem value="forum">Forum</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.post_type && (
-                                        <p className="text-sm text-destructive">{errors.post_type}</p>
-                                    )}
-                                </div>
-
-                                {/* Title Field */}
-                                {/* <div className="space-y-2">
-                                    <Label htmlFor="title" className="text-sm font-medium">
-                                        Post Title
-                                    </Label>
-                                    <Input
-                                        id="title"
-                                        placeholder="Enter post title (auto-generated from URL if empty)"
-                                        value={data.title}
-                                        onChange={(e) => setData('title', e.target.value)}
-                                        className={errors.title ? 'border-destructive' : ''}
-                                    />
-                                    {errors.title && (
-                                        <p className="text-sm text-destructive">{errors.title}</p>
-                                    )}
-                                </div> */}
-
-                                {/* Description Field */}
-                                {/* <div className="space-y-2">
-                                    <Label htmlFor="description" className="text-sm font-medium">
-                                        Description
-                                    </Label>
-                                    <Textarea
-                                        id="description"
-                                        placeholder="Brief description of the post content"
-                                        value={data.description}
-                                        onChange={(e) => setData('description', e.target.value)}
-                                        rows={3}
-                                        className={errors.description ? 'border-destructive' : ''}
-                                    />
-                                    {errors.description && (
-                                        <p className="text-sm text-destructive">{errors.description}</p>
-                                    )}
-                                </div> */}
-
-                                {/* Brand Selection */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="brand_id" className="text-sm font-medium">
-                                        Brand *
-                                    </Label>
-                                    <Select 
-                                        value={data.brand_id} 
-                                        onValueChange={(value) => setData('brand_id', value)}
-                                    >
-                                        <SelectTrigger className={errors.brand_id ? 'border-destructive' : ''}>
-                                            <SelectValue placeholder="Select a brand" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {brands.map((brand) => (
-                                                <SelectItem key={brand.id} value={brand.id.toString()}>
-                                                    {brand.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.brand_id && (
-                                        <p className="text-sm text-destructive">{errors.brand_id}</p>
-                                    )}
-                                </div>
-
-                                {/* Status and Date Row */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="status" className="text-sm font-medium">
-                                            Status
-                                        </Label>
-                                        <Select 
-                                            value={data.status} 
-                                            onValueChange={(value) => setData('status', value)}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="draft">Draft</SelectItem>
-                                                <SelectItem value="published">Published</SelectItem>
-                                                <SelectItem value="archived">Archived</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.status && (
-                                            <p className="text-sm text-destructive">{errors.status}</p>
-                                        )}
                                     </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="posted_at" className="text-sm font-medium">
-                                            Posted Date
-                                        </Label>
-                                        <Input
-                                            id="posted_at"
-                                            type="date"
-                                            value={data.posted_at}
-                                            onChange={(e) => setData('posted_at', e.target.value)}
-                                            className={errors.posted_at ? 'border-destructive' : ''}
-                                        />
-                                        {errors.posted_at && (
-                                            <p className="text-sm text-destructive">{errors.posted_at}</p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Submit Buttons */}
-                                <div className="flex items-center gap-3 pt-4">
-                                    <Button type="submit" disabled={processing}>
-                                        {processing ? 'Creating...' : 'Create Post'}
-                                    </Button>
-                                    <Button variant="outline" asChild>
-                                        <Link href={brand ? `/brands/${brand.id}/posts` : '/posts'}>Cancel</Link>
-                                    </Button>
-                                </div>
-                            </form>
-                        </CardContent>
-                    </Card>
-                </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
             </div>
         </AppLayout>
     );

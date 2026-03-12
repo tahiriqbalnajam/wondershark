@@ -19,7 +19,7 @@ class PostController extends Controller
      */
     public function index(Request $request)
     {
-        
+
         /** @var User $user */
         $user = Auth::user();
 
@@ -65,23 +65,24 @@ class PostController extends Controller
                         ->map(function ($group, $aiModel) {
                             $aiDetails = \App\Models\AiModel::where('name', $aiModel)->first();
                             // Collect all resources across all prompts for this model
-                            $allResources = $group->flatMap(fn($c) => $c->metadata['resources'] ?? [])->unique()->values()->toArray();
+                            $allResources = $group->flatMap(fn ($c) => $c->metadata['resources'] ?? [])->unique()->values()->toArray();
+
                             return [
-                                'id'               => $group->first()->id,
-                                'ai_model'         => $aiModel,
+                                'id' => $group->first()->id,
+                                'ai_model' => $aiModel,
                                 'ai_model_details' => $aiDetails,
-                                'is_mentioned'     => $group->where('is_mentioned', true)->count() > 0,
-                                'metadata'         => ['resources' => $allResources],
+                                'is_mentioned' => $group->where('is_mentioned', true)->count() > 0,
+                                'metadata' => ['resources' => $allResources],
                                 // Individual prompt results for the modal
-                                'prompt_results'   => $group->map(fn($c) => [
-                                    'id'           => $c->id,
-                                    'prompt_text'  => $c->prompt_text,
+                                'prompt_results' => $group->map(fn ($c) => [
+                                    'id' => $c->id,
+                                    'prompt_text' => $c->prompt_text,
                                     'is_mentioned' => $c->is_mentioned,
                                     'citation_url' => $c->citation_url,
-                                    'resources'    => $c->metadata['resources'] ?? [],
+                                    'resources' => $c->metadata['resources'] ?? [],
                                     'raw_response' => $c->metadata['raw_response'] ?? '',
-                                    'confidence'   => $c->metadata['confidence'] ?? 0,
-                                    'checked_at'   => $c->checked_at,
+                                    'confidence' => $c->metadata['confidence'] ?? 0,
+                                    'checked_at' => $c->checked_at,
                                 ])->values()->toArray(),
                             ];
                         })->values()->toArray(),
@@ -106,12 +107,10 @@ class PostController extends Controller
                      || $user->hasRole('agency_admin')
                      || $user->hasRole('brand_user');
 
-                     
-
-        if ( $user->hasRole('agency_member') &&
-            !in_array('agency_manager', $user->agencyMembership?->rights ?? []) &&
-            !in_array('agency_admin', $user->agencyMembership?->rights ?? []) &&
-            !in_array('brand_user', $user->agencyMembership?->rights ?? [] )
+        if ($user->hasRole('agency_member') &&
+            ! in_array('agency_manager', $user->agencyMembership?->rights ?? []) &&
+            ! in_array('agency_admin', $user->agencyMembership?->rights ?? []) &&
+            ! in_array('brand_user', $user->agencyMembership?->rights ?? [])
         ) {
             abort(403, 'You do not have permission to access this brand.');
         }
@@ -153,22 +152,23 @@ class PostController extends Controller
                         ->groupBy('ai_model')
                         ->map(function ($group, $aiModel) {
                             $aiDetails = \App\Models\AiModel::where('name', $aiModel)->first();
-                            $allResources = $group->flatMap(fn($c) => $c->metadata['resources'] ?? [])->unique()->values()->toArray();
+                            $allResources = $group->flatMap(fn ($c) => $c->metadata['resources'] ?? [])->unique()->values()->toArray();
+
                             return [
-                                'id'               => $group->first()->id,
-                                'ai_model'         => $aiModel,
+                                'id' => $group->first()->id,
+                                'ai_model' => $aiModel,
                                 'ai_model_details' => $aiDetails,
-                                'is_mentioned'     => $group->where('is_mentioned', true)->count() > 0,
-                                'metadata'         => ['resources' => $allResources],
-                                'prompt_results'   => $group->map(fn($c) => [
-                                    'id'           => $c->id,
-                                    'prompt_text'  => $c->prompt_text,
+                                'is_mentioned' => $group->where('is_mentioned', true)->count() > 0,
+                                'metadata' => ['resources' => $allResources],
+                                'prompt_results' => $group->map(fn ($c) => [
+                                    'id' => $c->id,
+                                    'prompt_text' => $c->prompt_text,
                                     'is_mentioned' => $c->is_mentioned,
                                     'citation_url' => $c->citation_url,
-                                    'resources'    => $c->metadata['resources'] ?? [],
+                                    'resources' => $c->metadata['resources'] ?? [],
                                     'raw_response' => $c->metadata['raw_response'] ?? '',
-                                    'confidence'   => $c->metadata['confidence'] ?? 0,
-                                    'checked_at'   => $c->checked_at,
+                                    'confidence' => $c->metadata['confidence'] ?? 0,
+                                    'checked_at' => $c->checked_at,
                                 ])->values()->toArray(),
                             ];
                         })->values()->toArray(),
@@ -182,7 +182,7 @@ class PostController extends Controller
     /**
      * Show the form for creating a new post for a specific brand.
      */
-    public function brandCreate(Brand $brand)
+    public function brandCreate(Request $request, Brand $brand)
     {
         /** @var User $user */
         $user = Auth::user();
@@ -201,8 +201,8 @@ class PostController extends Controller
         // Store selected brand in session
         session(['selected_brand_id' => $brand->id]);
 
-        // Check if user or brand can create posts
-        $canCreatePosts = $user->can_create_posts && $brand->can_create_posts;
+        // Check if user can create posts (brand-level restriction is shown as a warning in UI)
+        $canCreatePosts = $user->hasRole('admin') || $user->can_create_posts;
         $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
 
         // Get all brands for the user (agency or brand owner)
@@ -223,7 +223,7 @@ class PostController extends Controller
             'monthly_posts' => $b->monthly_posts,
         ]);
 
-        return Inertia::render('posts/create', [
+        $data = [
             'brands' => $allBrands,
             'selectedBrandId' => $brand->id,
             'canCreatePosts' => $canCreatePosts,
@@ -231,7 +231,23 @@ class PostController extends Controller
             'userCanCreatePosts' => $user->can_create_posts,
             'userPostCreationNote' => $user->post_creation_note,
             'brand' => $brand,
-        ]);
+        ];
+
+        // If post_id is provided, load the post data for the prompts tab
+        if ($request->has('post_id')) {
+            $post = Post::findOrFail($request->post_id);
+            $data['post'] = [
+                'id' => $post->id,
+                'title' => $post->title,
+                'url' => $post->url,
+                'description' => $post->description,
+                'status' => $post->status,
+                'posted_at' => $post->posted_at,
+                'brand_id' => $post->brand_id,
+            ];
+        }
+
+        return Inertia::render('posts/create', $data);
     }
 
     /**
@@ -317,7 +333,165 @@ class PostController extends Controller
             $request->description ?? ''
         );
 
-        return redirect()->route('brands.posts.index', $brand)->with('success', 'Post created successfully. Prompts are being generated in the background.');
+        return redirect()->route('brands.posts.create', ['brand' => $brand->id, 'post_id' => $post->id])
+            ->with('success', 'Post created successfully. Prompts are being generated in the background.');
+    }
+
+    /**
+     * Get prompts for a brand post (JSON API for the create page prompts tab).
+     */
+    public function brandGetPrompts(Brand $brand, Post $post)
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        $hasAccess = $user->hasRole('admin') ||
+                     $brand->agency_id === $user->id ||
+                     $brand->user_id === $user->id ||
+                     $user->hasRole('agency_member') ||
+                     $user->hasRole('agency_admin') ||
+                     $user->hasRole('brand_user');
+
+        if (! $hasAccess) {
+            abort(403);
+        }
+
+        $existingPrompts = $post->prompts()->get();
+
+        if ($existingPrompts->isEmpty()) {
+            try {
+                $postPromptService = app(\App\Services\PostPromptService::class);
+                $sessionId = session()->getId() ?: 'brand-'.uniqid();
+                $description = $post->description ?? $post->url ?? '';
+
+                $generatedPrompts = $postPromptService->generatePromptsFromMultipleModelsForPost(
+                    $post,
+                    $sessionId,
+                    $description
+                );
+
+                $prompts = collect($generatedPrompts)->map(fn ($p) => [
+                    'id' => $p->id,
+                    'prompt_text' => $p->prompt,
+                    'visibility' => $p->visibility ?? null,
+                    'sentiment' => $p->sentiment ?? null,
+                    'position' => $p->position ?? null,
+                    'location' => $p->location ?? null,
+                    'volume' => $p->volume ?? null,
+                    'status' => $p->status ?? 'suggested',
+                    'created_at' => $p->created_at,
+                ]);
+            } catch (\Exception $e) {
+                return response()->json(['prompts' => [], 'error' => $e->getMessage()]);
+            }
+        } else {
+            $prompts = $existingPrompts->map(fn ($p) => [
+                'id' => $p->id,
+                'prompt_text' => $p->prompt,
+                'visibility' => $p->visibility ?? null,
+                'sentiment' => $p->sentiment ?? null,
+                'position' => $p->position ?? null,
+                'location' => $p->location ?? null,
+                'volume' => $p->volume ?? null,
+                'status' => $p->status ?? 'suggested',
+                'created_at' => $p->created_at,
+            ]);
+        }
+
+        return response()->json(['prompts' => $prompts]);
+    }
+
+    /**
+     * Generate prompts for a brand post (JSON API).
+     */
+    public function brandGeneratePrompts(Request $request, Brand $brand, Post $post)
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        $hasAccess = $user->hasRole('admin') ||
+                     $brand->agency_id === $user->id ||
+                     $brand->user_id === $user->id ||
+                     $user->hasRole('agency_member') ||
+                     $user->hasRole('agency_admin') ||
+                     $user->hasRole('brand_user');
+
+        if (! $hasAccess) {
+            abort(403);
+        }
+
+        try {
+            $postPromptService = app(\App\Services\PostPromptService::class);
+            $sessionId = session()->getId() ?: 'brand-'.uniqid();
+            $description = $request->input('description') ?? $post->description ?? '';
+
+            $prompts = $postPromptService->generatePromptsFromMultipleModelsForPost(
+                $post,
+                $sessionId,
+                $description
+            );
+
+            return response()->json([
+                'success' => true,
+                'prompts' => collect($prompts)->map(fn ($p) => [
+                    'id' => $p->id,
+                    'prompt_text' => $p->prompt,
+                    'visibility' => $p->visibility ?? null,
+                    'sentiment' => $p->sentiment ?? null,
+                    'position' => $p->position ?? null,
+                    'location' => $p->location ?? null,
+                    'volume' => $p->volume ?? null,
+                    'status' => $p->status ?? 'suggested',
+                    'created_at' => $p->created_at,
+                ]),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Bulk update prompts status for a brand post (JSON API).
+     */
+    public function brandBulkUpdatePrompts(Request $request, Brand $brand, Post $post)
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        $hasAccess = $user->hasRole('admin') ||
+                     $brand->agency_id === $user->id ||
+                     $brand->user_id === $user->id ||
+                     $user->hasRole('agency_member') ||
+                     $user->hasRole('agency_admin') ||
+                     $user->hasRole('brand_user');
+
+        if (! $hasAccess) {
+            abort(403);
+        }
+
+        $request->validate([
+            'prompt_ids' => 'required|array',
+            'prompt_ids.*' => 'exists:brand_prompts,id',
+            'action' => 'required|in:activate,reject,delete',
+        ]);
+
+        try {
+            $prompts = \App\Models\PostPrompt::whereIn('id', $request->prompt_ids)
+                ->where('post_id', $post->id)
+                ->get();
+
+            foreach ($prompts as $prompt) {
+                match ($request->action) {
+                    'activate' => $prompt->update(['status' => 'active']),
+                    'reject' => $prompt->update(['status' => 'inactive']),
+                    'delete' => $prompt->delete(),
+                };
+            }
+
+            return response()->json(['success' => true, 'message' => 'Prompts updated successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 
     /**
