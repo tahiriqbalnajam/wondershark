@@ -1452,3 +1452,8 @@ img.w-5.h-5.rounded.object-contain {
     width: calc(var(--spacing)*6);
     height: calc(var(--spacing)*6);
 }
+
+.recharts-responsive-container svg.recharts-surface {
+    width: 104% !important;
+    margin-left: -21px;
+}
