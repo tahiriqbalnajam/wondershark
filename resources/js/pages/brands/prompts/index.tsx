@@ -26,9 +26,6 @@ import { countries } from '@/data/countries';
 import getUnicodeFlagIcon from 'country-flag-icons/unicode';
 import {
     Building2,
-    Eye,
-    Smile,
-    ChevronsUpDown,
     Trophy,
     MapPin,
     Power,
@@ -55,10 +52,11 @@ type BrandPrompt = {
     visibility: 'public' | 'private' | 'draft';
     country_code: string;
     is_active: boolean;
-    status?: 'suggested' | 'active' | 'inactive'; // Add status field
+    status?: 'suggested' | 'active' | 'inactive';
     session_id?: string | null;
     created_at: string;
     days_ago: number;
+    mentions_count?: number | null;
 };
 
 type Props = {
@@ -368,9 +366,6 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                             />
                                         </TableHead>
                                         <TableHead>Prompt</TableHead>
-                                        <TableHead><div className="flex items-center"><Eye className="w-4 mr-2" /> Visibility</div></TableHead>
-                                        <TableHead><div className="flex items-center"><Smile className="w-4 mr-2" /> Sentiment</div></TableHead>
-                                        <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2" /> Position</div></TableHead>
                                         <TableHead><div className="flex items-center"><Trophy className="w-4 mr-2" /> Mentions</div></TableHead>
                                         <TableHead><div className="flex items-center"><MapPin className="w-4 mr-2" /> Location</div></TableHead>
                                         <TableHead>Created</TableHead>
@@ -379,7 +374,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                 <TableBody>
                                     {activePrompts.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="text-center py-12">
+                                            <TableCell colSpan={5} className="text-center py-12">
                                                 <CircleCheckBig className="w-12 h-12 mx-auto text-gray-400 mb-4" />
                                                 <p className="text-gray-500 mb-2">No active prompts</p>
                                                 <p className="text-gray-400 text-sm">Activate prompts to see them here</p>
@@ -405,19 +400,8 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Badge variant="outline">{prompt.visibility}</Badge>
+                                                        {prompt.mentions_count != null ? prompt.mentions_count : 'N/A'}
                                                     </TableCell>
-                                                    <TableCell>
-                                                        <Badge className="sentiment-td">
-                                                            <span></span> {prompt.sentiment}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge className="position-td">
-                                                            <span>#</span> {prompt.position}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>N/A</TableCell>
                                                     <TableCell>
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>

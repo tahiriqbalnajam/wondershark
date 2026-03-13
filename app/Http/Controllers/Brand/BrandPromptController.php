@@ -23,10 +23,15 @@ class BrandPromptController extends Controller
         }
 
         $prompts = $brand->prompts()
+            ->with(['mentions' => function ($query) {
+                $query->where('entity_type', 'brand')
+                      ->orderBy('analyzed_at', 'desc');
+            }])
             ->orderBy('order')
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($prompt) {
+                $latestMention = $prompt->mentions->first();
                 return [
                     'id' => $prompt->id,
                     'prompt' => $prompt->prompt,
@@ -35,10 +40,11 @@ class BrandPromptController extends Controller
                     'visibility' => $prompt->visibility ?? 'public',
                     'country_code' => $prompt->country_code ?? 'US',
                     'is_active' => $prompt->is_active,
-                    'status' => $prompt->status ?? 'suggested', // Add status field
+                    'status' => $prompt->status ?? 'suggested',
                     'session_id' => $prompt->session_id,
                     'created_at' => $prompt->created_at,
                     'days_ago' => $prompt->created_at->diffInDays(now()),
+                    'mentions_count' => $latestMention ? $latestMention->mention_count : null,
                 ];
             });
 
