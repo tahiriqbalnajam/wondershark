@@ -292,7 +292,7 @@ export default function BrandEdit({ brand }: Props) {
               </div>
 
 
-
+{/*
 
               <div className="grid">
                 <div className="bg-white border rounded-lg px-4 py-7">
@@ -311,7 +311,7 @@ export default function BrandEdit({ brand }: Props) {
                     ))}
                   </div>
                 </div>
-              </div>
+              </div> */}
             </CardContent>
           </Card>
 
@@ -400,6 +400,19 @@ export default function BrandEdit({ brand }: Props) {
 
           {/* Actions */}
           <div className="lg:flex block justify-between items-center w-full mt-6">
+
+            <div className="lg:flex block gap-2">
+
+              <Button type="submit" disabled={processing} className='lg:w-auto w-full'>
+                <Save className="h-4 w-4 mr-2" /> {processing ? 'Saving...' : 'Save Changes'}
+              </Button>
+
+
+              <Button type="button" variant="outline" asChild className='lg:w-auto w-full lg:m-0 mb-3'>
+                <a href={`/brands/${brand.id}`}>Cancel</a>
+              </Button>
+            </div>
+
               <Button
                 className='lg:w-auto w-full lg:m-0 mb-3'
                 type="button"
@@ -412,17 +425,6 @@ export default function BrandEdit({ brand }: Props) {
               >
                 Delete Brand
               </Button>
-
-            <div className="lg:flex block gap-2">
-              <Button type="button" variant="outline" asChild className='lg:w-auto w-full lg:m-0 mb-3'>
-                <a href={`/brands/${brand.id}`}>Cancel</a>
-              </Button>
-
-              <Button type="submit" disabled={processing} className='lg:w-auto w-full'>
-                <Save className="h-4 w-4 mr-2" /> {processing ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </div>
-
           </div>
         </form>
       </div>
