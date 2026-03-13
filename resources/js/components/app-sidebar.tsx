@@ -6,17 +6,18 @@ import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { LogOut } from 'lucide-react';
 import { Link, router} from '@inertiajs/react';
 import { 
-    LayoutGrid, 
-    Users, 
-    Shield, 
-    Settings, 
-    FileText, 
-    Clock, 
-    BarChart3, 
-    MessageSquare, 
-    Package, 
+    LayoutGrid,
+    Users,
+    Shield,
+    Settings,
+    FileText,
+    Clock,
+    BarChart3,
+    MessageSquare,
+    Package,
     Building2,
-    CirclePlus
+    CirclePlus,
+    Terminal
 } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { usePage } from '@inertiajs/react';
@@ -216,6 +217,12 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
                     title: 'Job Monitor',
                     href: '/admin/jobs',
                     icon: Clock,
+                    permission: 'view-admin-panel',
+                },
+                {
+                    title: 'Console Commands',
+                    href: '/admin/console',
+                    icon: Terminal,
                     permission: 'view-admin-panel',
                 },
                 {
