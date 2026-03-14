@@ -591,7 +591,9 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                                 <span>#</span> --
                                                             </Badge>
                                                         </TableCell> */}
-                                                        <TableCell>--</TableCell>
+                                                        <TableCell>
+                                                            {prompt.mentions_count != null ? prompt.mentions_count : '--'}
+                                                        </TableCell>
                                                         <TableCell>
                                                             <div className="flex items-center gap-2">
                                                                 <span className="text-lg">{countryData.flag}</span>
