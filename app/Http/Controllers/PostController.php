@@ -135,7 +135,8 @@ class PostController extends Controller
                     'title' => $post->title,
                     'url' => $post->url,
                     'description' => $post->description,
-                    'status' => $post->status,
+                    'status' => $post->status,   
+                    'post_type' => $post->post_type,
                     'posted_at' => $post->posted_at,
                     'created_at' => $post->created_at,
                     'brand' => [

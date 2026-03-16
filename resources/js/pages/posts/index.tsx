@@ -342,6 +342,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                 <TableHead>Publication</TableHead>
                                                 {/* <TableHead>Brand</TableHead> */}
                                                 <TableHead>Status</TableHead>
+                                                <TableHead>Type</TableHead>
                                                 <TableHead>AI Citations</TableHead>
                                                 <TableHead>Posted Date</TableHead>
                                                 {/* <TableHead className="w-5"></TableHead> */}
@@ -397,6 +398,10 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                             {post.status}
                                                         </Badge>
                                                     </TableCell>
+                                                    <TableCell>
+                                                            {post.post_type}
+                                                    </TableCell>
+
                                                     <TableCell>
                                                         {renderCitationsCell(post)}
                                                     </TableCell>
@@ -466,9 +471,9 @@ export default function PostsIndex({ posts, brand }: Props) {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {posts.data.map((post) => (
+                                            {posts.data.map((post, index) => (
                                                 <TableRow key={post.id}>
-                                                    <TableCell className='text-center'>1</TableCell>
+                                                    <TableCell className='text-center'>{(posts.current_page - 1) * posts.per_page + index + 1}</TableCell>
                                                     {/* <TableCell>
                                                         <div className="space-y-1">
                                                             <div className="font-medium">
@@ -572,9 +577,9 @@ export default function PostsIndex({ posts, brand }: Props) {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {posts.data.map((post) => (
+                                            {posts.data.map((post, index) => (
                                                 <TableRow key={post.id}>
-                                                    <TableCell className='text-center'>1</TableCell>
+                                                    <TableCell className='text-center'>{(posts.current_page - 1) * posts.per_page + index + 1}</TableCell>
                                                     {/* <TableCell>
                                                         <div className="space-y-1">
                                                             <div className="font-medium">
