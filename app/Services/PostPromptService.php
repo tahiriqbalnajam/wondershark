@@ -111,7 +111,7 @@ class PostPromptService extends AIPromptService
     {
         $aiModels = $this->getEnabledAiModels();
         $allGeneratedPrompts = [];
-        $targetLimit = 10;
+        $targetLimit = 5;
         
         if ($aiModels->isEmpty()) {
             return [];

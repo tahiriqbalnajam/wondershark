@@ -565,16 +565,68 @@ CRITICAL INSTRUCTIONS:
     }
 
     /**
-     * Get mention-based visibility stats for a brand
+     * Build a zero-visibility stats array for a brand and all its accepted competitors.
+     * Used when no BrandMention data exists yet.
+     */
+    protected function buildZeroVisibilityStats(Brand $brand): array
+    {
+        $noTrends = [
+            'visibility_trend'  => 'new',
+            'sentiment_trend'   => 'new',
+            'position_trend'    => 'new',
+            'visibility_change' => 0,
+            'sentiment_change'  => 0,
+            'position_change'   => 0,
+        ];
+
+        $stats = [[
+            'id'                   => 0,
+            'entity_type'          => 'brand',
+            'entity_name'          => $brand->name,
+            'entity_url'           => $brand->website ?? '',
+            'visibility'           => 0,
+            'sentiment'            => null,
+            'position'             => 0,
+            'analyzed_at'          => null,
+            'trends'               => $noTrends,
+            'visibility_percentage'=> '0%',
+            'position_formatted'   => '#0',
+            'sentiment_level'      => 'N/A',
+            'mention_data'         => ['prompts_mentioned' => 0, 'total_prompts' => 0, 'total_mentions' => 0],
+        ]];
+
+        foreach ($brand->competitors()->accepted()->get() as $competitor) {
+            $stats[] = [
+                'id'                   => $competitor->id,
+                'entity_type'          => 'competitor',
+                'entity_name'          => $competitor->name,
+                'entity_url'           => $competitor->domain ? (str_starts_with($competitor->domain, 'http') ? $competitor->domain : 'https://'.$competitor->domain) : '',
+                'visibility'           => 0,
+                'sentiment'            => null,
+                'position'             => 0,
+                'analyzed_at'          => null,
+                'trends'               => $noTrends,
+                'visibility_percentage'=> '0%',
+                'position_formatted'   => '#0',
+                'sentiment_level'      => 'N/A',
+                'mention_data'         => ['prompts_mentioned' => 0, 'total_prompts' => 0, 'total_mentions' => 0],
+            ];
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Get mention-based visibility stats for a brand using Share of Voice (SOV).
      *
-     * This calculates visibility as: (prompts mentioning entity / total prompts) * 100
+     * Visibility = (entity total_mentions / all entities total_mentions) × 100
      */
     public function getMentionBasedVisibility(Brand $brand, ?int $days = 30, ?int $aiModelId = null): array
     {
         $startDate = now()->subDays($days);
-        $endDate = now();
+        $endDate   = now();
 
-        // Get total unique prompts analyzed in the time window
+        // Get total unique prompts that have mentions in the time window
         $totalPromptsQuery = BrandMention::where('brand_id', $brand->id)
             ->whereBetween('analyzed_at', [$startDate, $endDate]);
 
@@ -585,8 +637,8 @@ CRITICAL INSTRUCTIONS:
         $totalPrompts = $totalPromptsQuery->distinct('brand_prompt_id')->count('brand_prompt_id');
 
         if ($totalPrompts === 0) {
-            // Fall back to latest stored stats (filtered by ai_model_id if provided)
-            return $this->getLatestStatsWithTrends($brand, $aiModelId);
+            // No mention data at all — return 0% for brand + all accepted competitors
+            return $this->buildZeroVisibilityStats($brand);
         }
 
         // Get mention counts grouped by entity
@@ -611,23 +663,24 @@ CRITICAL INSTRUCTIONS:
         $mentionStats = $mentionStatsQuery->get();
 
         if ($mentionStats->isEmpty()) {
-            return $this->getLatestStatsWithTrends($brand, $aiModelId);
+            return $this->buildZeroVisibilityStats($brand);
         }
 
-        // Calculate total mentions across ALL entities (brand + competitors) for fair share of voice
+        // Index mention stats by competitor_id (null = brand) for easy lookup
+        $mentionsByCompetitorId = $mentionStats->keyBy(fn ($s) => $s->competitor_id ?? 'brand');
+
+        // Calculate total mentions across ALL entities (brand + competitors) for Share of Voice
         $totalAllMentions = $mentionStats->sum('total_mentions');
 
-        // Build visibility stats array
+        // Build visibility stats for entities that HAVE mentions
         $visibilityStats = [];
 
         foreach ($mentionStats as $stat) {
-            // Calculate visibility as share of voice across all entities
-            // This gives a fair comparison: brand and competitors compete for the same 100%
+            // Visibility = Share of Voice: this entity's mentions / all entities' mentions × 100
             $visibility = $totalAllMentions > 0
                 ? ($stat->total_mentions / $totalAllMentions) * 100
                 : 0;
 
-            // Get sentiment from competitive stats if available
             $competitiveStat = BrandCompetitiveStat::where('brand_id', $brand->id)
                 ->where('entity_type', $stat->entity_type)
                 ->when($stat->competitor_id, fn ($q) => $q->where('competitor_id', $stat->competitor_id))
@@ -639,61 +692,83 @@ CRITICAL INSTRUCTIONS:
                 ? 'https://'.$stat->entity_domain
                 : ($stat->entity_type === 'brand' ? $brand->website : '');
 
-            // Calculate position score based on average first-mention position
-            // Lower position = mentioned earlier = better ranking
-            // Convert to 1-10 scale where 1 is best (mentioned first)
-            $avgPosition = $stat->avg_position ?? 5000;
+            // Convert average character-position to 1–10 score (lower = earlier = better)
+            $avgPosition   = $stat->avg_position ?? 5000;
             $positionScore = min(10, max(1, round($avgPosition / 500, 1)));
 
-            // Determine sentiment: prefer avg from brand_mentions (populated after our fix),
-            // fall back to the competitive stat ONLY for the main brand. 
-            // For competitors, if mention sentiment is missing, explicitly leave as null so UI shows "N/A" instead of false 50 default.
             $mentionSentiment = isset($stat->avg_mention_sentiment) && $stat->avg_mention_sentiment !== null
                 ? (int) round($stat->avg_mention_sentiment)
                 : null;
             $displaySentiment = $mentionSentiment ?? ($stat->entity_type === 'brand' ? $competitiveStat?->sentiment : null);
 
-            // Build a temporary accessor-compatible object for sentiment_level
             $sentimentLevel = 'N/A';
             if ($displaySentiment !== null) {
-                $sentimentLevel = match(true) {
+                $sentimentLevel = match (true) {
                     $displaySentiment >= 80 => 'Very Positive',
                     $displaySentiment >= 60 => 'Positive',
                     $displaySentiment >= 40 => 'Neutral',
                     $displaySentiment >= 20 => 'Negative',
-                    default => 'Very Negative',
+                    default                 => 'Very Negative',
                 };
             }
 
             $visibilityStats[] = [
-                'id' => $competitiveStat->id ?? 0,
-                'entity_type' => $stat->entity_type,
-                'entity_name' => $stat->entity_name,
-                'entity_url' => $entityUrl,
-                'visibility' => round($visibility, 2),
-                'sentiment' => $displaySentiment,
-                'position' => round($positionScore, 1),
-                'analyzed_at' => now()->toDateTimeString(),
-                'trends' => $this->calculateTrendsForEntity($brand, $stat->entity_type, $stat->competitor_id, $days, $aiModelId, $competitiveStat),
-                'visibility_percentage' => round($visibility, 1).'%',
-                'position_formatted' => '#'.round($positionScore, 1),
-                'sentiment_level' => $sentimentLevel,
-                'mention_data' => [
-                    'prompts_mentioned' => $stat->prompts_mentioned,
-                    'total_prompts' => $totalPrompts,
-                    'total_mentions' => $stat->total_mentions,
+                'id'                   => $competitiveStat->id ?? 0,
+                'entity_type'          => $stat->entity_type,
+                'entity_name'          => $stat->entity_name,
+                'entity_url'           => $entityUrl,
+                'visibility'           => round($visibility, 2),
+                'sentiment'            => $displaySentiment,
+                'position'             => round($positionScore, 1),
+                'analyzed_at'          => now()->toDateTimeString(),
+                'trends'               => $this->calculateTrendsForEntity($brand, $stat->entity_type, $stat->competitor_id, $days, $aiModelId, $competitiveStat),
+                'visibility_percentage'=> round($visibility, 1).'%',
+                'position_formatted'   => '#'.round($positionScore, 1),
+                'sentiment_level'      => $sentimentLevel,
+                'mention_data'         => [
+                    'prompts_mentioned'  => $stat->prompts_mentioned,
+                    'total_prompts'      => $totalPrompts,
+                    'total_mentions'     => $stat->total_mentions,
                     'total_all_mentions' => $totalAllMentions,
-                    'share_of_voice' => round($visibility, 2),
+                    'share_of_voice'     => round($visibility, 2),
                 ],
             ];
         }
 
-        // Remove duplicates based on entity_name AND domain, preferring 'brand' type
+        // Ensure every accepted competitor appears — add 0% rows for those with no mentions
+        $competitors = $brand->competitors()->accepted()->get();
+        foreach ($competitors as $competitor) {
+            if ($mentionsByCompetitorId->has($competitor->id)) {
+                continue; // already in results
+            }
+
+            $visibilityStats[] = [
+                'id'                   => $competitor->id,
+                'entity_type'          => 'competitor',
+                'entity_name'          => $competitor->name,
+                'entity_url'           => $competitor->domain ? 'https://'.$competitor->domain : '',
+                'visibility'           => 0,
+                'sentiment'            => null,
+                'position'             => 0,
+                'analyzed_at'          => now()->toDateTimeString(),
+                'trends'               => $this->calculateTrendsForEntity($brand, 'competitor', $competitor->id, $days, $aiModelId, null),
+                'visibility_percentage'=> '0%',
+                'position_formatted'   => '#0',
+                'sentiment_level'      => 'N/A',
+                'mention_data'         => [
+                    'prompts_mentioned'  => 0,
+                    'total_prompts'      => $totalPrompts,
+                    'total_mentions'     => 0,
+                    'total_all_mentions' => $totalAllMentions,
+                    'share_of_voice'     => 0,
+                ],
+            ];
+        }
+
+        // Remove duplicates (prefer brand-type entry when name/domain collides)
         $visibilityStats = collect($visibilityStats)
             ->sortByDesc(fn ($item) => $item['entity_type'] === 'brand')
-            // First unique by domain (if valid url exists and not generic)
             ->unique(fn ($item) => $item['entity_url'] ? strtolower(parse_url($item['entity_url'], PHP_URL_HOST) ?? $item['entity_url']) : 'no-domain-'.$item['id'])
-            // Then unique by name
             ->unique(fn ($item) => strtolower(trim($item['entity_name'])))
             ->values()
             ->all();

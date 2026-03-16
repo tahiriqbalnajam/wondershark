@@ -1,5 +1,7 @@
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import { useEffect } from 'react';
+import { toast } from 'sonner';
 
 import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
@@ -100,6 +102,10 @@ type Props = {
     agencies: Agency[];
     brands: Brand[];
     aiModels: AiModel[];
+    flash?: {
+        success?: string;
+        error?: string;
+    };
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -113,7 +119,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function AdminPostsIndex({ posts, filters, agencies, brands, aiModels }: Props) {
+export default function AdminPostsIndex({ posts, filters, agencies, brands, aiModels, flash }: Props) {
     const { data, setData, processing } = useForm<Filters>({
         date_from: filters.date_from || '',
         date_to: filters.date_to || '',
@@ -121,6 +127,11 @@ export default function AdminPostsIndex({ posts, filters, agencies, brands, aiMo
         brand_id: filters.brand_id || 'all',
         ai_model: filters.ai_model || 'all',
     });
+
+    useEffect(() => {
+        if (flash?.success) toast.success(flash.success);
+        if (flash?.error) toast.error(flash.error);
+    }, [flash]);
 
     const getStatusColor = (status: string) => {
         switch (status) {

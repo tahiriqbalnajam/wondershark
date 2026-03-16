@@ -92,6 +92,10 @@ class PostController extends Controller
             'agencies' => $agencies,
             'brands' => $brands,
             'aiModels' => $aiModels,
+            'flash' => [
+                'success' => session('success'),
+                'error'   => session('error'),
+            ],
         ]);
     }
 
@@ -158,13 +162,38 @@ class PostController extends Controller
             'post_type' => $request->post_type,
         ]);
 
-        // Dispatch background job to generate 10 prompts and get citations
-        \App\Jobs\GeneratePostPromptsJob::dispatch($post);
+        // Generate prompts synchronously so they are immediately saved and activated
+        try {
+            $postPromptService = app(\App\Services\PostPromptService::class);
+            $sessionId = 'admin-' . uniqid();
 
-        // Redirect to the same create page with the post_id parameter
-        // Prompts will be generated asynchronously in the background
-        return redirect()->route('admin.posts.create', ['post_id' => $post->id])
-            ->with('success', 'Post created successfully! Prompts and citations will be generated in the background.');
+            $prompts = $postPromptService->generatePromptsFromMultipleModelsForPost(
+                $post,
+                $sessionId,
+                $post->description ?? ''
+            );
+
+            // Activate all generated prompts automatically
+            $promptIds = collect($prompts)->pluck('id')->filter()->toArray();
+            if (! empty($promptIds)) {
+                \App\Models\PostPrompt::whereIn('id', $promptIds)->update(['status' => 'active']);
+            }
+
+            $promptCount = count($promptIds);
+
+            // Dispatch citation check as background job (non-blocking)
+            \App\Jobs\CheckPostCitationsJob::dispatch($post);
+
+            $successMessage = "Post created successfully. {$promptCount} prompts have been automatically generated and activated.";
+        } catch (\Exception $e) {
+            \Log::error('Failed to generate prompts during post creation', [
+                'post_id' => $post->id,
+                'error'   => $e->getMessage(),
+            ]);
+            $successMessage = 'Post created successfully. Prompt generation failed — please try regenerating from the post detail page.';
+        }
+
+        return redirect()->route('admin.posts.index')->with('success', $successMessage);
     }
 
     /**

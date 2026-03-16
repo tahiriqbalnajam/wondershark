@@ -369,8 +369,8 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
     }, [aiModels]);
     const filteredCompetitiveStats = useMemo(() => {
         return competitiveStats.filter(stat => {
-            // Date filter
-            if (!isWithinDateRange(stat.analyzed_at)) return false;
+            // Date filter — allow null analyzed_at (0% placeholder rows with no data yet)
+            if (stat.analyzed_at && !isWithinDateRange(stat.analyzed_at)) return false;
 
             // Brand filter
             if (selectedBrand !== 'all') {

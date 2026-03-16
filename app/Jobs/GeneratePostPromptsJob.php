@@ -26,14 +26,22 @@ class GeneratePostPromptsJob implements ShouldQueue
     {
         try {
             Log::info('Generating prompts via queued job', ['post_id' => $this->post->id]);
-            
-            // Generate prompts. Service handles the limit of 10.
-            $service->generatePromptsFromMultipleModelsForPost(
+
+            // Generate prompts. Service handles the limit of 5.
+            $prompts = $service->generatePromptsFromMultipleModelsForPost(
                 $this->post,
                 'job-' . uniqid(),
                 $this->post->description ?? ''
             );
-            
+
+            // Activate all generated prompts automatically
+            $promptIds = collect($prompts)->pluck('id')->filter()->toArray();
+            if (!empty($promptIds)) {
+                \App\Models\PostPrompt::whereIn('id', $promptIds)
+                    ->update(['status' => 'active']);
+                Log::info('Activated prompts for post', ['post_id' => $this->post->id, 'count' => count($promptIds)]);
+            }
+
             // Trigger citation check for this newly prepared post
             CheckPostCitationsJob::dispatch($this->post);
         } catch (\Exception $e) {

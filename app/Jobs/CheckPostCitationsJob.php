@@ -43,8 +43,23 @@ class CheckPostCitationsJob implements ShouldQueue
 
     public function handle(CitationCheckService $service): void
     {
-        Log::info('Checking citations via queued job', ['post_id' => $this->post->id]);
+        Log::info('Checking citations via queued job', [
+            'post_id' => $this->post->id,
+            'status'  => $this->post->status,
+        ]);
+
         $service->runCitationCheck($this->post);
+
+        // Re-fetch current status from DB (serialized model may be stale)
+        $this->post->refresh();
+
+        // Promote draft posts to published after citations are processed
+        if ($this->post->status === 'draft') {
+            $this->post->update(['status' => 'published']);
+            Log::info('Post promoted from draft to published after citation check', [
+                'post_id' => $this->post->id,
+            ]);
+        }
     }
 
     /**
