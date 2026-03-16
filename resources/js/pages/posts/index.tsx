@@ -471,95 +471,79 @@ export default function PostsIndex({ posts, brand }: Props) {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {posts.data.map((post, index) => (
-                                                <TableRow key={post.id}>
-                                                    <TableCell className='text-center'>{(posts.current_page - 1) * posts.per_page + index + 1}</TableCell>
-                                                    {/* <TableCell>
-                                                        <div className="space-y-1">
-                                                            <div className="font-medium">
-                                                                {post.title || 'Untitled Post'}
+                                            {
+
+                                           
+                                            
+                                            posts.data
+                                                .filter(post => post.post_type === 'blog')
+                                                .map((post, index) => (
+                                                    <TableRow key={post.id}>
+                                                        <TableCell className='text-center'>{(posts.current_page - 1) * posts.per_page + index + 1}</TableCell>
+                                                        {/* ...existing code... */}
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <Building2 className="h-4 w-4 text-muted-foreground" />
+                                                                <span className="font-medium">{post.brand.name}</span>
                                                             </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge className={getStatusColor(post.status)}>
+                                                                {post.status}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {renderCitationsCell(post)}
+                                                        </TableCell>
+                                                        <TableCell>
                                                             <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                                <ExternalLink className="h-3 w-3" />
-                                                                <a 
-                                                                    href={post.url} 
-                                                                    target="_blank" 
-                                                                    rel="noopener noreferrer"
-                                                                    className="hover:text-primary truncate max-w-60"
-                                                                >
-                                                                    {post.url}
-                                                                </a>
+                                                                <Calendar className="h-3 w-3" />
+                                                                {formatDate(post.created_at)}
                                                             </div>
-                                                            {post.description && (
-                                                                <div className="text-xs text-muted-foreground line-clamp-1">
-                                                                    {post.description}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </TableCell> */}
-                                                    <TableCell>
-                                                        <div className="flex items-center gap-2">
-                                                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                                                            <span className="font-medium">{post.brand.name}</span>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge className={getStatusColor(post.status)}>
-                                                            {post.status}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {renderCitationsCell(post)}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                            <Calendar className="h-3 w-3" />
-                                                            {formatDate(post.created_at)}
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                                    <MoreVertical className="h-4 w-4" />
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem asChild>
-                                                                    <Link href={`/posts/${post.id}`}>
-                                                                        <Eye className="h-4 w-4 mr-2" />
-                                                                        View Details
-                                                                    </Link>
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem asChild>
-                                                                    <Link href={`/posts/${post.id}/edit`}>
-                                                                        <Edit className="h-4 w-4 mr-2" />
-                                                                        Edit
-                                                                    </Link>
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem asChild>
-                                                                    <Link href={`/posts/${post.id}/manage-prompts`}>
-                                                                        <MessageSquare className="h-4 w-4 mr-2" />
-                                                                        Manage Prompts
-                                                                    </Link>
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => handleStartAnalysis(post.id)}>
-                                                                    <BarChart3 className="h-4 w-4 mr-2" />
-                                                                    Industry Analysis
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuSeparator />
-                                                                <DropdownMenuItem
-                                                                    onClick={() => handleDelete(post.id)}
-                                                                    className="text-destructive"
-                                                                >
-                                                                    <Trash2 className="h-4 w-4 mr-2" />
-                                                                    Delete
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                                        <MoreVertical className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuItem asChild>
+                                                                        <Link href={`/posts/${post.id}`}>
+                                                                            <Eye className="h-4 w-4 mr-2" />
+                                                                            View Details
+                                                                        </Link>
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem asChild>
+                                                                        <Link href={`/posts/${post.id}/edit`}>
+                                                                            <Edit className="h-4 w-4 mr-2" />
+                                                                            Edit
+                                                                        </Link>
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem asChild>
+                                                                        <Link href={`/posts/${post.id}/manage-prompts`}>
+                                                                            <MessageSquare className="h-4 w-4 mr-2" />
+                                                                            Manage Prompts
+                                                                        </Link>
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleStartAnalysis(post.id)}>
+                                                                        <BarChart3 className="h-4 w-4 mr-2" />
+                                                                        Industry Analysis
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => handleDelete(post.id)}
+                                                                        className="text-destructive"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4 mr-2" />
+                                                                        Delete
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
                                         </TableBody>
                                     </Table>
                                 </TabsContent>
@@ -577,95 +561,75 @@ export default function PostsIndex({ posts, brand }: Props) {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {posts.data.map((post, index) => (
-                                                <TableRow key={post.id}>
-                                                    <TableCell className='text-center'>{(posts.current_page - 1) * posts.per_page + index + 1}</TableCell>
-                                                    {/* <TableCell>
-                                                        <div className="space-y-1">
-                                                            <div className="font-medium">
-                                                                {post.title || 'Untitled Post'}
+                                            {posts.data
+                                                .filter(post => post.post_type === 'forum')
+                                                .map((post, index) => (
+                                                    <TableRow key={post.id}>
+                                                        <TableCell className='text-center'>{(posts.current_page - 1) * posts.per_page + index + 1}</TableCell>
+                                                        {/* ...existing code... */}
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <Building2 className="h-4 w-4 text-muted-foreground" />
+                                                                <span className="font-medium">{post.brand.name}</span>
                                                             </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge className={getStatusColor(post.status)}>
+                                                                {post.status}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {renderCitationsCell(post)}
+                                                        </TableCell>
+                                                        <TableCell>
                                                             <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                                <ExternalLink className="h-3 w-3" />
-                                                                <a 
-                                                                    href={post.url} 
-                                                                    target="_blank" 
-                                                                    rel="noopener noreferrer"
-                                                                    className="hover:text-primary truncate max-w-60"
-                                                                >
-                                                                    {post.url}
-                                                                </a>
+                                                                <Calendar className="h-3 w-3" />
+                                                                {formatDate(post.created_at)}
                                                             </div>
-                                                            {post.description && (
-                                                                <div className="text-xs text-muted-foreground line-clamp-1">
-                                                                    {post.description}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </TableCell> */}
-                                                    <TableCell>
-                                                        <div className="flex items-center gap-2">
-                                                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                                                            <span className="font-medium">{post.brand.name}</span>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge className={getStatusColor(post.status)}>
-                                                            {post.status}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {renderCitationsCell(post)}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                            <Calendar className="h-3 w-3" />
-                                                            {formatDate(post.created_at)}
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                                    <MoreVertical className="h-4 w-4" />
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem asChild>
-                                                                    <Link href={`/posts/${post.id}`}>
-                                                                        <Eye className="h-4 w-4 mr-2" />
-                                                                        View Details
-                                                                    </Link>
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem asChild>
-                                                                    <Link href={`/posts/${post.id}/edit`}>
-                                                                        <Edit className="h-4 w-4 mr-2" />
-                                                                        Edit
-                                                                    </Link>
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem asChild>
-                                                                    <Link href={`/posts/${post.id}/manage-prompts`}>
-                                                                        <MessageSquare className="h-4 w-4 mr-2" />
-                                                                        Manage Prompts
-                                                                    </Link>
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => handleStartAnalysis(post.id)}>
-                                                                    <BarChart3 className="h-4 w-4 mr-2" />
-                                                                    Industry Analysis
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuSeparator />
-                                                                <DropdownMenuItem
-                                                                    onClick={() => handleDelete(post.id)}
-                                                                    className="text-destructive"
-                                                                >
-                                                                    <Trash2 className="h-4 w-4 mr-2" />
-                                                                    Delete
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                                        <MoreVertical className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuItem asChild>
+                                                                        <Link href={`/posts/${post.id}`}>
+                                                                            <Eye className="h-4 w-4 mr-2" />
+                                                                            View Details
+                                                                        </Link>
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem asChild>
+                                                                        <Link href={`/posts/${post.id}/edit`}>
+                                                                            <Edit className="h-4 w-4 mr-2" />
+                                                                            Edit
+                                                                        </Link>
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem asChild>
+                                                                        <Link href={`/posts/${post.id}/manage-prompts`}>
+                                                                            <MessageSquare className="h-4 w-4 mr-2" />
+                                                                            Manage Prompts
+                                                                        </Link>
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleStartAnalysis(post.id)}>
+                                                                        <BarChart3 className="h-4 w-4 mr-2" />
+                                                                        Industry Analysis
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => handleDelete(post.id)}
+                                                                        className="text-destructive"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4 mr-2" />
+                                                                        Delete
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
                                         </TableBody>
                                     </Table>
                                 </TabsContent>
