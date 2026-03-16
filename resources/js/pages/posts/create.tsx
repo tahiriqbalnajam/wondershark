@@ -323,7 +323,9 @@ export default function PostsCreate({
 
             <div className="space-y-6">
                 <Tabs value={activeMainTab} onValueChange={setActiveMainTab}>
-                    <TabsList className="add-prompt-lists border inline-flex mb-3">
+                   
+                   
+                   {/* <TabsList className="add-prompt-lists border inline-flex mb-3">
                         <Link href={backHref} className="post-bsck-btn flex items-center">
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Back to Posts
@@ -333,6 +335,7 @@ export default function PostsCreate({
                             Prompts
                         </TabsTrigger>
                     </TabsList>
+                    */}
 
                     <TabsContent value="create-post">
                         <div className="grid gap-6 lg:grid-cols-3">
@@ -428,7 +431,7 @@ export default function PostsCreate({
                                                 {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
                                             </div>
 
-                                            <div className="space-y-2">
+                                        { /*  <div className="space-y-2">
                                                 <Label htmlFor="description">Description (optional)</Label>
                                                 <Textarea
                                                     id="description"
@@ -441,9 +444,10 @@ export default function PostsCreate({
                                                 {errors.description && (
                                                     <p className="text-sm text-red-500">{errors.description}</p>
                                                 )}
-                                            </div>
+                                            </div> */}
 
                                             <div className="grid gap-4 md:grid-cols-2">
+                                                { /*
                                                 <div className="space-y-2">
                                                     <Label htmlFor="status">Status</Label>
                                                     <Select
@@ -459,7 +463,9 @@ export default function PostsCreate({
                                                             <SelectItem value="archived">Archived</SelectItem>
                                                         </SelectContent>
                                                     </Select>
-                                                </div>
+                                                </div>*/}
+
+                                                
 
                                                 <div className="space-y-2">
                                                     <Label htmlFor="posted_at">Posted Date</Label>
@@ -512,7 +518,7 @@ export default function PostsCreate({
                                     </CardContent>
                                 </Card>
                             </div>
-
+                         {/*                                    
                             <div className="space-y-6">
                                 {brand && (
                                     <Card>
@@ -564,6 +570,7 @@ export default function PostsCreate({
                                     </CardContent>
                                 </Card>
                             </div>
+                                */}
                         </div>
                     </TabsContent>
 
