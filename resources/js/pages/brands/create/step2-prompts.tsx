@@ -634,7 +634,7 @@ export default function Step2Prompts({
                         <TabsTrigger value="suggested">Suggested</TabsTrigger>
                         <TabsTrigger value="inactive">Inactive</TabsTrigger>
                     </TabsList>
-                    <AddPromptDialog brandId={undefined} className="add-prompt-btn" onPromptAdd={handleManualPromptAddWrapper} />
+                    <AddPromptDialog brandId={brandId} className="add-prompt-btn" onPromptAdd={handleManualPromptAddWrapper} />
                 </div>
                 <TabsContent value="active" className="active-table-prompt">
                     <Table className="default-table">
