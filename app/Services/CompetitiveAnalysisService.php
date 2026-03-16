@@ -565,55 +565,55 @@ CRITICAL INSTRUCTIONS:
     }
 
     /**
-     * Build a zero-visibility stats array for a brand and all its accepted competitors.
-     * Used when no BrandMention data exists yet.
+     * Fallback when no BrandMention data exists.
+     * Uses the most recent analysis session that contains BOTH the brand AND at least one competitor.
+     * This avoids using partial sessions (brand-only runs) that store 100% visibility.
+     * Falls back to getLatestStatsWithTrends if no complete session exists.
      */
-    protected function buildZeroVisibilityStats(Brand $brand): array
+    protected function buildFallbackStats(Brand $brand, ?int $aiModelId = null): array
     {
-        $noTrends = [
-            'visibility_trend'  => 'new',
-            'sentiment_trend'   => 'new',
-            'position_trend'    => 'new',
-            'visibility_change' => 0,
-            'sentiment_change'  => 0,
-            'position_change'   => 0,
-        ];
+        // Find the most recent analysis_session_id that has entries for both brand and competitor
+        $completeSession = DB::table('brand_competitive_stats')
+            ->where('brand_id', $brand->id)
+            ->whereNotNull('analysis_session_id')
+            ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
+            ->select('analysis_session_id')
+            ->groupBy('analysis_session_id')
+            ->havingRaw('SUM(entity_type = ?) > 0 AND SUM(entity_type = ?) > 0', ['brand', 'competitor'])
+            ->orderByRaw('MAX(analyzed_at) DESC')
+            ->first();
 
-        $stats = [[
-            'id'                   => 0,
-            'entity_type'          => 'brand',
-            'entity_name'          => $brand->name,
-            'entity_url'           => $brand->website ?? '',
-            'visibility'           => 0,
-            'sentiment'            => null,
-            'position'             => 0,
-            'analyzed_at'          => null,
-            'trends'               => $noTrends,
-            'visibility_percentage'=> '0%',
-            'position_formatted'   => '#0',
-            'sentiment_level'      => 'N/A',
-            'mention_data'         => ['prompts_mentioned' => 0, 'total_prompts' => 0, 'total_mentions' => 0],
-        ]];
+        if ($completeSession) {
+            $sessionStats = BrandCompetitiveStat::where('brand_id', $brand->id)
+                ->where('analysis_session_id', $completeSession->analysis_session_id)
+                ->with(['competitor'])
+                ->get();
 
-        foreach ($brand->competitors()->accepted()->get() as $competitor) {
-            $stats[] = [
-                'id'                   => $competitor->id,
-                'entity_type'          => 'competitor',
-                'entity_name'          => $competitor->name,
-                'entity_url'           => $competitor->domain ? (str_starts_with($competitor->domain, 'http') ? $competitor->domain : 'https://'.$competitor->domain) : '',
-                'visibility'           => 0,
-                'sentiment'            => null,
-                'position'             => 0,
-                'analyzed_at'          => null,
-                'trends'               => $noTrends,
-                'visibility_percentage'=> '0%',
-                'position_formatted'   => '#0',
-                'sentiment_level'      => 'N/A',
-                'mention_data'         => ['prompts_mentioned' => 0, 'total_prompts' => 0, 'total_mentions' => 0],
-            ];
+            $result = [];
+            foreach ($sessionStats as $stat) {
+                $trends    = $stat->getTrends();
+                $statArray = $stat->toArray();
+                if ($stat->entity_type === 'competitor' && $stat->competitor) {
+                    $statArray['entity_name'] = $stat->competitor->name;
+                    $statArray['entity_url']  = $stat->competitor->domain ?? '';
+                } elseif ($stat->entity_type === 'brand') {
+                    $statArray['entity_name'] = $brand->name;
+                    $statArray['entity_url']  = $brand->website ?? '';
+                }
+                $statArray['trends']               = $trends;
+                $statArray['visibility_percentage'] = $stat->visibility_percentage;
+                $statArray['position_formatted']    = $stat->position_formatted;
+                $statArray['sentiment_level']       = $stat->sentiment_level;
+                $result[] = $statArray;
+            }
+
+            usort($result, fn ($a, $b) => $b['visibility'] <=> $a['visibility']);
+
+            return $result;
         }
 
-        return $stats;
+        // No complete session — fall back to latest per-entity stats
+        return $this->getLatestStatsWithTrends($brand, $aiModelId);
     }
 
     /**
@@ -638,7 +638,7 @@ CRITICAL INSTRUCTIONS:
 
         if ($totalPrompts === 0) {
             // No mention data at all — return 0% for brand + all accepted competitors
-            return $this->buildZeroVisibilityStats($brand);
+            return $this->buildFallbackStats($brand, $aiModelId);
         }
 
         // Get mention counts grouped by entity
@@ -663,7 +663,7 @@ CRITICAL INSTRUCTIONS:
         $mentionStats = $mentionStatsQuery->get();
 
         if ($mentionStats->isEmpty()) {
-            return $this->buildZeroVisibilityStats($brand);
+            return $this->buildFallbackStats($brand, $aiModelId);
         }
 
         // Index mention stats by competitor_id (null = brand) for easy lookup

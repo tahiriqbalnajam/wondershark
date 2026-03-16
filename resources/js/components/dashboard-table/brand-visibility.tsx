@@ -60,12 +60,18 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
     // Sort by visibility (higher is better)
     const sortedStats = [...competitiveStats].sort((a, b) => (b.visibility ?? 0) - (a.visibility ?? 0));
 
-    // Apply limit if specified
-    const displayStats = limit ? sortedStats.slice(0, limit) : sortedStats;
+    // When a limit is set, always keep the main brand visible:
+    // Pin the brand row first, then fill remaining slots with top competitors.
+    const displayStats = (() => {
+        if (!limit) return sortedStats;
+        const brandRow = sortedStats.find(s => s.entity_type === 'brand');
+        const brandInTop = brandRow && sortedStats.indexOf(brandRow) < limit;
+        if (!brandRow || brandInTop) return sortedStats.slice(0, limit);
+        // Brand is outside the limit — pin it first, fill rest with top (limit-1) competitors
+        const competitors = sortedStats.filter(s => s.entity_type !== 'brand').slice(0, limit - 1);
+        return [brandRow, ...competitors];
+    })();
     const hasMore = limit && sortedStats.length > limit;
-
-
-    console.log('hasMore', sortedStats.length);
 
     // Helper function to get the color for a domain based on its index in entities array (same as chart)
     const getColorForDomain = (domain: string) => {
@@ -145,13 +151,17 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                 .replace(/^www\./, '')
                                 .split('/')[0];
                             const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
+                            // True rank in full sorted list (1-based)
+                            const trueRank = sortedStats.indexOf(stat) + 1;
+                            // Brand pinned outside its natural rank when it's first but trueRank > 1
+                            const isPinnedBrand = stat.entity_type === 'brand' && index === 0 && trueRank > 1;
                             return (
                                 <TableRow
                                     key={stat.id}
                                     onClick={() => onRowClick?.(cleanDomain)}
                                     onMouseEnter={() => onDomainHover?.(cleanDomain)}
                                     onMouseLeave={() => onDomainHover?.(null)}
-                                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                                    className={`cursor-pointer hover:bg-muted/50 transition-colors${stat.entity_type === 'brand' ? ' bg-blue-50/40' : ''}`}
                                 >
                                     <TableCell className="font-medium border-r border-gray-200 text-center">
                                         <div className="flex items-center justify-center">
@@ -160,8 +170,10 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                                     className="w-3 h-3 rounded-full"
                                                     style={{ backgroundColor: getColorForDomain(cleanDomain) }}
                                                 />
+                                            ) : isPinnedBrand ? (
+                                                <span className="text-xs text-muted-foreground">#{trueRank}</span>
                                             ) : (
-                                                <span>{index + 1}</span>
+                                                <span>{trueRank}</span>
                                             )}
                                         </div>
                                     </TableCell>
