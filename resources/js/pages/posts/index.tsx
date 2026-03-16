@@ -403,7 +403,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                     <TableCell>
                                                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                                                             <Calendar className="h-3 w-3" />
-                                                            {formatDate(post.posted_at)}
+                                                            {formatDate(post.created_at)}
                                                         </div>
                                                     </TableCell>
                                                     {/* <TableCell>
@@ -509,7 +509,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                     <TableCell>
                                                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                                                             <Calendar className="h-3 w-3" />
-                                                            {formatDate(post.posted_at)}
+                                                            {formatDate(post.created_at)}
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
@@ -615,7 +615,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                     <TableCell>
                                                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                                                             <Calendar className="h-3 w-3" />
-                                                            {formatDate(post.posted_at)}
+                                                            {formatDate(post.created_at)}
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
