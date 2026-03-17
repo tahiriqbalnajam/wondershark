@@ -27,18 +27,22 @@ interface CompetitiveStat {
     entity_name: string;
     entity_url: string;
     visibility: number;
+    sov: number;
     sentiment: number;
     position: number;
     analyzed_at: string;
     trends: {
         visibility_trend: 'up' | 'down' | 'stable' | 'new';
+        sov_trend: 'up' | 'down' | 'stable' | 'new';
         sentiment_trend: 'up' | 'down' | 'stable' | 'new';
         position_trend: 'up' | 'down' | 'stable' | 'new';
         visibility_change: number;
+        sov_change: number;
         sentiment_change: number;
         position_change: number;
     };
     visibility_percentage: string;
+    sov_percentage: string;
     position_formatted: string;
     sentiment_level: string;
 }
@@ -100,7 +104,24 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                     </TooltipTrigger>
                                     <TooltipContent className="w-50">
                                         <p className="text-xs text-center">
-                                            Percentage of chats mentioning the brand in the last 30 days
+                                            Average daily share of voice over the selected date range — mirrors the graph values
+                                        </p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TableHead>
+                            <TableHead className="w-28 border-r border-gray-200">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className="p-0 border-0 text-xs shadow-none bg-transparent hover:border-0"
+                                        >
+                                            SOV <Info className="h-3 w-3 inline-block" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="w-50">
+                                        <p className="text-xs text-center">
+                                            Share of Voice: entity mentions ÷ total market mentions × 100 over the selected period
                                         </p>
                                     </TooltipContent>
                                 </Tooltip>
@@ -204,6 +225,22 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                                 )}
                                             </span>
                                             <span className="text-xs font-bold flex-shrink-0">{stat.visibility != null ? `${Math.round(stat.visibility)}%` : 'N/A'}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="border-r border-gray-200 w-28">
+                                        <div className="flex items-center justify-between gap-1">
+                                            <span className="text-xs text-muted-foreground flex items-center gap-1 flex-shrink-0">
+                                                {stat.trends.sov_trend === "up" && (
+                                                    <ArrowUpRight className="h-4 w-4 text-green-600" />
+                                                )}
+                                                {stat.trends.sov_trend === "down" && (
+                                                    <ArrowDownRight className="h-4 w-4 text-red-600" />
+                                                )}
+                                                {stat.trends.sov_change !== 0 && stat.trends.sov_trend !== 'stable' && stat.trends.sov_trend !== 'new' && (
+                                                    <span className="whitespace-nowrap">{Math.abs(stat.trends.sov_change)}%</span>
+                                                )}
+                                            </span>
+                                            <span className="text-xs font-bold flex-shrink-0">{stat.sov != null ? `${Math.round(stat.sov)}%` : 'N/A'}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell className="border-r border-gray-200 w-28">

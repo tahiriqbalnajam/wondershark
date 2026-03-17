@@ -91,9 +91,9 @@ export function VisibilityChart({ data, entities, granularity = 'month', hovered
                                 textAnchor={visibilityData.length > 12 ? 'end' : 'middle'}
                                 height={visibilityData.length > 12 ? 80 : 30}
                             />
-                            <YAxis 
+                            <YAxis
                                 tick={{ fontSize: 12 }}
-                                domain={[0, 'dataMax + 5']}
+                                domain={yAxisDomain}
                                 tickFormatter={(value) => `${Math.round(Number(value))}%`}
                             />
                             <RechartsTooltip 
