@@ -735,6 +735,37 @@ CRITICAL INSTRUCTIONS:
             ];
         }
 
+        // Ensure the main brand always appears, even if it has no mention records (0% SOV)
+        $brandAlreadyPresent = collect($visibilityStats)->contains('entity_type', 'brand');
+        if (! $brandAlreadyPresent) {
+            $brandStat = BrandCompetitiveStat::where('brand_id', $brand->id)
+                ->where('entity_type', 'brand')
+                ->latest('analyzed_at')
+                ->first();
+
+            $visibilityStats[] = [
+                'id'                   => $brandStat->id ?? 0,
+                'entity_type'          => 'brand',
+                'entity_name'          => $brand->name,
+                'entity_url'           => $brand->website ?? '',
+                'visibility'           => 0,
+                'sentiment'            => $brandStat?->sentiment,
+                'position'             => 0,
+                'analyzed_at'          => now()->toDateTimeString(),
+                'trends'               => $this->calculateTrendsForEntity($brand, 'brand', null, $days, $aiModelId, $brandStat),
+                'visibility_percentage'=> '0%',
+                'position_formatted'   => '#0',
+                'sentiment_level'      => 'N/A',
+                'mention_data'         => [
+                    'prompts_mentioned'  => 0,
+                    'total_prompts'      => $totalPrompts,
+                    'total_mentions'     => 0,
+                    'total_all_mentions' => $totalAllMentions,
+                    'share_of_voice'     => 0,
+                ],
+            ];
+        }
+
         // Ensure every accepted competitor appears — add 0% rows for those with no mentions
         $competitors = $brand->competitors()->accepted()->get();
         foreach ($competitors as $competitor) {
