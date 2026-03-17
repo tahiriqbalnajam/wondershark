@@ -39,6 +39,27 @@ export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: 
             'http');
     }
 
+
+    if(!displayImage && user.logo_thumbnail) {
+         displayImage = user.logo_thumbnail.replace(
+            'http://wondershark.test/storage/http',
+            'http');
+
+        displayImage = displayImage.replace(
+            'https://app.wondershark.ai/storage/http',
+            'http');
+    }
+
+    if(!displayImage && user.avatar) {
+         displayImage = user.avatar.replace(
+            'http://wondershark.test/storage/http',
+            'http');
+
+        displayImage = displayImage.replace(
+            'https://app.wondershark.ai/storage/http',
+            'http');
+    }
+
     // Function to check if image is accessible
     const checkImageAccessibility = (url: string | null): Promise<boolean> => {
         return new Promise((resolve) => {
@@ -76,7 +97,14 @@ export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: 
             : null);
 
     // Use agency logo (user.logo or user.logo_thumbnail) for the avatar fallback
-    const agencyLogoUrl = user.logo ? `${user.logo}` : (user.logo_thumbnail ? `${user.logo_thumbnail}` : null);
+    let agencyLogoUrl = user.logo ? `${user.logo}` : (user.logo_thumbnail ? `${user.logo_thumbnail}` : null);
+
+     if (!agencyLogoUrl) {
+        agencyLogoUrl = selectedBrand?.website ? 
+            `https://img.logo.dev/${selectedBrand.website.replace(/^https?:\/\//, '').replace(/^www\./, '')}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA` 
+            : null;
+    }
+
 
     return (
         <>
