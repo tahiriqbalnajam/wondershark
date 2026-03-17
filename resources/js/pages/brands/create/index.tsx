@@ -348,6 +348,12 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
             return;
         }
 
+        if (currentStep === 3) {
+            return;
+        }
+
+        console.log('currentStep:', currentStep);
+
         // Step 5: Finalize brand (mark as completed)
         try {
             const response = await fetch(route('brands.update.step5', { brand: brandId }), {
