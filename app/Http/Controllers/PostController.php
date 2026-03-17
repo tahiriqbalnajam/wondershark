@@ -124,7 +124,6 @@ class PostController extends Controller
 
         $posts = Post::with(['brand', 'user', 'citations'])
             ->where('brand_id', $brand->id)
-            ->has('citations')
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
@@ -334,7 +333,7 @@ class PostController extends Controller
             $request->description ?? ''
         );
 
-        return redirect()->route('brands.posts.create', ['brand' => $brand->id, 'post_id' => $post->id])
+        return redirect()->route('brands.posts.index', ['brand' => $brand->id])
             ->with('success', 'Post created successfully. Prompts are being generated in the background.');
     }
 

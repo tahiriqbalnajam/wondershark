@@ -1,5 +1,5 @@
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 import HeadingSmall from '@/components/heading-small';
@@ -9,6 +9,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
     Tabs,
     TabsContent,
@@ -49,6 +50,23 @@ import {
     User,
     Globe
 } from 'lucide-react';
+import {
+    Drawer,
+    DrawerClose,
+    DrawerContent,
+    DrawerDescription,
+    DrawerFooter,
+    DrawerHeader,
+    DrawerTitle,
+    DrawerTrigger,
+} from "@/components/ui/drawer";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 type Post = {
     id: number;
@@ -86,6 +104,16 @@ type Post = {
             checked_at: string;
         }>;
     }>;
+};
+
+type FormData = {
+    title: string;
+    url: string;
+    description: string;
+    brand_id: string;
+    status: string;
+    posted_at: string;
+    post_type: string;
 };
 
 type Props = {
@@ -134,6 +162,17 @@ export default function PostsIndex({ posts, brand }: Props) {
 
     // Construct the create post URL - use brand-specific route if brand prop exists
     const createPostUrl = brand ? `/brands/${brand.id}/posts/create` : (brandId ? `/posts/create?brand_id=${brandId}` : '/posts/create');
+    const storeUrl = brand ? `/brands/${brand.id}/posts` : '/posts';
+
+    const { data, setData, post, processing, errors } = useForm<FormData>({
+        title: '',
+        url: '',
+        description: '',
+        brand_id: brandId || '',
+        status: 'draft',
+        posted_at: new Date().toISOString().split('T')[0],
+        post_type: 'blog',
+    });
 
     // Helper to get favicon URL from citation URL
     const getFaviconUrl = (citationUrl: string) => {
@@ -147,6 +186,9 @@ export default function PostsIndex({ posts, brand }: Props) {
 
     const [selectedCitation, setSelectedCitation] = useState<any | null>(null);
     const [isCitationModalOpen, setIsCitationModalOpen] = useState(false);
+    const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+    const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+    const [submitError, setSubmitError] = useState<string | null>(null);
 
     const handleCitationClick = (citation: any) => {
         setSelectedCitation(citation);
@@ -281,6 +323,34 @@ export default function PostsIndex({ posts, brand }: Props) {
         });
     };
 
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setSubmitMessage(null);
+        setSubmitError(null);
+        post(storeUrl, {
+            onSuccess: (response: any) => {
+                setSubmitMessage('Post created successfully!');
+                setIsCreatePostOpen(false);
+                // Assuming the response has the post data, redirect to post page
+                if (response.props?.post?.id) {
+                    //router.visit(`/posts/${response.props.post.id}`);
+
+                      setSubmitMessage('Post created successfully!');
+                        //setIsCreatePostOpen(false);
+                        router.visit(storeUrl);
+                        //setTimeout(() => router.visit(storeUrl), 2000);
+
+                } else {
+                    router.reload();
+                }
+            },
+            onError: (errors: any) => {
+                const errorMessages = Object.values(errors).flat().join(', ');
+                setSubmitError(errorMessages || 'Failed to create post. Please try again.');
+            },
+        });
+    };
+
     return (
         <AppLayout breadcrumbs={getBreadcrumbs(brand)}>
             <Head title={brand ? `${brand.name} - Posts` : "Posts"} />
@@ -293,11 +363,9 @@ export default function PostsIndex({ posts, brand }: Props) {
                     />
 
                     <div className="flex gap-3">
-                        <Button asChild>
-                           <Link href={createPostUrl} className='primary-btn'>
-                                <CirclePlus className="h-4 w-4 mr-2" />
-                                Create Post
-                            </Link> 
+                        <Button onClick={() => setIsCreatePostOpen(true)} className='primary-btn'>
+                            <CirclePlus className="h-4 w-4 mr-2" />
+                            Create Post
                         </Button>
                     </div>
                 </div>
@@ -716,6 +784,91 @@ export default function PostsIndex({ posts, brand }: Props) {
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* Create Post Drawer */}
+            <Drawer open={isCreatePostOpen} onOpenChange={setIsCreatePostOpen} direction="right">
+                <DrawerContent className="!inset-auto !right-0 !top-0 !bottom-0 !left-auto w-[500px] !rounded-l-lg !rounded-r-none">
+                    <DrawerHeader>
+                        <DrawerTitle>Create Post</DrawerTitle>
+                        <DrawerDescription>
+                            Fill in the details to create a new post.
+                        </DrawerDescription>
+                    </DrawerHeader>
+                    <form onSubmit={handleSubmit} className="space-y-6 p-6">
+                        {submitError && (
+                            <Alert variant="destructive">
+                                <AlertDescription>{submitError}</AlertDescription>
+                            </Alert>
+                        )}
+                        {submitMessage && (
+                            <Alert>
+                                <AlertDescription>{submitMessage}</AlertDescription>
+                            </Alert>
+                        )}
+                        <div className="space-y-2">
+                            <Label htmlFor="url">URL *</Label>
+                            <Input
+                                id="url"
+                                type="url"
+                                value={data.url}
+                                onChange={(e) => setData('url', e.target.value)}
+                                placeholder="https://example.com/post"
+                                className={errors.url ? 'border-red-500' : ''}
+                            />
+                            {errors.url && <p className="text-sm text-red-500">{errors.url}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="post_type">Post Type *</Label>
+                            <Select
+                                value={data.post_type}
+                                onValueChange={(v) => setData('post_type', v)}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select post type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="blog">Blog</SelectItem>
+                                    <SelectItem value="forum">Forum</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {errors.post_type && <p className="text-sm text-red-500">{errors.post_type}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="title">Title (optional)</Label>
+                            <Input
+                                id="title"
+                                type="text"
+                                value={data.title}
+                                onChange={(e) => setData('title', e.target.value)}
+                                placeholder="Post title"
+                                className={errors.title ? 'border-red-500' : ''}
+                            />
+                            {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="posted_at">Posted Date</Label>
+                            <Input
+                                id="posted_at"
+                                type="date"
+                                value={data.posted_at}
+                                onChange={(e) => setData('posted_at', e.target.value)}
+                            />
+                        </div>
+
+                        <DrawerFooter>
+                            <Button type="submit" disabled={processing} className="primary-btn">
+                                Create Post
+                            </Button>
+                            <DrawerClose asChild>
+                                <Button variant="outline">Cancel</Button>
+                            </DrawerClose>
+                        </DrawerFooter>
+                    </form>
+                </DrawerContent>
+            </Drawer>
 
         </AppLayout>
     );
