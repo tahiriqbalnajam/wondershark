@@ -113,6 +113,11 @@ class RecalculateBrandVisibility extends Command
             ->where('analysis_completed_at', '>=', now()->subDays($days))
             ->get();
 
+        // Delete existing mentions for these prompts before re-extracting
+        // to avoid duplicates when re-running the command
+        $promptIds = $prompts->pluck('id');
+        \App\Models\BrandMention::whereIn('brand_prompt_id', $promptIds)->delete();
+
         foreach ($prompts as $prompt) {
             // Generate a session ID for this batch
             $sessionId = Str::uuid()->toString();

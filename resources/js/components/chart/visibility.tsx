@@ -142,7 +142,7 @@ export function VisibilityChart({ data, entities, granularity = 'month', hovered
                             {chartEntities.map((entity, index) => {
                                 const isHovered = hoveredDomain === entity.domain;
                                 const isOtherHovered = hoveredDomain && hoveredDomain !== entity.domain;
-                                
+
                                 return (
                                     <Line
                                         key={entity.domain}
@@ -152,6 +152,8 @@ export function VisibilityChart({ data, entities, granularity = 'month', hovered
                                         strokeWidth={isHovered ? 4 : 2}
                                         strokeOpacity={isOtherHovered ? 0.2 : 1}
                                         name={entity.name}
+                                        connectNulls={false}
+                                        dot={false}
                                     />
                                 );
                             })}

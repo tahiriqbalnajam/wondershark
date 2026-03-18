@@ -419,10 +419,10 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                     date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
                 };
 
-                // Add visibility for each entity
+                // Add visibility for each entity (explicitly 0 for missing data to keep line continuous)
                 entities.forEach(entity => {
                     const dayData = historicalStats[dateStr];
-                    dataPoint[entity.domain] = dayData[entity.domain]?.visibility || 0;
+                    dataPoint[entity.domain] = dayData[entity.domain]?.visibility ?? 0;
                 });
 
                 return dataPoint;
@@ -483,19 +483,28 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
     const filteredVisibilityChartData = useMemo(() => {
         if (!historicalStats) return visibilityChartData;
 
+        const allEntities = visibilityChartData.entities;
+
         const filteredDates = Object.keys(historicalStats).filter(date =>
             isWithinDateRange(date)
         ).sort();
 
         const data = filteredDates.map(dateStr => {
             const date = new Date(dateStr + 'T00:00:00Z');
-            const row: any = {
+            const row: Record<string, string | number> = {
                 date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
             };
 
+            // Pre-fill all entities with 0 to ensure continuous line rendering
+            allEntities.forEach(entity => {
+                if (selectedBrand !== 'all' && !entity.domain.includes(selectedBrand)) return;
+                row[entity.domain] = 0;
+            });
+
+            // Override with actual visibility values (including explicit 0s from the database)
             Object.entries(historicalStats[dateStr]).forEach(([domain, stats]) => {
                 if (selectedBrand !== 'all' && !domain.includes(selectedBrand)) return;
-                row[domain] = stats.visibility;
+                row[domain] = stats.visibility ?? 0;
             });
 
             return row;
@@ -505,7 +514,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
             ...visibilityChartData,
             data,
         };
-    }, [historicalStats, selectedDateRange, customDateRange, selectedBrand]);
+    }, [historicalStats, selectedDateRange, customDateRange, selectedBrand, visibilityChartData]);
 
     type AnyPrompt = Brand['prompts'][0] | PostPromptItem;
     const [selectedPrompt, setSelectedPrompt] = useState<AnyPrompt | null>(null);
