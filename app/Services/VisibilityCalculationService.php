@@ -344,9 +344,19 @@ class VisibilityCalculationService
     /**
      * Find mentions of search terms in text
      */
+    /**
+     * Normalize text for matching: lowercase and strip apostrophes/curly quotes
+     * so "Lay's" matches search term "Lays", "McDonald's" matches "McDonalds", etc.
+     */
+    protected function normalizeForSearch(string $text): string
+    {
+        return strtolower(str_replace(["\u{2019}", "\u{2018}", "'", "`"], '', $text));
+    }
+
     protected function findMentionsInText(string $text, array $searchTerms, ?string $domain = null): array
     {
         $textLower = strtolower($text);
+        $textNorm  = $this->normalizeForSearch($text);
         $found = false;
         $count = 0;
         $firstPosition = null;
@@ -355,15 +365,25 @@ class VisibilityCalculationService
         // Search for name variations
         foreach ($searchTerms as $term) {
             $termLower = strtolower($term);
+            $termNorm  = $this->normalizeForSearch($term);
+
+            // Try exact match first, then fall back to apostrophe-normalized match
+            // (handles "Lay's" in text when search term is "Lays", and vice-versa)
             $termCount = substr_count($textLower, $termLower);
+            if ($termCount === 0) {
+                $termCount = substr_count($textNorm, $termNorm);
+            }
 
             if ($termCount > 0) {
                 $found = true;
                 $count += $termCount;
 
-                // Find first position
+                // Find first position — try exact match first, then normalized
                 if ($firstPosition === null) {
                     $pos = strpos($textLower, $termLower);
+                    if ($pos === false) {
+                        $pos = strpos($textNorm, $termNorm);
+                    }
                     if ($pos !== false) {
                         $firstPosition = $pos;
                         // Extract context (100 chars before and after)
