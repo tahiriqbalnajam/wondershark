@@ -30,6 +30,7 @@ type Post = {
     description?: string;
     status: 'published' | 'draft' | 'archived';
     posted_at: string;
+    post_type: string;
     brand_id: number;
     brand: {
         id: number;

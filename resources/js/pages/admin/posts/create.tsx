@@ -60,6 +60,7 @@ type Props = {
         status: string;
         posted_at: string;
         brand_id: number;
+        post_type: string;
     };
 };
 
@@ -97,7 +98,7 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
         brand_id: createdPost?.brand_id?.toString() || '',
         status: createdPost?.status || 'draft',
         posted_at: createdPost?.posted_at ? new Date(createdPost.posted_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        post_type: 'blog',
+        post_type: createdPost?.post_type || 'blog',
     });
 
     const [selectedAgency, setSelectedAgency] = useState('all');
