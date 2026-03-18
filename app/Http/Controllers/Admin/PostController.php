@@ -66,7 +66,6 @@ class PostController extends Controller
                     'status' => $post->status,
                     'posted_at' => $post->posted_at,
                     'created_at' => $post->created_at,
-                    'post_type' => $post->post_type,
                     'brand' => [
                         'id' => $post->brand->id,
                         'name' => $post->brand->name,
@@ -301,7 +300,6 @@ class PostController extends Controller
             'description' => 'nullable|string|max:1000',
             'status' => 'required|in:published,draft,archived',
             'posted_at' => 'nullable|date',
-            'post_type' => 'required|in:blog,forum',
         ]);
 
         // Check if the brand can create posts (for admin override)
@@ -314,7 +312,7 @@ class PostController extends Controller
             'description' => $request->description,
             'status' => $request->status,
             'posted_at' => $request->posted_at,
-            'post_type' => $request->post_type,
+            'post_type' => $request->post_type ?? $post->post_type ?? 'blog',
         ]);
 
         return redirect()->route('admin.posts.create', ['post_id' => $post->id])
