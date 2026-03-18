@@ -76,6 +76,7 @@ type Post = {
     status: 'Published' | 'Draft' | 'Archived';
     posted_at: string;
     created_at: string;
+    post_type: string;
     brand: {
         id: number;
         name: string;
