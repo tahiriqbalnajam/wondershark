@@ -109,6 +109,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                     </TooltipContent>
                                 </Tooltip>
                             </TableHead>
+                            {/* SOV column — hidden until SOV logic is reworked
                             <TableHead className="w-28 border-r border-gray-200">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -126,6 +127,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                     </TooltipContent>
                                 </Tooltip>
                             </TableHead>
+                            */}
                             <TableHead className="w-28 border-r border-gray-200">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -227,6 +229,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                             <span className="text-xs font-bold flex-shrink-0">{stat.visibility != null ? `${Math.round(stat.visibility)}%` : 'N/A'}</span>
                                         </div>
                                     </TableCell>
+                                    {/* SOV cell — hidden until SOV logic is reworked
                                     <TableCell className="border-r border-gray-200 w-28">
                                         <div className="flex items-center justify-between gap-1">
                                             <span className="text-xs text-muted-foreground flex items-center gap-1 flex-shrink-0">
@@ -243,6 +246,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                             <span className="text-xs font-bold flex-shrink-0">{stat.sov != null ? `${Math.round(stat.sov)}%` : 'N/A'}</span>
                                         </div>
                                     </TableCell>
+                                    */}
                                     <TableCell className="border-r border-gray-200 w-28">
                                         <div className="flex items-center justify-between gap-1">
                                             <span className="text-xs text-muted-foreground flex items-center gap-1 flex-shrink-0">
@@ -263,6 +267,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                     </TableCell>
                                     <TableCell className="border-r border-gray-200 w-28">
                                         <div className="flex items-center justify-between gap-1">
+                                            {/* Position trend — hidden until position trend logic is reworked
                                             <span className="text-xs text-muted-foreground flex items-center gap-1 flex-shrink-0">
                                                 {stat.trends.position_trend === "up" && (
                                                     <ArrowUpRight className="h-4 w-4 text-green-600" />
@@ -274,6 +279,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                                     <span className="whitespace-nowrap">{Math.abs(stat.trends.position_change)}%</span>
                                                 )}
                                             </span>
+                                            */}
                                             <span className="text-xs font-bold flex-shrink-0">{stat.position_formatted || 'N/A'}</span>
                                         </div>
                                     </TableCell>
