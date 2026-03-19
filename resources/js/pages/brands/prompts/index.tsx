@@ -613,7 +613,22 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                             </Badge>
                                                         </TableCell> */}
                                                         <TableCell>
-                                                            {prompt.mentions_count != null ? prompt.mentions_count : '--'}
+                                                            { /* prompt.mentions_count != null ? prompt.mentions_count : '--' */}
+                                                            <div className="flex items-center gap-1 justify-center">
+                                                                <div style={{ display: 'flex', alignItems: 'flex-end', height: '22px' }}>
+                                                                    {[...Array(5)].map((_, i) => {
+                                                                        // Heights for wifi-like bars: 6, 10, 14, 18, 22px
+                                                                        const heights = [6, 10, 14, 18, 22];
+                                                                        return (
+                                                                            <span
+                                                                                key={i}
+                                                                                style={{ height: `${heights[i]}px` }}
+                                                                                className={`inline-block w-1 mx-0.5 rounded bg-gray-300 ${prompt.mentions_count && prompt.mentions_count > i ? 'bg-orange-600' : 'bg-gray-200'}`}
+                                                                            />
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
                                                         </TableCell>
                                                         <TableCell>
                                                             <div className="flex items-center gap-2">
