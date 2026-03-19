@@ -802,6 +802,17 @@ class CompetitorController extends Controller
                         'temperature' => 0.3,
                         'num_search_results' => 10, // Required for sonar models
                     ]);
+            } elseif (in_array($aiModel->name, ['gemini', 'google', 'google-ai'])) {
+                $model = $aiModel->api_config['model'] ?? 'gemini-2.0-flash';
+                $response = Http::timeout(60)
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
+                        'contents' => [['parts' => [['text' => $prompt]]]],
+                        'generationConfig' => [
+                            'temperature' => 0.3,
+                            'maxOutputTokens' => 4000,
+                            'responseMimeType' => 'application/json',
+                        ],
+                    ]);
             } else {
                 // OpenAI or other models
                 $response = Http::timeout(60)
@@ -832,8 +843,8 @@ class CompetitorController extends Controller
             $data = $response->json();
             $content = '';
 
-            if ($aiModel->name === 'perplexity') {
-                $content = $data['choices'][0]['message']['content'] ?? '';
+            if (in_array($aiModel->name, ['gemini', 'google', 'google-ai'])) {
+                $content = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
             } else {
                 $content = $data['choices'][0]['message']['content'] ?? '';
             }
