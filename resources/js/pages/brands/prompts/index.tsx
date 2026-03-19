@@ -632,7 +632,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                         </TableCell>
                                                         <TableCell>
                                                             <div className="flex items-center gap-2">
-                                                                <span className="text-lg">{countryData.flag}</span>
+                                                              { /*   <span className="text-lg">{countryData.flag}</span>*/}
                                                                 <span className="text-sm">{countryData.name}</span>
                                                             </div>
                                                         </TableCell>
