@@ -238,16 +238,15 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
     return items;
 };
 
+
 const getDocsFilesNavItems = (permissions: ReturnType<typeof usePermissions>): NavItem[] => {
     const items: NavItem[] = [];
-
     // Docs & Files - available to all authenticated users
-    items.push({
+    /* items.push({
         title: 'Docs & Files',
         href: '/docs-files',
         icon: FileText,
-    });
-
+    }); */
     return items;
 };
 

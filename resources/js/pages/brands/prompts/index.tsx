@@ -72,6 +72,8 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
     const isAgencyMember = userRoles.includes('agency_member');
 
     const [selectedPrompts, setSelectedPrompts] = useState<number[]>([]);
+    // Sorting state for volume column in suggested tab
+    const [suggestedVolumeSort, setSuggestedVolumeSort] = useState<'asc' | 'desc'>('desc');
     const [isLoading, setIsLoading] = useState(false);
     const [currentTab, setCurrentTab] = useState<'suggested' | 'active' | 'inactive'>(() => {
         if (typeof window !== 'undefined') {
@@ -551,13 +553,32 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                 {/* <TableHead><div className="flex items-center"><Eye className="w-4 mr-2" /> Visibility</div></TableHead>
                                                 <TableHead><div className="flex items-center"><Smile className="w-4 mr-2" /> Sentiment</div></TableHead>
                                                 <TableHead><div className="flex items-center"><ChevronsUpDown className="w-4 mr-2" /> Position</div></TableHead> */}
-                                                <TableHead><div className="flex items-center"><Trophy className="w-4 mr-2" /> Volume</div></TableHead>
+                                                <TableHead>
+                                                    <button
+                                                        type="button"
+                                                        className="flex items-center focus:outline-none"
+                                                        onClick={() => setSuggestedVolumeSort(suggestedVolumeSort === 'asc' ? 'desc' : 'asc')}
+                                                    >
+                                                        <Trophy className="w-4 mr-2" /> Volume
+                                                        <span className="ml-1">
+                                                            {suggestedVolumeSort === 'asc' ? '▲' : '▼'}
+                                                        </span>
+                                                    </button>
+                                                </TableHead>
                                                 <TableHead><div className="flex items-center"><MapPin className="w-4 mr-2" /> Location</div></TableHead>
                                                 <TableHead>Actions</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {suggestedPrompts.map((prompt) => {
+                                            {[...suggestedPrompts]
+                                                .sort((a, b) => {
+                                                    const aCount = a.mentions_count ?? 0;
+                                                    const bCount = b.mentions_count ?? 0;
+                                                    return suggestedVolumeSort === 'asc'
+                                                        ? aCount - bCount
+                                                        : bCount - aCount;
+                                                })
+                                                .map((prompt) => {
                                                 const countryData = getCountryData(prompt.country_code);
                                                 return (
                                                     <TableRow key={prompt.id}>
