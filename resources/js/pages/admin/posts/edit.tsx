@@ -75,7 +75,7 @@ const Edit: React.FC<Props> = ({ post, agencies, brands }) => {
 
     useEffect(() => {
         // Set initial agency selection based on post's brand
-        if (post.brand) {
+        if (post.brand && post.brand.agency_id != null) {
             setSelectedAgency(post.brand.agency_id.toString());
             setFilteredBrands(brands.filter(brand => brand.agency_id === post.brand.agency_id));
         } else {
