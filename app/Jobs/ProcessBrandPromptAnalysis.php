@@ -19,6 +19,11 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
     public int $tries = 3;
 
     /**
+     * Delete the job if the BrandPrompt model no longer exists (e.g. user was deleted).
+     */
+    public bool $deleteWhenMissingModels = true;
+
+    /**
      * Create a new job instance.
      */
     public function __construct(
@@ -168,10 +173,13 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
             'attempts' => $this->tries,
         ]);
 
-        // Mark as failed
-        $this->brandPrompt->update([
-            'analysis_failed_at' => now(),
-            'analysis_error' => $exception->getMessage(),
-        ]);
+        // Re-fetch to avoid updating a deleted record (e.g. if user was deleted)
+        $prompt = BrandPrompt::find($this->brandPrompt->id);
+        if ($prompt) {
+            $prompt->update([
+                'analysis_failed_at' => now(),
+                'analysis_error' => $exception->getMessage(),
+            ]);
+        }
     }
 }

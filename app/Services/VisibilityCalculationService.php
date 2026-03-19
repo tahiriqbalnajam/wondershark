@@ -32,8 +32,30 @@ class VisibilityCalculationService
         $brandDomain = $this->extractDomain($brand->website);
         $brandNames = $this->getBrandSearchTerms($brand);
 
-        // Check if the brand itself is mentioned
+        // Check if the brand itself is mentioned in the AI response text
         $brandMentionData = $this->findMentionsInText($aiResponse, $brandNames, $brandDomain);
+
+        // If not found in text, check if brand domain appears in the cited resources
+        if (! $brandMentionData['found'] && $brandDomain) {
+            $resources = $brandPrompt->resources;
+            if (is_string($resources)) {
+                $resources = json_decode($resources, true) ?? [];
+            }
+            if (is_array($resources)) {
+                $domainLower = strtolower($brandDomain);
+                foreach ($resources as $resourceUrl) {
+                    if (is_string($resourceUrl) && str_contains(strtolower($resourceUrl), $domainLower)) {
+                        $brandMentionData = [
+                            'found' => true,
+                            'count' => 1,
+                            'first_position' => null,
+                            'context' => 'Cited as resource: ' . $resourceUrl,
+                        ];
+                        break;
+                    }
+                }
+            }
+        }
 
         if ($brandMentionData['found']) {
             $mention = BrandMention::create([

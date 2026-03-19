@@ -248,22 +248,15 @@ class UserController extends Controller
 
     /**
      * Remove the specified user from storage.
+     * All related data (brands, prompts, posts, files, etc.) is cascade-deleted at the DB level.
+     * Any queued analysis jobs for this user's brand prompts are automatically discarded
+     * because ProcessBrandPromptAnalysis has $deleteWhenMissingModels = true.
      */
     public function destroy(User $user): RedirectResponse
     {
         // Prevent admin from deleting themselves
         if ($user->id === Auth::id()) {
             return back()->withErrors(['error' => 'You cannot delete your own account.']);
-        }
-
-        // Check if user has critical data
-        $brandsCount = $user->brands()->count();
-        $postsCount = $user->posts()->count();
-
-        if ($brandsCount > 0 || $postsCount > 0) {
-            return back()->withErrors([
-                'error' => "Cannot delete user. They have {$brandsCount} brands and {$postsCount} posts associated. Please transfer or delete these first.",
-            ]);
         }
 
         $user->delete();
