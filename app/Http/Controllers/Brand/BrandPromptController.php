@@ -8,6 +8,7 @@ use App\Models\Brand;
 use App\Models\BrandPrompt;
 use App\Services\AiModelDistributionService;
 use App\Services\AIPromptService;
+use App\Services\BrandContextService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -401,12 +402,24 @@ class BrandPromptController extends Controller
                 'count' => $count,
             ]);
 
-            // Generate prompts using AI
+            // Step 1: Extract structured brand context from the website
+            $contextService = app(BrandContextService::class);
+            $brandContext = $contextService->extractContext($brand->website, $aiProvider);
+
+            Log::info('Brand context extracted', [
+                'brand_id' => $brand->id,
+                'context_keys' => array_keys(array_filter($brandContext)),
+                'has_context' => ! empty(array_filter($brandContext)),
+            ]);
+
+            // Step 2: Generate prompts using the extracted brand context
             $generatedPrompts = $aiService->generatePromptsForWebsite(
                 $brand->website,
                 $sessionId,
                 $aiProvider,
-                $brand->description ?? ''
+                $brand->description ?? '',
+                null,
+                $brandContext
             );
 
             // Get distribution service

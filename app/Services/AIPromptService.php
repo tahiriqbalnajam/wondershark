@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Log;
 
 class AIPromptService
 {
-    public function generatePromptsForWebsite(string $website, string $sessionId, string $provider = 'openai', string $description = '', ?int $promptCount = null): array
+    public function generatePromptsForWebsite(string $website, string $sessionId, string $provider = 'openai', string $description = '', ?int $promptCount = null, ?array $brandContext = null): array
     {
         $aiModel = $this->getAiModelConfig($provider);
 
@@ -19,7 +19,7 @@ class AIPromptService
             return [];
         }
 
-        $prompt = $this->buildPrompt($website, $description, $promptCount ?? $aiModel->prompts_per_brand);
+        $prompt = $this->buildPrompt($website, $description, $promptCount ?? $aiModel->prompts_per_brand, $brandContext);
 
         try {
             $response = $this->callAiProvider($aiModel, $prompt);
@@ -120,8 +120,12 @@ class AIPromptService
         }
     }
 
-    protected function buildPrompt(string $website, string $description = '', int $promptCount = 25): string
+    protected function buildPrompt(string $website, string $description = '', int $promptCount = 25, ?array $brandContext = null): string
     {
+        if ($brandContext && array_filter($brandContext)) {
+            return $this->buildPromptFromContext($brandContext, $website, $promptCount);
+        }
+
         $industryContext = $description ? "\n\n=== CRITICAL INDUSTRY CONTEXT ===\nThe business operates in the following industry/sector: {$description}\nALL generated statements MUST be relevant to this specific industry context. Do NOT generate generic health, wellness, or unrelated industry statements.\nFocus EXCLUSIVELY on user problems, solutions, and search behaviors relevant to: {$description}" : '';
 
         return "Given a website {$website} and a desired number of statements {$promptCount}, analyze the website's content to identify key themes, products, benefits, problems solved, and target user needs. Then, generate {$promptCount} unique, generic statements (a mix of questions and declarative phrases) that reflect natural user intents, as if potential customers are seeking solutions where the website's offerings would be highly relevant.{$industryContext}
@@ -146,6 +150,84 @@ class AIPromptService
                 - ALL statements must be highly relevant to the specified industry
 
                 Generate exactly {$promptCount} statements:";
+    }
+
+    /**
+     * Build a richer prompt when structured brand context is available.
+     */
+    protected function buildPromptFromContext(array $context, string $website, int $promptCount): string
+    {
+        $brandName = $context['brand_name'] ?? '';
+        $tagline = $context['tagline'] ?? '';
+        $industry = $context['industry'] ?? '';
+        $targetAudience = $context['target_audience'] ?? '';
+        $toneOfVoice = $context['tone_of_voice'] ?? '';
+        $productsServices = implode(', ', $context['products_services'] ?? []);
+        $valuePropositions = implode('; ', $context['value_propositions'] ?? []);
+        $keywords = implode(', ', $context['keywords'] ?? []);
+
+        $contextBlock = "=== BRAND CONTEXT ===";
+        if ($brandName) {
+            $contextBlock .= "\nBrand: {$brandName}";
+        }
+        if ($tagline) {
+            $contextBlock .= "\nTagline: {$tagline}";
+        }
+        if ($industry) {
+            $contextBlock .= "\nIndustry: {$industry}";
+        }
+        if ($productsServices) {
+            $contextBlock .= "\nProducts/Services: {$productsServices}";
+        }
+        if ($targetAudience) {
+            $contextBlock .= "\nTarget Audience: {$targetAudience}";
+        }
+        if ($toneOfVoice) {
+            $contextBlock .= "\nTone of Voice: {$toneOfVoice}";
+        }
+        if ($valuePropositions) {
+            $contextBlock .= "\nValue Propositions: {$valuePropositions}";
+        }
+        if ($keywords) {
+            $contextBlock .= "\nKey Terms: {$keywords}";
+        }
+
+        $brandNameInstruction = $brandName
+            ? "Do NOT mention '{$brandName}' or any specific brand/company names."
+            : "Do NOT mention any specific brand or company names.";
+
+        return "You are an expert in AI search behavior and user intent research. Using the brand context below, generate {$promptCount} highly relevant search statements that the target audience would realistically use when looking for solutions in this space.
+
+{$contextBlock}
+
+Generate exactly {$promptCount} unique statements (a natural mix of questions and declarative search phrases) that:
+
+1. {$brandNameInstruction} Keep all statements fully generic.
+2. Directly reflect the problems, needs, and goals of: {$targetAudience}
+3. Are grounded in the industry and product/service space: {$industry}
+4. Highlight the pain points and desired outcomes that the brand's value propositions address.
+5. Are concise (under 20 words each) and sound like real user searches.
+6. Cover diverse search intents: problem discovery, solution comparison, how-to, best options, recommendations.
+7. Incorporate industry-specific terminology and the key terms listed above naturally.
+8. CRITICAL: Every statement must be tightly relevant to this specific industry and audience — no generic or off-topic results.
+
+Requirements:
+- Return ONLY the statements, one per line
+- No numbering, bullets, or other formatting
+- No explanations or additional text
+- Output should be spreadsheet compatible (each statement on a new line)
+
+Generate exactly {$promptCount} statements:";
+    }
+
+    /**
+     * Expose AI provider call for use by dependent services (e.g. BrandContextService).
+     */
+    public function callAI(AiModel $aiModel, string $prompt): string
+    {
+        $response = $this->callAiProvider($aiModel, $prompt);
+
+        return $response->text;
     }
 
     protected function parseQuestions(string $content): array
