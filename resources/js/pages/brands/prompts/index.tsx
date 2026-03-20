@@ -1,6 +1,7 @@
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 
 import { AddPromptDialog } from '@/components/brand/add-prompt-dialog';
 import { Button } from '@/components/ui/button';
@@ -298,6 +299,22 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
     }
     const allSelected = selectedPrompts.length === currentPrompts.length && currentPrompts.length > 0;
 
+    // Export active prompts to Excel
+    const handleExportActivePrompts = () => {
+        // Prepare data for export
+        const exportData = activePrompts.map(prompt => ({
+            ID: prompt.id,
+            Prompt: prompt.prompt,
+            Mentions: prompt.mentions_count ?? 'N/A',
+            Location: getCountryData(prompt.country_code).name,
+            Created: Math.floor(prompt.days_ago) === 0 ? 'Today' : Math.floor(prompt.days_ago) === 1 ? '1 day' : `${Math.floor(prompt.days_ago)} days`,
+        }));
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Active Prompts');
+        XLSX.writeFile(workbook, `${brand.name}-active-prompts.xlsx`);
+    };
+
     return (
         <AppLayout title={`${brand.name} Prompts`}>
             <Head title={`${brand.name} - Prompts`} />
@@ -351,9 +368,21 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                 )}
                                 <TabsTrigger value="inactive">Inactive ({inactivePrompts.length})</TabsTrigger>
                             </TabsList>
-                            {(isAdmin || isBrandOrAgency || isAgencyMember) && (
-                                <AddPromptDialog brandId={brand.id} className="add-prompt-btn" onPromptAdd={handleManualPromptAdd} />
-                            )}
+                            <div className="flex items-center gap-2">
+                                {(isAdmin || isBrandOrAgency || isAgencyMember) && (
+                                    <AddPromptDialog brandId={brand.id} className="add-prompt-btn" onPromptAdd={handleManualPromptAdd} />
+                                )}
+                                { /* currentTab === 'active' && (  }
+                                    <button
+                                        type="button"
+                                        className="export-prompts-btn border px-2 py-1 rounded-sm bg-gray-200 text-gray-950 hover:bg-blue-600 hover:text-white"
+                                        title="Export Active Prompts"
+                                        onClick={handleExportActivePrompts}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16v-8m0 8l-4-4m4 4l4-4M4 20h16" /></svg>
+                                    </button>
+                                ) */}
+                            </div>
                         </div>
 
                         <TabsContent value="active" className="active-table-prompt">
@@ -435,6 +464,26 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                 </TableBody>
                             </Table>
                         </TabsContent>
+
+
+                        <div className="flex items-center justify-end gap-2 mt-4">
+                                {currentTab === 'active' && (
+                                    <button
+                                        type="button"
+                                        className="export-prompts-btn border px-2 py-1 rounded-sm text-gray-950 hover:bg-blue-600 hover:text-white mr-3"
+                                        title="Export Active Prompts"
+                                        onClick={handleExportActivePrompts}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                            <path strokeLinecap="round" strokeLinejoin="round"
+                                                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5
+                                                M8.5 8.5l3.5-3.5 3.5 3.5
+                                                 M12 5v10" />
+                                         </svg>
+
+                                    </button>
+                                )}
+                            </div>
 
                         <TabsContent value="inactive" className="active-table-prompt">
                             <Table className="flexible-table">
