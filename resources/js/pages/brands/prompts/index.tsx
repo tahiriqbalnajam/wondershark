@@ -303,7 +303,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
     const handleExportActivePrompts = () => {
         // Prepare data for export
         const exportData = activePrompts.map(prompt => ({
-            ID: prompt.id,
+            //ID: prompt.id,
             Prompt: prompt.prompt,
             Mentions: prompt.mentions_count ?? 'N/A',
             Location: getCountryData(prompt.country_code).name,
@@ -468,20 +468,27 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
 
                         <div className="flex items-center justify-end gap-2 mt-4">
                                 {currentTab === 'active' && (
-                                    <button
-                                        type="button"
-                                        className="export-prompts-btn border px-2 py-1 rounded-sm text-gray-950 hover:bg-blue-600 hover:text-white mr-3"
-                                        title="Export Active Prompts"
-                                        onClick={handleExportActivePrompts}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-                                            <path strokeLinecap="round" strokeLinejoin="round"
-                                                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5
-                                                M8.5 8.5l3.5-3.5 3.5 3.5
-                                                 M12 5v10" />
-                                         </svg>
-
-                                    </button>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <button
+                                                    type="button"
+                                                    className="export-prompts-btn border px-2 py-1 rounded-sm text-gray-950 hover:bg-gray-600 hover:text-white mr-3"
+                                                    onClick={handleExportActivePrompts}
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                                        <path strokeLinecap="round" strokeLinejoin="round"
+                                                            d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5
+                                                            M8.5 8.5l3.5-3.5 3.5 3.5
+                                                            M12 5v10" />
+                                                    </svg>
+                                                </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                Export CSV
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
                                 )}
                             </div>
 
