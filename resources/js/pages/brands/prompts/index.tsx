@@ -299,20 +299,27 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
     }
     const allSelected = selectedPrompts.length === currentPrompts.length && currentPrompts.length > 0;
 
-    // Export active prompts to Excel
+    // Export active prompts to CSV
     const handleExportActivePrompts = () => {
         // Prepare data for export
         const exportData = activePrompts.map(prompt => ({
-            //ID: prompt.id,
             Prompt: prompt.prompt,
             Mentions: prompt.mentions_count ?? 'N/A',
             Location: getCountryData(prompt.country_code).name,
             Created: Math.floor(prompt.days_ago) === 0 ? 'Today' : Math.floor(prompt.days_ago) === 1 ? '1 day' : `${Math.floor(prompt.days_ago)} days`,
         }));
         const worksheet = XLSX.utils.json_to_sheet(exportData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Active Prompts');
-        XLSX.writeFile(workbook, `${brand.name}-active-prompts.xlsx`);
+        const csv = XLSX.utils.sheet_to_csv(worksheet);
+        // Create a blob and trigger download
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${brand.name}-active-prompts.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
     };
 
     return (
