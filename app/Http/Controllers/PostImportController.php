@@ -7,6 +7,7 @@ use App\Models\Brand;
 use App\Models\Post;
 use App\Models\SystemSetting;
 use Carbon\Carbon;
+use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
@@ -16,6 +17,21 @@ use League\Csv\Writer;
 
 class PostImportController extends Controller
 {
+    /** Required CSV columns */
+    private const REQUIRED_COLUMNS = ['url'];
+
+    /** All recognized CSV columns */
+    private const TEMPLATE_COLUMNS = [
+        'url',
+        'title',
+        'description',
+        'status',
+        'posted_at',
+        'post_type',
+        'brand_id',
+        'brand_name',
+    ];
+
     /**
      * Show the CSV import form for agency users
      */
@@ -23,28 +39,30 @@ class PostImportController extends Controller
     {
         $user = Auth::user();
 
-        // Check if user is authenticated and has agency role
         if (! $user) {
             abort(403, 'Authentication required');
         }
 
-        if (! $user->roles->contains('name', 'agency')) {
+        // Allow both agency and agency_member roles (matches route middleware)
+        $isAgencyUser = $user->roles->contains(fn ($r) => in_array($r->name, ['agency', 'agency_member']));
+        if (! $isAgencyUser) {
             abort(403, 'This feature is only available for agency users');
         }
 
-        // Check if user can create posts
         if (! $user->can_create_posts) {
             $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
 
             return Inertia::render('posts/import', [
-                'brands' => [],
-                'error' => "You don't have permission to import posts. Please contact the administrator at {$adminEmail}. ".
-                          ($user->post_creation_note ? "Note: {$user->post_creation_note}" : ''),
+                'brands'          => [],
+                'upgrade_message' => "You don't have permission to import posts. Please contact the administrator at {$adminEmail}. ".
+                                     ($user->post_creation_note ? "Note: {$user->post_creation_note}" : ''),
             ]);
         }
 
-        // Get brands the user has access to
-        $allUserBrands = Brand::where('agency_id', $user->id)->orderBy('name')->get(['id', 'name', 'monthly_posts', 'can_create_posts']);
+        // For agency_member, look up the parent agency brands
+        $agencyId = $user->roles->contains('name', 'agency') ? $user->id : $user->agency_id;
+
+        $allUserBrands = Brand::where('agency_id', $agencyId)->orderBy('name')->get(['id', 'name', 'monthly_posts', 'can_create_posts']);
         $activeBrands = $allUserBrands->where('can_create_posts', true);
         $inactiveBrands = $allUserBrands->where('can_create_posts', false);
 
@@ -57,7 +75,7 @@ class PostImportController extends Controller
         }
 
         return Inertia::render('posts/import', [
-            'brands' => $activeBrands->values(),
+            'brands'          => $activeBrands->values(),
             'upgrade_message' => $upgradeMessage,
         ]);
     }
@@ -68,27 +86,17 @@ class PostImportController extends Controller
     public function downloadTemplate()
     {
         $csv = Writer::createFromString('');
+        $csv->insertOne(self::TEMPLATE_COLUMNS);
 
-        // Set the header
-        $csv->insertOne([
-            'url',
-            'title',
-            'description',
-            'status',
-            'posted_at',
-            'brand_id',
-            'brand_name',
-        ]);
-
-        // Add example rows
         $csv->insertOne([
             'https://example.com/sample-post-with-id',
             'Sample Post Title (optional)',
             'Sample description (optional)',
             'published',
-            '2025-01-01',
+            date('Y-m-d'),
+            'blog',
             '1',
-            '', // Empty brand_name when using brand_id
+            '',
         ]);
 
         $csv->insertOne([
@@ -96,15 +104,16 @@ class PostImportController extends Controller
             'Another Sample Post',
             'Another description',
             'draft',
-            '2025-01-02',
-            '', // Empty brand_id when using brand_name
+            date('Y-m-d'),
+            'news',
+            '',
             'Sample Brand Name',
         ]);
 
         $filename = 'post-import-template-'.date('Y-m-d').'.csv';
 
         return Response::make($csv->toString(), 200, [
-            'Content-Type' => 'text/csv',
+            'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => "attachment; filename=\"$filename\"",
         ]);
     }
@@ -114,15 +123,18 @@ class PostImportController extends Controller
      */
     public function import(Request $request)
     {
+        if ($request->default_brand_id === 'none') {
+            $request->merge(['default_brand_id' => null]);
+        }
+
         $request->validate([
-            'csv_file' => 'required|file|mimes:csv,txt|max:2048',
+            'csv_file'         => 'required|file|mimes:csv,txt|max:10240', // 10 MB
             'default_brand_id' => 'nullable|exists:brands,id',
-            'default_status' => 'required|in:published,draft,archived',
+            'default_status'   => 'required|in:published,draft,archived',
         ]);
 
         $user = Auth::user();
 
-        // Check if user can create posts
         if (! $user->can_create_posts) {
             $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
 
@@ -132,134 +144,154 @@ class PostImportController extends Controller
             );
         }
 
+        // Resolve the agency this user belongs to
+        $agencyId = $user->roles->contains('name', 'agency') ? $user->id : $user->agency_id;
+
         $file = $request->file('csv_file');
 
         try {
             $csv = Reader::createFromPath($file->getRealPath(), 'r');
             $csv->setHeaderOffset(0);
+            $csv->skipInputBOM();
+
+            // Validate required headers
+            $headers = $csv->getHeader();
+            $missingColumns = array_diff(self::REQUIRED_COLUMNS, $headers);
+            if (! empty($missingColumns)) {
+                return redirect()->route('posts.agency-import')->with(
+                    'error',
+                    'CSV is missing required columns: '.implode(', ', $missingColumns).'. Please download the template and try again.'
+                );
+            }
 
             $records = $csv->getRecords();
             $imported = 0;
             $errors = [];
             $sessionId = session()->getId() ?: 'import-'.uniqid();
+            $seenUrls = [];
 
             foreach ($records as $offset => $record) {
-                $lineNumber = $offset + 2; // +2 because offset starts at 0 and we have header
+                $lineNumber = $offset + 2;
 
-                // Validate required URL
-                if (empty($record['url'])) {
+                $url = trim($record['url'] ?? '');
+                if (empty($url)) {
                     $errors[] = "Line $lineNumber: URL is required";
-
                     continue;
                 }
 
-                // Validate URL format
-                if (! filter_var($record['url'], FILTER_VALIDATE_URL)) {
-                    $errors[] = "Line $lineNumber: Invalid URL format";
-
+                if (! filter_var($url, FILTER_VALIDATE_URL)) {
+                    $errors[] = "Line $lineNumber: Invalid URL format — '$url'";
                     continue;
                 }
 
-                // Determine brand ID - try brand_id first, then brand_name, then default
+                // Detect in-batch duplicates
+                $normalizedUrl = rtrim(strtolower($url), '/');
+                if (isset($seenUrls[$normalizedUrl])) {
+                    $errors[] = "Line $lineNumber: Duplicate URL in CSV (already seen on line {$seenUrls[$normalizedUrl]})";
+                    continue;
+                }
+                $seenUrls[$normalizedUrl] = $lineNumber;
+
+                // Determine brand — must belong to this agency and have post creation enabled
                 $brandId = null;
                 $brand = null;
 
                 if (! empty($record['brand_id'])) {
-                    // Use brand_id if provided
-                    $brandId = $record['brand_id'];
-                    $brand = Brand::where('id', $brandId)
-                        ->where('agency_id', $user->id)
+                    $brand = Brand::where('id', $record['brand_id'])
+                        ->where('agency_id', $agencyId)
                         ->where('can_create_posts', true)
                         ->first();
 
                     if (! $brand) {
                         $errors[] = "Line $lineNumber: Invalid brand ID or brand cannot create posts";
-
                         continue;
                     }
+                    $brandId = $brand->id;
                 } elseif (! empty($record['brand_name'])) {
-                    // Use brand_name if provided
-                    $brand = Brand::where('name', $record['brand_name'])
-                        ->where('agency_id', $user->id)
+                    $brand = Brand::where('name', trim($record['brand_name']))
+                        ->where('agency_id', $agencyId)
                         ->where('can_create_posts', true)
                         ->first();
 
                     if (! $brand) {
                         $errors[] = "Line $lineNumber: Brand name '{$record['brand_name']}' not found or cannot create posts";
-
                         continue;
                     }
                     $brandId = $brand->id;
                 } elseif ($request->default_brand_id && $request->default_brand_id !== 'none') {
-                    // Use default brand if provided
-                    $brandId = $request->default_brand_id;
-                    $brand = Brand::where('id', $brandId)
-                        ->where('agency_id', $user->id)
+                    $brand = Brand::where('id', $request->default_brand_id)
+                        ->where('agency_id', $agencyId)
                         ->where('can_create_posts', true)
                         ->first();
 
                     if (! $brand) {
                         $errors[] = "Line $lineNumber: Default brand is invalid or cannot create posts";
-
                         continue;
                     }
+                    $brandId = $brand->id;
                 } else {
                     $errors[] = "Line $lineNumber: Brand is required (provide brand_id, brand_name, or set a default brand)";
-
                     continue;
                 }
 
-                // Check brand post limit
+                // Enforce monthly post limit
                 $currentMonth = Carbon::now()->startOfMonth();
                 $postsThisMonth = Post::where('brand_id', $brand->id)
                     ->where('created_at', '>=', $currentMonth)
                     ->count();
 
                 if ($brand->monthly_posts && $postsThisMonth >= $brand->monthly_posts) {
-                    $errors[] = "Line $lineNumber: Brand '{$brand->name}' has reached its monthly post limit of {$brand->monthly_posts} posts. Current count: {$postsThisMonth}";
-
+                    $errors[] = "Line $lineNumber: Brand '{$brand->name}' has reached its monthly post limit of {$brand->monthly_posts} posts (current: {$postsThisMonth})";
                     continue;
                 }
 
-                // Set defaults
-                $title = ! empty($record['title']) ? $record['title'] : 'Post from '.parse_url($record['url'], PHP_URL_HOST);
-                $description = $record['description'] ?? '';
-                $status = ! empty($record['status']) ? $record['status'] : $request->default_status;
-                $postedAt = ! empty($record['posted_at']) ? Carbon::parse($record['posted_at']) : now();
+                // Resolve field values
+                $title = ! empty($record['title']) ? trim($record['title']) : 'Post from '.parse_url($url, PHP_URL_HOST);
+                $description = trim($record['description'] ?? '');
+                $postType = trim($record['post_type'] ?? '') ?: null;
 
-                // Validate status
+                $status = ! empty($record['status']) ? trim($record['status']) : $request->default_status;
                 if (! in_array($status, ['published', 'draft', 'archived'])) {
                     $status = $request->default_status;
                 }
 
+                $postedAt = now();
+                if (! empty($record['posted_at'])) {
+                    try {
+                        $postedAt = Carbon::parse(trim($record['posted_at']));
+                    } catch (InvalidFormatException $e) {
+                        $errors[] = "Line $lineNumber: Invalid posted_at date format '{$record['posted_at']}' — use YYYY-MM-DD";
+                        continue;
+                    }
+                }
+
                 try {
                     $post = Post::create([
-                        'brand_id' => $brandId,
-                        'user_id' => $user->id,
-                        'title' => $title,
-                        'url' => $record['url'],
+                        'brand_id'    => $brandId,
+                        'user_id'     => $user->id,
+                        'title'       => $title,
+                        'url'         => $url,
                         'description' => $description,
-                        'status' => $status,
-                        'posted_at' => $postedAt,
+                        'status'      => $status,
+                        'posted_at'   => $postedAt,
+                        'post_type'   => $postType,
                     ]);
 
-                    // Generate prompts in background
                     GeneratePostPrompts::dispatch($post, $sessionId, $description);
-
                     $imported++;
                 } catch (\Exception $e) {
-                    $errors[] = "Line $lineNumber: Failed to create post - ".$e->getMessage();
+                    $errors[] = "Line $lineNumber: Failed to create post — ".$e->getMessage();
                 }
             }
 
-            $message = "Successfully imported $imported posts.";
+            $message = "Successfully imported $imported post".($imported !== 1 ? 's' : '').'.';
             if (! empty($errors)) {
-                $message .= ' '.count($errors).' errors occurred.';
+                $message .= ' '.count($errors).' error'.( count($errors) !== 1 ? 's' : '').' occurred.';
             }
 
             return redirect()->route('posts.agency-import')->with([
-                'success' => $message,
-                'import_errors' => $errors,
+                'success'        => $message,
+                'import_errors'  => $errors,
                 'imported_count' => $imported,
             ]);
 

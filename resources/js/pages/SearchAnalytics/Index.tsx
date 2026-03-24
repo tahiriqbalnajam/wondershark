@@ -208,6 +208,7 @@ export default function Index({ analyses, filters }: PageProps) {
                                         <SelectItem value="all">All Countries</SelectItem>
                                         <SelectItem value="US">United States</SelectItem>
                                         <SelectItem value="UK">United Kingdom</SelectItem>
+                                        <SelectItem value="IE">Ireland</SelectItem>
                                         <SelectItem value="CA">Canada</SelectItem>
                                         <SelectItem value="AU">Australia</SelectItem>
                                         <SelectItem value="DE">Germany</SelectItem>

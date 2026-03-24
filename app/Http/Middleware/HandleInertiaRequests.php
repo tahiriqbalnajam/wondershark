@@ -109,6 +109,13 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'flash' => [
+                'success'          => fn () => $request->session()->get('success'),
+                'error'            => fn () => $request->session()->get('error'),
+                'import_errors'    => fn () => $request->session()->get('import_errors', []),
+                'import_warnings'  => fn () => $request->session()->get('import_warnings', []),
+                'imported_count'   => fn () => $request->session()->get('imported_count'),
+            ],
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
                 'user' => $user ? array_merge($user->toArray(), [

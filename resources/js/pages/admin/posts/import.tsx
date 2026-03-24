@@ -11,11 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import AppLayout from '@/layouts/app-layout';
-import { 
-    Upload, 
-    Download, 
-    FileSpreadsheet, 
-    Info
+import {
+    Upload,
+    Download,
+    FileSpreadsheet,
+    Info,
+    AlertTriangle,
 } from 'lucide-react';
 
 type Brand = {
@@ -31,13 +32,18 @@ type Agency = {
     name: string;
 };
 
-type Props = {
-    brands: Brand[];
-    agencies: Agency[];
+type Flash = {
     success?: string;
     error?: string;
     import_errors?: string[];
+    import_warnings?: string[];
     imported_count?: number;
+};
+
+type Props = {
+    brands: Brand[];
+    agencies: Agency[];
+    flash?: Flash;
 };
 
 const breadcrumbItems: BreadcrumbItem[] = [
@@ -46,10 +52,21 @@ const breadcrumbItems: BreadcrumbItem[] = [
     { title: 'Import from CSV', href: '/posts/admin-import' },
 ];
 
-export default function AdminPostImport({ brands = [], agencies = [], success, error, import_errors, imported_count }: Props) {
+export default function AdminPostImport({
+    brands = [],
+    agencies = [],
+    flash,
+}: Props) {
+    const success = flash?.success;
+    const error = flash?.error;
+    const import_errors = flash?.import_errors;
+    const import_warnings = flash?.import_warnings;
+    const imported_count = flash?.imported_count;
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [selectedAgency, setSelectedAgency] = useState<string>('all');
-    
+    const [showAllErrors, setShowAllErrors] = useState(false);
+    const [showAllWarnings, setShowAllWarnings] = useState(false);
+
     const { data, setData, post, processing, errors } = useForm({
         csv_file: null as File | null,
         default_brand_id: 'none',
@@ -73,9 +90,30 @@ export default function AdminPostImport({ brands = [], agencies = [], success, e
         window.open(route('posts.admin-import.template'), '_blank');
     };
 
-    const filteredBrands = selectedAgency && selectedAgency !== 'all'
-        ? brands.filter(brand => brand.agency_id.toString() === selectedAgency)
-        : brands;
+    const downloadErrorReport = () => {
+        const allMessages = [
+            ...(import_errors ?? []).map((e) => `ERROR: ${e}`),
+            ...(import_warnings ?? []).map((w) => `WARNING: ${w}`),
+        ];
+        const blob = new Blob([allMessages.join('\n')], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `import-errors-${new Date().toISOString().slice(0, 10)}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const filteredBrands =
+        selectedAgency && selectedAgency !== 'all'
+            ? brands.filter((brand) => brand.agency_id.toString() === selectedAgency)
+            : brands;
+
+    const PREVIEW_LIMIT = 5;
+    const visibleErrors = showAllErrors ? (import_errors ?? []) : (import_errors ?? []).slice(0, PREVIEW_LIMIT);
+    const visibleWarnings = showAllWarnings ? (import_warnings ?? []) : (import_warnings ?? []).slice(0, PREVIEW_LIMIT);
+    const hasErrors = (import_errors?.length ?? 0) > 0;
+    const hasWarnings = (import_warnings?.length ?? 0) > 0;
 
     return (
         <AppLayout breadcrumbs={breadcrumbItems}>
@@ -86,31 +124,82 @@ export default function AdminPostImport({ brands = [], agencies = [], success, e
                     <Alert className="border-green-200 bg-green-50">
                         <AlertDescription className="text-green-800">
                             {success}
-                            {imported_count && <span className="font-medium ml-2">({imported_count} posts imported)</span>}
+                            {imported_count !== undefined && (
+                                <span className="font-medium ml-2">({imported_count} post{imported_count !== 1 ? 's' : ''} imported)</span>
+                            )}
                         </AlertDescription>
                     </Alert>
                 )}
-                
+
                 {error && (
                     <Alert className="border-red-200 bg-red-50">
+                        <AlertDescription className="text-red-800">{error}</AlertDescription>
+                    </Alert>
+                )}
+
+                {hasErrors && (
+                    <Alert className="border-red-200 bg-red-50">
                         <AlertDescription className="text-red-800">
-                            {error}
+                            <div className="flex items-center justify-between mb-2">
+                                <strong>Import Errors ({import_errors!.length}):</strong>
+                                {(import_errors!.length > PREVIEW_LIMIT || hasWarnings) && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={downloadErrorReport}
+                                        className="text-xs"
+                                    >
+                                        <Download className="h-3 w-3 mr-1" />
+                                        Download Report
+                                    </Button>
+                                )}
+                            </div>
+                            <ul className="list-disc list-inside space-y-1">
+                                {visibleErrors.map((err, index) => (
+                                    <li key={index} className="text-sm">{err}</li>
+                                ))}
+                            </ul>
+                            {import_errors!.length > PREVIEW_LIMIT && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAllErrors((v) => !v)}
+                                    className="text-sm font-medium mt-2 underline"
+                                >
+                                    {showAllErrors
+                                        ? 'Show less'
+                                        : `Show all ${import_errors!.length} errors`}
+                                </button>
+                            )}
                         </AlertDescription>
                     </Alert>
                 )}
-                
-                {import_errors && import_errors.length > 0 && (
+
+                {hasWarnings && (
                     <Alert className="border-yellow-200 bg-yellow-50">
                         <AlertDescription className="text-yellow-800">
-                            <strong>Import Errors/Warnings:</strong>
-                            <ul className="list-disc list-inside mt-2">
-                                {import_errors.slice(0, 5).map((err, index) => (
-                                    <li key={index} className="text-sm">{err}</li>
+                            <div className="flex items-center justify-between mb-2">
+                                <strong className="flex items-center gap-1">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    Import Warnings ({import_warnings!.length}) — rows were imported despite these:
+                                </strong>
+                            </div>
+                            <ul className="list-disc list-inside space-y-1">
+                                {visibleWarnings.map((w, index) => (
+                                    <li key={index} className="text-sm">{w}</li>
                                 ))}
-                                {import_errors.length > 5 && (
-                                    <li className="text-sm font-medium">... and {import_errors.length - 5} more errors</li>
-                                )}
                             </ul>
+                            {import_warnings!.length > PREVIEW_LIMIT && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAllWarnings((v) => !v)}
+                                    className="text-sm font-medium mt-2 underline"
+                                >
+                                    {showAllWarnings
+                                        ? 'Show less'
+                                        : `Show all ${import_warnings!.length} warnings`}
+                                </button>
+                            )}
                         </AlertDescription>
                     </Alert>
                 )}
@@ -154,7 +243,10 @@ export default function AdminPostImport({ brands = [], agencies = [], success, e
                                     <div className="grid gap-4 md:grid-cols-2">
                                         <div className="space-y-2">
                                             <Label htmlFor="agency_filter">Filter by Agency (optional)</Label>
-                                            <Select value={selectedAgency} onValueChange={(value) => setSelectedAgency(value)}>
+                                            <Select
+                                                value={selectedAgency}
+                                                onValueChange={(value) => setSelectedAgency(value)}
+                                            >
                                                 <SelectTrigger>
                                                     <SelectValue placeholder="All agencies" />
                                                 </SelectTrigger>
@@ -171,7 +263,10 @@ export default function AdminPostImport({ brands = [], agencies = [], success, e
 
                                         <div className="space-y-2">
                                             <Label htmlFor="default_brand_id">Default Brand (optional)</Label>
-                                            <Select value={data.default_brand_id} onValueChange={(value) => setData('default_brand_id', value)}>
+                                            <Select
+                                                value={data.default_brand_id}
+                                                onValueChange={(value) => setData('default_brand_id', value)}
+                                            >
                                                 <SelectTrigger>
                                                     <SelectValue placeholder="Select a default brand" />
                                                 </SelectTrigger>
@@ -192,15 +287,21 @@ export default function AdminPostImport({ brands = [], agencies = [], success, e
                                                     ))}
                                                 </SelectContent>
                                             </Select>
-                                            <div className="text-sm text-gray-600">
-                                                Used for rows without brand_id
-                                            </div>
+                                            {errors.default_brand_id && (
+                                                <div className="text-sm text-red-600">{errors.default_brand_id}</div>
+                                            )}
+                                            <div className="text-sm text-gray-600">Used for rows without brand_id or brand_name</div>
                                         </div>
                                     </div>
 
                                     <div className="space-y-2">
                                         <Label htmlFor="default_status">Default Status</Label>
-                                        <Select value={data.default_status} onValueChange={(value: 'published' | 'draft' | 'archived') => setData('default_status', value)}>
+                                        <Select
+                                            value={data.default_status}
+                                            onValueChange={(value: 'published' | 'draft' | 'archived') =>
+                                                setData('default_status', value)
+                                            }
+                                        >
                                             <SelectTrigger>
                                                 <SelectValue />
                                             </SelectTrigger>
@@ -210,14 +311,12 @@ export default function AdminPostImport({ brands = [], agencies = [], success, e
                                                 <SelectItem value="archived">Archived</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <div className="text-sm text-gray-600">
-                                            Used for rows without status
-                                        </div>
+                                        <div className="text-sm text-gray-600">Used for rows without a status column value</div>
                                     </div>
 
                                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                                         <div className="text-sm text-yellow-800">
-                                            <strong>Admin Note:</strong> You can import posts even if brands don't have post creation 
+                                            <strong>Admin Note:</strong> You can import posts even if brands don't have post creation
                                             permissions or have exceeded monthly limits. Warnings will be shown but imports will proceed.
                                         </div>
                                     </div>
@@ -228,7 +327,7 @@ export default function AdminPostImport({ brands = [], agencies = [], success, e
                                         className="w-full"
                                     >
                                         <Upload className="mr-2 h-4 w-4" />
-                                        {processing ? 'Importing...' : 'Import Posts'}
+                                        {processing ? 'Importing…' : 'Import Posts'}
                                     </Button>
                                 </form>
                             </CardContent>
@@ -271,26 +370,43 @@ export default function AdminPostImport({ brands = [], agencies = [], success, e
                                     <div>
                                         <strong>Required Columns:</strong>
                                         <ul className="list-disc list-inside ml-2 mt-1 text-gray-600">
-                                            <li>url - The post URL</li>
+                                            <li>
+                                                <code>url</code> — The post URL
+                                            </li>
                                         </ul>
                                     </div>
                                     <Separator />
                                     <div>
                                         <strong>Brand Selection (choose one):</strong>
                                         <ul className="list-disc list-inside ml-2 mt-1 text-gray-600">
-                                            <li>brand_id - Brand ID number</li>
-                                            <li>brand_name - Brand name (exact match)</li>
-                                            <li>Leave both empty to use default brand</li>
+                                            <li>
+                                                <code>brand_id</code> — Brand ID number
+                                            </li>
+                                            <li>
+                                                <code>brand_name</code> — Brand name (exact match)
+                                            </li>
+                                            <li>Leave both empty to use the default brand above</li>
                                         </ul>
                                     </div>
                                     <Separator />
                                     <div>
                                         <strong>Optional Columns:</strong>
                                         <ul className="list-disc list-inside ml-2 mt-1 text-gray-600">
-                                            <li>title - Auto-generated if empty</li>
-                                            <li>description - Can be empty</li>
-                                            <li>status - published/draft/archived</li>
-                                            <li>posted_at - Date (YYYY-MM-DD)</li>
+                                            <li>
+                                                <code>title</code> — Auto-generated from domain if empty
+                                            </li>
+                                            <li>
+                                                <code>description</code> — Can be empty
+                                            </li>
+                                            <li>
+                                                <code>status</code> — published / draft / archived
+                                            </li>
+                                            <li>
+                                                <code>posted_at</code> — Date in YYYY-MM-DD format
+                                            </li>
+                                            <li>
+                                                <code>post_type</code> — e.g. blog, news, article
+                                            </li>
                                         </ul>
                                     </div>
                                     <Separator />
@@ -305,7 +421,7 @@ export default function AdminPostImport({ brands = [], agencies = [], success, e
                                             ))}
                                             {brands.length > 10 && (
                                                 <div className="text-center text-gray-500 py-1">
-                                                    ... and {brands.length - 10} more brands
+                                                    … and {brands.length - 10} more brands
                                                 </div>
                                             )}
                                         </div>

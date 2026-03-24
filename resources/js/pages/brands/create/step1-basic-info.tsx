@@ -11,6 +11,7 @@ const countries = [
     'United States',
     'Canada',
     'United Kingdom',
+    'Ireland',
     'Germany',
     'France',
     'Italy',

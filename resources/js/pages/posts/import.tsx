@@ -11,11 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import AppLayout from '@/layouts/app-layout';
-import { 
-    Upload, 
-    Download, 
-    FileSpreadsheet, 
-    Info
+import {
+    Upload,
+    Download,
+    FileSpreadsheet,
+    Info,
 } from 'lucide-react';
 
 type Brand = {
@@ -24,13 +24,17 @@ type Brand = {
     monthly_posts: number | null;
 };
 
-type Props = {
-    brands: Brand[];
+type Flash = {
     success?: string;
     error?: string;
     import_errors?: string[];
     imported_count?: number;
+};
+
+type Props = {
+    brands: Brand[];
     upgrade_message?: string;
+    flash?: Flash;
 };
 
 const breadcrumbItems: BreadcrumbItem[] = [
@@ -38,9 +42,18 @@ const breadcrumbItems: BreadcrumbItem[] = [
     { title: 'Import from CSV', href: '/posts/agency-import' },
 ];
 
-export default function PostImport({ brands = [], success, error, import_errors, imported_count, upgrade_message }: Props) {
+export default function PostImport({
+    brands = [],
+    upgrade_message,
+    flash,
+}: Props) {
+    const success = flash?.success;
+    const error = flash?.error;
+    const import_errors = flash?.import_errors;
+    const imported_count = flash?.imported_count;
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    
+    const [showAllErrors, setShowAllErrors] = useState(false);
+
     const { data, setData, post, processing, errors } = useForm({
         csv_file: null as File | null,
         default_brand_id: 'none',
@@ -64,6 +77,21 @@ export default function PostImport({ brands = [], success, error, import_errors,
         window.open(route('posts.agency-import.template'), '_blank');
     };
 
+    const downloadErrorReport = () => {
+        const lines = (import_errors ?? []).map((e) => `ERROR: ${e}`);
+        const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `import-errors-${new Date().toISOString().slice(0, 10)}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const PREVIEW_LIMIT = 5;
+    const hasErrors = (import_errors?.length ?? 0) > 0;
+    const visibleErrors = showAllErrors ? (import_errors ?? []) : (import_errors ?? []).slice(0, PREVIEW_LIMIT);
+
     return (
         <AppLayout breadcrumbs={breadcrumbItems}>
             <Head title="Import Posts from CSV" />
@@ -81,31 +109,55 @@ export default function PostImport({ brands = [], success, error, import_errors,
                     <Alert className="border-green-200 bg-green-50">
                         <AlertDescription className="text-green-800">
                             {success}
-                            {imported_count && <span className="font-medium ml-2">({imported_count} posts imported)</span>}
+                            {imported_count !== undefined && (
+                                <span className="font-medium ml-2">
+                                    ({imported_count} post{imported_count !== 1 ? 's' : ''} imported)
+                                </span>
+                            )}
                         </AlertDescription>
                     </Alert>
                 )}
-                
+
                 {error && (
                     <Alert className="border-red-200 bg-red-50">
-                        <AlertDescription className="text-red-800">
-                            {error}
-                        </AlertDescription>
+                        <AlertDescription className="text-red-800">{error}</AlertDescription>
                     </Alert>
                 )}
-                
-                {import_errors && import_errors.length > 0 && (
+
+                {hasErrors && (
                     <Alert className="border-yellow-200 bg-yellow-50">
                         <AlertDescription className="text-yellow-800">
-                            <strong>Import Errors/Warnings:</strong>
-                            <ul className="list-disc list-inside mt-2">
-                                {import_errors.slice(0, 5).map((err, index) => (
-                                    <li key={index} className="text-sm">{err}</li>
-                                ))}
-                                {import_errors.length > 5 && (
-                                    <li className="text-sm font-medium">... and {import_errors.length - 5} more errors</li>
+                            <div className="flex items-center justify-between mb-2">
+                                <strong>Import Errors ({import_errors!.length}):</strong>
+                                {import_errors!.length > PREVIEW_LIMIT && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={downloadErrorReport}
+                                        className="text-xs"
+                                    >
+                                        <Download className="h-3 w-3 mr-1" />
+                                        Download Report
+                                    </Button>
                                 )}
+                            </div>
+                            <ul className="list-disc list-inside space-y-1">
+                                {visibleErrors.map((err, index) => (
+                                    <li key={index} className="text-sm">
+                                        {err}
+                                    </li>
+                                ))}
                             </ul>
+                            {import_errors!.length > PREVIEW_LIMIT && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAllErrors((v) => !v)}
+                                    className="text-sm font-medium mt-2 underline"
+                                >
+                                    {showAllErrors ? 'Show less' : `Show all ${import_errors!.length} errors`}
+                                </button>
+                            )}
                         </AlertDescription>
                     </Alert>
                 )}
@@ -128,66 +180,77 @@ export default function PostImport({ brands = [], success, error, import_errors,
                                 <form onSubmit={handleSubmit} className="space-y-6">
                                     <fieldset disabled={!!upgrade_message || brands.length === 0} className="space-y-6">
                                         <div className="space-y-2">
-                                        <Label htmlFor="csv_file">CSV File *</Label>
-                                        <Input
-                                            id="csv_file"
-                                            type="file"
-                                            accept=".csv,.txt"
-                                            onChange={handleFileSelect}
-                                            className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/80"
-                                        />
-                                        {errors.csv_file && (
-                                            <div className="text-sm text-red-600">{errors.csv_file}</div>
-                                        )}
-                                        {selectedFile && (
-                                            <div className="text-sm text-gray-600 flex items-center gap-2">
-                                                <FileSpreadsheet className="h-4 w-4" />
-                                                {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
+                                            <Label htmlFor="csv_file">CSV File *</Label>
+                                            <Input
+                                                id="csv_file"
+                                                type="file"
+                                                accept=".csv,.txt"
+                                                onChange={handleFileSelect}
+                                                className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/80"
+                                            />
+                                            {errors.csv_file && (
+                                                <div className="text-sm text-red-600">{errors.csv_file}</div>
+                                            )}
+                                            {selectedFile && (
+                                                <div className="text-sm text-gray-600 flex items-center gap-2">
+                                                    <FileSpreadsheet className="h-4 w-4" />
+                                                    {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="default_brand_id">Default Brand (optional)</Label>
+                                            <Select
+                                                value={data.default_brand_id}
+                                                onValueChange={(value) => setData('default_brand_id', value)}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select a default brand" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="none">No default brand</SelectItem>
+                                                    {brands.map((brand) => (
+                                                        <SelectItem key={brand.id} value={brand.id.toString()}>
+                                                            {brand.name}
+                                                            {brand.monthly_posts && (
+                                                                <span className="text-gray-500 ml-2">
+                                                                    (Limit: {brand.monthly_posts}/month)
+                                                                </span>
+                                                            )}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {errors.default_brand_id && (
+                                                <div className="text-sm text-red-600">{errors.default_brand_id}</div>
+                                            )}
+                                            <div className="text-sm text-gray-600">
+                                                Used for rows that don't specify a brand_id or brand_name
                                             </div>
-                                        )}
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="default_brand_id">Default Brand (optional)</Label>
-                                        <Select value={data.default_brand_id} onValueChange={(value) => setData('default_brand_id', value)}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select a default brand" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="none">No default brand</SelectItem>
-                                                {brands.map((brand) => (
-                                                    <SelectItem key={brand.id} value={brand.id.toString()}>
-                                                        {brand.name}
-                                                        {brand.monthly_posts && (
-                                                            <span className="text-gray-500 ml-2">
-                                                                (Limit: {brand.monthly_posts}/month)
-                                                            </span>
-                                                        )}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <div className="text-sm text-gray-600">
-                                            This will be used for rows that don't specify a brand_id
                                         </div>
-                                    </div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="default_status">Default Status</Label>
-                                        <Select value={data.default_status} onValueChange={(value: 'published' | 'draft' | 'archived') => setData('default_status', value)}>
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="published">Published</SelectItem>
-                                                <SelectItem value="draft">Draft</SelectItem>
-                                                <SelectItem value="archived">Archived</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <div className="text-sm text-gray-600">
-                                            This will be used for rows that don't specify a status
+                                        <div className="space-y-2">
+                                            <Label htmlFor="default_status">Default Status</Label>
+                                            <Select
+                                                value={data.default_status}
+                                                onValueChange={(value: 'published' | 'draft' | 'archived') =>
+                                                    setData('default_status', value)
+                                                }
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="published">Published</SelectItem>
+                                                    <SelectItem value="draft">Draft</SelectItem>
+                                                    <SelectItem value="archived">Archived</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <div className="text-sm text-gray-600">
+                                                Used for rows that don't specify a status
+                                            </div>
                                         </div>
-                                    </div>
                                     </fieldset>
 
                                     <Button
@@ -196,7 +259,7 @@ export default function PostImport({ brands = [], success, error, import_errors,
                                         className="w-full"
                                     >
                                         <Upload className="mr-2 h-4 w-4" />
-                                        {processing ? 'Importing...' : 'Import Posts'}
+                                        {processing ? 'Importing…' : 'Import Posts'}
                                     </Button>
                                 </form>
                             </CardContent>
@@ -239,26 +302,43 @@ export default function PostImport({ brands = [], success, error, import_errors,
                                     <div>
                                         <strong>Required Columns:</strong>
                                         <ul className="list-disc list-inside ml-2 mt-1 text-gray-600">
-                                            <li>url - The post URL</li>
+                                            <li>
+                                                <code>url</code> — The post URL
+                                            </li>
                                         </ul>
                                     </div>
                                     <Separator />
                                     <div>
                                         <strong>Brand Selection (choose one):</strong>
                                         <ul className="list-disc list-inside ml-2 mt-1 text-gray-600">
-                                            <li>brand_id - Brand ID number</li>
-                                            <li>brand_name - Brand name (exact match)</li>
-                                            <li>Leave both empty to use default brand</li>
+                                            <li>
+                                                <code>brand_id</code> — Brand ID number
+                                            </li>
+                                            <li>
+                                                <code>brand_name</code> — Brand name (exact match)
+                                            </li>
+                                            <li>Leave both empty to use the default brand above</li>
                                         </ul>
                                     </div>
                                     <Separator />
                                     <div>
                                         <strong>Optional Columns:</strong>
                                         <ul className="list-disc list-inside ml-2 mt-1 text-gray-600">
-                                            <li>title - Auto-generated if empty</li>
-                                            <li>description - Can be empty</li>
-                                            <li>status - published/draft/archived</li>
-                                            <li>posted_at - Date (YYYY-MM-DD)</li>
+                                            <li>
+                                                <code>title</code> — Auto-generated from domain if empty
+                                            </li>
+                                            <li>
+                                                <code>description</code> — Can be empty
+                                            </li>
+                                            <li>
+                                                <code>status</code> — published / draft / archived
+                                            </li>
+                                            <li>
+                                                <code>posted_at</code> — Date in YYYY-MM-DD format
+                                            </li>
+                                            <li>
+                                                <code>post_type</code> — e.g. blog, news, article
+                                            </li>
                                         </ul>
                                     </div>
                                     <Separator />
@@ -266,8 +346,8 @@ export default function PostImport({ brands = [], success, error, import_errors,
                                         <strong>Default Values:</strong>
                                         <ul className="list-disc list-inside ml-2 mt-1 text-gray-600">
                                             <li>Title: "Post from domain.com"</li>
-                                            <li>Status: As selected above</li>
-                                            <li>Date: Current date</li>
+                                            <li>Status: as selected above</li>
+                                            <li>Date: today's date</li>
                                         </ul>
                                     </div>
                                 </div>
