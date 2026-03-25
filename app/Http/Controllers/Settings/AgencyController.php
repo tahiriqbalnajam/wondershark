@@ -316,6 +316,23 @@ class AgencyController extends Controller
     }
 
     /**
+     * Delete the agency and all associated data.
+     */
+    public function deleteAgency(): RedirectResponse
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        DB::transaction(function () use ($user) {
+            $user->delete();
+        });
+
+        Auth::logout();
+
+        return redirect('/')->with('status', 'Agency account deleted successfully.');
+    }
+
+    /**
      * Create a thumbnail version of the uploaded image.
      */
     private function createThumbnail($file, string $filename, string $extension): ?string

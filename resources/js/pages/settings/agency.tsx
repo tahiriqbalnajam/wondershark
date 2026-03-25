@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import { Building2, LogOut,Pipette } from 'lucide-react';
+import { AlertTriangle, Building2, LogOut, Pipette, Trash2 } from 'lucide-react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 
@@ -46,6 +46,17 @@ const handleLogout = () => {
         cleanup();
         router.flushAll();
     };
+
+const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+const { delete: deleteAgency, processing: deleteProcessing } = useForm({});
+
+const handleDeleteAgency = () => {
+    deleteAgency(route('settings.agency.delete'), {
+        onSuccess: () => {
+            setShowDeleteConfirm(false);
+        },
+    });
+};
 const [logoPreview, setLogoPreview] = useState<string | undefined>(() => agency.logo || undefined);
 
 useEffect(() => {
@@ -345,6 +356,79 @@ const submitPassword: FormEventHandler = (e) => {
                             Logout
                         </Link>
                     </div>
+
+                    {/* Danger Zone */}
+                    <Card className="border-red-200">
+                        <CardHeader>
+                            <CardTitle className="text-red-600">Danger Zone</CardTitle>
+                            <CardDescription>Irreversible and destructive actions</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="font-medium text-sm">Delete Agency Account</p>
+                                    <p className="text-sm text-muted-foreground">Permanently delete this agency and all associated data</p>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    className="bg-red-600 hover:bg-red-700 text-white"
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete Agency
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Delete Confirmation Dialog */}
+                    {showDeleteConfirm && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                                        <AlertTriangle className="h-5 w-5 text-red-600" />
+                                    </div>
+                                    <h2 className="text-lg font-semibold text-red-600">Delete Agency Account</h2>
+                                </div>
+
+                                <div className="space-y-3 mb-6">
+                                    <p className="text-sm font-medium">Are you absolutely sure? This action <span className="font-bold underline">cannot be undone</span>.</p>
+                                    <div className="rounded-md bg-red-50 border border-red-200 p-3 space-y-2">
+                                        <p className="text-sm font-semibold text-red-700">The following will be permanently deleted:</p>
+                                        <ul className="text-sm text-red-600 list-disc list-inside space-y-1">
+                                            <li>Your agency account and profile</li>
+                                            <li>All brands associated with this agency</li>
+                                            <li>All brand data including posts, mentions, and analytics</li>
+                                            <li>All agency members and their access</li>
+                                            <li>All settings, integrations, and configurations</li>
+                                        </ul>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">This process is <span className="font-bold text-red-600">irreversible</span>. Once deleted, there is no way to recover any of this data.</p>
+                                </div>
+
+                                <div className="flex gap-3 justify-end">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setShowDeleteConfirm(false)}
+                                        disabled={deleteProcessing}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        className="bg-red-600 hover:bg-red-700 text-white"
+                                        onClick={handleDeleteAgency}
+                                        disabled={deleteProcessing}
+                                    >
+                                        {deleteProcessing ? 'Deleting...' : 'Yes, Delete Everything'}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </AppLayout>
