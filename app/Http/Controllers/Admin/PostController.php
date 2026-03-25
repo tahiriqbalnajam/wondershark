@@ -49,7 +49,7 @@ class PostController extends Controller
             });
         }
 
-        $posts = $query->orderBy('created_at', 'desc')->paginate(50);
+        $posts = $query->orderBy('created_at', 'desc')->paginate(20);
 
         // Get filter options
         $agencies = User::role('agency')->orderBy('name')->get(['id', 'name']);

@@ -352,6 +352,17 @@ export default function PostsIndex({ posts, brand }: Props) {
         });
     };
 
+    // Pagination handlers
+    const handlePageChange = (page: number) => {
+        const params = new URLSearchParams(window.location.search);
+        params.set('page', String(page));
+        router.visit(window.location.pathname + '?' + params.toString(), { preserveScroll: true });
+    };
+
+    // Pagination summary helpers
+    const startIdx = (posts.current_page - 1) * posts.per_page + 1;
+    const endIdx = Math.min(posts.current_page * posts.per_page, posts.total);
+
     return (
         <AppLayout breadcrumbs={getBreadcrumbs(brand)}>
             <Head title={brand ? `${brand.name} - Posts` : "Posts"} />
@@ -646,6 +657,35 @@ export default function PostsIndex({ posts, brand }: Props) {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Pagination Controls (Admin Style) */}
+                {posts.last_page > 1 && (
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 px-2 py-4 mt-6">
+                        <div className="text-sm text-muted-foreground mb-2 md:mb-0">
+                            Showing {startIdx} to {endIdx} of {posts.total} posts
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            {posts.current_page > 1 && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handlePageChange(posts.current_page - 1)}
+                                >
+                                    Previous
+                                </Button>
+                            )}
+                            {posts.current_page < posts.last_page && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handlePageChange(posts.current_page + 1)}
+                                >
+                                    Next
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
 
