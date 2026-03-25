@@ -52,6 +52,7 @@ type BrandPrompt = {
     sentiment: 'positive' | 'neutral' | 'negative';
     visibility: 'public' | 'private' | 'draft';
     country_code: string;
+    region?: string;
     is_active: boolean;
     status?: 'suggested' | 'active' | 'inactive';
     session_id?: string | null;
@@ -405,7 +406,8 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                         </TableHead>
                                         <TableHead>Prompt</TableHead>
                                         <TableHead><div className="flex items-center"><Trophy className="w-4 mr-2" /> Mentions</div></TableHead>
-                                        <TableHead><div className="flex items-center"><MapPin className="w-4 mr-2" /> Location</div></TableHead>
+                                        <TableHead><div className="flex items-center"><MapPin className="w-4 mr-2" /> Country</div></TableHead>
+                                        <TableHead><div className="flex items-center"><MapPin className="w-4 mr-2" /> Region</div></TableHead>
                                         <TableHead>Created</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -444,9 +446,10 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
                                                                 <div className="flex items-center gap-2 cursor-help">
-                                                                    <span className="text-lg select-none">
+                                                                   {/* <span className="text-lg select-none">
                                                                         {countryData.flag}
-                                                                    </span>
+                                                                    </span> 
+                                                                    */}
                                                                     <span className="text-sm">
                                                                         {countryData.name}
                                                                     </span>
@@ -456,6 +459,11 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                                 <p>{countryData.name} ({prompt.country_code})</p>
                                                             </TooltipContent>
                                                         </Tooltip>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="text-sm">
+                                                            {brand.region || '-'}
+                                                        </div>
                                                     </TableCell>
                                                     <TableCell>
                                                         <div className="text-sm text-muted-foreground">
