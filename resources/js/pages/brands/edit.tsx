@@ -242,7 +242,7 @@ export default function BrandEdit({ brand }: Props) {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="region">Region</Label>
-                <Input id="region" value={data.region || brand.region || ''} onChange={e => setData('region', e.target.value)} placeholder="Region" className="form-control" />
+                <Input id="region" value={data.region} onChange={e => setData('region', e.target.value)} placeholder="Region" className="form-control" />
                 <InputError message={errors.region} />
               </div>
 
