@@ -19,6 +19,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+const countries = [
+  'United States',
+  'Canada',
+  'United Kingdom',
+  'Ireland',
+  'Germany',
+  'France',
+  'Italy',
+  'Spain',
+  'Netherlands',
+  'Sweden',
+  'Norway',
+  'Denmark',
+  'Finland',
+  'Belgium',
+  'Austria',
+  'Switzerland',
+  'Australia',
+  'New Zealand',
+  'Japan',
+  'South Korea',
+  'Singapore',
+  'India',
+  'Brazil',
+  'Mexico',
+  'Argentina',
+  'Chile',
+  'South Africa',
+  'Israel',
+  'UAE',
+  'Saudi Arabia',
+  'Other'
+];
 import AppLayout from '@/layouts/app-layout';
 import { AddPromptDialog } from '@/components/brand/add-prompt-dialog';
 import {
@@ -55,6 +88,8 @@ type BrandForm = {
   monthly_posts: number;
   status: 'active' | 'inactive' | 'pending';
   logo: File | null;
+  country: string;
+  region: string;
   // prompts: string[];
   // subreddits: string[];
 
@@ -85,6 +120,8 @@ export default function BrandEdit({ brand }: Props) {
     monthly_posts: brand.monthly_posts,
     status: brand.status,
     logo: null,
+    country: brand.country || '',
+    region: brand.region || '',
     Verified: false,
     'GPT-4o Search': false,
     'OpenAI (GPT-4)': false,
@@ -180,10 +217,38 @@ export default function BrandEdit({ brand }: Props) {
               </div>
 
               <div className="grid gap-2">
+
                 <Label htmlFor="website">Website</Label>
                 <Input id="website" type="url" value={data.website} onChange={(e) => setData('website', e.target.value)} placeholder="https://example.com" className="form-control" />
                 <InputError message={errors.website} />
               </div>
+
+              {/* Country and Region fields */}
+              <div className="grid gap-2">
+                <Label htmlFor="country">Country</Label>
+                <Select value={data.country || brand.country || ''} onValueChange={value => setData('country', value)}>
+                  <SelectTrigger className="form-control cursor-pointer">
+                    <SelectValue placeholder="Select your country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countries.map((country) => (
+                      <SelectItem key={country} value={country}>
+                        {country}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <InputError message={errors.country} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="region">Region</Label>
+                <Input id="region" value={data.region || brand.region || ''} onChange={e => setData('region', e.target.value)} placeholder="Region" className="form-control" />
+                <InputError message={errors.region} />
+              </div>
+
+
+
+              
 
               <div className="grid gap-2">
                 <Label htmlFor="description">Description *</Label>

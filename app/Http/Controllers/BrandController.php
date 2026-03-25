@@ -1139,6 +1139,7 @@ class BrandController extends Controller
                 'website' => $request->website,
                 'description' => $request->description,
                 'country' => $request->country,
+                'region' => $request->region,
                 'monthly_posts' => $request->monthly_posts,
                 'status' => $request->status ?? $brand->status,
             ]);
