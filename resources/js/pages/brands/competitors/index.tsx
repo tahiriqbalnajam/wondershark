@@ -132,7 +132,7 @@ const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, tot
                             </p>
                         )}
                     </div> */}
-                    <div className="flex gap-2 mb-6">
+                    <div className="flex gap-2 mb-6 justify-end" style={{ paddingRight: '57px' }}>
                         <Drawer direction="right" open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
                             <DrawerTrigger asChild>
                                 <Button variant="outline" className='add-competitor-btn'>Add Competitor</Button>
