@@ -38,7 +38,7 @@ class PostController extends Controller
                 return $query->where('brand_id', $request->brand_id);
             })
             ->orderBy('created_at', 'desc')
-            ->paginate(20);
+            ->paginate(50);
 
         return Inertia::render('posts/index', [
             'posts' => $posts->through(function ($post) {
@@ -125,7 +125,7 @@ class PostController extends Controller
         $posts = Post::with(['brand', 'user', 'citations'])
             ->where('brand_id', $brand->id)
             ->orderBy('created_at', 'desc')
-            ->paginate(20);
+            ->paginate(50);
 
         return Inertia::render('posts/index', [
             'posts' => $posts->through(function ($post) {
