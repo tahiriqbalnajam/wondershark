@@ -55,8 +55,8 @@ class HandleInertiaRequests extends Middleware
                 // Admin can see all brands, limit to 10 most recent
                 $query->whereNotNull('website')
                     ->where('website', '!=', '')
-                    ->orderBy('updated_at', 'desc')
-                    ->limit(10);
+                    ->orderBy('updated_at', 'desc');
+                   // ->limit(10);
             } else {
                 // Regular users see only their own brands
                 // Include brands for: brand users (user_id), agency owners (agency_id), and agency members
@@ -70,8 +70,8 @@ class HandleInertiaRequests extends Middleware
                         $q->orWhere('agency_id', $membership->agency_id);
                     }
                 })
-                    ->orderBy('updated_at', 'desc')
-                    ->limit(10);
+                    ->orderBy('updated_at', 'desc');
+                    //->limit(10);
             }
 
             $brands = $query->select('id', 'name', 'website', 'logo')->get();
