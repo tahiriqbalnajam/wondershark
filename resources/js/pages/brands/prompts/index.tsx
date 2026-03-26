@@ -302,12 +302,22 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
 
     // Export active prompts to CSV
     const handleExportActivePrompts = () => {
+        // Helper to format date as 'Feb 20, 2026' using UTC
+        const formatDate = (isoString: string) => {
+            const date = new Date(isoString);
+            const month = date.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
+            const day = date.getUTCDate();
+            const year = date.getUTCFullYear();
+            return `${month} ${day}, ${year}`;
+        };
         // Prepare data for export
         const exportData = activePrompts.map(prompt => ({
             Prompt: prompt.prompt,
             Mentions: prompt.mentions_count ?? 'N/A',
             Location: getCountryData(prompt.country_code).name,
-            Created: Math.floor(prompt.days_ago) === 0 ? 'Today' : Math.floor(prompt.days_ago) === 1 ? '1 day' : `${Math.floor(prompt.days_ago)} days`,
+            //Created: Math.floor(prompt.days_ago) === 0 ? 'Today' : Math.floor(prompt.days_ago) === 1 ? '1 day' : `${Math.floor(prompt.days_ago)} days`,
+            //Created_at: "'" + formatDate(prompt.created_at),
+            Created: formatDate(prompt.created_at),
         }));
         const worksheet = XLSX.utils.json_to_sheet(exportData);
         const csv = XLSX.utils.sheet_to_csv(worksheet);
@@ -467,9 +477,19 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                     </TableCell>
                                                     <TableCell>
                                                         <div className="text-sm text-muted-foreground">
-                                                            {Math.floor(prompt.days_ago) === 0 ? 'Today' :
+                                                            {/* Math.floor(prompt.days_ago) === 0 ? 'Today' :
                                                                 Math.floor(prompt.days_ago) === 1 ? '1 day' :
-                                                                    `${Math.floor(prompt.days_ago)} days`}
+                                                                    `${Math.floor(prompt.days_ago)} days`} */}
+
+                                                            {(() => {
+                                                                // Format date as 'Feb 20, 2026' (use UTC to avoid timezone issues)
+                                                                const date = new Date(prompt.created_at);
+                                                                const month = date.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
+                                                                const day = date.getUTCDate();
+                                                                const year = date.getUTCFullYear();
+                                                                return `${month} ${day}, ${year}`;
+                                                            })()}
+
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
