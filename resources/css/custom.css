@@ -206,7 +206,7 @@ button {
 .dropdown-menu-mail {
     padding: 15px 0;
     margin: 0 5px;
-    max-height: 600px;
+    max-height: 500px;
     overflow-y: auto;
     /* Thin scrollbar for Firefox */
     scrollbar-width: thin;
