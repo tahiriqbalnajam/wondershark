@@ -34,6 +34,7 @@ import {
     CircleCheckBig,
     Sparkles,
     Info,
+    Calendar,
     Loader2
 } from 'lucide-react';
 
@@ -476,11 +477,11 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <div className="text-sm text-muted-foreground">
+                                                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
                                                             {/* Math.floor(prompt.days_ago) === 0 ? 'Today' :
                                                                 Math.floor(prompt.days_ago) === 1 ? '1 day' :
                                                                     `${Math.floor(prompt.days_ago)} days`} */}
-
+                                                            <Calendar className="h-3 w-3" />
                                                             {(() => {
                                                                 // Format date as 'Feb 20, 2026' (use UTC to avoid timezone issues)
                                                                 const date = new Date(prompt.created_at);
