@@ -22,7 +22,7 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
     };
 
     return (
-        <>
+        <div className="dropdown-menu-wrapper">
             <DropdownMenuLabel className="p-0 font-normal">
                 <div className="flex items-center gap-2 px-3 py-5 text-left text-lg border-b">
                     <span><Mail className='w-[15px]'/> </span><UserInfo user={user} showEmail={true} />
@@ -106,6 +106,6 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                     </Link>
                 </DropdownMenuItem>
             </DropdownMenuGroup>
-        </>
+        </div>
     );
 }

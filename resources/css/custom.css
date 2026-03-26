@@ -203,10 +203,21 @@ button {
     font-size: 14px;
 }
 
+.dropdown-menu-wrapper {
+    display: flex;
+    flex-direction: column;
+    max-height: min(600px, calc(100vh - 80px));
+    overflow: hidden;
+}
+
+.dropdown-menu-wrapper .dropdown-menu-link {
+    flex-shrink: 0;
+}
+
 .dropdown-menu-mail {
     padding: 15px 0;
     margin: 0 5px;
-    max-height: 500px;
+    flex: 1 1 auto;
     overflow-y: auto;
     /* Thin scrollbar for Firefox */
     scrollbar-width: thin;
