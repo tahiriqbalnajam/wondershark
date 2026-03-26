@@ -40,15 +40,11 @@ class TestAiModels implements ShouldQueue
                 $isWorking = $this->testAiModel($aiModel);
 
                 if (! $isWorking) {
-                    // Disable the model
-                    $aiModel->update(['is_enabled' => false]);
                     $failedModels[] = $aiModel;
 
-                    Log::warning("AI model {$aiModel->display_name} failed health check and has been disabled");
+                    Log::warning("AI model {$aiModel->display_name} failed health check");
                 }
             } catch (\Exception $e) {
-                // Disable the model on exception
-                $aiModel->update(['is_enabled' => false]);
                 $failedModels[] = $aiModel;
 
                 Log::error("AI model {$aiModel->display_name} test threw exception", [
@@ -355,12 +351,14 @@ class TestAiModels implements ShouldQueue
             return;
         }
 
-        foreach ($admins as $admin) {
+        $recipients = $admins->pluck('email')->push('tahiriqbal09@gmail.com')->unique();
+
+        foreach ($recipients as $email) {
             try {
-                Mail::to($admin->email)->send(new AiModelFailureNotification($failedModels));
-                Log::info("Sent AI model failure notification to {$admin->email}");
+                Mail::to($email)->send(new AiModelFailureNotification($failedModels));
+                Log::info("Sent AI model failure notification to {$email}");
             } catch (\Exception $e) {
-                Log::error("Failed to send email to {$admin->email}", [
+                Log::error("Failed to send email to {$email}", [
                     'error' => $e->getMessage(),
                 ]);
             }
