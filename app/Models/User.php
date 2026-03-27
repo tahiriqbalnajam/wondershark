@@ -33,6 +33,7 @@ class User extends Authenticatable
         'agency_color',
         'docs_view_mode',
         'docs_sort_by',
+        'last_visited_brand',
     ];
 
     /**
@@ -56,6 +57,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'can_create_posts' => 'boolean',
+            'last_visited_brand' => 'integer',
         ];
     }
 
