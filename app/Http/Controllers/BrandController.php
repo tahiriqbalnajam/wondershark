@@ -630,12 +630,14 @@ class BrandController extends Controller
                     $aiModelId = $aiModel?->id;
                 }
 
+                $isActive = (is_array($promptData) && array_key_exists('is_active', $promptData)) ? (bool)$promptData['is_active'] : false;
                 $prompt = \App\Models\BrandPrompt::create([
                     'brand_id' => $brand->id,
                     'prompt' => $promptText,
+                    'country_code' => is_array($promptData) && isset($promptData['country_code']) ? $promptData['country_code'] : null,
                     'order' => is_array($promptData) ? ($promptData['order'] ?? $index + 1) : $index + 1,
-                    'is_active' => false, // All generated prompts start as inactive (suggested)
-                    'status' => 'suggested', // New prompts are always suggested initially
+                    'is_active' => $isActive,
+                    'status' => $isActive ? 'active' : 'suggested',
                     'ai_provider' => is_array($promptData) && isset($promptData['source']) ? $promptData['source'] : 'ai',
                     'ai_model_id' => $aiModelId,
                     'visibility' => is_array($promptData) ? ($promptData['visibility'] ?? null) : null,
