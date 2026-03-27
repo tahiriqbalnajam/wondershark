@@ -736,7 +736,21 @@ class BrandController extends Controller
         }
 
         // Store selected brand in session
+
+        // Store selected brand in session
         session(['selected_brand_id' => $brand->id]);
+
+        // Store last visited brand in user meta and save user
+        if ($user) {
+            $user->last_visited_brand = $brand->id;
+            $user->save();
+        }
+
+
+        
+
+
+
 
         $brand->load([
             'prompts' => function ($query) {
