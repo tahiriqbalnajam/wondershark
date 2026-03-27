@@ -1138,6 +1138,11 @@ class BrandPromptAnalysisService
             return null;
         }
 
+        // Reject clearly fake or low-quality URLs before storing them
+        if ($this->isJunkResourceUrl($url)) {
+            return null;
+        }
+
         $domain = parse_url($url, PHP_URL_HOST);
         $isCompetitorUrl = $this->isCompetitorUrl($url, $domain, $competitors);
 
@@ -1197,6 +1202,48 @@ class BrandPromptAnalysisService
             if (strpos($urlDomain, $competitorDomain) !== false || strpos($competitorDomain, $urlDomain) !== false) {
                 return true;
             }
+        }
+
+        return false;
+    }
+
+    /**
+     * Detect URLs that are clearly fake, placeholder, or low-signal so they are
+     * not stored as citations. Returns true if the URL should be rejected.
+     */
+    protected function isJunkResourceUrl(string $url): bool
+    {
+        // Well-known junk/placeholder video IDs (e.g. the rickroll)
+        $blockedVideoIds = ['dQw4w9WgXcQ'];
+        foreach ($blockedVideoIds as $id) {
+            if (str_contains($url, $id)) {
+                return true;
+            }
+        }
+
+        // Placeholder Reddit post IDs — real IDs are 6-7 alphanumeric chars but
+        // purely sequential letters (abcdef, ghijkl) are AI-generated fakes.
+        if (preg_match('/reddit\.com.*\/comments\/([a-z]{6,7})\b/i', $url, $m)) {
+            if (preg_match('/^[a-z]+$/', $m[1]) && ! preg_match('/[0-9]/', $m[1])) {
+                return true;
+            }
+        }
+
+        // Bare root-domain URLs with no meaningful path (e.g. https://www.forbes.com)
+        $parsed = parse_url($url);
+        $path   = rtrim($parsed['path'] ?? '', '/');
+        if ($path === '' && empty($parsed['query']) && empty($parsed['fragment'])) {
+            return true;
+        }
+
+        // Forbes/similar with obviously fake tracking hashes (all repeated hex chars)
+        if (preg_match('/\?sh=([0-9a-f])\1{7,}/i', $url)) {
+            return true;
+        }
+
+        // YouTube search-results pages are not real citations
+        if (str_contains($url, 'youtube.com/results')) {
+            return true;
         }
 
         return false;

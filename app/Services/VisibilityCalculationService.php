@@ -57,6 +57,7 @@ class VisibilityCalculationService
             }
         }
 
+
         if ($brandMentionData['found']) {
             $mention = BrandMention::create([
                 'brand_prompt_id' => $brandPrompt->id,
@@ -110,7 +111,7 @@ class VisibilityCalculationService
                     'context' => $competitorMentionData['context'],
                     'session_id' => $sessionId,
                     'analyzed_at' => $analyzedAt,
-                    'sentiment' => $compSentiment, // Assigned from AI analysis if available
+                    'sentiment' => $compSentiment,
                 ]);
                 $mentions[] = $mention;
             }

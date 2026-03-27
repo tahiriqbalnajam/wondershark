@@ -61,32 +61,16 @@ class RecalculateBrandVisibility extends Command
                     $this->regenerateMentionsForBrand($brand, $visibilityService, $days);
                 }
 
-                // Get all unique AI models that have mentions for this brand
-                $aiModelIds = \App\Models\BrandMention::where('brand_id', $brand->id)
-                    ->whereNotNull('ai_model_id')
-                    ->distinct('ai_model_id')
-                    ->pluck('ai_model_id')
-                    ->toArray();
-
-                if (empty($aiModelIds)) {
-                    // No AI model mentions found, calculate without filter
-                    $visibilityService->updateCompetitiveStats(
-                        $brand,
-                        now()->subDays($days),
-                        now(),
-                        null
-                    );
-                } else {
-                    // Calculate stats separately for each AI model
-                    foreach ($aiModelIds as $aiModelId) {
-                        $visibilityService->updateCompetitiveStats(
-                            $brand,
-                            now()->subDays($days),
-                            now(),
-                            $aiModelId
-                        );
-                    }
-                }
+                // Calculate visibility across ALL models combined so that totalPrompts
+                // is the full denominator (e.g. 12 active prompts), not 1 per model.
+                // Calculating per-model produced totalPrompts=1 for each model →
+                // every entity that appeared in that single prompt got 100% visibility.
+                $visibilityService->updateCompetitiveStats(
+                    $brand,
+                    now()->subDays($days),
+                    now(),
+                    null
+                );
 
                 $bar->advance();
             } catch (\Exception $e) {
@@ -108,7 +92,10 @@ class RecalculateBrandVisibility extends Command
      */
     protected function regenerateMentionsForBrand(Brand $brand, VisibilityCalculationService $visibilityService, int $days): void
     {
+        // Only regenerate for active prompts — inactive/suggested prompts may contain
+        // artificially injected brand names that produce misleading mention data.
         $prompts = BrandPrompt::where('brand_id', $brand->id)
+            ->where('is_active', true)
             ->whereNotNull('ai_response')
             ->where('analysis_completed_at', '>=', now()->subDays($days))
             ->get();

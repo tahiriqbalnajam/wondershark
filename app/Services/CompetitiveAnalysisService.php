@@ -399,6 +399,8 @@ CRITICAL INSTRUCTIONS:
             $statArray['visibility_percentage'] = $stat->visibility_percentage;
             $statArray['position_formatted'] = $stat->position_formatted;
             $statArray['sentiment_level'] = $stat->sentiment_level;
+            $statArray['sov']            = $stat->visibility;
+            $statArray['sov_percentage'] = $stat->visibility_percentage;
 
             return $statArray;
         })->filter()->values()->toArray(); // Filter out null values from ai_model_id filtering
@@ -414,14 +416,18 @@ CRITICAL INSTRUCTIONS:
                 'entity_name' => $brand->name,
                 'entity_url' => $brand->website ?? $brand->domain ?? '',
                 'visibility' => 0,
+                'sov' => 0,
+                'sov_percentage' => '0%',
                 'sentiment' => 0,
                 'position' => 0,
                 'analyzed_at' => null,
                 'trends' => [
                     'visibility_trend' => 'new',
+                    'sov_trend' => 'new',
                     'sentiment_trend' => 'new',
                     'position_trend' => 'new',
                     'visibility_change' => 0,
+                    'sov_change' => 0,
                     'sentiment_change' => 0,
                     'position_change' => 0,
                 ],
@@ -439,14 +445,18 @@ CRITICAL INSTRUCTIONS:
                     'entity_name' => $competitor->name,
                     'entity_url' => $competitor->domain,
                     'visibility' => 0,
+                    'sov' => 0,
+                    'sov_percentage' => '0%',
                     'sentiment' => null,
                     'position' => 0,
                     'analyzed_at' => null,
                     'trends' => [
                         'visibility_trend' => 'new',
+                        'sov_trend' => 'new',
                         'sentiment_trend' => 'new',
                         'position_trend' => 'new',
                         'visibility_change' => 0,
+                        'sov_change' => 0,
                         'sentiment_change' => 0,
                         'position_change' => 0,
                     ],
@@ -604,6 +614,9 @@ CRITICAL INSTRUCTIONS:
                 $statArray['visibility_percentage'] = $stat->visibility_percentage;
                 $statArray['position_formatted']    = $stat->position_formatted;
                 $statArray['sentiment_level']       = $stat->sentiment_level;
+                // Fallback has no real SOV; mirror visibility so the frontend key exists
+                $statArray['sov']             = $stat->visibility;
+                $statArray['sov_percentage']  = $stat->visibility_percentage;
                 $result[] = $statArray;
             }
 
