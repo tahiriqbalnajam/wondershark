@@ -153,6 +153,10 @@ export function AddPromptDialog({ brandId, className, onPromptAdd }: AddPromptDi
         }
         if (errorLines.length > 0) {
           setBulkError(errorLines.join('\n'));
+          setCsvFile(null);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
           setLoading(false);
           setTimeout(() => {
             router.reload();
@@ -191,13 +195,21 @@ export function AddPromptDialog({ brandId, className, onPromptAdd }: AddPromptDi
             router.reload(); // Auto-refresh page data
           } else {
             const errorData = await response.json();
-            setBulkError(errorData.message || 'Failed to upload prompts. Please check your CSV format and try again.');
+            setBulkError('Failed to upload prompts. Please check your CSV format and try again.');
+            setCsvFile(null);
+            if (fileInputRef.current) {
+              fileInputRef.current.value = '';
+            }
             setTimeout(() => {
               router.reload();
             }, 1000);
           }
         } catch (err) {
           setBulkError('Failed to upload prompts. Please check your CSV format and try again.');
+          setCsvFile(null);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
           setTimeout(() => {
             router.reload();
           }, 1000);
@@ -206,6 +218,10 @@ export function AddPromptDialog({ brandId, className, onPromptAdd }: AddPromptDi
       },
       error: () => {
         setBulkError('Failed to upload prompts. Please check your CSV format and try again.');
+        setCsvFile(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
         setTimeout(() => {
             router.reload();
           }, 1000);
