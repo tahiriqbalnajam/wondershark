@@ -315,7 +315,8 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
         const exportData = activePrompts.map(prompt => ({
             Prompt: prompt.prompt,
             Mentions: prompt.mentions_count ?? 'N/A',
-            Location: getCountryData(prompt.country_code).name,
+            Country: getCountryData(prompt.country_code).name,
+            Region: brand.region || '-',
             //Created: Math.floor(prompt.days_ago) === 0 ? 'Today' : Math.floor(prompt.days_ago) === 1 ? '1 day' : `${Math.floor(prompt.days_ago)} days`,
             //Created_at: "'" + formatDate(prompt.created_at),
             Created: formatDate(prompt.created_at),
