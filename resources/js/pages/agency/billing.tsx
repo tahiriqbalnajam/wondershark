@@ -331,10 +331,18 @@ export default function AgencyBillingPage() {
             <div
               className={`border rounded-lg p-6 flex-1 bg-background shadow-sm transition-all ${
                 hasActiveSubscription
-                  ? currentPlan === 'agency_growth' ? 'ring-2 ring-primary border-primary' : ''
+                  ? currentPlan === 'agency_growth' ? 'ring-2' : ''
                   : selectedPlan === 'agency_growth' ? 'ring-2 ring-primary border-primary cursor-pointer' : 'hover:border-primary/50 cursor-pointer'
               }`}
-              style={{ minWidth: 320, maxWidth: 380 }}
+              style={{
+                minWidth: 320,
+                maxWidth: 380,
+                ...(hasActiveSubscription && currentPlan === 'agency_growth' && agency?.color
+                  ? { borderColor: agency.color, '--tw-ring-color': agency.color } as React.CSSProperties
+                  : hasActiveSubscription && currentPlan === 'agency_growth'
+                  ? { borderColor: 'hsl(var(--primary))', '--tw-ring-color': 'hsl(var(--primary))' } as React.CSSProperties
+                  : {})
+              }}
               {...(!hasActiveSubscription && {
                 onClick: () => setSelectedPlan('agency_growth'),
                 tabIndex: 0,
@@ -386,7 +394,7 @@ export default function AgencyBillingPage() {
               {currentPlan === 'agency_growth' ? (
                 subscription?.cancel_at_period_end ? (
                   <button
-                    className="w-full py-2 px-4 rounded bg-primary text-primary-foreground font-semibold"
+                    className="w-full bg-primary text-primary-foreground font-semibold rounded-[6px] p-2 text-body-m"
                     onClick={(e) => { e.stopPropagation(); handleReactivate(); }}
                     disabled={loading}
                   >
@@ -394,7 +402,7 @@ export default function AgencyBillingPage() {
                   </button>
                 ) : (
                   <button
-                    className="w-full py-2 px-4 rounded bg-muted text-muted-foreground border border-muted-foreground"
+                    className="w-full bg-muted text-muted-foreground border border-muted-foreground rounded-[6px] p-2 text-body-m"
                     onClick={(e) => { e.stopPropagation(); handleCancel(); }}
                     disabled={loading}
                   >
@@ -403,7 +411,7 @@ export default function AgencyBillingPage() {
                 )
               ) : (
                 <button
-                  className="w-full py-2 px-4 rounded bg-primary text-primary-foreground font-semibold flex items-center justify-center"
+                  className="w-full bg-primary text-primary-foreground font-semibold flex items-center justify-center rounded-[6px] p-2 text-body-m" 
                   onClick={(e) => { e.stopPropagation(); handlePlanAction('agency_growth'); }}
                   disabled={loading || subscribingPlan === 'agency_growth'}
                 >
@@ -441,10 +449,18 @@ export default function AgencyBillingPage() {
             <div
               className={`border rounded-lg p-6 flex-1 bg-background shadow-sm transition-all ${
                 hasActiveSubscription
-                  ? currentPlan === 'agency_unlimited' ? 'ring-2 ring-primary border-primary' : ''
+                  ? currentPlan === 'agency_unlimited' ? 'ring-2' : ''
                   : selectedPlan === 'agency_unlimited' ? 'ring-2 ring-primary border-primary cursor-pointer' : 'hover:border-primary/50 cursor-pointer'
               }`}
-              style={{ minWidth: 320, maxWidth: 380 }}
+              style={{
+                minWidth: 320,
+                maxWidth: 380,
+                ...(hasActiveSubscription && currentPlan === 'agency_unlimited' && agency?.color
+                  ? { borderColor: agency.color, '--tw-ring-color': agency.color } as React.CSSProperties
+                  : hasActiveSubscription && currentPlan === 'agency_unlimited'
+                  ? { borderColor: 'hsl(var(--primary))', '--tw-ring-color': 'hsl(var(--primary))' } as React.CSSProperties
+                  : {})
+              }}
               {...(!hasActiveSubscription && {
                 onClick: () => setSelectedPlan('agency_unlimited'),
                 tabIndex: 0,
@@ -496,7 +512,7 @@ export default function AgencyBillingPage() {
               {currentPlan === 'agency_unlimited' ? (
                 subscription?.cancel_at_period_end ? (
                   <button
-                    className="w-full py-2 px-4 rounded bg-primary text-primary-foreground font-semibold"
+                    className="w-full bg-primary text-primary-foreground font-semibold rounded-[6px] p-2 text-body-m"
                     onClick={(e) => { e.stopPropagation(); handleReactivate(); }}
                     disabled={loading}
                   >
@@ -504,7 +520,7 @@ export default function AgencyBillingPage() {
                   </button>
                 ) : (
                   <button
-                    className="w-full py-2 px-4 rounded bg-muted text-muted-foreground border border-muted-foreground"
+                    className="w-full bg-muted text-muted-foreground border border-muted-foreground rounded-[6px] p-2 text-body-m"
                     onClick={(e) => { e.stopPropagation(); handleCancel(); }}
                     disabled={loading}
                   >
@@ -513,7 +529,7 @@ export default function AgencyBillingPage() {
                 )
               ) : (
                 <button
-                  className="w-full py-2 px-4 rounded bg-primary text-primary-foreground font-semibold flex items-center justify-center"
+                  className="w-full bg-primary text-primary-foreground font-semibold flex items-center justify-center rounded-[6px] p-2 text-body-m"
                   onClick={(e) => { e.stopPropagation(); handlePlanAction('agency_unlimited'); }}
                   disabled={loading || subscribingPlan === 'agency_unlimited'}
                 >
