@@ -329,26 +329,21 @@ export default function AgencyBillingPage() {
           <div className="flex flex-col md:flex-row gap-6">
             {/* Growth Plan */}
             <div
-              className={`border rounded-lg p-6 flex-1 bg-background shadow-sm transition-all ${
-                hasActiveSubscription
-                  ? currentPlan === 'agency_growth' ? 'ring-2' : ''
-                  : selectedPlan === 'agency_growth' ? 'ring-2 ring-primary border-primary cursor-pointer' : 'hover:border-primary/50 cursor-pointer'
+              className={`border rounded-lg p-6 flex-1 bg-background transition-all ${
+                hasActiveSubscription && currentPlan === 'agency_growth'
+                  ? ''
+                  : 'shadow-sm'
               }`}
               style={{
                 minWidth: 320,
                 maxWidth: 380,
-                ...(hasActiveSubscription && currentPlan === 'agency_growth' && agency?.color
-                  ? { borderColor: agency.color, '--tw-ring-color': agency.color } as React.CSSProperties
-                  : hasActiveSubscription && currentPlan === 'agency_growth'
-                  ? { borderColor: 'hsl(var(--primary))', '--tw-ring-color': 'hsl(var(--primary))' } as React.CSSProperties
+                ...(hasActiveSubscription && currentPlan === 'agency_growth'
+                  ? {
+                      borderColor: agency?.color || '#ff5b49',
+                      boxShadow: `0 0 0 2px ${agency?.color || '#ff5b49'}, 0 1px 2px 0 rgb(0 0 0 / 0.05)`
+                    } as React.CSSProperties
                   : {})
               }}
-              {...(!hasActiveSubscription && {
-                onClick: () => setSelectedPlan('agency_growth'),
-                tabIndex: 0,
-                role: "button",
-                "aria-pressed": selectedPlan === 'agency_growth'
-              })}
             >
               <div className="mb-4 text-muted-foreground">Growth</div>
               <div className="text-2xl font-bold text-black mb-2">$299 <span className="text-base font-normal text-muted-foreground">/per month</span></div>
@@ -447,26 +442,21 @@ export default function AgencyBillingPage() {
             </div>
             {/* Unlimited Plan */}
             <div
-              className={`border rounded-lg p-6 flex-1 bg-background shadow-sm transition-all ${
-                hasActiveSubscription
-                  ? currentPlan === 'agency_unlimited' ? 'ring-2' : ''
-                  : selectedPlan === 'agency_unlimited' ? 'ring-2 ring-primary border-primary cursor-pointer' : 'hover:border-primary/50 cursor-pointer'
+              className={`border rounded-lg p-6 flex-1 bg-background transition-all ${
+                hasActiveSubscription && currentPlan === 'agency_unlimited'
+                  ? ''
+                  : 'shadow-sm'
               }`}
               style={{
                 minWidth: 320,
                 maxWidth: 380,
-                ...(hasActiveSubscription && currentPlan === 'agency_unlimited' && agency?.color
-                  ? { borderColor: agency.color, '--tw-ring-color': agency.color } as React.CSSProperties
-                  : hasActiveSubscription && currentPlan === 'agency_unlimited'
-                  ? { borderColor: 'hsl(var(--primary))', '--tw-ring-color': 'hsl(var(--primary))' } as React.CSSProperties
+                ...(hasActiveSubscription && currentPlan === 'agency_unlimited'
+                  ? {
+                      borderColor: agency?.color || '#ff5b49',
+                      boxShadow: `0 0 0 2px ${agency?.color || '#ff5b49'}, 0 1px 2px 0 rgb(0 0 0 / 0.05)`
+                    } as React.CSSProperties
                   : {})
               }}
-              {...(!hasActiveSubscription && {
-                onClick: () => setSelectedPlan('agency_unlimited'),
-                tabIndex: 0,
-                role: "button",
-                "aria-pressed": selectedPlan === 'agency_unlimited'
-              })}
             >
               <div className="mb-4 text-muted-foreground">Unlimited</div>
               <div className="text-2xl font-bold text-black mb-2">$499 <span className="text-base font-normal text-muted-foreground">/per month</span></div>
