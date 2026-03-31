@@ -17,7 +17,8 @@ import {
     Package,
     Building2,
     CirclePlus,
-    Terminal
+    Terminal,
+    CreditCard
 } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { usePage } from '@inertiajs/react';
@@ -140,6 +141,12 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
             href: '/settings/agency',
             icon: Building2,
         });
+            // Billing - only for agency users
+            items.push({
+                title: 'Billing',
+                href: '/agency/billing',
+                icon: FileText,
+            });
     }
 
     // User Management - only for admin users (skip for agency and brand)
@@ -229,6 +236,12 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
                     title: 'System Settings',
                     href: '/admin/settings',
                     icon: Settings,
+                    permission: 'manage-system',
+                },
+                {
+                    title: 'Stripe Settings',
+                    href: '/admin/settings/stripe',
+                    icon: CreditCard,
                     permission: 'manage-system',
                 },
             ]

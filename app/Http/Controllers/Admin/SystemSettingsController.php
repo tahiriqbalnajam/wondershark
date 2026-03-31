@@ -86,4 +86,78 @@ class SystemSettingsController extends Controller
 
         return redirect()->back()->with('success', 'Settings updated successfully.');
     }
+
+    public function stripe()
+    {
+        $settings = [
+            'stripe_mode' => SystemSetting::get('stripe_mode', 'test'),
+            'stripe_test_publishable_key' => SystemSetting::get('stripe_test_publishable_key', ''),
+            'stripe_test_secret_key' => SystemSetting::get('stripe_test_secret_key', ''),
+            'stripe_live_publishable_key' => SystemSetting::get('stripe_live_publishable_key', ''),
+            'stripe_live_secret_key' => SystemSetting::get('stripe_live_secret_key', ''),
+        ];
+
+        return Inertia::render('admin/settings/stripe', [
+            'settings' => $settings,
+        ]);
+    }
+
+    public function updateStripe(Request $request)
+    {
+        $request->validate([
+            'stripe_mode' => 'required|in:test,live',
+            'stripe_test_publishable_key' => 'nullable|string',
+            'stripe_test_secret_key' => 'nullable|string',
+            'stripe_live_publishable_key' => 'nullable|string',
+            'stripe_live_secret_key' => 'nullable|string',
+        ]);
+
+        // Update Stripe mode
+        SystemSetting::set(
+            'stripe_mode',
+            $request->input('stripe_mode'),
+            'string',
+            'Stripe API mode (test or live)'
+        );
+
+        // Update test keys
+        if ($request->has('stripe_test_publishable_key')) {
+            SystemSetting::set(
+                'stripe_test_publishable_key',
+                $request->input('stripe_test_publishable_key'),
+                'string',
+                'Stripe test publishable key'
+            );
+        }
+
+        if ($request->has('stripe_test_secret_key')) {
+            SystemSetting::set(
+                'stripe_test_secret_key',
+                $request->input('stripe_test_secret_key'),
+                'string',
+                'Stripe test secret key'
+            );
+        }
+
+        // Update live keys
+        if ($request->has('stripe_live_publishable_key')) {
+            SystemSetting::set(
+                'stripe_live_publishable_key',
+                $request->input('stripe_live_publishable_key'),
+                'string',
+                'Stripe live publishable key'
+            );
+        }
+
+        if ($request->has('stripe_live_secret_key')) {
+            SystemSetting::set(
+                'stripe_live_secret_key',
+                $request->input('stripe_live_secret_key'),
+                'string',
+                'Stripe live secret key'
+            );
+        }
+
+        return redirect()->back()->with('success', 'Stripe settings updated successfully.');
+    }
 }

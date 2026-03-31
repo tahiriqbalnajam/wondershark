@@ -25,6 +25,9 @@ Route::get('/', function () {
 Route::get('invitation/{token}', [\App\Http\Controllers\Agency\InvitationController::class, 'show'])->name('agency.invitation.accept');
 Route::post('invitation/accept', [\App\Http\Controllers\Agency\InvitationController::class, 'accept'])->name('agency.invitation.store');
 
+// Stripe Webhook - Public route (NO authentication required)
+Route::post('webhook/stripe', [\App\Http\Controllers\Agency\SubscriptionController::class, 'webhook'])->name('stripe.webhook');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     // Working import routes - using controllers to get proper data
     Route::get('posts/agency-import', [\App\Http\Controllers\PostImportController::class, 'index'])
@@ -176,6 +179,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::prefix('admin/settings')->name('admin.settings.')->middleware('role.permission:manage-system')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'index'])->name('index');
             Route::post('/update', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'update'])->name('update');
+            
+            // Stripe Settings
+            Route::get('/stripe', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'stripe'])->name('stripe');
+            Route::post('/stripe/update', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'updateStripe'])->name('stripe.update');
         });
 
         // Post Permissions Management - Admin only (requires additional manage-system permission)
@@ -350,6 +357,60 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             // Orders Management
             Route::get('orders', [\App\Http\Controllers\Agency\OrderController::class, 'index'])->name('orders.index');
+
+            // Subscription Management
+            Route::post('subscriptions/subscribe', [\App\Http\Controllers\Agency\SubscriptionController::class, 'subscribe'])->name('subscriptions.subscribe');
+            Route::post('subscriptions/subscribe-with-card', [\App\Http\Controllers\Agency\SubscriptionController::class, 'subscribeWithPaymentMethod'])->name('subscriptions.subscribe-with-card');
+            Route::get('subscriptions/success', [\App\Http\Controllers\Agency\SubscriptionController::class, 'success'])->name('subscriptions.success');
+            Route::post('subscriptions/update', [\App\Http\Controllers\Agency\SubscriptionController::class, 'update'])->name('subscriptions.update');
+            Route::post('subscriptions/cancel', [\App\Http\Controllers\Agency\SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
+            Route::post('subscriptions/reactivate', [\App\Http\Controllers\Agency\SubscriptionController::class, 'reactivate'])->name('subscriptions.reactivate');
+            Route::get('subscriptions/status', [\App\Http\Controllers\Agency\SubscriptionController::class, 'getStatus'])->name('subscriptions.status');
+            Route::post('subscriptions/billing-portal', [\App\Http\Controllers\Agency\SubscriptionController::class, 'billingPortal'])->name('subscriptions.billing-portal');
+            
+            // Payment Method Management
+            Route::post('subscriptions/setup-intent', [\App\Http\Controllers\Agency\SubscriptionController::class, 'createSetupIntent'])->name('subscriptions.setup-intent');
+            Route::post('subscriptions/attach-payment-method', [\App\Http\Controllers\Agency\SubscriptionController::class, 'attachPaymentMethod'])->name('subscriptions.attach-payment-method');
+            Route::get('subscriptions/payment-methods', [\App\Http\Controllers\Agency\SubscriptionController::class, 'getPaymentMethods'])->name('subscriptions.payment-methods');
+
+            // Billing Page
+            Route::get('billing', function () {
+                $user = Auth::user();
+                
+                // If user is an agency member, get the agency owner's data
+                if($user->hasRole('agency_member')){
+                    $agencyId = $user->agencyMembership?->agency_id;
+                    $user = \App\Models\User::find($agencyId);
+                }
+                
+                // Get subscription data (already synced by middleware)
+                $subscription = \App\Models\Subscription::where('user_id', $user->id)
+                    ->where('status', 'active')
+                    ->first();
+                
+                // Get Stripe publishable key
+                $stripeMode = \App\Models\SystemSetting::get('stripe_mode', 'test');
+                $stripePublishableKey = $stripeMode === 'live' 
+                    ? \App\Models\SystemSetting::get('stripe_live_publishable_key')
+                    : \App\Models\SystemSetting::get('stripe_test_publishable_key');
+                
+                return Inertia::render('agency/billing', [
+                    'agency' => [
+                        'name' => $user->name,
+                        'url' => $user->url,
+                        'logo' => $user->logo ? asset('storage/'.$user->logo) : null,
+                        'color' => $user->agency_color ?? '',
+                    ],
+                    'subscription' => $subscription ? [
+                        'plan_name' => $subscription->plan_name,
+                        'status' => $subscription->status,
+                        'cancel_at_period_end' => $subscription->cancel_at_period_end,
+                        'cancel_at' => $subscription->cancel_at?->format('M d, Y'),
+                        'current_period_end' => $subscription->current_period_end?->format('M d, Y'),
+                    ] : null,
+                    'stripePublishableKey' => $stripePublishableKey,
+                ]);
+            })->name('billing')->middleware(['role.permission:null,agency', 'sync.subscription']);
         });
     });
 

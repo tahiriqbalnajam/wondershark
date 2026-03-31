@@ -56,7 +56,11 @@ export function NavMain({ items = [], label = 'General' }: { items: NavItem[], l
                                 {/* Static submenu (NO collapsible) */}
                                 <SidebarMenuSub className="ml-5 mt-1">
                                     {item.items.map((subItem) => {
-                                        const subIsActive = page.url.startsWith(subItem.href);
+                                        // Check if sub-item is active - use exact match or match with query/hash only
+                                        const subIsActive = page.url === subItem.href || 
+                                                          (page.url.startsWith(subItem.href) && 
+                                                           (page.url[subItem.href.length] === '?' || 
+                                                            page.url[subItem.href.length] === '#'));
 
                                         return (
                                             <SidebarMenuSubItem key={subItem.title}>
@@ -96,7 +100,11 @@ export function NavMain({ items = [], label = 'General' }: { items: NavItem[], l
                                     <CollapsibleContent>
                                         <SidebarMenuSub className="ml-5 mt-1">
                                             {item.items.map((subItem) => {
-                                                const subIsActive = page.url.startsWith(subItem.href);
+                                                // Check if sub-item is active - use exact match or match with query/hash only
+                                                const subIsActive = page.url === subItem.href || 
+                                                                  (page.url.startsWith(subItem.href) && 
+                                                                   (page.url[subItem.href.length] === '?' || 
+                                                                    page.url[subItem.href.length] === '#'));
 
                                                 return (
                                                     <SidebarMenuSubItem key={subItem.title}>
