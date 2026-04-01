@@ -11,6 +11,8 @@ interface CardUpdateModalProps {
   onOpenChange: (open: boolean) => void;
   stripePublishableKey: string;
   onSuccess?: () => void;
+  setupIntentEndpoint?: string;
+  attachPaymentMethodEndpoint?: string;
 }
 
 interface PaymentMethod {
@@ -28,7 +30,9 @@ const CardForm: React.FC<{
   existingCard: PaymentMethod | null;
   onSuccess?: () => void; 
   onCancel: () => void;
-}> = ({ existingCard, onSuccess, onCancel }) => {
+  setupIntentEndpoint?: string;
+  attachPaymentMethodEndpoint?: string;
+}> = ({ existingCard, onSuccess, onCancel, setupIntentEndpoint = '/agency/subscriptions/setup-intent', attachPaymentMethodEndpoint = '/agency/subscriptions/attach-payment-method' }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -53,7 +57,7 @@ const CardForm: React.FC<{
 
     try {
       // Get setup intent client secret
-      const setupResponse = await fetch('/agency/subscriptions/setup-intent', {
+      const setupResponse = await fetch(setupIntentEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +94,7 @@ const CardForm: React.FC<{
       }
 
       // Attach payment method to customer
-      const attachResponse = await fetch('/agency/subscriptions/attach-payment-method', {
+      const attachResponse = await fetch(attachPaymentMethodEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -204,12 +208,17 @@ export const CardUpdateModal: React.FC<CardUpdateModalProps> = ({
   onOpenChange,
   stripePublishableKey,
   onSuccess,
+  setupIntentEndpoint = '/agency/subscriptions/setup-intent',
+  attachPaymentMethodEndpoint = '/agency/subscriptions/attach-payment-method',
 }) => {
   const [stripeElements] = useState(() => 
     stripePublishableKey ? stripePromise(stripePublishableKey) : null
   );
   const [existingCard, setExistingCard] = useState<PaymentMethod | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Derive payment methods endpoint from setup intent endpoint
+  const paymentMethodsEndpoint = setupIntentEndpoint.replace('/setup-intent', '/payment-methods');
 
   useEffect(() => {
     if (open) {
@@ -222,7 +231,7 @@ export const CardUpdateModal: React.FC<CardUpdateModalProps> = ({
 
   const fetchExistingCard = async () => {
     try {
-      const response = await fetch('/agency/subscriptions/payment-methods', {
+      const response = await fetch(paymentMethodsEndpoint, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -276,7 +285,9 @@ export const CardUpdateModal: React.FC<CardUpdateModalProps> = ({
             <CardForm 
               existingCard={existingCard}
               onSuccess={onSuccess} 
-              onCancel={() => onOpenChange(false)} 
+              onCancel={() => onOpenChange(false)}
+              setupIntentEndpoint={setupIntentEndpoint}
+              attachPaymentMethodEndpoint={attachPaymentMethodEndpoint}
             />
           </Elements>
         )}

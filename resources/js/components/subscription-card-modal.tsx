@@ -10,21 +10,25 @@ interface SubscriptionCardModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   stripePublishableKey: string;
-  planName: 'agency_growth' | 'agency_unlimited';
+  planName: 'agency_growth' | 'agency_unlimited' | 'brand_growth' | 'brand_unlimited';
   planDisplayName: string;
   planPrice: string;
   onSuccess?: () => void;
+  setupIntentEndpoint?: string;
+  subscribeEndpoint?: string;
 }
 
 const stripePromise = (publishableKey: string) => loadStripe(publishableKey);
 
 const SubscriptionForm: React.FC<{ 
-  planName: 'agency_growth' | 'agency_unlimited';
+  planName: 'agency_growth' | 'agency_unlimited' | 'brand_growth' | 'brand_unlimited';
   planDisplayName: string;
   planPrice: string;
   onSuccess?: () => void; 
   onCancel: () => void;
-}> = ({ planName, planDisplayName, planPrice, onSuccess, onCancel }) => {
+  setupIntentEndpoint?: string;
+  subscribeEndpoint?: string;
+}> = ({ planName, planDisplayName, planPrice, onSuccess, onCancel, setupIntentEndpoint = '/agency/subscriptions/setup-intent', subscribeEndpoint = '/agency/subscriptions/subscribe-with-card' }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -40,7 +44,7 @@ const SubscriptionForm: React.FC<{
 
     try {
       // Get setup intent client secret
-      const setupResponse = await fetch('/agency/subscriptions/setup-intent', {
+      const setupResponse = await fetch(setupIntentEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,7 +81,7 @@ const SubscriptionForm: React.FC<{
       }
 
       // Create subscription with payment method
-      const subscribeResponse = await fetch('/agency/subscriptions/subscribe-with-card', {
+      const subscribeResponse = await fetch(subscribeEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -165,6 +169,8 @@ export const SubscriptionCardModal: React.FC<SubscriptionCardModalProps> = ({
   planDisplayName,
   planPrice,
   onSuccess,
+  setupIntentEndpoint = '/agency/subscriptions/setup-intent',
+  subscribeEndpoint = '/agency/subscriptions/subscribe-with-card',
 }) => {
   const [stripeElements] = useState(() => 
     stripePublishableKey ? stripePromise(stripePublishableKey) : null
@@ -189,7 +195,9 @@ export const SubscriptionCardModal: React.FC<SubscriptionCardModalProps> = ({
             planDisplayName={planDisplayName}
             planPrice={planPrice}
             onSuccess={onSuccess} 
-            onCancel={() => onOpenChange(false)} 
+            onCancel={() => onOpenChange(false)}
+            setupIntentEndpoint={setupIntentEndpoint}
+            subscribeEndpoint={subscribeEndpoint}
           />
         </Elements>
       </DialogContent>

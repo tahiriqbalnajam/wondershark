@@ -260,6 +260,36 @@ class StripeService
     }
 
     /**
+     * Setup brand plans (Brand Growth and Brand Unlimited)
+     */
+    public function setupBrandPlans()
+    {
+        $plans = [
+            [
+                'name' => 'Brand Growth',
+                'key' => 'brand_growth',
+                'price' => 199*100, // $199 in cents
+                'description' => 'Growth plan for brand users',
+            ]
+        ];
+
+        $result = [];
+
+        foreach ($plans as $plan) {
+            $product = $this->getOrCreateProduct($plan['name'], $plan['description']);
+            $price = $this->getOrCreatePrice($product->id, $plan['price']);
+            
+            $result[$plan['key']] = [
+                'product_id' => $product->id,
+                'price_id' => $price->id,
+                'amount' => $plan['price'],
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
      * Create a Billing Portal Session for managing payment methods and invoices
      */
     public function createBillingPortalSession(string $customerId, string $returnUrl)

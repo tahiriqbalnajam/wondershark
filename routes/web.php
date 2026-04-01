@@ -414,6 +414,58 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
     });
 
+    // Brand Subscription Routes
+    Route::prefix('brand')->name('brand.')->middleware(['auth', 'verified', 'role.permission:null,brand'])->group(function () {
+        // Subscription Management
+        Route::post('subscriptions/subscribe', [\App\Http\Controllers\Brand\SubscriptionController::class, 'subscribe'])->name('subscriptions.subscribe');
+        Route::post('subscriptions/subscribe-with-card', [\App\Http\Controllers\Brand\SubscriptionController::class, 'subscribeWithPaymentMethod'])->name('subscriptions.subscribe-with-card');
+        Route::get('subscriptions/success', [\App\Http\Controllers\Brand\SubscriptionController::class, 'success'])->name('subscriptions.success');
+        Route::post('subscriptions/update', [\App\Http\Controllers\Brand\SubscriptionController::class, 'update'])->name('subscriptions.update');
+        Route::post('subscriptions/cancel', [\App\Http\Controllers\Brand\SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
+        Route::post('subscriptions/reactivate', [\App\Http\Controllers\Brand\SubscriptionController::class, 'reactivate'])->name('subscriptions.reactivate');
+        Route::get('subscriptions/status', [\App\Http\Controllers\Brand\SubscriptionController::class, 'getStatus'])->name('subscriptions.status');
+        Route::post('subscriptions/billing-portal', [\App\Http\Controllers\Brand\SubscriptionController::class, 'billingPortal'])->name('subscriptions.billing-portal');
+        
+        // Payment Method Management
+        Route::post('subscriptions/setup-intent', [\App\Http\Controllers\Brand\SubscriptionController::class, 'createSetupIntent'])->name('subscriptions.setup-intent');
+        Route::post('subscriptions/attach-payment-method', [\App\Http\Controllers\Brand\SubscriptionController::class, 'attachPaymentMethod'])->name('subscriptions.attach-payment-method');
+        Route::get('subscriptions/payment-methods', [\App\Http\Controllers\Brand\SubscriptionController::class, 'getPaymentMethods'])->name('subscriptions.payment-methods');
+
+        // Billing Page
+        Route::get('billing', function () {
+            $user = Auth::user();
+            
+            // Get subscription data
+            $subscription = \App\Models\Subscription::where('user_id', $user->id)
+                ->where('status', 'active')
+                ->first();
+            
+            // Sync subscription status before rendering
+            if ($subscription) {
+                $controller = app(\App\Http\Controllers\Brand\SubscriptionController::class);
+                $subscription = $controller->syncSubscriptionStatus($user->id);
+            }
+            
+            // Get Stripe publishable key
+            $stripeMode = \App\Models\SystemSetting::get('stripe_mode', 'test');
+            $stripePublishableKey = $stripeMode === 'live' 
+                ? \App\Models\SystemSetting::get('stripe_live_publishable_key')
+                : \App\Models\SystemSetting::get('stripe_test_publishable_key');
+            
+            return Inertia::render('brand/billing', [
+                'subscription' => $subscription ? [
+                    'plan_name' => $subscription->plan_name,
+                    'status' => $subscription->status,
+                    'cancel_at_period_end' => $subscription->cancel_at_period_end,
+                    'cancel_at' => $subscription->cancel_at?->format('M d, Y'),
+                    'current_period_end' => $subscription->current_period_end?->format('M d, Y'),
+                    'current_period_start' => $subscription->current_period_start?->format('M d, Y'),
+                ] : null,
+                'stripePublishableKey' => $stripePublishableKey,
+            ]);
+        })->name('billing');
+    });
+
     // Search Analytics / Industry Analysis Routes
     Route::prefix('search-analytics')->name('search-analytics.')->group(function () {
         Route::get('/', [IndustryAnalysisController::class, 'index'])->name('index');

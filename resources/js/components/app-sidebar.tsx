@@ -145,8 +145,17 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
             items.push({
                 title: 'Billing',
                 href: '/agency/billing',
-                icon: FileText,
+                icon: CreditCard,
             });
+    }
+
+    // Billing - for brand users
+    if (permissions.hasRole('brand')) {
+        items.push({
+            title: 'Billing',
+            href: '/brand/billing',
+            icon: CreditCard,
+        });
     }
 
     // User Management - only for admin users (skip for agency and brand)
