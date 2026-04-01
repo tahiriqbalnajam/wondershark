@@ -255,7 +255,7 @@ export const CardUpdateModal: React.FC<CardUpdateModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] add-paymnt-box">
         <DialogHeader>
           <DialogTitle>
             {existingCard ? 'Manage Payment Method' : 'Add Payment Method'}

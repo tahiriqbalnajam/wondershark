@@ -1459,6 +1459,12 @@ img.w-5.h-5.rounded.object-contain {
     .default-table td {
         width: 110px;
     }
+
+    .add-paymnt-box{
+        padding-left: 8px;
+        padding-right: 10px;
+        padding-top: 38px;
+    }
 }
 
 

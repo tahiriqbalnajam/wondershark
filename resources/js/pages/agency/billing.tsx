@@ -272,7 +272,8 @@ export default function AgencyBillingPage() {
         loading={loading}
         cancelDate={subscription?.cancel_at || subscription?.current_period_end}
       />
-      <div className="mx-auto p-8">
+      <div className="w-full overflow-x-hidden">
+        <div className="mx-auto md:p-8">
         <section className="mb-8">
           <div className="mb-4">
             <h2 className="text-lg font-semibold mb-1">Plans</h2>
@@ -326,17 +327,15 @@ export default function AgencyBillingPage() {
         <section className="mb-8">
           <h2 className="text-lg font-semibold mb-2">Base plan</h2>
           <p className="text-muted-foreground mb-4">Select your desired subscription plan</p>
-          <div className="flex flex-col md:flex-row gap-6">
+          <div className="flex flex-col md:flex-row gap-4 md:gap-6">
             {/* Growth Plan */}
             <div
-              className={`border rounded-lg p-6 flex-1 bg-background transition-all ${
+              className={`border rounded-lg p-4 md:p-6 flex-1 bg-background transition-all md:min-w-[320px] md:max-w-[380px] ${
                 hasActiveSubscription && currentPlan === 'agency_growth'
                   ? ''
                   : 'shadow-sm'
               }`}
               style={{
-                minWidth: 320,
-                maxWidth: 380,
                 ...(hasActiveSubscription && currentPlan === 'agency_growth'
                   ? {
                       borderColor: agency?.color || '#ff5b49',
@@ -442,14 +441,12 @@ export default function AgencyBillingPage() {
             </div>
             {/* Unlimited Plan */}
             <div
-              className={`border rounded-lg p-6 flex-1 bg-background transition-all ${
+              className={`border rounded-lg p-4 md:p-6 flex-1 bg-background transition-all md:min-w-[320px] md:max-w-[380px] ${
                 hasActiveSubscription && currentPlan === 'agency_unlimited'
                   ? ''
                   : 'shadow-sm'
               }`}
               style={{
-                minWidth: 320,
-                maxWidth: 380,
                 ...(hasActiveSubscription && currentPlan === 'agency_unlimited'
                   ? {
                       borderColor: agency?.color || '#ff5b49',
@@ -555,9 +552,9 @@ export default function AgencyBillingPage() {
             </div>
           </div>
         </section>
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           <button
-            className="button whitespace-nowrap text-sm font-normal focus-visible:outline-1 focus-visible:outline-ring focus-visible:ring-4 focus-visible:ring-ring/30 focus-visible:ring-offset-0 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground flex h-auto w-full items-center justify-start gap-4 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:bg-muted/30 group disabled:pointer-events-none disabled:opacity-50"
+            className="button md:whitespace-nowrap text-sm font-normal focus-visible:outline-1 focus-visible:outline-ring focus-visible:ring-4 focus-visible:ring-ring/30 focus-visible:ring-offset-0 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground flex h-auto w-full items-center justify-start gap-4 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:bg-muted/30 group disabled:pointer-events-none disabled:opacity-50"
             type="button"
             aria-label="Payment method: Update card or billing details"
             onClick={handleCardUpdate}
@@ -573,7 +570,7 @@ export default function AgencyBillingPage() {
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-external-link h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
           </button>
           <button
-            className="button whitespace-nowrap text-sm font-normal focus-visible:outline-1 focus-visible:outline-ring focus-visible:ring-4 focus-visible:ring-ring/30 focus-visible:ring-offset-0 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground flex h-auto w-full items-center justify-start gap-4 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:bg-muted/30 group disabled:pointer-events-none disabled:opacity-50"
+            className="button md:whitespace-nowrap text-sm font-normal focus-visible:outline-1 focus-visible:outline-ring focus-visible:ring-4 focus-visible:ring-ring/30 focus-visible:ring-offset-0 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground flex h-auto w-full items-center justify-start gap-4 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:bg-muted/30 group disabled:pointer-events-none disabled:opacity-50"
             type="button"
             aria-label="Invoices: View and download past invoices"
             onClick={handleBillingPortal}
@@ -590,6 +587,7 @@ export default function AgencyBillingPage() {
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-external-link h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
           </button>
         </section>
+        </div>
       </div>
     </AppLayout>
   );
