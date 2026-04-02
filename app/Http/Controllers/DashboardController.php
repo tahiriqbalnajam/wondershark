@@ -137,6 +137,7 @@ class DashboardController extends Controller
             if (! $hasSubscription) {
                 $showTrialPopup = true;
                 $user->free_trial_availed = true;
+                $user->free_trial_claimed_at = now();
                 $user->save();
             }
         }

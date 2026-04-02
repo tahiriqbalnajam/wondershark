@@ -35,6 +35,7 @@ class User extends Authenticatable
         'docs_sort_by',
         'last_visited_brand',
         'free_trial_availed',
+        'free_trial_claimed_at',
     ];
 
     /**
@@ -60,6 +61,7 @@ class User extends Authenticatable
             'can_create_posts' => 'boolean',
             'last_visited_brand' => 'integer',
             'free_trial_availed' => 'boolean',
+            'free_trial_claimed_at' => 'datetime',
         ];
     }
 
