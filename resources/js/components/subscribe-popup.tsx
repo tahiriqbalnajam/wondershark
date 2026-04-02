@@ -5,6 +5,7 @@ import { router } from '@inertiajs/react';
 
 interface SubscribePopupProps {
     show: boolean;
+    billingUrl: string;
 }
 
 const plans = [
@@ -52,12 +53,12 @@ const featureIcons: Record<string, JSX.Element> = {
     ),
 };
 
-export default function SubscribePopup({ show }: SubscribePopupProps) {
+export default function SubscribePopup({ show, billingUrl }: SubscribePopupProps) {
     const [open, setOpen] = useState(show);
     const [selectedPlan, setSelectedPlan] = useState<string>('agency_growth');
 
     const handleSubscribe = () => {
-        router.visit('/agency/billing');
+        router.visit(billingUrl);
     };
 
     return (

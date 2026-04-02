@@ -157,6 +157,7 @@ class DashboardController extends Controller
             'aiModels' => $aiModels,
             'showTrialPopup' => $showTrialPopup,
             'showSubscribePopup' => $showSubscribePopup,
+            'billingUrl' => $user->hasRole('agency') ? '/agency/billing' : '/brand/billing',
         ]);
     }
 }

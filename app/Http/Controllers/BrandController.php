@@ -992,6 +992,7 @@ class BrandController extends Controller
             'postPrompts' => $postPrompts,
             'showTrialPopup' => $showTrialPopup,
             'showSubscribePopup' => $showSubscribePopup,
+            'billingUrl' => $user->hasRole('agency') ? '/agency/billing' : '/brand/billing',
         ]);
     }
 

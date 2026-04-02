@@ -94,6 +94,7 @@ export default function Dashboard() {
         }>;
         showTrialPopup?: boolean;
         showSubscribePopup?: boolean;
+        billingUrl?: string;
     }>();
 
     const currentBrand = props.brand;
@@ -485,7 +486,7 @@ export default function Dashboard() {
                 </div>
             </div>
             {props.showTrialPopup && <FreeTrialPopup show={props.showTrialPopup} />}
-            {props.showSubscribePopup && <SubscribePopup show={props.showSubscribePopup} />}
+            {props.showSubscribePopup && <SubscribePopup show={props.showSubscribePopup} billingUrl={props.billingUrl ?? '/agency/billing'} />}
         </AppLayout>
     );
 }

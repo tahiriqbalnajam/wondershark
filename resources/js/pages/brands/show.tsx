@@ -173,6 +173,7 @@ interface Props {
     postPrompts?: PostPromptItem[];
     showTrialPopup?: boolean;
     showSubscribePopup?: boolean;
+    billingUrl?: string;
 }
 
 const breadcrumbs = (brand: Brand) => [
@@ -203,7 +204,7 @@ const cleanAiResponse = (response: string | undefined): string => {
     return cleaned.trim();
 };
 
-export default function BrandShow({ brand, competitiveStats, historicalStats, aiModels, allBrands, analysisStatus, postPrompts = [], showTrialPopup = false, showSubscribePopup = false }: Props) {
+export default function BrandShow({ brand, competitiveStats, historicalStats, aiModels, allBrands, analysisStatus, postPrompts = [], showTrialPopup = false, showSubscribePopup = false, billingUrl = '/agency/billing' }: Props) {
     const [selectedCompetitorDomain, setSelectedCompetitorDomain] = useState<string | null>(null);
     const [triggeringAnalysis, setTriggeringAnalysis] = useState(false);
     const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1280,7 +1281,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                 </DialogContent>
             </Dialog>
             {showTrialPopup && <FreeTrialPopup show={showTrialPopup} />}
-            {showSubscribePopup && <SubscribePopup show={showSubscribePopup} />}
+            {showSubscribePopup && <SubscribePopup show={showSubscribePopup} billingUrl={billingUrl} />}
         </AppLayout>
     );
 }
