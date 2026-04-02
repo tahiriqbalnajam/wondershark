@@ -961,9 +961,7 @@ class BrandController extends Controller
         // Show free trial popup once for brand/agency users with no active subscription
         $showTrialPopup = false;
         if (! $user->hasRole('admin') && ! $user->free_trial_availed) {
-            $hasSubscription = Subscription::where('user_id', $user->id)
-                ->where('status', 'active')
-                ->exists();
+            $hasSubscription = Subscription::where('user_id', $user->id)->exists();
             if (! $hasSubscription) {
                 $showTrialPopup = true;
                 $user->free_trial_availed = true;
