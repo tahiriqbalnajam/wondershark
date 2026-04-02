@@ -36,6 +36,7 @@ class User extends Authenticatable
         'last_visited_brand',
         'free_trial_availed',
         'free_trial_claimed_at',
+        'subscribe_popup_shown',
     ];
 
     /**
@@ -62,6 +63,7 @@ class User extends Authenticatable
             'last_visited_brand' => 'integer',
             'free_trial_availed' => 'boolean',
             'free_trial_claimed_at' => 'datetime',
+            'subscribe_popup_shown' => 'boolean',
         ];
     }
 
