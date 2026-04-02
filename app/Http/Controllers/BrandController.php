@@ -960,13 +960,25 @@ class BrandController extends Controller
 
         // Show free trial popup once for brand/agency users with no active subscription
         $showTrialPopup = false;
-        if (! $user->hasRole('admin') && ! $user->free_trial_availed) {
-            $hasSubscription = Subscription::where('user_id', $user->id)->exists();
-            if (! $hasSubscription) {
-                $showTrialPopup = true;
-                $user->free_trial_availed = true;
-                $user->free_trial_claimed_at = now();
-                $user->save();
+        $showSubscribePopup = false;
+        if (! $user->hasRole('admin')) {
+            $hasActiveSubscription = Subscription::where('user_id', $user->id)
+                ->where('status', 'active')
+                ->exists();
+
+            if (! $hasActiveSubscription) {
+                if (! $user->free_trial_availed && ! Subscription::where('user_id', $user->id)->exists()) {
+                    // First visit, no subscription history → give free trial
+                    $showTrialPopup = true;
+                    $user->free_trial_availed = true;
+                    $user->free_trial_claimed_at = now();
+                    $user->save();
+                } elseif ($user->free_trial_availed && ! $user->subscribe_popup_shown && $user->free_trial_claimed_at && $user->free_trial_claimed_at->addDays(7)->isPast()) {
+                    // Trial has expired, popup not yet shown → show once and mark it
+                    $showSubscribePopup = true;
+                    $user->subscribe_popup_shown = true;
+                    $user->save();
+                }
             }
         }
 
@@ -979,6 +991,7 @@ class BrandController extends Controller
             'analysisStatus' => $analysisStatus,
             'postPrompts' => $postPrompts,
             'showTrialPopup' => $showTrialPopup,
+            'showSubscribePopup' => $showSubscribePopup,
         ]);
     }
 

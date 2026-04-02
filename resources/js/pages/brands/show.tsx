@@ -27,6 +27,7 @@ import { DayPicker } from 'react-day-picker';
 import { format, addDays, subDays } from 'date-fns';
 import { ExportDashboardPDF } from '@/components/pdf/export-dashboard-pdf';
 import FreeTrialPopup from '@/components/free-trial-popup';
+import SubscribePopup from '@/components/subscribe-popup';
 interface CompetitiveStat {
     id: number;
     entity_type: 'brand' | 'competitor';
@@ -171,6 +172,7 @@ interface Props {
     analysisStatus: AnalysisStatus;
     postPrompts?: PostPromptItem[];
     showTrialPopup?: boolean;
+    showSubscribePopup?: boolean;
 }
 
 const breadcrumbs = (brand: Brand) => [
@@ -201,7 +203,7 @@ const cleanAiResponse = (response: string | undefined): string => {
     return cleaned.trim();
 };
 
-export default function BrandShow({ brand, competitiveStats, historicalStats, aiModels, allBrands, analysisStatus, postPrompts = [], showTrialPopup = false }: Props) {
+export default function BrandShow({ brand, competitiveStats, historicalStats, aiModels, allBrands, analysisStatus, postPrompts = [], showTrialPopup = false, showSubscribePopup = false }: Props) {
     const [selectedCompetitorDomain, setSelectedCompetitorDomain] = useState<string | null>(null);
     const [triggeringAnalysis, setTriggeringAnalysis] = useState(false);
     const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1278,6 +1280,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                 </DialogContent>
             </Dialog>
             {showTrialPopup && <FreeTrialPopup show={showTrialPopup} />}
+            {showSubscribePopup && <SubscribePopup show={showSubscribePopup} />}
         </AppLayout>
     );
 }
