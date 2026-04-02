@@ -6,6 +6,7 @@ use App\Models\AiModel;
 use App\Models\Brand;
 use App\Models\BrandPrompt;
 use App\Models\BrandSubreddit;
+use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -957,6 +958,19 @@ class BrandController extends Controller
             ];
         })->values()->toArray();
 
+        // Show free trial popup once for brand/agency users with no active subscription
+        $showTrialPopup = false;
+        if (! $user->hasRole('admin') && ! $user->free_trial_availed) {
+            $hasSubscription = Subscription::where('user_id', $user->id)
+                ->where('status', 'active')
+                ->exists();
+            if (! $hasSubscription) {
+                $showTrialPopup = true;
+                $user->free_trial_availed = true;
+                $user->save();
+            }
+        }
+
         return Inertia::render('brands/show', [
             'brand' => $brand,
             'competitiveStats' => $competitiveStats,
@@ -965,6 +979,7 @@ class BrandController extends Controller
             'allBrands' => $allBrands,
             'analysisStatus' => $analysisStatus,
             'postPrompts' => $postPrompts,
+            'showTrialPopup' => $showTrialPopup,
         ]);
     }
 

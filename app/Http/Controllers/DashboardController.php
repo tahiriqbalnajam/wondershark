@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AiModel;
 use App\Models\Brand;
+use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -129,9 +130,23 @@ class DashboardController extends Controller
             }
         }
 
+        // Show free trial popup once for brand/agency users with no active subscription
+        $showTrialPopup = false;
+        if (! $user->hasRole('admin') && ! $user->free_trial_availed) {
+            $hasSubscription = Subscription::where('user_id', $user->id)
+                ->where('status', 'active')
+                ->exists();
+            if (! $hasSubscription) {
+                $showTrialPopup = true;
+                $user->free_trial_availed = true;
+                $user->save();
+            }
+        }
+
         // Otherwise, show the default dashboard
         return Inertia::render('dashboard', [
             'aiModels' => $aiModels,
+            'showTrialPopup' => $showTrialPopup,
         ]);
     }
 }

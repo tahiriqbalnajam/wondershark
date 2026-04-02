@@ -1,4 +1,5 @@
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
+import FreeTrialPopup from '@/components/free-trial-popup';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -90,6 +91,7 @@ export default function Dashboard() {
             icon?: string;
             provider?: string;
         }>;
+        showTrialPopup?: boolean;
     }>();
 
     const currentBrand = props.brand;
@@ -480,6 +482,7 @@ export default function Dashboard() {
                     </Card>
                 </div>
             </div>
+            {props.showTrialPopup && <FreeTrialPopup show={props.showTrialPopup} />}
         </AppLayout>
     );
 }

@@ -34,6 +34,7 @@ class User extends Authenticatable
         'docs_view_mode',
         'docs_sort_by',
         'last_visited_brand',
+        'free_trial_availed',
     ];
 
     /**
@@ -58,6 +59,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'can_create_posts' => 'boolean',
             'last_visited_brand' => 'integer',
+            'free_trial_availed' => 'boolean',
         ];
     }
 
