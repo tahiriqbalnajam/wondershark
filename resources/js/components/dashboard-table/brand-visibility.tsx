@@ -61,8 +61,12 @@ interface BrandVisibilityIndexProps {
 }
 
 export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, limit, hoveredDomain, onDomainHover, entities, onShowAllBrands, showAllBrandsButton, totalBrandsCount }: BrandVisibilityIndexProps) {
+    // Deduplicate by entity_name (case-insensitive), keeping first occurrence
+    const dedupedStats = competitiveStats.filter((stat, index, arr) =>
+        arr.findIndex(s => s.entity_name.toLowerCase().trim() === stat.entity_name.toLowerCase().trim()) === index
+    );
     // Sort by visibility (higher is better)
-    const sortedStats = [...competitiveStats].sort((a, b) => (b.visibility ?? 0) - (a.visibility ?? 0));
+    const sortedStats = [...dedupedStats].sort((a, b) => (b.visibility ?? 0) - (a.visibility ?? 0));
 
     // When a limit is set, always keep the main brand visible:
     // Pin the brand row first, then fill remaining slots with top competitors.

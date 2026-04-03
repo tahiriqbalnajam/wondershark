@@ -854,7 +854,7 @@ CRITICAL INSTRUCTIONS:
                 'id'                    => $competitor->id,
                 'entity_type'           => 'competitor',
                 'entity_name'           => $competitor->name,
-                'entity_url'            => $competitor->domain ? 'https://'.$competitor->domain : '',
+                'entity_url'            => $competitor->domain ? 'https://'.explode('/', preg_replace('#^https?://(www\.)?#', '', strtolower($competitor->domain)))[0] : '',
                 'visibility'            => 0,
                 'sov'                   => 0,
                 'sentiment'             => null,

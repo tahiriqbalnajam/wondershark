@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CheckFeatureLimit;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RolePermissionMiddleware;
@@ -31,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role.permission' => RolePermissionMiddleware::class,
             'sync.subscription' => SyncSubscriptionStatus::class,
+            'feature' => CheckFeatureLimit::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
