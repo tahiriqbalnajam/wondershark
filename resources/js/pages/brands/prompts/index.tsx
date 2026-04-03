@@ -44,6 +44,8 @@ type Brand = {
     website?: string;
     description: string;
     country?: string;
+    region?: string;
+    logo?: string;
 };
 
 type BrandPrompt = {
@@ -336,7 +338,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
     };
 
     return (
-        <AppLayout title={`${brand.name} Prompts`}>
+        <AppLayout title={`${brand.name} Prompts`} logo={brand.logo} website={brand.website}>
             <Head title={`${brand.name} - Prompts`} />
 
             <TooltipProvider>
@@ -367,7 +369,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                     <div className="flex items-center justify-between">
                         <div className="space-y-1">
                             <h3 className="text-xl font-semibold">{brand.name} Prompts <small className="text-gray-400 text-sm"> - {prompts.length} Total</small></h3>
-                            <p className="text-gray-400 text-sm">Manage all prompts for {brand.name}</p>
+                            <p className="text-gray-400 text-sm">Manage all prompts for hgfh {brand.name}</p>
                         </div>
                         {isAdmin && (
                             <Button asChild>

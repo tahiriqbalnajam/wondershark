@@ -57,6 +57,7 @@ class BrandPromptController extends Controller
                 'description' => $brand->description,
                 'country' => $brand->country,
                 'region' => $brand->region,
+                'logo' => $brand->logo,
             ],
             'prompts' => $prompts,
         ]);
