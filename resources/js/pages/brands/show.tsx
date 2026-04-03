@@ -232,6 +232,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
     const [customDateRange, setCustomDateRange] = useState<{ from?: Date; to?: Date }>({});
     const [selectedBrand, setSelectedBrand] = useState('all');
     const [selectedAIModel, setSelectedAIModel] = useState(initialAIModel);
+    const [isLoadingStats, setIsLoadingStats] = useState(false);
     const [hoveredDomain, setHoveredDomain] = useState<string | null>(null);
     const [brandFilter, setBrandFilter] = useState<'all' | 'with-agency' | 'without-agency'>('all');
     const [currentPage, setCurrentPage] = useState(1);
@@ -245,6 +246,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
         const minutes = pad(Math.abs(offset) % 60);
         const timezone = `${sign}${hours}:${minutes}`;
 
+        setIsLoadingStats(true);
         router.get(
             `/brands/${brand.id}`,
             {
@@ -256,7 +258,8 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                 preserveState: true,
                 preserveScroll: true,
                 replace: true,
-                only: ['competitiveStats', 'historicalStats']
+                only: ['competitiveStats', 'historicalStats'],
+                onFinish: () => setIsLoadingStats(false),
             }
         );
     };
@@ -974,7 +977,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                         </CardHeader>
                         <BrandVisibilityIndex
                             // competitiveStats={competitiveStats} 
-                            competitiveStats={filteredCompetitiveStats}
+                            competitiveStats={isLoadingStats ? [] : filteredCompetitiveStats}
                             onRowClick={handleBrandRowClick}
                             brandId={brand.id}
                             limit={5}
