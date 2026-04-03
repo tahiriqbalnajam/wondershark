@@ -4,6 +4,7 @@ import { Briefcase, Loader2 } from 'lucide-react';
 import CardUpdateModal from '@/components/card-update-modal';
 import SubscriptionCardModal from '@/components/subscription-card-modal';
 import CancelSubscriptionModal from '@/components/cancel-subscription-modal';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 import React, { useState } from 'react';
 import { toast } from 'sonner';
@@ -328,7 +329,7 @@ export default function BrandBillingPage() {
               {hasActiveSubscription ? (
                 subscription?.cancel_at_period_end ? (
                   <button
-                    className="w-full bg-primary text-primary-foreground font-semibold rounded-[6px] p-2 text-body-m"
+                    className="w-full bg-primary text-primary-foreground font-semibold rounded-[6px] p-2 text-body-m opacity-80 transition-all duration-200 hover:opacity-100 focus:opacity-100 hover:scale-105 focus:scale-105"
                     onClick={(e) => { e.stopPropagation(); handleReactivate(); }}
                     disabled={loading}
                   >
@@ -336,7 +337,7 @@ export default function BrandBillingPage() {
                   </button>
                 ) : (
                   <button
-                    className="w-full bg-muted text-muted-foreground border border-muted-foreground rounded-[6px] p-2 text-body-m"
+                    className="w-full bg-muted text-muted-foreground border border-muted-foreground rounded-[6px] p-2 text-body-m opacity-80 transition-all duration-200 hover:opacity-100 focus:opacity-100 hover:scale-105 focus:scale-105"
                     onClick={(e) => { e.stopPropagation(); handleCancel(); }}
                     disabled={loading}
                   >
@@ -345,7 +346,7 @@ export default function BrandBillingPage() {
                 )
               ) : (
                 <button
-                  className="w-full bg-primary text-primary-foreground font-semibold flex items-center justify-center rounded-[6px] p-2 text-body-m" 
+                  className="w-full bg-primary text-primary-foreground font-semibold flex items-center justify-center rounded-[6px] p-2 text-body-m opacity-80 transition-all duration-200 hover:opacity-100 focus:opacity-100 hover:scale-105 focus:scale-105" 
                   onClick={(e) => { e.stopPropagation(); handleSubscribe(); }}
                   disabled={loading || subscribing}
                 >
@@ -369,12 +370,42 @@ export default function BrandBillingPage() {
                   </div>
                 </div>
                 <div className="flex gap-2 items-center">
-                  <img src="/images/ai-models/openai.svg" alt="OpenAI" className="w-6 h-6 rounded-full bg-white border" />
-                  <img src="/images/ai-models/perplexity.svg" alt="Perplexity" className="w-6 h-6 rounded-full bg-white border" />
-                  <img src="/images/ai-models/google.svg" alt="Google" className="w-6 h-6 rounded-full bg-white border" />
-                  <img src="/images/ai-models/gemini.svg" alt="Gemini" className="w-6 h-6 rounded-full bg-white border" />
-                  <img src="/images/ai-models/copilot.svg" alt="Copilot" className="w-6 h-6 rounded-full bg-white border" />
-                  <img src="/images/ai-models/grok.svg" alt="Grok" className="w-6 h-6 rounded-full bg-white border" />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/openai.svg" alt="ChatGPT" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>ChatGPT</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/perplexity.svg" alt="Perplexity" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>Perplexity</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/google.svg" alt="Google" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>Google</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/gemini.svg" alt="Gemini" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>Gemini</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/copilot.svg" alt="Copilot" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>Copilot</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/grok.svg" alt="Grok" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>Grok</TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             </div>

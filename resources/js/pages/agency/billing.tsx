@@ -4,6 +4,7 @@ import { Briefcase, Loader2 } from 'lucide-react';
 import CardUpdateModal from '@/components/card-update-modal';
 import SubscriptionCardModal from '@/components/subscription-card-modal';
 import CancelSubscriptionModal from '@/components/cancel-subscription-modal';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 import React, { useState } from 'react';
 import { toast } from 'sonner';
@@ -378,7 +379,7 @@ export default function AgencyBillingPage() {
                   <span className="font-semibold text-black">Unlimited</span>
                 </li>
                 <li className="flex justify-between items-center">
-                  <span className="flex items-center gap-2 text-muted-foreground">                                      
+                  <span className="flex items-center gap-2 text-muted-foreground">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-users h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                     Team seats
                   </span>
@@ -388,7 +389,7 @@ export default function AgencyBillingPage() {
               {currentPlan === 'agency_growth' ? (
                 subscription?.cancel_at_period_end ? (
                   <button
-                    className="w-full bg-primary text-primary-foreground font-semibold rounded-[6px] p-2 text-body-m"
+                    className="w-full bg-primary text-primary-foreground font-semibold rounded-[6px] p-2 text-body-m opacity-80 transition-all duration-200 hover:opacity-100 focus:opacity-100 hover:scale-105 focus:scale-105"
                     onClick={(e) => { e.stopPropagation(); handleReactivate(); }}
                     disabled={loading}
                   >
@@ -396,7 +397,7 @@ export default function AgencyBillingPage() {
                   </button>
                 ) : (
                   <button
-                    className="w-full bg-muted text-muted-foreground border border-muted-foreground rounded-[6px] p-2 text-body-m"
+                    className="w-full bg-muted text-muted-foreground border border-muted-foreground rounded-[6px] p-2 text-body-m opacity-80 transition-all duration-200 hover:opacity-100 focus:opacity-100 hover:scale-105 focus:scale-105"
                     onClick={(e) => { e.stopPropagation(); handleCancel(); }}
                     disabled={loading}
                   >
@@ -405,7 +406,7 @@ export default function AgencyBillingPage() {
                 )
               ) : (
                 <button
-                  className="w-full bg-primary text-primary-foreground font-semibold flex items-center justify-center rounded-[6px] p-2 text-body-m" 
+                  className="w-full bg-primary text-primary-foreground font-semibold flex items-center justify-center rounded-[6px] p-2 text-body-m opacity-80 transition-all duration-200 border border-primary hover:opacity-100 focus:opacity-100 hover:scale-105 focus:scale-105"
                   onClick={(e) => { e.stopPropagation(); handlePlanAction('agency_growth'); }}
                   disabled={loading || subscribingPlan === 'agency_growth'}
                 >
@@ -429,12 +430,42 @@ export default function AgencyBillingPage() {
                   </div>
                 </div>
                 <div className="flex gap-2 items-center">
-                  <img src="/images/ai-models/openai.svg" alt="OpenAI" className="w-6 h-6 rounded-full bg-white border" />
-                  <img src="/images/ai-models/perplexity.svg" alt="Perplexity" className="w-6 h-6 rounded-full bg-white border" />
-                  <img src="/images/ai-models/google.svg" alt="Google" className="w-6 h-6 rounded-full bg-white border" />
-                  <img src="/images/ai-models/gemini.svg" alt="Gemini" className="w-6 h-6 rounded-full bg-white border" />
-                  <img src="/images/ai-models/copilot.svg" alt="Copilot" className="w-6 h-6 rounded-full bg-white border" />
-                  <img src="/images/ai-models/grok.svg" alt="Grok" className="w-6 h-6 rounded-full bg-white border" />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/openai.svg" alt="ChatGPT" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>ChatGPT</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/perplexity.svg" alt="Perplexity" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>Perplexity</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/google.svg" alt="Google" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>Google</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/gemini.svg" alt="Gemini" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>Gemini</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/copilot.svg" alt="Copilot" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>Copilot</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/grok.svg" alt="Grok" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>Grok</TooltipContent>
+                  </Tooltip>
                 </div>
               
               </div>
@@ -499,7 +530,7 @@ export default function AgencyBillingPage() {
               {currentPlan === 'agency_unlimited' ? (
                 subscription?.cancel_at_period_end ? (
                   <button
-                    className="w-full bg-primary text-primary-foreground font-semibold rounded-[6px] p-2 text-body-m"
+                    className="w-full bg-primary text-primary-foreground font-semibold rounded-[6px] p-2 text-body-m opacity-80 transition-all duration-200 hover:opacity-100 focus:opacity-100 hover:scale-105 focus:scale-105"
                     onClick={(e) => { e.stopPropagation(); handleReactivate(); }}
                     disabled={loading}
                   >
@@ -507,7 +538,7 @@ export default function AgencyBillingPage() {
                   </button>
                 ) : (
                   <button
-                    className="w-full bg-muted text-muted-foreground border border-muted-foreground rounded-[6px] p-2 text-body-m"
+                    className="w-full bg-muted text-muted-foreground border border-muted-foreground rounded-[6px] p-2 text-body-m transition-colors duration-200 hover:bg-primary hover:text-white hover:border-primary"
                     onClick={(e) => { e.stopPropagation(); handleCancel(); }}
                     disabled={loading}
                   >
@@ -516,7 +547,7 @@ export default function AgencyBillingPage() {
                 )
               ) : (
                 <button
-                  className="w-full bg-primary text-primary-foreground font-semibold flex items-center justify-center rounded-[6px] p-2 text-body-m"
+                  className="w-full bg-primary text-primary-foreground font-semibold flex items-center justify-center rounded-[6px] p-2 text-body-m opacity-80 transition-all duration-200 border border-primary hover:opacity-100 focus:opacity-100 hover:scale-105 focus:scale-105"
                   onClick={(e) => { e.stopPropagation(); handlePlanAction('agency_unlimited'); }}
                   disabled={loading || subscribingPlan === 'agency_unlimited'}
                 >
@@ -540,12 +571,42 @@ export default function AgencyBillingPage() {
                   </div>
                 </div>
                 <div className="flex gap-2 items-center">
-                  <img src="/images/ai-models/openai.svg" alt="OpenAI" className="w-6 h-6 rounded-full bg-white border" />
-                  <img src="/images/ai-models/perplexity.svg" alt="Perplexity" className="w-6 h-6 rounded-full bg-white border" />
-                  <img src="/images/ai-models/google.svg" alt="Google" className="w-6 h-6 rounded-full bg-white border" />
-                  <img src="/images/ai-models/gemini.svg" alt="Gemini" className="w-6 h-6 rounded-full bg-white border" />
-                  <img src="/images/ai-models/copilot.svg" alt="Copilot" className="w-6 h-6 rounded-full bg-white border" />
-                  <img src="/images/ai-models/grok.svg" alt="Grok" className="w-6 h-6 rounded-full bg-white border" />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/openai.svg" alt="ChatGPT" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>ChatGPT</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/perplexity.svg" alt="Perplexity" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>Perplexity</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/google.svg" alt="Google" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>Google</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/gemini.svg" alt="Gemini" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>Gemini</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/copilot.svg" alt="Copilot" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>Copilot</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <img src="/images/ai-models/grok.svg" alt="Grok" className="w-6 h-6 rounded-full bg-white border" />
+                    </TooltipTrigger>
+                    <TooltipContent>Grok</TooltipContent>
+                  </Tooltip>
                 </div>
                
               </div>
