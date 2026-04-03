@@ -246,7 +246,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
         const minutes = pad(Math.abs(offset) % 60);
         const timezone = `${sign}${hours}:${minutes}`;
 
-        setIsLoadingStats(true);
+       // setIsLoadingStats(true);
         router.get(
             `/brands/${brand.id}`,
             {
@@ -255,11 +255,11 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                 timezone: timezone
             },
             {
-                preserveState: true,
+                preserveState: false,
                 preserveScroll: true,
                 replace: true,
                 only: ['competitiveStats', 'historicalStats'],
-                onFinish: () => setIsLoadingStats(false),
+                //onFinish: () => setIsLoadingStats(false),
             }
         );
     };
@@ -976,8 +976,9 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                             </CardTitle>
                         </CardHeader>
                         <BrandVisibilityIndex
-                            // competitiveStats={competitiveStats} 
-                            competitiveStats={isLoadingStats ? [] : filteredCompetitiveStats}
+                            //competitiveStats={competitiveStats} 
+                            competitiveStats={filteredCompetitiveStats}
+                            //competitiveStats={isLoadingStats ? [] : filteredCompetitiveStats}
                             onRowClick={handleBrandRowClick}
                             brandId={brand.id}
                             limit={5}
