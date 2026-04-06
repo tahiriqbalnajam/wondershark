@@ -187,9 +187,28 @@ export default function PostsIndex({ posts, brand }: Props) {
 
     const [selectedCitation, setSelectedCitation] = useState<any | null>(null);
     const [isCitationModalOpen, setIsCitationModalOpen] = useState(false);
-    const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+    const [isCreatePostOpen, setIsCreatePostOpenRaw] = useState(false);
     const [submitMessage, setSubmitMessage] = useState<string | null>(null);
     const [submitError, setSubmitError] = useState<string | null>(null);
+
+    // Wrap setIsCreatePostOpen to clear messages when closing
+    const setIsCreatePostOpen = (open: boolean) => {
+        if (!open) {
+            setSubmitMessage(null);
+            setSubmitError(null);
+            // Reset form fields to initial values
+            setData({
+                title: '',
+                url: '',
+                description: '',
+                brand_id: brandId || '',
+                status: 'draft',
+                posted_at: new Date().toISOString().split('T')[0],
+                post_type: 'blog',
+            });
+        }
+        setIsCreatePostOpenRaw(open);
+    };
 
     const handleCitationClick = (citation: any) => {
         setSelectedCitation(citation);
@@ -474,9 +493,43 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Badge className={getStatusColor(post.status)}>
-                                                            {post.status}
-                                                        </Badge>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.7em' }}>
+                                                            <Badge className={getStatusColor(post.status)}>
+                                                                {post.status === 'draft' ? (
+                                                                    'Processing'
+                                                                ) : (
+                                                                    post.status
+                                                                )}
+                                                            </Badge>
+                                                            {post.status === 'draft' && (
+                                                                <span className="inline-block align-middle" style={{ width: 18, height: 18, position: 'relative', verticalAlign: 'middle' }}>
+                                                                    {[...Array(12)].map((_, i) => (
+                                                                        <span
+                                                                            key={i}
+                                                                            style={{
+                                                                                position: 'absolute',
+                                                                                left: '50%',
+                                                                                top: '50%',
+                                                                                width: 3,
+                                                                                height: 8,
+                                                                                background: '#000',
+                                                                                borderRadius: 1,
+                                                                                transform: `rotate(${i * 30}deg) translate(0, -7px)`,
+                                                                                opacity: 0.2,
+                                                                                animation: `fade-spinner 1.2s linear infinite`,
+                                                                                animationDelay: `${i * 0.1}s`,
+                                                                            }}
+                                                                        />
+                                                                    ))}
+                                                                    <style>{`
+                                                                        @keyframes fade-spinner {
+                                                                            0% { opacity: 1; }
+                                                                            100% { opacity: 0.2; }
+                                                                        }
+                                                                    `}</style>
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </TableCell>
                                                     <TableCell>
                                                             {post.post_type}
@@ -574,9 +627,43 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Badge className={getStatusColor(post.status)}>
-                                                                {post.status}
-                                                            </Badge>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.7em' }}>
+                                                                <Badge className={getStatusColor(post.status)}>
+                                                                    {post.status === 'draft' ? (
+                                                                        'Processing'
+                                                                    ) : (
+                                                                        post.status
+                                                                    )}
+                                                                </Badge>
+                                                                {post.status === 'draft' && (
+                                                                    <span className="inline-block align-middle" style={{ width: 18, height: 18, position: 'relative', verticalAlign: 'middle' }}>
+                                                                        {[...Array(12)].map((_, i) => (
+                                                                            <span
+                                                                                key={i}
+                                                                                style={{
+                                                                                    position: 'absolute',
+                                                                                    left: '50%',
+                                                                                    top: '50%',
+                                                                                    width: 3,
+                                                                                    height: 8,
+                                                                                    background: '#000',
+                                                                                    borderRadius: 1,
+                                                                                    transform: `rotate(${i * 30}deg) translate(0, -7px)`,
+                                                                                    opacity: 0.2,
+                                                                                    animation: `fade-spinner 1.2s linear infinite`,
+                                                                                    animationDelay: `${i * 0.1}s`,
+                                                                                }}
+                                                                            />
+                                                                        ))}
+                                                                        <style>{`
+                                                                            @keyframes fade-spinner {
+                                                                                0% { opacity: 1; }
+                                                                                100% { opacity: 0.2; }
+                                                                            }
+                                                                        `}</style>
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </TableCell>
                                                         <TableCell>
                                                             {post.post_type}
@@ -632,9 +719,43 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Badge className={getStatusColor(post.status)}>
-                                                                {post.status}
-                                                            </Badge>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.7em' }}>
+                                                                <Badge className={getStatusColor(post.status)}>
+                                                                    {post.status === 'draft' ? (
+                                                                        'Processing'
+                                                                    ) : (
+                                                                        post.status
+                                                                    )}
+                                                                </Badge>
+                                                                {post.status === 'draft' && (
+                                                                    <span className="inline-block align-middle" style={{ width: 18, height: 18, position: 'relative', verticalAlign: 'middle' }}>
+                                                                        {[...Array(12)].map((_, i) => (
+                                                                            <span
+                                                                                key={i}
+                                                                                style={{
+                                                                                    position: 'absolute',
+                                                                                    left: '50%',
+                                                                                    top: '50%',
+                                                                                    width: 3,
+                                                                                    height: 8,
+                                                                                    background: '#000',
+                                                                                    borderRadius: 1,
+                                                                                    transform: `rotate(${i * 30}deg) translate(0, -7px)`,
+                                                                                    opacity: 0.2,
+                                                                                    animation: `fade-spinner 1.2s linear infinite`,
+                                                                                    animationDelay: `${i * 0.1}s`,
+                                                                                }}
+                                                                            />
+                                                                        ))}
+                                                                        <style>{`
+                                                                            @keyframes fade-spinner {
+                                                                                0% { opacity: 1; }
+                                                                                100% { opacity: 0.2; }
+                                                                            }
+                                                                        `}</style>
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </TableCell>
                                                         <TableCell>
                                                             {post.post_type}
