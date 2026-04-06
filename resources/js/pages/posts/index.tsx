@@ -740,7 +740,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                                                     height: 8,
                                                                                     background: '#000',
                                                                                     borderRadius: 1,
-                                                                                    transform: `rotate(${i * 30}deg) translate(0, -7px)`,
+                                                                                    transform: `rotate(${i * 30}deg) translate(0, -10px)`,
                                                                                     opacity: 0.2,
                                                                                     animation: `fade-spinner 1.2s linear infinite`,
                                                                                     animationDelay: `${i * 0.1}s`,
