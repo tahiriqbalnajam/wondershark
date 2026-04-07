@@ -21,6 +21,9 @@ class Subscription extends Model
         'current_period_end',
         'cancel_at_period_end',
         'cancel_at',
+        'is_manual',
+        'activated_by',
+        'admin_note',
     ];
 
     protected $casts = [
@@ -28,6 +31,7 @@ class Subscription extends Model
         'current_period_end' => 'datetime',
         'cancel_at_period_end' => 'boolean',
         'cancel_at' => 'datetime',
+        'is_manual' => 'boolean',
     ];
 
     public function user(): BelongsTo

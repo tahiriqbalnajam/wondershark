@@ -224,6 +224,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('/{user}', [\App\Http\Controllers\Admin\UserController::class, 'destroy'])->name('destroy');
             Route::patch('/{user}/toggle-post-permission', [\App\Http\Controllers\Admin\UserController::class, 'togglePostPermission'])->name('toggle-post-permission');
             Route::post('/bulk-update-post-permissions', [\App\Http\Controllers\Admin\UserController::class, 'bulkUpdatePostPermissions'])->name('bulk-update-post-permissions');
+            Route::post('/{user}/extend-trial', [\App\Http\Controllers\Admin\UserController::class, 'extendTrial'])->name('extend-trial');
+            Route::post('/{user}/activate-subscription', [\App\Http\Controllers\Admin\UserController::class, 'activateSubscription'])->name('activate-subscription');
+            Route::post('/{user}/feature-overrides', [\App\Http\Controllers\Admin\UserController::class, 'updateFeatureOverrides'])->name('feature-overrides');
         });
 
         // Prompt Management - Admin only
@@ -231,6 +234,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\PromptController::class, 'index'])->name('index');
             Route::post('/', [\App\Http\Controllers\Admin\PromptController::class, 'store'])->name('store');
             Route::delete('/{id}', [\App\Http\Controllers\Admin\PromptController::class, 'destroy'])->name('destroy');
+        });
+
+        // Plan Features Management - Admin only
+        Route::prefix('admin/plan-features')->name('admin.plan-features.')->middleware('role.permission:manage-system')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\PlanFeatureController::class, 'index'])->name('index');
+            Route::post('/update', [\App\Http\Controllers\Admin\PlanFeatureController::class, 'update'])->name('update');
+            Route::delete('/destroy', [\App\Http\Controllers\Admin\PlanFeatureController::class, 'destroy'])->name('destroy');
         });
 
         // Competitor Management - Admin only

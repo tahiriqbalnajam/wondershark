@@ -253,6 +253,12 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
                     icon: CreditCard,
                     permission: 'manage-system',
                 },
+                {
+                    title: 'Plan Features',
+                    href: '/admin/plan-features',
+                    icon: Package,
+                    permission: 'manage-system',
+                },
             ]
         });
     }

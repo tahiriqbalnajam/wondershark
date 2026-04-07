@@ -436,6 +436,17 @@ class SubscriptionController extends Controller
                 ->where('status', 'active')
                 ->firstOrFail();
 
+            // For manual subscriptions (no Stripe), cancel locally only
+            if ($subscription->is_manual || ! $subscription->stripe_subscription_id) {
+                $subscription->update([
+                    'status' => 'canceled',
+                    'cancel_at_period_end' => false,
+                    'cancel_at' => now(),
+                ]);
+
+                return back()->with('success', 'Subscription has been canceled.');
+            }
+
             // Cancel subscription on Stripe at period end (not immediately)
             $stripeSubscription = $this->stripeService->cancelSubscription(
                 $subscription->stripe_subscription_id,
@@ -443,8 +454,8 @@ class SubscriptionController extends Controller
             );
 
             // Update subscription in database
-            $cancelAt = $stripeSubscription->cancel_at 
-                ? date('Y-m-d H:i:s', $stripeSubscription->cancel_at) 
+            $cancelAt = $stripeSubscription->cancel_at
+                ? date('Y-m-d H:i:s', $stripeSubscription->cancel_at)
                 : null;
 
             $subscription->update([

@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Subscription;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -45,44 +49,86 @@ class UserController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'roles' => 'array',
             'roles.*' => 'exists:roles,name',
+            'trial_option' => 'required|in:A,B,subscription',
+            'trial_days' => 'nullable|integer|min:1|max:365',
+            'trial_discount' => 'nullable|integer|min:0|max:100',
+            'plan_name' => 'nullable|string|in:trial,free,agency_growth,agency_unlimited',
+            'subscription_expires_at' => 'nullable|date',
+            'admin_note' => 'nullable|string|max:500',
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'email_verified_at' => now(), // Auto-verify admin created users
-        ]);
+        $user = null;
 
-        if ($request->roles) {
-            $user->assignRole($request->roles);
+        DB::transaction(function () use ($request, &$user) {
+            $trialOption = $request->trial_option;
+            $trialDays = $request->integer('trial_days', 7);
 
-            // If brand role is assigned, create a brand record
-            if (in_array('brand', $request->roles)) {
-                try {
-                    $adminUser = auth()->user();
+            $userData = [
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'email_verified_at' => now(),
+                'created_by_admin' => true,
+            ];
 
-                    \App\Models\Brand::create([
-                        'agency_id' => $adminUser->id,
-                        'user_id' => $user->id,
-                        'name' => $request->name."'s Brand",
-                        'website' => null,
-                        'description' => 'Brand created for '.$request->name,
-                        'status' => 'active',
-                    ]);
+            if ($trialOption === 'A') {
+                $userData['trial_type'] = 'A';
+                $userData['trial_days'] = $trialDays;
+                $userData['trial_ends_at'] = now()->addDays($trialDays);
+                $userData['trial_discount'] = $request->integer('trial_discount', 50);
+                $userData['free_trial_availed'] = true;
+                $userData['free_trial_claimed_at'] = now();
+            } elseif ($trialOption === 'B') {
+                $userData['trial_type'] = 'B';
+                $userData['trial_days'] = 0;
+                $userData['trial_ends_at'] = null;
+                $userData['free_trial_availed'] = false;
+            } else {
+                $userData['trial_type'] = null;
+                $userData['trial_days'] = 0;
+                $userData['trial_ends_at'] = null;
+                $userData['free_trial_availed'] = false;
+            }
 
-                    \Illuminate\Support\Facades\Log::info('Brand record created successfully', [
-                        'user_id' => $user->id,
-                        'user_email' => $user->email,
-                    ]);
-                } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error('Failed to create brand record', [
-                        'user_id' => $user->id,
-                        'error' => $e->getMessage(),
-                    ]);
+            $user = User::create($userData);
+
+            if ($request->roles) {
+                $user->assignRole($request->roles);
+
+                if (in_array('brand', $request->roles)) {
+                    try {
+                        \App\Models\Brand::create([
+                            'agency_id' => Auth::id(),
+                            'user_id' => $user->id,
+                            'name' => $request->name."'s Brand",
+                            'website' => null,
+                            'description' => 'Brand created for '.$request->name,
+                            'status' => 'active',
+                        ]);
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error('Failed to create brand record', [
+                            'user_id' => $user->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
                 }
             }
-        }
+
+            if ($trialOption === 'subscription' && $request->plan_name) {
+                Subscription::create([
+                    'user_id' => $user->id,
+                    'plan_name' => $request->plan_name,
+                    'status' => 'active',
+                    'is_manual' => true,
+                    'activated_by' => Auth::id(),
+                    'admin_note' => $request->admin_note,
+                    'current_period_start' => now(),
+                    'current_period_end' => $request->subscription_expires_at
+                        ? Carbon::parse($request->subscription_expires_at)->endOfDay()
+                        : null,
+                ]);
+            }
+        });
 
         return redirect()->route('users.index')->with('success', 'User created successfully.');
     }

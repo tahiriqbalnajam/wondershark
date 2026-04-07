@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\PlanFeature;
+use App\Models\Subscription;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Models\UserFeatureOverride;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -84,19 +88,51 @@ class UserController extends Controller
             'permissions.*' => 'exists:permissions,name',
             'can_create_posts' => 'boolean',
             'post_creation_note' => 'nullable|string|max:500',
+            'trial_option' => 'required|in:A,B,subscription',
+            'trial_days' => 'nullable|integer|min:1|max:365',
+            'trial_discount' => 'nullable|integer|min:0|max:100',
+            'plan_name' => 'nullable|string|in:trial,free,agency_growth,agency_unlimited',
+            'subscription_expires_at' => 'nullable|date|after:today',
+            'admin_note' => 'nullable|string|max:500',
         ]);
 
         $user = null;
 
         DB::transaction(function () use ($request, &$user) {
-            $user = User::create([
+            $trialOption = $request->trial_option;
+            $trialDays = $request->integer('trial_days', 7);
+
+            $userData = [
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
                 'email_verified_at' => now(),
                 'can_create_posts' => $request->boolean('can_create_posts', false),
                 'post_creation_note' => $request->post_creation_note,
-            ]);
+                'created_by_admin' => true,
+            ];
+
+            if ($trialOption === 'A') {
+                $userData['trial_type'] = 'A';
+                $userData['trial_days'] = $trialDays;
+                $userData['trial_ends_at'] = now()->addDays($trialDays);
+                $userData['trial_discount'] = $request->integer('trial_discount', 50);
+                $userData['free_trial_availed'] = true;
+                $userData['free_trial_claimed_at'] = now();
+            } elseif ($trialOption === 'B') {
+                $userData['trial_type'] = 'B';
+                $userData['trial_days'] = 0;
+                $userData['trial_ends_at'] = null;
+                $userData['free_trial_availed'] = false;
+            } else {
+                // subscription — no trial
+                $userData['trial_type'] = null;
+                $userData['trial_days'] = 0;
+                $userData['trial_ends_at'] = null;
+                $userData['free_trial_availed'] = false;
+            }
+
+            $user = User::create($userData);
 
             // Assign roles
             if ($request->roles && ! empty($request->roles)) {
@@ -106,6 +142,22 @@ class UserController extends Controller
             // Assign direct permissions
             if ($request->permissions) {
                 $user->givePermissionTo($request->permissions);
+            }
+
+            // Activate subscription immediately if option is 'subscription'
+            if ($trialOption === 'subscription' && $request->plan_name) {
+                Subscription::create([
+                    'user_id' => $user->id,
+                    'plan_name' => $request->plan_name,
+                    'status' => 'active',
+                    'is_manual' => true,
+                    'activated_by' => Auth::id(),
+                    'admin_note' => $request->admin_note,
+                    'current_period_start' => now(),
+                    'current_period_end' => $request->subscription_expires_at
+                        ? Carbon::parse($request->subscription_expires_at)
+                        : null,
+                ]);
             }
         });
 
@@ -184,6 +236,9 @@ class UserController extends Controller
     {
         $roles = Role::all();
         $permissions = Permission::all();
+        $featureKeys = \App\Http\Controllers\Admin\PlanFeatureController::FEATURE_KEYS;
+        $userOverrides = UserFeatureOverride::forUser($user->id);
+        $activeSubscription = $user->activeSubscription;
 
         return Inertia::render('admin/users/edit', [
             'user' => [
@@ -194,9 +249,27 @@ class UserController extends Controller
                 'post_creation_note' => $user->post_creation_note,
                 'roles' => $user->getRoleNames(),
                 'direct_permissions' => $user->getDirectPermissions()->pluck('name'),
+                'trial_type' => $user->trial_type,
+                'trial_days' => $user->trial_days ?? 7,
+                'trial_ends_at' => $user->trial_ends_at?->toDateString(),
+                'created_by_admin' => $user->created_by_admin,
+                'is_on_trial' => $user->isOnTrial(),
+                'trial_days_left' => $user->trialDaysLeft(),
+                'is_trial_expired' => $user->isTrialExpired(),
             ],
             'roles' => $roles,
             'permissions' => $permissions,
+            'featureKeys' => $featureKeys,
+            'userOverrides' => $userOverrides,
+            'activeSubscription' => $activeSubscription ? [
+                'id' => $activeSubscription->id,
+                'plan_name' => $activeSubscription->plan_name,
+                'status' => $activeSubscription->status,
+                'is_manual' => $activeSubscription->is_manual,
+                'admin_note' => $activeSubscription->admin_note,
+                'current_period_start' => $activeSubscription->current_period_start?->toDateString(),
+                'current_period_end' => $activeSubscription->current_period_end?->toDateString(),
+            ] : null,
         ]);
     }
 
@@ -244,6 +317,90 @@ class UserController extends Controller
 
         return redirect()->route('admin.users.index')
             ->with('success', 'User updated successfully.');
+    }
+
+    /**
+     * Extend or update the trial for a user.
+     */
+    public function extendTrial(Request $request, User $user): RedirectResponse
+    {
+        $request->validate([
+            'trial_ends_at' => 'required|date',
+            'trial_type' => 'nullable|in:A,B',
+        ]);
+
+        $user->update([
+            'trial_ends_at' => Carbon::parse($request->trial_ends_at)->endOfDay(),
+            'trial_type' => $request->trial_type ?? ($user->trial_type ?? 'A'),
+            'free_trial_availed' => true,
+            'free_trial_claimed_at' => $user->free_trial_claimed_at ?? now(),
+        ]);
+
+        return back()->with('success', 'Trial updated for ' . $user->name . '.');
+    }
+
+    /**
+     * Manually activate a subscription for a user (wire transfer / bypass Stripe).
+     */
+    public function activateSubscription(Request $request, User $user): RedirectResponse
+    {
+        $request->validate([
+            'plan_name' => 'required|in:trial,free,agency_growth,agency_unlimited',
+            'expires_at' => 'nullable|date',
+            'admin_note' => 'nullable|string|max:500',
+        ]);
+
+        DB::transaction(function () use ($request, $user) {
+            // Cancel any existing active subscriptions
+            Subscription::where('user_id', $user->id)
+                ->where('status', 'active')
+                ->update(['status' => 'canceled']);
+
+            Subscription::create([
+                'user_id' => $user->id,
+                'plan_name' => $request->plan_name,
+                'status' => 'active',
+                'is_manual' => true,
+                'activated_by' => Auth::id(),
+                'admin_note' => $request->admin_note,
+                'current_period_start' => now(),
+                'current_period_end' => $request->expires_at
+                    ? Carbon::parse($request->expires_at)->endOfDay()
+                    : null,
+            ]);
+        });
+
+        return back()->with('success', 'Subscription activated for ' . $user->name . '.');
+    }
+
+    /**
+     * Update per-user feature overrides.
+     */
+    public function updateFeatureOverrides(Request $request, User $user): RedirectResponse
+    {
+        $request->validate([
+            'overrides' => 'required|array',
+            'overrides.*.feature_key' => 'required|string',
+            'overrides.*.value' => 'nullable|string|max:255',
+        ]);
+
+        foreach ($request->overrides as $override) {
+            $val = $override['value'] ?? '';
+
+            if ($val === '' || $val === null) {
+                // Empty = remove override, fall back to plan default
+                UserFeatureOverride::where('user_id', $user->id)
+                    ->where('feature_key', $override['feature_key'])
+                    ->delete();
+            } else {
+                UserFeatureOverride::updateOrCreate(
+                    ['user_id' => $user->id, 'feature_key' => $override['feature_key']],
+                    ['value' => $val]
+                );
+            }
+        }
+
+        return back()->with('success', 'Feature overrides saved for ' . $user->name . '.');
     }
 
     /**

@@ -1,6 +1,7 @@
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { useSidebar } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
+import { TrialCountdownBadge } from '@/components/trial-countdown-badge';
 import { type BreadcrumbItem as BreadcrumbItemType } from '@/types';
 import { usePage } from '@inertiajs/react';
 
@@ -77,15 +78,18 @@ export function AppSidebarHeader({ breadcrumbs = [], title, logo, website }: { b
                     </h2>
                 </div>
 
-                {/* 👇 Button only visible on Dashboard */}
-                {isDashboard && (
-                    <Button
-                        onClick={() => console.log('Dashboard button clicked')}
-                        className="primary-btn"
-                    >
-                        Generate a PDF Report <FileDown/>
-                    </Button>
-                )}
+                <div className="flex items-center gap-3">
+                    <TrialCountdownBadge />
+                    {/* Button only visible on Dashboard */}
+                    {isDashboard && (
+                        <Button
+                            onClick={() => console.log('Dashboard button clicked')}
+                            className="primary-btn"
+                        >
+                            Generate a PDF Report <FileDown/>
+                        </Button>
+                    )}
+                </div>
             </div>
         </header>
     );

@@ -2,6 +2,7 @@ import { AppContent } from '@/components/app-content';
 import { AppShell } from '@/components/app-shell';
 import { AppSidebar } from '@/components/app-sidebar';
 import { AppSidebarHeader } from '@/components/app-sidebar-header';
+import { TrialPaywallPopup } from '@/components/trial-paywall-popup';
 import { type BreadcrumbItem } from '@/types';
 import { usePage } from '@inertiajs/react';
 import { type PropsWithChildren, useEffect } from 'react';
@@ -29,6 +30,7 @@ export default function AppSidebarLayout({ children, breadcrumbs = [], title, lo
                 <AppSidebarHeader breadcrumbs={breadcrumbs} title={title} logo={logo} website={website} />
                 {children}
             </AppContent>
+            <TrialPaywallPopup />
         </AppShell>
     );
 }

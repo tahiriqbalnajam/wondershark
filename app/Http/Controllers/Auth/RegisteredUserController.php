@@ -51,6 +51,13 @@ class RegisteredUserController extends Controller
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
+                'trial_type' => 'A',
+                'trial_days' => 7,
+                'trial_ends_at' => now()->addDays(7),
+                'trial_discount' => 50,
+                'free_trial_availed' => true,
+                'free_trial_claimed_at' => now(),
+                'created_by_admin' => false,
             ]);
 
             // Assign the selected role to the user

@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo as EloquentBelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
@@ -37,6 +38,11 @@ class User extends Authenticatable
         'free_trial_availed',
         'free_trial_claimed_at',
         'subscribe_popup_shown',
+        'trial_type',
+        'trial_days',
+        'trial_discount',
+        'trial_ends_at',
+        'created_by_admin',
     ];
 
     /**
@@ -64,6 +70,10 @@ class User extends Authenticatable
             'free_trial_availed' => 'boolean',
             'free_trial_claimed_at' => 'datetime',
             'subscribe_popup_shown' => 'boolean',
+            'trial_ends_at' => 'datetime',
+            'trial_days' => 'integer',
+            'trial_discount' => 'integer',
+            'created_by_admin' => 'boolean',
         ];
     }
 
@@ -171,5 +181,67 @@ class User extends Authenticatable
     public function posts(): HasMany
     {
         return $this->hasMany(Post::class);
+    }
+
+    /**
+     * Feature overrides for this user.
+     */
+    public function featureOverrides(): HasMany
+    {
+        return $this->hasMany(UserFeatureOverride::class);
+    }
+
+    /**
+     * Active subscription.
+     */
+    public function activeSubscription(): HasOne
+    {
+        return $this->hasOne(Subscription::class)->where('status', 'active')->latestOfMany();
+    }
+
+    /**
+     * Whether this user is currently in an active trial.
+     */
+    public function isOnTrial(): bool
+    {
+        return $this->trial_ends_at !== null && $this->trial_ends_at->isFuture();
+    }
+
+    /**
+     * Days left in trial (0 if expired or not on trial).
+     */
+    public function trialDaysLeft(): int
+    {
+        if (! $this->isOnTrial()) {
+            return 0;
+        }
+
+        return (int) now()->diffInDays($this->trial_ends_at, false);
+    }
+
+    /**
+     * Whether trial has expired (was set but is now past).
+     */
+    public function isTrialExpired(): bool
+    {
+        return $this->trial_ends_at !== null && $this->trial_ends_at->isPast();
+    }
+
+    /**
+     * Get the name of the user's active plan (for feature resolution).
+     * Returns null if neither on trial nor subscribed.
+     */
+    public function activePlanName(): ?string
+    {
+        $sub = $this->activeSubscription;
+        if ($sub) {
+            return $sub->plan_name;
+        }
+
+        if ($this->isOnTrial()) {
+            return 'trial';
+        }
+
+        return null;
     }
 }
