@@ -146,13 +146,14 @@ class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'trial' => $user ? [
-                'is_on_trial'     => $user->isOnTrial(),
-                'trial_days_left' => $user->trialDaysLeft(),
-                'trial_ends_at'   => $user->trial_ends_at?->toIso8601String(),
-                'trial_discount'  => (int) ($user->trial_discount ?? 50),
-                'trial_type'      => $user->trial_type,
-                'show_paywall'    => $user->isOnTrial() && $user->trialDaysLeft() <= 4,
-                'is_trial_expired' => $user->isTrialExpired(),
+                'is_on_trial'            => $user->isOnTrial(),
+                'trial_days_left'        => $user->trialDaysLeft(),
+                'trial_ends_at'          => $user->trial_ends_at?->toIso8601String(),
+                'trial_discount'         => (int) ($user->trial_discount ?? 50),
+                'trial_type'             => $user->trial_type,
+                'show_paywall'           => $user->isOnTrial() && $user->trialDaysLeft() <= 4,
+                'show_immediate_paywall' => $user->trial_type === 'B' && ! $user->activeSubscription,
+                'is_trial_expired'       => $user->isTrialExpired(),
             ] : null,
         ];
     }

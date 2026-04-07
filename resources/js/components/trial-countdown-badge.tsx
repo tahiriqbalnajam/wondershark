@@ -3,8 +3,15 @@ import { useEffect, useState } from 'react';
 import { Clock } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 
+function getBillingUrl(roles: string[]): string {
+    if (roles?.includes('agency')) return '/agency/billing';
+    if (roles?.includes('brand')) return '/brand/billing';
+    return '/billing';
+}
+
 export function TrialCountdownBadge() {
-    const { trial } = usePage().props as any;
+    const { trial, auth } = usePage().props as any;
+    const billingUrl = getBillingUrl(auth?.roles ?? []);
     const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
 
     useEffect(() => {
@@ -33,7 +40,7 @@ export function TrialCountdownBadge() {
     const isUrgent = trial.trial_days_left <= 4;
 
     return (
-        <Link href="/billing" className="no-underline">
+        <Link href={billingUrl} className="no-underline">
             <div className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors cursor-pointer
                 ${isUrgent
                     ? 'bg-orange-50 border-orange-300 text-orange-700 hover:bg-orange-100'

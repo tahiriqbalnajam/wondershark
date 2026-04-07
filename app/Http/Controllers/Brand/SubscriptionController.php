@@ -248,6 +248,16 @@ class SubscriptionController extends Controller
             
             $newPriceId = $plans[$planKey]['price_id'];
 
+            // For manual subscriptions, update plan locally without Stripe
+            if ($subscription->is_manual || ! $subscription->stripe_subscription_id) {
+                $subscription->update([
+                    'plan_name' => $newPlanName,
+                ]);
+
+                $planDisplay = str_replace('brand_', '', $newPlanName);
+                return back()->with('success', 'Updated to ' . ucfirst($planDisplay) . ' plan successfully!');
+            }
+
             // Update subscription on Stripe
             $stripeSubscription = $this->stripeService->updateSubscription(
                 $subscription->stripe_subscription_id,
