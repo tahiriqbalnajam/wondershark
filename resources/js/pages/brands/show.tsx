@@ -34,18 +34,22 @@ interface CompetitiveStat {
     entity_name: string;
     entity_url: string;
     visibility: number;
+    sov: number;
     sentiment: number;
     position: number;
     analyzed_at: string;
     trends: {
         visibility_trend: 'up' | 'down' | 'stable' | 'new';
+        sov_trend: 'up' | 'down' | 'stable' | 'new';
         sentiment_trend: 'up' | 'down' | 'stable' | 'new';
         position_trend: 'up' | 'down' | 'stable' | 'new';
         visibility_change: number;
+        sov_change: number;
         sentiment_change: number;
         position_change: number;
     };
     visibility_percentage: string;
+    sov_percentage: string;
     position_formatted: string;
     sentiment_level: string;
 }
@@ -976,9 +980,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                             </CardTitle>
                         </CardHeader>
                         <BrandVisibilityIndex
-                            //competitiveStats={competitiveStats} 
                             competitiveStats={filteredCompetitiveStats}
-                            //competitiveStats={isLoadingStats ? [] : filteredCompetitiveStats}
                             onRowClick={handleBrandRowClick}
                             brandId={brand.id}
                             limit={5}
@@ -988,6 +990,8 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                             onShowAllBrands={() => { setSelectedBrand('all'); setTableLimit(undefined); }}
                             showAllBrandsButton={selectedBrand !== 'all'}
                             totalBrandsCount={competitiveStats.length}
+                            brandLogo={brand.logo ? `/storage/${brand.logo}` : null}
+                            brandName={brand.name}
                         />
                     </Card>
                 </div>

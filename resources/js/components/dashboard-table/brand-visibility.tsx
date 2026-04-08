@@ -58,9 +58,11 @@ interface BrandVisibilityIndexProps {
     onShowAllBrands?: () => void;
     showAllBrandsButton?: boolean;
     totalBrandsCount?: number;
+    brandLogo?: string | null;
+    brandName?: string;
 }
 
-export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, limit, hoveredDomain, onDomainHover, entities, onShowAllBrands, showAllBrandsButton, totalBrandsCount }: BrandVisibilityIndexProps) {
+export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, limit, hoveredDomain, onDomainHover, entities, onShowAllBrands, showAllBrandsButton, totalBrandsCount, brandLogo, brandName }: BrandVisibilityIndexProps) {
     // Deduplicate by entity_name (case-insensitive), keeping first occurrence
     const dedupedStats = competitiveStats.filter((stat, index, arr) =>
         arr.findIndex(s => s.entity_name.toLowerCase().trim() === stat.entity_name.toLowerCase().trim()) === index
@@ -207,11 +209,11 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                     <TableCell className="font-medium border-r border-gray-200">
                                         <div className="flex items-center gap-2 min-w-0">
                                             <img
-                                                src={logoUrl}
+                                                src={stat.entity_type === 'brand' && brandLogo && stat.entity_name === brandName ? brandLogo : logoUrl}
                                                 alt={stat.entity_name}
                                                 className="w-4 h-4 rounded object-contain flex-shrink-0"
                                                 onError={(e) => {
-                                                    e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>`;
+                                                    e.currentTarget.src = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><circle cx='8.5' cy='8.5' r='1.5'/><polyline points='21,15 16,10 5,21'/></svg>`;
                                                 }}
                                             />
                                             <span className="truncate text-xs">{stat.entity_name}</span>

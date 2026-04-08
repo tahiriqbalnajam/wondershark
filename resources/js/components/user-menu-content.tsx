@@ -32,7 +32,7 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
             <div className="dropdown-menu-mail">
                 {brands && brands.length > 0 ? (
                     <>
-                        {brands.map((brand: { id: number; name: string; website: string }) => {
+                        {brands.map((brand: { id: number; name: string; website: string; logo?: string }) => {
                             let hostname = '';
                             let faviconUrl = '';
                             
@@ -40,6 +40,9 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                                 if (brand.website) {
                                     hostname = new URL(brand.website).hostname.replace('www.', '');
                                     faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=16`;
+                                }
+                                if(brand.logo) {
+                                    faviconUrl = `/storage/${brand.logo}`;
                                 }
                             } catch {
                                 // Invalid URL, use brand name as fallback
