@@ -48,6 +48,18 @@ class CheckPostCitationsJob implements ShouldQueue
             'status'  => $this->post->status,
         ]);
 
+        // Block AI processing if the brand owner's trial has expired and they have no active subscription
+        $brand = $this->post->brand;
+        $brandUser = $brand ? \App\Models\User::find($brand->user_id ?? $brand->agency_id) : null;
+        if ($brandUser && ! $brandUser->canProcessAnalysis()) {
+            Log::info('Skipping citation check — trial expired, no active subscription', [
+                'post_id' => $this->post->id,
+                'user_id' => $brandUser->id,
+            ]);
+
+            return;
+        }
+
         $service->runCitationCheck($this->post);
 
         // Re-fetch current status from DB (serialized model may be stale)

@@ -77,6 +77,18 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
                 return;
             }
 
+            // Block AI processing if the brand owner's trial has expired and they have no active subscription
+            $brandUser = \App\Models\User::find($brand->user_id ?? $brand->agency_id);
+            if ($brandUser && ! $brandUser->canProcessAnalysis()) {
+                Log::info('Skipping analysis — trial expired, no active subscription', [
+                    'brand_prompt_id' => $this->brandPrompt->id,
+                    'brand_id' => $brand->id,
+                    'user_id' => $brandUser->id,
+                ]);
+
+                return;
+            }
+
             Log::info('Brand loaded for analysis', [
                 'brand_id' => $brand->id,
                 'brand_name' => $brand->name,

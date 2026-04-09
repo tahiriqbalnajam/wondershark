@@ -79,7 +79,6 @@ export function AppSidebarHeader({ breadcrumbs = [], title, logo, website }: { b
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <TrialCountdownBadge />
                     {/* Button only visible on Dashboard */}
                     {isDashboard && (
                         <Button

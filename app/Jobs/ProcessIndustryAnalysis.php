@@ -37,6 +37,17 @@ class ProcessIndustryAnalysis implements ShouldQueue
     {
         Log::info("ProcessIndustryAnalysis job started for analysis ID: {$this->analysis->id}");
 
+        // Block AI processing if the user's trial has expired and they have no active subscription
+        $analysisUser = \App\Models\User::find($this->analysis->user_id);
+        if ($analysisUser && ! $analysisUser->canProcessAnalysis()) {
+            Log::info('Skipping industry analysis — trial expired, no active subscription', [
+                'analysis_id' => $this->analysis->id,
+                'user_id' => $analysisUser->id,
+            ]);
+
+            return;
+        }
+
         try {
             // Update analysis status to processing if this is the first AI provider
             if ($this->analysis->status === 'pending') {

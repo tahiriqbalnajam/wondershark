@@ -125,6 +125,8 @@ class HandleInertiaRequests extends Middleware
                 ]) : null,
                 'roles' => $userRoles,
                 'permissions' => $userPermissions,
+                'session_id' => session()->getId(),
+                'logged_in_at' => session()->get('logged_in_at'),
                 'can' => $user ? [
                     'viewDashboard' => $user->can('view-dashboard'),
                     'manageDashboard' => $user->can('manage-dashboard'),
@@ -154,6 +156,7 @@ class HandleInertiaRequests extends Middleware
                 'show_paywall'           => $user->isOnTrial() && $user->trialDaysLeft() <= 4,
                 'show_immediate_paywall' => $user->trial_type === 'B' && ! $user->activeSubscription,
                 'is_trial_expired'       => $user->isTrialExpired(),
+                'has_ever_subscribed'    => \App\Models\Subscription::where('user_id', $user->id)->exists(),
             ] : null,
         ];
     }

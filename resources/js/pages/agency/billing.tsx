@@ -6,9 +6,10 @@ import SubscriptionCardModal from '@/components/subscription-card-modal';
 import CancelSubscriptionModal from '@/components/cancel-subscription-modal';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { usePage, router } from '@inertiajs/react';
+import { Clock, Zap } from 'lucide-react';
 
 interface SubscriptionData {
   plan_name: string;
@@ -32,7 +33,7 @@ interface PageProps extends Record<string, unknown> {
 }
 
 export default function AgencyBillingPage() {
-  const { agency, subscription, stripePublishableKey } = usePage<PageProps>().props;
+  const { agency, subscription, stripePublishableKey, trial } = usePage<PageProps & { trial?: any }>().props;
   const [selectedPlan, setSelectedPlan] = useState<'agency_growth' | 'agency_unlimited'>(
     (subscription?.plan_name === 'agency_growth' || subscription?.plan_name === 'agency_unlimited' ? subscription.plan_name : 'agency_growth')
   );
@@ -42,6 +43,7 @@ export default function AgencyBillingPage() {
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
   const [subscriptionPlan, setSubscriptionPlan] = useState<'agency_growth' | 'agency_unlimited'>('agency_growth');
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [trialTimeLeft, setTrialTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
 
   // Auto-refresh when page regains focus (e.g., returning from billing portal)
   React.useEffect(() => {
@@ -56,11 +58,30 @@ export default function AgencyBillingPage() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [cardModalOpen, subscriptionModalOpen, cancelModalOpen]);
 
-  const currentPlan: 'agency_growth' | 'agency_unlimited' | null = 
-    subscription?.plan_name === 'agency_growth' || subscription?.plan_name === 'agency_unlimited' 
-      ? subscription.plan_name 
+  const currentPlan: 'agency_growth' | 'agency_unlimited' | null =
+    subscription?.plan_name === 'agency_growth' || subscription?.plan_name === 'agency_unlimited'
+      ? subscription.plan_name
       : null;
   const hasActiveSubscription = !!subscription && subscription.status === 'active';
+  const isOnTrial = !!(trial?.is_on_trial && !hasActiveSubscription && !trial?.has_ever_subscribed);
+  const trialDiscount: number = trial?.trial_discount ?? 0;
+
+  useEffect(() => {
+    if (!isOnTrial || !trial?.trial_ends_at) return;
+    const compute = () => {
+      const diff = new Date(trial.trial_ends_at).getTime() - Date.now();
+      if (diff <= 0) { setTrialTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 }); return; }
+      setTrialTimeLeft({
+        days: Math.floor(diff / 86400000),
+        hours: Math.floor((diff % 86400000) / 3600000),
+        minutes: Math.floor((diff % 3600000) / 60000),
+        seconds: Math.floor((diff % 60000) / 1000),
+      });
+    };
+    compute();
+    const id = setInterval(compute, 1000);
+    return () => clearInterval(id);
+  }, [trial?.trial_ends_at, isOnTrial]);
 
   // Handle subscription actions
   const handleSubscribe = async (plan: 'agency_growth' | 'agency_unlimited') => {
@@ -263,7 +284,11 @@ export default function AgencyBillingPage() {
         stripePublishableKey={stripePublishableKey}
         planName={subscriptionPlan}
         planDisplayName={subscriptionPlan === 'agency_growth' ? 'Growth' : 'Unlimited'}
-        planPrice={subscriptionPlan === 'agency_growth' ? '$299' : '$499'}
+        planPrice={isOnTrial && trialDiscount > 0
+          ? (subscriptionPlan === 'agency_growth'
+              ? `$${Math.round(299 * (1 - trialDiscount / 100))} (${trialDiscount}% off 1st month)`
+              : `$${Math.round(499 * (1 - trialDiscount / 100))} (${trialDiscount}% off 1st month)`)
+          : (subscriptionPlan === 'agency_growth' ? '$299' : '$499')}
         onSuccess={handleSubscriptionSuccess}
       />
       <CancelSubscriptionModal
@@ -275,6 +300,54 @@ export default function AgencyBillingPage() {
       />
       <div className="w-full overflow-x-hidden">
         <div className="mx-auto md:p-8">
+
+        {isOnTrial && trialDiscount > 0 && (
+          <div className="mb-6 rounded-xl border-2 border-orange-300 bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white">
+                  <Zap className="h-6 w-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-extrabold text-orange-500">{trialDiscount}% OFF</span>
+                    <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700 border border-orange-300">1st month only</span>
+                  </div>
+                  <p className="text-sm text-orange-700 mt-0.5">Subscribe during your free trial and get <strong>{trialDiscount}% off</strong> your first month. Discount applied automatically.</p>
+                </div>
+              </div>
+              {trialTimeLeft && (
+                <div className="flex flex-col items-center sm:items-end gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-orange-600">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>Trial ends in</span>
+                  </div>
+                  <div className="flex gap-1">
+                    {trialTimeLeft.days > 0 && (
+                      <div className="flex flex-col items-center rounded-lg bg-orange-500 px-2 py-1 text-white min-w-[40px]">
+                        <span className="text-lg font-bold leading-none tabular-nums">{trialTimeLeft.days}</span>
+                        <span className="text-[10px]">days</span>
+                      </div>
+                    )}
+                    <div className="flex flex-col items-center rounded-lg bg-orange-500 px-2 py-1 text-white min-w-[40px]">
+                      <span className="text-lg font-bold leading-none tabular-nums">{String(trialTimeLeft.hours).padStart(2, '0')}</span>
+                      <span className="text-[10px]">hrs</span>
+                    </div>
+                    <div className="flex flex-col items-center rounded-lg bg-orange-500 px-2 py-1 text-white min-w-[40px]">
+                      <span className="text-lg font-bold leading-none tabular-nums">{String(trialTimeLeft.minutes).padStart(2, '0')}</span>
+                      <span className="text-[10px]">min</span>
+                    </div>
+                    <div className="flex flex-col items-center rounded-lg bg-orange-500 px-2 py-1 text-white min-w-[40px]">
+                      <span className="text-lg font-bold leading-none tabular-nums">{String(trialTimeLeft.seconds).padStart(2, '0')}</span>
+                      <span className="text-[10px]">sec</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <section className="mb-8">
           <div className="mb-4">
             <h2 className="text-lg font-semibold mb-1">Plans</h2>
@@ -346,7 +419,17 @@ export default function AgencyBillingPage() {
               }}
             >
               <div className="mb-4 text-muted-foreground">Growth</div>
-              <div className="text-2xl font-bold text-black mb-2">$299 <span className="text-base font-normal text-muted-foreground">/per month</span></div>
+              {isOnTrial && trialDiscount > 0 ? (
+                <div className="mb-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-black">${Math.round(299 * (1 - trialDiscount / 100))}</span>
+                    <span className="text-sm line-through text-muted-foreground">$299</span>
+                    <span className="text-base font-normal text-muted-foreground">/mo</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-2xl font-bold text-black mb-2">$299 <span className="text-base font-normal text-muted-foreground">/per month</span></div>
+              )}
                           <div data-orientation="horizontal" role="none" className="shrink-0 bg-border h-px w-full mb-4"></div>
               
               <ul className="mb-4 space-y-1 text-sm">
@@ -416,7 +499,9 @@ export default function AgencyBillingPage() {
                       Subscribing...
                     </>
                   ) : (
-                    !hasActiveSubscription ? 'Subscribe' : currentPlan === 'agency_unlimited' ? 'Downgrade to Growth' : 'Subscribe'
+                    !hasActiveSubscription
+                      ? (isOnTrial && trialDiscount > 0 ? `Subscribe — ${trialDiscount}% Off 1st Month` : 'Subscribe')
+                      : currentPlan === 'agency_unlimited' ? 'Downgrade to Growth' : 'Subscribe'
                   )}
                 </button>
               )}
@@ -487,7 +572,17 @@ export default function AgencyBillingPage() {
               }}
             >
               <div className="mb-4 text-muted-foreground">Unlimited</div>
-              <div className="text-2xl font-bold text-black mb-2">$499 <span className="text-base font-normal text-muted-foreground">/per month</span></div>
+              {isOnTrial && trialDiscount > 0 ? (
+                <div className="mb-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-black">${Math.round(499 * (1 - trialDiscount / 100))}</span>
+                    <span className="text-sm line-through text-muted-foreground">$499</span>
+                    <span className="text-base font-normal text-muted-foreground">/mo</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-2xl font-bold text-black mb-2">$499 <span className="text-base font-normal text-muted-foreground">/per month</span></div>
+              )}
                           <div data-orientation="horizontal" role="none" className="shrink-0 bg-border h-px w-full mb-4"></div>
               
               <ul className="mb-4 space-y-1 text-sm">
@@ -557,7 +652,9 @@ export default function AgencyBillingPage() {
                       {!hasActiveSubscription ? 'Subscribing...' : currentPlan === 'agency_growth' ? 'Upgrading...' : 'Subscribing...'}
                     </>
                   ) : (
-                    !hasActiveSubscription ? 'Subscribe' : currentPlan === 'agency_growth' ? 'Upgrade' : 'Subscribe'
+                    !hasActiveSubscription
+                      ? (isOnTrial && trialDiscount > 0 ? `Subscribe — ${trialDiscount}% Off 1st Month` : 'Subscribe')
+                      : currentPlan === 'agency_growth' ? 'Upgrade' : 'Subscribe'
                   )}
                 </button>
               )}

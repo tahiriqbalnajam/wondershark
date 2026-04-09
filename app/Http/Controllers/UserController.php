@@ -143,9 +143,31 @@ class UserController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'roles' => $user->getRoleNames(),
+                'trial_ends_at' => $user->trial_ends_at?->toDateString(),
+                'trial_type' => $user->trial_type,
+                'is_on_trial' => $user->isOnTrial(),
+                'trial_days_left' => $user->trialDaysLeft(),
+                'is_trial_expired' => $user->isTrialExpired(),
             ],
             'roles' => $roles,
         ]);
+    }
+
+    public function extendTrialByDays(Request $request, User $user): \Illuminate\Http\RedirectResponse
+    {
+        $request->validate(['extend_days' => 'required|integer|min:1|max:365']);
+
+        $days = $request->integer('extend_days');
+        $base = ($user->isOnTrial() && $user->trial_ends_at) ? $user->trial_ends_at : now();
+
+        $user->update([
+            'trial_ends_at'         => $base->addDays($days)->endOfDay(),
+            'trial_type'            => $user->trial_type ?? 'A',
+            'free_trial_availed'    => true,
+            'free_trial_claimed_at' => $user->free_trial_claimed_at ?? now(),
+        ]);
+
+        return back()->with('success', "Trial extended by {$days} day(s) for {$user->name}.");
     }
 
     public function update(Request $request, User $user)

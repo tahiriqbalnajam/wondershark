@@ -27,6 +27,18 @@ class GeneratePostPromptsJob implements ShouldQueue
         try {
             Log::info('Generating prompts via queued job', ['post_id' => $this->post->id]);
 
+            // Block AI processing if the brand owner's trial has expired and they have no active subscription
+            $brand = $this->post->brand;
+            $brandUser = $brand ? \App\Models\User::find($brand->user_id ?? $brand->agency_id) : null;
+            if ($brandUser && ! $brandUser->canProcessAnalysis()) {
+                Log::info('Skipping prompt generation — trial expired, no active subscription', [
+                    'post_id' => $this->post->id,
+                    'user_id' => $brandUser->id,
+                ]);
+
+                return;
+            }
+
             // Generate prompts. Service handles the limit of 5.
             $prompts = $service->generatePromptsFromMultipleModelsForPost(
                 $this->post,

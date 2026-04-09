@@ -45,7 +45,7 @@ class PlanFeature extends Model
 
     public static function clearAllCache(): void
     {
-        foreach (['trial', 'agency_growth', 'agency_unlimited', 'free'] as $plan) {
+        foreach (['trial', 'agency_growth', 'agency_unlimited', 'free', 'brand_growth'] as $plan) {
             Cache::forget("plan_features:{$plan}");
         }
     }

@@ -228,6 +228,27 @@ class User extends Authenticatable
     }
 
     /**
+     * Whether this user is allowed to trigger AI analysis and post processing.
+     * Blocked when trial has expired and there is no active subscription.
+     */
+    public function canProcessAnalysis(): bool
+    {
+        if ($this->hasRole('admin')) {
+            return true;
+        }
+
+        if ($this->activeSubscription) {
+            return true;
+        }
+
+        if ($this->isOnTrial()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Get the name of the user's active plan (for feature resolution).
      * Returns null if neither on trial nor subscribed.
      */

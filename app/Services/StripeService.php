@@ -362,12 +362,13 @@ class StripeService
      * Create subscription with specific payment method
      */
     public function createSubscriptionWithPaymentMethod(
-        string $customerId, 
-        string $priceId, 
+        string $customerId,
+        string $priceId,
         string $paymentMethodId,
-        array $metadata = []
+        array $metadata = [],
+        ?int $discountPercent = null
     ) {
-        return $this->stripe->subscriptions->create([
+        $params = [
             'customer' => $customerId,
             'items' => [
                 ['price' => $priceId],
@@ -375,6 +376,33 @@ class StripeService
             'default_payment_method' => $paymentMethodId,
             'metadata' => $metadata,
             'expand' => ['latest_invoice.payment_intent'],
-        ]);
+        ];
+
+        if ($discountPercent && $discountPercent > 0 && $discountPercent <= 100) {
+            $coupon = $this->getOrCreateTrialCoupon($discountPercent);
+            $params['discounts'] = [['coupon' => $coupon->id]];
+        }
+
+        return $this->stripe->subscriptions->create($params);
+    }
+
+    /**
+     * Get or create a one-time trial discount coupon (applies to first invoice only).
+     */
+    public function getOrCreateTrialCoupon(int $percentOff): \Stripe\Coupon
+    {
+        $couponId = 'trial_discount_' . $percentOff . 'pct';
+
+        try {
+            return $this->stripe->coupons->retrieve($couponId);
+        } catch (\Stripe\Exception\InvalidRequestException $e) {
+            // Coupon doesn't exist yet, create it
+            return $this->stripe->coupons->create([
+                'id'          => $couponId,
+                'percent_off' => $percentOff,
+                'duration'    => 'once',
+                'name'        => "{$percentOff}% off first month (trial)",
+            ]);
+        }
     }
 }

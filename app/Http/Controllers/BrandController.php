@@ -958,10 +958,11 @@ class BrandController extends Controller
             ];
         })->values()->toArray();
 
-        // Show free trial popup once for brand/agency users with no active subscription
+        // Show free trial popup once for brand/agency users with no active subscription.
+        // Skip entirely for Option B users — they have no free trial and are handled by TrialPaywallPopup.
         $showTrialPopup = false;
         $showSubscribePopup = false;
-        if (! $user->hasRole('admin')) {
+        if (! $user->hasRole('admin') && $user->trial_type !== 'B') {
             $hasActiveSubscription = Subscription::where('user_id', $user->id)
                 ->where('status', 'active')
                 ->exists();

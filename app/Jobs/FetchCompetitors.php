@@ -33,6 +33,17 @@ class FetchCompetitors implements ShouldQueue
     {
         Log::info("FetchCompetitors job started for brand ID: {$this->brand->id}");
 
+        // Block AI processing if the brand owner's trial has expired and they have no active subscription
+        $brandUser = \App\Models\User::find($this->brand->user_id ?? $this->brand->agency_id);
+        if ($brandUser && ! $brandUser->canProcessAnalysis()) {
+            Log::info('Skipping competitor fetch — trial expired, no active subscription', [
+                'brand_id' => $this->brand->id,
+                'user_id' => $brandUser->id,
+            ]);
+
+            return;
+        }
+
         $aiModel = AiModel::where('provider_name', 'openai')->where('is_enabled', true)->first();
 
         if (! $aiModel || empty($aiModel->api_config['api_key'])) {

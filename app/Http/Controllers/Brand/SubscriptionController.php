@@ -178,6 +178,12 @@ class SubscriptionController extends Controller
             // Attach payment method to customer
             $this->stripeService->attachPaymentMethod($paymentMethodId, $customer->id);
 
+            // Apply trial discount only on first-ever subscription (not re-subscribes after cancel)
+            $hasEverSubscribed = Subscription::where('user_id', $user->id)->exists();
+            $discountPercent = ($user->isOnTrial() && $user->trial_discount > 0 && !$hasEverSubscribed)
+                ? (int) $user->trial_discount
+                : null;
+
             // Create subscription
             $stripeSubscription = $this->stripeService->createSubscriptionWithPaymentMethod(
                 $customer->id,
@@ -186,7 +192,8 @@ class SubscriptionController extends Controller
                 [
                     'user_id' => $user->id,
                     'plan_name' => $planName,
-                ]
+                ],
+                $discountPercent
             );
 
             // Store subscription in database

@@ -9,9 +9,13 @@ use Inertia\Inertia;
 
 class PlanFeatureController extends Controller
 {
-    const PLANS = ['trial', 'free', 'agency_growth', 'agency_unlimited'];
+    const PLANS = ['trial', 'free', 'agency_growth', 'agency_unlimited', 'brand_growth'];
+
+    const AGENCY_PLANS = ['trial', 'agency_growth', 'agency_unlimited'];
+    const BRAND_PLANS  = ['trial', 'brand_growth'];
 
     const FEATURE_KEYS = [
+        'price',
         'brands_covered',
         'competitor_analysis',
         'monthly_posts',
@@ -45,9 +49,11 @@ class PlanFeatureController extends Controller
         }
 
         return Inertia::render('admin/plan-features/index', [
-            'plans' => self::PLANS,
-            'featureKeys' => self::FEATURE_KEYS,
-            'features' => $features,
+            'plans'        => self::PLANS,
+            'agencyPlans'  => self::AGENCY_PLANS,
+            'brandPlans'   => self::BRAND_PLANS,
+            'featureKeys'  => self::FEATURE_KEYS,
+            'features'     => $features,
         ]);
     }
 

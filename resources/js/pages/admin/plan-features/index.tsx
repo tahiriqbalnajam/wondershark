@@ -42,6 +42,7 @@ const PLAN_LABELS: Record<string, string> = {
 };
 
 const FEATURE_LABELS: Record<string, string> = {
+    price: "Price (USD)",
     brands_covered: "Brands Covered",
     competitor_analysis: "Competitor Analysis",
     monthly_posts: "Monthly Posts",

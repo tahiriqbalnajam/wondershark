@@ -117,6 +117,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('users', [UserController::class, 'store'])->name('users.store')->middleware('role.permission:create-users');
         Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit')->middleware('role.permission:edit-users');
         Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update')->middleware('role.permission:edit-users');
+        Route::post('users/{user}/extend-trial-by-days', [UserController::class, 'extendTrialByDays'])->name('users.extend-trial-by-days')->middleware('role.permission:edit-users');
         Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy')->middleware('role.permission:delete-users');
     });
 
@@ -225,6 +226,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::patch('/{user}/toggle-post-permission', [\App\Http\Controllers\Admin\UserController::class, 'togglePostPermission'])->name('toggle-post-permission');
             Route::post('/bulk-update-post-permissions', [\App\Http\Controllers\Admin\UserController::class, 'bulkUpdatePostPermissions'])->name('bulk-update-post-permissions');
             Route::post('/{user}/extend-trial', [\App\Http\Controllers\Admin\UserController::class, 'extendTrial'])->name('extend-trial');
+            Route::post('/{user}/extend-trial-by-days', [\App\Http\Controllers\Admin\UserController::class, 'extendTrialByDays'])->name('extend-trial-by-days');
             Route::post('/{user}/activate-subscription', [\App\Http\Controllers\Admin\UserController::class, 'activateSubscription'])->name('activate-subscription');
             Route::post('/{user}/feature-overrides', [\App\Http\Controllers\Admin\UserController::class, 'updateFeatureOverrides'])->name('feature-overrides');
         });

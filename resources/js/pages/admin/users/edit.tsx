@@ -129,6 +129,14 @@ export default function EditUser({ user, roles, permissions, featureKeys, userOv
         trialForm.post(route('admin.users.extend-trial', user.id));
     };
 
+    // --- Extend by days form ---
+    const extendForm = useForm({ extend_days: 7 });
+
+    const handleExtendSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        extendForm.post(route('admin.users.extend-trial-by-days', user.id));
+    };
+
     // --- Subscription form ---
     const subForm = useForm({
         plan_name: 'agency_growth',
@@ -353,6 +361,34 @@ export default function EditUser({ user, roles, permissions, featureKeys, userOv
                                 Save Trial
                             </Button>
                         </form>
+
+                        <div className="border-t pt-4 mt-2">
+                            <p className="text-sm font-medium mb-3">Extend trial by additional days</p>
+                            <form onSubmit={handleExtendSubmit} className="flex flex-wrap items-end gap-4">
+                                <div>
+                                    <Label htmlFor="extend_days">Days to Add</Label>
+                                    <Input
+                                        id="extend_days"
+                                        type="number"
+                                        min={1}
+                                        max={365}
+                                        value={extendForm.data.extend_days}
+                                        onChange={e => extendForm.setData('extend_days', parseInt(e.target.value) || 1)}
+                                        className="mt-1 w-28"
+                                        required
+                                    />
+                                    {extendForm.errors.extend_days && <p className="text-sm text-red-600 mt-1">{extendForm.errors.extend_days}</p>}
+                                </div>
+                                <div className="text-sm text-muted-foreground pb-2">
+                                    {user.is_on_trial
+                                        ? <>Extends from current end date <strong>({user.trial_ends_at})</strong></>
+                                        : 'Extends from today (trial expired or not set)'}
+                                </div>
+                                <Button type="submit" variant="outline" disabled={extendForm.processing}>
+                                    + Extend Trial
+                                </Button>
+                            </form>
+                        </div>
                     </CardContent>
                 </Card>
 

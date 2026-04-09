@@ -340,6 +340,32 @@ class UserController extends Controller
     }
 
     /**
+     * Extend the user's trial by X additional days from today or current trial end.
+     */
+    public function extendTrialByDays(Request $request, User $user): RedirectResponse
+    {
+        $request->validate([
+            'extend_days' => 'required|integer|min:1|max:365',
+        ]);
+
+        $days = $request->integer('extend_days');
+
+        // Extend from current trial end if still active, otherwise from today
+        $base = ($user->isOnTrial() && $user->trial_ends_at)
+            ? $user->trial_ends_at
+            : now();
+
+        $user->update([
+            'trial_ends_at'        => $base->addDays($days)->endOfDay(),
+            'trial_type'           => $user->trial_type ?? 'A',
+            'free_trial_availed'   => true,
+            'free_trial_claimed_at' => $user->free_trial_claimed_at ?? now(),
+        ]);
+
+        return back()->with('success', "Trial extended by {$days} day(s) for {$user->name}.");
+    }
+
+    /**
      * Manually activate a subscription for a user (wire transfer / bypass Stripe).
      */
     public function activateSubscription(Request $request, User $user): RedirectResponse

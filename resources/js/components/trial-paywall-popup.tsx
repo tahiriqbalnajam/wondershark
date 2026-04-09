@@ -1,9 +1,46 @@
-import { usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { router, usePage } from '@inertiajs/react';
+import { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Clock, Zap, X, Lock } from 'lucide-react';
 import { Link } from '@inertiajs/react';
+
+/**
+ * Module-level state — survives SPA navigations (module not reloaded between pages).
+ *
+ * optionBStartedAt  Unix ms when the Option B countdown began.
+ *   Non-null  = we are still in the countdown window (component may remount mid-countdown).
+ *   null      = redirect has already fired (or user logged out / subscribed).
+ *
+ * optionAShownKey   `${userId}_${sessionId}` for Option A show-once-per-login tracking.
+ */
+let optionBStartedAt: number | null = null;
+let optionAShownKey: string | null = null;
+
+function sessionKey(prefix: string, userId: number, sessionId: string) {
+    return `${prefix}_${userId}_${sessionId}`;
+}
+
+function useCountdown(endsAt: string | null) {
+    const calc = () => {
+        if (!endsAt) return { d: 0, h: 0, m: 0, s: 0 };
+        const diff = Math.max(0, new Date(endsAt).getTime() - Date.now());
+        const total = Math.floor(diff / 1000);
+        return {
+            d: Math.floor(total / 86400),
+            h: Math.floor((total % 86400) / 3600),
+            m: Math.floor((total % 3600) / 60),
+            s: total % 60,
+        };
+    };
+    const [time, setTime] = useState(calc);
+    const ref = useRef<ReturnType<typeof setInterval>>();
+    useEffect(() => {
+        ref.current = setInterval(() => setTime(calc()), 1000);
+        return () => clearInterval(ref.current);
+    }, [endsAt]);
+    return time;
+}
 
 function getBillingUrl(roles: string[]): string {
     if (roles?.includes('agency')) return '/agency/billing';
@@ -11,46 +48,111 @@ function getBillingUrl(roles: string[]): string {
     return '/billing';
 }
 
-export function TrialPaywallPopup() {
-    const { trial, auth } = usePage().props as any;
-    const [open, setOpen] = useState(false);
+const REDIRECT_DELAY = 5;
 
-    const shouldShowA = trial?.show_paywall;
-    const shouldShowB = trial?.show_immediate_paywall;
+export function TrialPaywallPopup() {
+    const page = usePage();
+    const { trial, auth } = page.props as any;
+
+    const shouldShowA: boolean = !!trial?.show_paywall;
+    const shouldShowB: boolean = !!trial?.show_immediate_paywall;
+    const userId: number | null = auth?.user?.id ?? null;
+    const loggedInAt: number | null = (auth as any)?.logged_in_at ?? null;
     const billingUrl = getBillingUrl(auth?.roles ?? []);
 
-    useEffect(() => {
-        if (!auth?.user?.id) return;
-        if (!shouldShowA && !shouldShowB) return;
+    const isOnBillingPage = typeof window !== 'undefined' && window.location.pathname.includes('/billing');
 
-        const key = `paywall_shown_${auth.user.id}`;
-        if (!sessionStorage.getItem(key)) {
-            sessionStorage.setItem(key, '1'); // Mark shown before opening — prevents re-show on re-mount
-            const t = setTimeout(() => setOpen(true), 800);
-            return () => clearTimeout(t);
+    const [open, setOpen] = useState(false);
+    const [redirectIn, setRedirectIn] = useState<number | null>(null);
+
+    // ── Option B: mandatory, once per login session ──────────────────────────
+    useEffect(() => {
+        if (!shouldShowB || isOnBillingPage || !userId || !loggedInAt) return;
+
+        const key = sessionKey('optionB', userId, loggedInAt);
+        const alreadyShown = !!sessionStorage.getItem(key);
+
+        if (!alreadyShown) {
+            sessionStorage.setItem(key, '1');
+            optionBStartedAt = Date.now();
+            setOpen(true);
+            setRedirectIn(REDIRECT_DELAY);
+        } else if (optionBStartedAt !== null) {
+            // resume mid-countdown
+            const elapsed = Math.floor((Date.now() - optionBStartedAt) / 1000);
+            const remaining = REDIRECT_DELAY - elapsed;
+            if (remaining > 0) {
+                setOpen(true);
+                setRedirectIn(remaining);
+            } else {
+                optionBStartedAt = null;
+            }
         }
-    }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // intentional empty deps — runs once per mount only
+
+    // ── Option A: show once per login session ────────────────────────────────
+    useEffect(() => {
+        if (!shouldShowA || !userId || !loggedInAt || isOnBillingPage) return;
+        const key = sessionKey('optionA', userId, loggedInAt);
+        if (optionAShownKey === key || sessionStorage.getItem(key)) return;
+        optionAShownKey = key;
+        sessionStorage.setItem(key, '1');
+        const t = setTimeout(() => {
+            setOpen(true);
+            setRedirectIn(REDIRECT_DELAY);
+        }, 800);
+        return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [shouldShowA, userId, loggedInAt]);
+
+    // ── Reset module state on logout / subscription acquired ─────────────────
+    useEffect(() => {
+        if (!userId) {
+            optionBStartedAt = null;
+            optionAShownKey = null;
+        }
+    }, [userId]);
+
+    useEffect(() => {
+        if (!shouldShowB) optionBStartedAt = null;
+    }, [shouldShowB]);
+
+    // ── Auto-redirect countdown ──────────────────────────────────────────────
+    useEffect(() => {
+        if (!open || redirectIn === null) return;
+        if (redirectIn <= 0) {
+            optionBStartedAt = null;
+            setOpen(false);
+            setRedirectIn(null);
+            router.visit(billingUrl);
+            return;
+        }
+        const t = setTimeout(() => setRedirectIn((s) => (s !== null ? s - 1 : 0)), 1000);
+        return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, redirectIn]);
 
     if (!shouldShowA && !shouldShowB) return null;
 
     const handleClose = () => {
-        // Option B: don't allow dismissal — user must subscribe
         if (shouldShowB) return;
         setOpen(false);
+        setRedirectIn(null);
     };
 
-    const daysLeft  = trial.trial_days_left as number;
-    const discount  = trial.trial_discount as number;
+    const daysLeft = (trial?.trial_days_left as number) ?? 0;
+    const discount = (trial?.trial_discount as number) ?? 50;
+    const countdown = useCountdown(trial?.trial_ends_at ?? null);
 
-    // Option B — immediate, non-dismissable paywall
+    // ── Option B ─────────────────────────────────────────────────────────────
     if (shouldShowB) {
         return (
             <Dialog open={open} onOpenChange={() => {}}>
                 <DialogContent
                     className="sm:max-w-md"
                     onInteractOutside={(e) => e.preventDefault()}
-                    // Hide the default close button rendered by shadcn
-                    hideCloseButton
+                    onEscapeKeyDown={(e) => e.preventDefault()}
                 >
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-xl">
@@ -71,16 +173,22 @@ export function TrialPaywallPopup() {
                         <Link href={billingUrl} className="block">
                             <Button className="w-full bg-red-500 hover:bg-red-600 text-white">
                                 <Zap className="h-4 w-4 mr-2" />
-                                View Plans & Subscribe
+                                View Plans &amp; Subscribe
                             </Button>
                         </Link>
+
+                        {redirectIn !== null && redirectIn > 0 && (
+                            <p className="text-center text-xs text-muted-foreground">
+                                Redirecting to billing in <strong>{redirectIn}s</strong>…
+                            </p>
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>
         );
     }
 
-    // Option A — last 4 days paywall, dismissable
+    // ── Option A ─────────────────────────────────────────────────────────────
     return (
         <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
             <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
@@ -107,11 +215,25 @@ export function TrialPaywallPopup() {
                 </DialogHeader>
 
                 <div className="space-y-4 py-2">
-                    <div className="flex justify-center">
-                        <div className="flex flex-col items-center justify-center rounded-full border-4 border-orange-400 bg-orange-50 w-24 h-24">
-                            <span className="text-3xl font-bold text-orange-500 leading-none">{daysLeft}</span>
-                            <span className="text-xs text-orange-600 mt-1">day{daysLeft !== 1 ? 's' : ''} left</span>
-                        </div>
+                    <div className="flex justify-center gap-2">
+                        {[
+                            { value: countdown.d, label: 'Days' },
+                            { value: countdown.h, label: 'Hrs' },
+                            { value: countdown.m, label: 'Min' },
+                            { value: countdown.s, label: 'Sec' },
+                        ].map(({ value, label }) => (
+                            <div
+                                key={label}
+                                className="flex flex-col items-center bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 min-w-[52px]"
+                            >
+                                <span className="text-2xl font-bold text-orange-500 leading-none tabular-nums">
+                                    {String(value).padStart(2, '0')}
+                                </span>
+                                <span className="text-[10px] text-orange-600 mt-1 uppercase tracking-wide">
+                                    {label}
+                                </span>
+                            </div>
+                        ))}
                     </div>
 
                     <div className="rounded-lg bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 p-4 text-center space-y-1">
@@ -133,7 +255,9 @@ export function TrialPaywallPopup() {
                     </div>
 
                     <p className="text-center text-xs text-muted-foreground">
-                        Discount applied automatically at checkout during your trial.
+                        {redirectIn !== null && redirectIn > 0
+                            ? <>Redirecting to billing in <strong>{redirectIn}s</strong>…</>
+                            : 'Discount applied automatically at checkout during your trial.'}
                     </p>
                 </div>
             </DialogContent>
