@@ -14,8 +14,11 @@ export default function Step6AccountSetup({ }: StepProps) {
 
                 <h3 className="text-2xl font-semibold mb-3">Ready to Complete Setup!</h3>
                 <p className="text-muted-foreground text-lg mb-6 max-w-[900px] mx-auto">
-                    You’ve successfully configured your brand. Select your plan and click “<b>Get Started</b>” below to activate your brand and start using the platform. An invoice will be sent to your email shortly.
+                    You’ve successfully configured your brand.
                 </p>
+                { /* <p className="text-muted-foreground text-lg mb-6 max-w-[900px] mx-auto">
+                    You’ve successfully configured your brand. Select your plan and click “<b>Get Started</b>” below to activate your brand and start using the platform. An invoice will be sent to your email shortly.
+                </p> 
 
                 <div className="plan-wrapp mt-20">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -75,7 +78,7 @@ export default function Step6AccountSetup({ }: StepProps) {
                     <div className='flex justify-center mt-15'>
                         <button className="primary-btn">Contact Us</button>
                     </div>
-                </div>
+                </div>*/ }
             </div>
         </div>
     );
