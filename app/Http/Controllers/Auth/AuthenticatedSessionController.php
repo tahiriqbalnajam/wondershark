@@ -57,6 +57,16 @@ class AuthenticatedSessionController extends Controller
                 }
                 return redirect()->route('agency.billing');
             }
+
+
+            if ($user->trial_type === 'A' && $user->isTrialExpired() && !$user->activeSubscription) {
+                if ($user->hasRole('agency')) {
+                    return redirect()->route('agency.billing');
+                } elseif ($user->hasRole('brand')) {
+                    return redirect()->route('brand.billing');
+                }
+                return redirect()->route('agency.billing');
+            }
         }
 
         return redirect()->intended(route('dashboard', absolute: false));

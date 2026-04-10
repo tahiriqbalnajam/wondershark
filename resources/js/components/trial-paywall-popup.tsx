@@ -58,6 +58,7 @@ export function TrialPaywallPopup() {
 
     const shouldShowA: boolean = !!trial?.show_paywall;
     const shouldShowB: boolean = !!trial?.show_immediate_paywall;
+    const shouldShowExpired: boolean = !!trial?.show_expired_paywall;
     const userId: number | null = auth?.user?.id ?? null;
     const loggedInAt: number | null = (auth as any)?.logged_in_at ?? null;
     const billingUrl = getBillingUrl(auth?.roles ?? []);
@@ -108,6 +109,18 @@ export function TrialPaywallPopup() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [shouldShowA, userId, loggedInAt, isOnBillingPage]);
 
+    // ── Expired Trial: show popup on billing page ───────────────
+    useEffect(() => {
+        if (!shouldShowExpired || !userId || !loggedInAt || !isOnBillingPage) return;
+        const key = sessionKey('expiredTrial', userId, String(loggedInAt));
+        if (sessionStorage.getItem(key)) return;
+        sessionStorage.setItem(key, '1');
+        const t = setTimeout(() => {
+            setOpen(true);
+        }, 500);
+        return () => clearTimeout(t);
+    }, [shouldShowExpired, userId, loggedInAt, isOnBillingPage]);
+
     // ── Reset module state on logout / subscription acquired ─────────────────
     useEffect(() => {
         if (!userId) {
@@ -135,7 +148,7 @@ export function TrialPaywallPopup() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, redirectIn]);
 
-    if (!shouldShowA && !shouldShowB) return null;
+    if (!shouldShowA && !shouldShowB && !shouldShowExpired) return null;
 
     const handleClose = () => {
         if (shouldShowB) return;
@@ -151,9 +164,7 @@ export function TrialPaywallPopup() {
     if (shouldShowB) {
         return (
             <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent
-                    className="sm:max-w-md"
-                >
+                <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-xl">
                             <Lock className="h-5 w-5 text-red-500" />
@@ -163,13 +174,39 @@ export function TrialPaywallPopup() {
                             A subscription is required to access the platform. Choose a plan to get started.
                         </DialogDescription>
                     </DialogHeader>
-
                     <div className="space-y-4 py-2">
                         <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-center space-y-1">
                             <div className="text-base font-semibold text-red-700">Full Access Locked</div>
                             <div className="text-sm text-red-600">Subscribe now to unlock all features.</div>
                         </div>
+                        <div className="text-center text-sm text-muted-foreground">
+                            Choose a plan below to get started with the platform.
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        );
+    }
 
+    // ── Expired Trial ───────────────────────────────────────────────────────
+    if (shouldShowExpired) {
+        return (
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl">
+                            <Lock className="h-5 w-5 text-red-500" />
+                            Trial Expired
+                        </DialogTitle>
+                        <DialogDescription>
+                            Your free trial has ended. Please subscribe to continue using the platform.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-center space-y-1">
+                            <div className="text-base font-semibold text-red-700">Access Locked</div>
+                            <div className="text-sm text-red-600">Subscribe now to unlock all features.</div>
+                        </div>
                         <div className="text-center text-sm text-muted-foreground">
                             Choose a plan below to get started with the platform.
                         </div>

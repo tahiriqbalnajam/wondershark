@@ -156,6 +156,7 @@ class HandleInertiaRequests extends Middleware
                 'show_paywall'           => $user->isOnTrial() && $user->trialDaysLeft() <= 4 && ! $user->activeSubscription,
                 'show_immediate_paywall' => $user->trial_type === 'B' && ! $user->activeSubscription,
                 'is_trial_expired'       => $user->isTrialExpired(),
+                'show_expired_paywall'   => $user->trial_type === 'A' && $user->isTrialExpired() && ! $user->activeSubscription,
                 'has_ever_subscribed'    => \App\Models\Subscription::where('user_id', $user->id)->exists(),
             ] : null,
         ];
