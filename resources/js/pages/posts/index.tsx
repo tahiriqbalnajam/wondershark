@@ -1,5 +1,6 @@
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage, useForm } from '@inertiajs/react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useState } from 'react';
 
 import HeadingSmall from '@/components/heading-small';
@@ -158,7 +159,11 @@ const getBreadcrumbs = (brand?: { id: number; name: string }): BreadcrumbItem[] 
 
 export default function PostsIndex({ posts, brand }: Props) {
     const { url } = usePage();
+    const { auth } = usePage().props as any;
     const urlParams = new URLSearchParams(url.split('?')[1] || '');
+    const isSubscribed: boolean = !!(auth?.user?.activeSubscription);
+    const isAdmin: boolean = !!(auth?.roles?.includes('admin'));
+    const canCreatePost = isAdmin || isSubscribed;
     const brandId = urlParams.get('brand_id');
 
     // Construct the create post URL - use brand-specific route if brand prop exists
@@ -394,10 +399,27 @@ export default function PostsIndex({ posts, brand }: Props) {
                     />
 
                     <div className="flex gap-3">
-                        <Button onClick={() => setIsCreatePostOpen(true)} className='primary-btn'>
-                            <CirclePlus className="h-4 w-4 mr-2" />
-                            Create Post
-                        </Button>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span>
+                                        <Button
+                                            onClick={() => canCreatePost && setIsCreatePostOpen(true)}
+                                            className='primary-btn'
+                                            disabled={!canCreatePost}
+                                        >
+                                            <CirclePlus className="h-4 w-4 mr-2" />
+                                            Create Post
+                                        </Button>
+                                    </span>
+                                </TooltipTrigger>
+                                {!canCreatePost && (
+                                    <TooltipContent>
+                                        <p>Add Post is a premium feature. Subscribe to a plan to create posts.</p>
+                                    </TooltipContent>
+                                )}
+                            </Tooltip>
+                        </TooltipProvider>
                     </div>
                 </div>
 

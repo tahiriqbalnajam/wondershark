@@ -122,6 +122,7 @@ class HandleInertiaRequests extends Middleware
                     'logo' => $user->logo ? asset('storage/'.$user->logo) : null,
                     'logo_thumbnail' => $user->logo_thumbnail ? asset('storage/'.$user->logo_thumbnail) : null,
                     'agency_color' => $user->agency_color,
+                    'activeSubscription' => (bool) $user->activeSubscription,
                 ]) : null,
                 'roles' => $userRoles,
                 'permissions' => $userPermissions,
