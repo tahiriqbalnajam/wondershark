@@ -34,6 +34,31 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
         $request->session()->put('logged_in_at', now()->timestamp);
 
+        $user = Auth::user();
+
+        // Redirect trial users to billing page if they don't have an active subscription
+        if ($user && !$user->activeSubscription) {
+            // Option B: Immediate paywall - redirect to billing
+            if ($user->trial_type === 'B') {
+                if ($user->hasRole('agency')) {
+                    return redirect()->route('agency.billing');
+                } elseif ($user->hasRole('brand')) {
+                    return redirect()->route('brand.billing');
+                }
+                return redirect()->route('agency.billing');
+            }
+            
+            // Option A: Free trial - redirect to billing to show discount
+            if ($user->trial_type === 'A' && $user->isOnTrial()) {
+                if ($user->hasRole('agency')) {
+                    return redirect()->route('agency.billing');
+                } elseif ($user->hasRole('brand')) {
+                    return redirect()->route('brand.billing');
+                }
+                return redirect()->route('agency.billing');
+            }
+        }
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

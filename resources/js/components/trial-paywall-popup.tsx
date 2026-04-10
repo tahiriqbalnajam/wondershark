@@ -34,10 +34,12 @@ function useCountdown(endsAt: string | null) {
         };
     };
     const [time, setTime] = useState(calc);
-    const ref = useRef<ReturnType<typeof setInterval>>();
+    const ref = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
     useEffect(() => {
         ref.current = setInterval(() => setTime(calc()), 1000);
-        return () => clearInterval(ref.current);
+        return () => {
+            if (ref.current) clearInterval(ref.current);
+        };
     }, [endsAt]);
     return time;
 }
@@ -65,46 +67,46 @@ export function TrialPaywallPopup() {
     const [open, setOpen] = useState(false);
     const [redirectIn, setRedirectIn] = useState<number | null>(null);
 
-    // ── Option B: mandatory, once per login session ──────────────────────────
+    // ── Option B: show popup on billing page ─────────────────────────────────
     useEffect(() => {
-        if (!shouldShowB || isOnBillingPage || !userId || !loggedInAt) return;
+        if (!shouldShowB || !userId || !loggedInAt || !isOnBillingPage) return;
 
-        const key = sessionKey('optionB', userId, loggedInAt);
+        const key = sessionKey('optionB', userId, String(loggedInAt));
         const alreadyShown = !!sessionStorage.getItem(key);
-
+        
         if (!alreadyShown) {
             sessionStorage.setItem(key, '1');
             optionBStartedAt = Date.now();
-            setOpen(true);
-            setRedirectIn(REDIRECT_DELAY);
+            // Small delay to ensure page has loaded
+            setTimeout(() => {
+                setOpen(true);
+            }, 500);
         } else if (optionBStartedAt !== null) {
             // resume mid-countdown
             const elapsed = Math.floor((Date.now() - optionBStartedAt) / 1000);
             const remaining = REDIRECT_DELAY - elapsed;
             if (remaining > 0) {
                 setOpen(true);
-                setRedirectIn(remaining);
             } else {
                 optionBStartedAt = null;
             }
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // intentional empty deps — runs once per mount only
+    }, [isOnBillingPage, shouldShowB, userId, loggedInAt]);
 
-    // ── Option A: show once per login session ────────────────────────────────
+    // ── Option A: show once per login session on billing page ───────────────
     useEffect(() => {
-        if (!shouldShowA || !userId || !loggedInAt || isOnBillingPage) return;
-        const key = sessionKey('optionA', userId, loggedInAt);
+        if (!shouldShowA || !userId || !loggedInAt || !isOnBillingPage) return;
+        const key = sessionKey('optionA', userId, String(loggedInAt));
         if (optionAShownKey === key || sessionStorage.getItem(key)) return;
         optionAShownKey = key;
         sessionStorage.setItem(key, '1');
         const t = setTimeout(() => {
             setOpen(true);
-            setRedirectIn(REDIRECT_DELAY);
-        }, 800);
+        }, 500);
         return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [shouldShowA, userId, loggedInAt]);
+    }, [shouldShowA, userId, loggedInAt, isOnBillingPage]);
 
     // ── Reset module state on logout / subscription acquired ─────────────────
     useEffect(() => {
@@ -118,14 +120,14 @@ export function TrialPaywallPopup() {
         if (!shouldShowB) optionBStartedAt = null;
     }, [shouldShowB]);
 
-    // ── Auto-redirect countdown ──────────────────────────────────────────────
+    // ── Auto-redirect countdown (not used for either option anymore) ────────
+    // Option A shows on billing page (no redirect needed)
+    // Option B already redirected server-side (no countdown needed)
     useEffect(() => {
         if (!open || redirectIn === null) return;
         if (redirectIn <= 0) {
-            optionBStartedAt = null;
             setOpen(false);
             setRedirectIn(null);
-            router.visit(billingUrl);
             return;
         }
         const t = setTimeout(() => setRedirectIn((s) => (s !== null ? s - 1 : 0)), 1000);
@@ -148,11 +150,9 @@ export function TrialPaywallPopup() {
     // ── Option B ─────────────────────────────────────────────────────────────
     if (shouldShowB) {
         return (
-            <Dialog open={open} onOpenChange={() => {}}>
+            <Dialog open={open} onOpenChange={setOpen}>
                 <DialogContent
                     className="sm:max-w-md"
-                    onInteractOutside={(e) => e.preventDefault()}
-                    onEscapeKeyDown={(e) => e.preventDefault()}
                 >
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-xl">
@@ -170,18 +170,9 @@ export function TrialPaywallPopup() {
                             <div className="text-sm text-red-600">Subscribe now to unlock all features.</div>
                         </div>
 
-                        <Link href={billingUrl} className="block">
-                            <Button className="w-full bg-red-500 hover:bg-red-600 text-white">
-                                <Zap className="h-4 w-4 mr-2" />
-                                View Plans &amp; Subscribe
-                            </Button>
-                        </Link>
-
-                        {redirectIn !== null && redirectIn > 0 && (
-                            <p className="text-center text-xs text-muted-foreground">
-                                Redirecting to billing in <strong>{redirectIn}s</strong>…
-                            </p>
-                        )}
+                        <div className="text-center text-sm text-muted-foreground">
+                            Choose a plan below to get started with the platform.
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -202,15 +193,15 @@ export function TrialPaywallPopup() {
 
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-xl">
-                        <Clock className="h-5 w-5 text-orange-500" />
-                        Your trial is ending soon!
+                        <Zap className="h-5 w-5 text-orange-500" />
+                        Welcome! You've Got {discount}% OFF
                     </DialogTitle>
                     <DialogDescription>
                         You have{' '}
                         <strong className="text-foreground">
                             {daysLeft} day{daysLeft !== 1 ? 's' : ''}
                         </strong>{' '}
-                        left in your free trial.
+                        left in your free trial to claim this exclusive discount.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -239,25 +230,19 @@ export function TrialPaywallPopup() {
                     <div className="rounded-lg bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 p-4 text-center space-y-1">
                         <div className="text-4xl font-extrabold text-orange-500">{discount}% OFF</div>
                         <div className="text-sm font-medium text-orange-800">on your 1st month subscription</div>
-                        <div className="text-xs text-orange-600">Available only during your trial period</div>
+                        <div className="text-xs text-orange-600">Choose a plan below to get started</div>
                     </div>
 
-                    <div className="flex gap-2">
-                        <Link href={billingUrl} className="flex-1" onClick={handleClose}>
-                            <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white">
-                                <Zap className="h-4 w-4 mr-2" />
-                                Subscribe Now — {discount}% Off
-                            </Button>
-                        </Link>
-                        <Button variant="outline" onClick={handleClose}>
-                            Later
-                        </Button>
-                    </div>
+                    <Button 
+                        variant="outline" 
+                        onClick={handleClose}
+                        className="w-full"
+                    >
+                        Explore Plans Below
+                    </Button>
 
                     <p className="text-center text-xs text-muted-foreground">
-                        {redirectIn !== null && redirectIn > 0
-                            ? <>Redirecting to billing in <strong>{redirectIn}s</strong>…</>
-                            : 'Discount applied automatically at checkout during your trial.'}
+                        Discount applied automatically when you subscribe during your trial period.
                     </p>
                 </div>
             </DialogContent>
