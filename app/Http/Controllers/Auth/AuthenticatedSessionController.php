@@ -49,7 +49,7 @@ class AuthenticatedSessionController extends Controller
             }
             
             // Option A: Free trial - redirect to billing to show discount
-            if ($user->trial_type === 'A' && $user->isOnTrial()) {
+            if ($user->trial_type === 'A' && $user->isOnTrial() && $user->trialDaysLeft() <= 4) {
                 if ($user->hasRole('agency')) {
                     return redirect()->route('agency.billing');
                 } elseif ($user->hasRole('brand')) {
