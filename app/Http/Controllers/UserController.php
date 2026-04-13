@@ -52,7 +52,7 @@ class UserController extends Controller
             'trial_option' => 'required|in:A,B,subscription',
             'trial_days' => 'nullable|integer|min:1|max:365',
             'trial_discount' => 'nullable|integer|min:0|max:100',
-            'plan_name' => 'nullable|string|in:trial,free,agency_growth,agency_unlimited',
+            'plan_name' => 'nullable|string|in:trial,free,agency_growth,agency_unlimited,brand_growth',
             'subscription_expires_at' => 'nullable|date',
             'admin_note' => 'nullable|string|max:500',
         ]);
@@ -170,7 +170,7 @@ class UserController extends Controller
             'access_option'  => 'required|in:A,B,subscription',
             'trial_ends_at'  => 'nullable|date',
             'trial_discount' => 'nullable|integer|min:0|max:100',
-            'plan_name'      => 'nullable|string|in:trial,free,agency_growth,agency_unlimited',
+            'plan_name'      => 'nullable|string|in:trial,free,agency_growth,agency_unlimited,brand_growth',
             'expires_at'     => 'nullable|date',
             'admin_note'     => 'nullable|string|max:500',
         ]);
@@ -198,7 +198,7 @@ class UserController extends Controller
                 ]);
             } else {
                 $request->validate([
-                    'plan_name' => 'required|in:trial,free,agency_growth,agency_unlimited',
+                    'plan_name' => 'required|in:trial,free,agency_growth,agency_unlimited,brand_growth',
                 ]);
 
                 $user->update(['trial_type' => null, 'trial_ends_at' => null]);
@@ -251,7 +251,7 @@ class UserController extends Controller
             'access_option'  => 'required|in:A,B,subscription',
             'trial_ends_at'  => 'nullable|date',
             'trial_discount' => 'nullable|integer|min:0|max:100',
-            'plan_name'      => 'nullable|string|in:trial,free,agency_growth,agency_unlimited',
+            'plan_name'      => 'nullable|string|in:trial,free,agency_growth,agency_unlimited,brand_growth',
             'expires_at'     => 'nullable|date',
             'admin_note'     => 'nullable|string|max:500',
         ]);
@@ -281,7 +281,7 @@ class UserController extends Controller
                 Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
                 $user->update(['trial_type' => 'B', 'trial_ends_at' => null, 'free_trial_availed' => false]);
             } else {
-                $request->validate(['plan_name' => 'required|in:trial,free,agency_growth,agency_unlimited']);
+                $request->validate(['plan_name' => 'required|in:trial,free,agency_growth,agency_unlimited,brand_growth']);
                 $user->update(['trial_type' => null, 'trial_ends_at' => null]);
                 Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
                 Subscription::create([
