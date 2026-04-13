@@ -196,7 +196,14 @@ class User extends Authenticatable
      */
     public function activeSubscription(): HasOne
     {
-        return $this->hasOne(Subscription::class)->where('status', 'active')->latestOfMany();
+        return $this->hasOne(Subscription::class)
+            ->where('status', 'active')
+            ->where(function ($query) {
+                $query->where('is_manual', false)
+                      ->orWhereNull('current_period_end')
+                      ->orWhere('current_period_end', '>=', now());
+            })
+            ->latestOfMany();
     }
 
     /**

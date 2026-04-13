@@ -744,7 +744,11 @@ class SubscriptionController extends Controller
                 ->first();
 
             if (!$subscription || !$subscription->stripe_subscription_id) {
-                // No subscription locally, nothing to sync
+                // Auto-expire manual subscriptions past their period end
+                if ($subscription && $subscription->is_manual && $subscription->status === 'active' && $subscription->current_period_end && $subscription->current_period_end->isPast()) {
+                    $subscription->update(['status' => 'canceled']);
+                    Log::info('Manual subscription auto-expired', ['subscription_id' => $subscription->id, 'user_id' => $userId]);
+                }
                 return $subscription;
             }
 

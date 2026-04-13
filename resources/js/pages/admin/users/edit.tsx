@@ -24,6 +24,7 @@ interface UserData {
     direct_permissions: string[];
     trial_type: string | null;
     trial_days: number;
+    trial_discount: number;
     trial_ends_at: string | null;
     created_by_admin: boolean;
     is_on_trial: boolean;
@@ -57,14 +58,17 @@ interface Props {
 const PLAN_OPTIONS = [
     { value: 'trial', label: 'Trial' },
     { value: 'free', label: 'Free' },
+    { value: 'brand_growth', label: 'Brand Growth' },
     { value: 'agency_growth', label: 'Agency Growth' },
     { value: 'agency_unlimited', label: 'Agency Unlimited' },
+    
 ];
 
 const FEATURE_LABELS: Record<string, string> = {
     brands_covered: 'Brands Covered',
     competitor_analysis: 'Competitor Analysis',
     monthly_posts: 'Monthly Posts',
+    brand_growth: 'Brand Growth',
     ai_models_access: 'AI Models Access',
     search_analytics: 'Search Analytics',
     docs_files: 'Docs & Files',
@@ -89,7 +93,11 @@ export default function EditUser({ user, roles, permissions, featureKeys, userOv
         if (flash?.error) toast.error(flash.error);
     }, [flash]);
 
-    // --- Basic Info form ---
+    const initialAccessOption = activeSubscription
+        ? 'subscription'
+        : user.trial_type === 'B' ? 'B' : 'A';
+
+    // --- Single form for all fields ---
     const form = useForm({
         name: user.name,
         email: user.email,
@@ -99,6 +107,13 @@ export default function EditUser({ user, roles, permissions, featureKeys, userOv
         post_creation_note: user.post_creation_note || '',
         roles: user.roles as string[],
         permissions: user.direct_permissions as string[],
+        // access fields
+        access_option: initialAccessOption as 'A' | 'B' | 'subscription',
+        trial_ends_at: user.trial_ends_at || '',
+        trial_discount: user.trial_discount ?? 50,
+        plan_name: (activeSubscription?.plan_name || 'agency_growth') as string,
+        expires_at: activeSubscription?.current_period_end || '',
+        admin_note: '',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -118,35 +133,12 @@ export default function EditUser({ user, roles, permissions, featureKeys, userOv
             : form.data.permissions.filter(p => p !== permName));
     };
 
-    // --- Trial form ---
-    const trialForm = useForm({
-        trial_ends_at: user.trial_ends_at || '',
-        trial_type: user.trial_type || 'A',
-    });
-
-    const handleTrialSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        trialForm.post(route('admin.users.extend-trial', user.id));
-    };
-
-    // --- Extend by days form ---
+    // --- Extend by days (quick action) ---
     const extendForm = useForm({ extend_days: 7 });
 
     const handleExtendSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         extendForm.post(route('admin.users.extend-trial-by-days', user.id));
-    };
-
-    // --- Subscription form ---
-    const subForm = useForm({
-        plan_name: 'agency_growth',
-        expires_at: '',
-        admin_note: '',
-    });
-
-    const handleSubSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        subForm.post(route('admin.users.activate-subscription', user.id));
     };
 
     // --- Feature overrides ---
@@ -294,187 +286,216 @@ export default function EditUser({ user, roles, permissions, featureKeys, userOv
                         </div>
                     </div>
 
-                    <div className="flex justify-end gap-2">
-                        <Button type="button" variant="outline" onClick={() => router.visit(route('admin.users.index'))}>Cancel</Button>
-                        <Button type="submit" disabled={form.processing}>Update User</Button>
-                    </div>
-                </form>
-
-                {/* ── Trial Management ── */}
+                {/* ── Account Access ── */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Clock className="h-5 w-5" />
-                            Trial Management
+                            Account Access
                         </CardTitle>
                         <CardDescription>
-                            {user.created_by_admin ? 'Account created by admin.' : 'Self-signup account.'}
-                            {' '}
+                            Choose how this user accesses the platform.
                             {user.is_on_trial && (
-                                <span className="text-green-600 font-medium">
+                                <span className="ml-1 text-green-600 font-medium">
                                     Active trial — {user.trial_days_left} day{user.trial_days_left !== 1 ? 's' : ''} left.
                                 </span>
                             )}
                             {user.is_trial_expired && (
-                                <span className="text-red-600 font-medium">Trial expired.</span>
-                            )}
-                            {!user.is_on_trial && !user.is_trial_expired && !user.trial_ends_at && (
-                                <span className="text-muted-foreground">No trial set.</span>
+                                <span className="ml-1 text-red-600 font-medium">Trial expired.</span>
                             )}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {/* Status badges */}
+                        {/* Current status */}
                         <div className="flex flex-wrap gap-2 mb-4">
-                            {user.trial_type === 'A' && <Badge className="bg-blue-100 text-blue-800">Type A — late paywall</Badge>}
-                            {user.trial_type === 'B' && <Badge className="bg-orange-100 text-orange-800">Type B — immediate paywall</Badge>}
+                            {activeSubscription && (
+                                <div className="w-full p-3 rounded-lg bg-green-50 border border-green-200 flex items-start gap-3 mb-2">
+                                    <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+                                    <div className="text-sm">
+                                        <p className="font-medium text-green-800">
+                                            Active: {activeSubscription.plan_name}
+                                            {activeSubscription.is_manual && <Badge className="ml-2 bg-yellow-100 text-yellow-800 text-xs">Manual</Badge>}
+                                        </p>
+                                        {activeSubscription.current_period_end
+                                            ? <p className="text-green-700">Expires: {activeSubscription.current_period_end}</p>
+                                            : <p className="text-green-700">No expiry set (lifetime)</p>}
+                                        {activeSubscription.admin_note && (
+                                            <p className="text-green-700 mt-1">Note: {activeSubscription.admin_note}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                             {user.is_on_trial && <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />On Trial</Badge>}
-                            {user.is_trial_expired && <Badge variant="destructive"><AlertTriangle className="w-3 h-3 mr-1" />Expired</Badge>}
+                            {user.is_trial_expired && <Badge variant="destructive"><AlertTriangle className="w-3 h-3 mr-1" />Trial Expired</Badge>}
                         </div>
 
-                        <form onSubmit={handleTrialSubmit} className="flex flex-wrap items-end gap-4">
-                            <div>
-                                <Label htmlFor="trial_type">Trial Type</Label>
-                                <select
-                                    id="trial_type"
-                                    value={trialForm.data.trial_type}
-                                    onChange={e => trialForm.setData('trial_type', e.target.value)}
-                                    className="mt-1 block rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
-                                >
-                                    <option value="A">A — free trial (late paywall)</option>
-                                    <option value="B">B — immediate paywall</option>
-                                </select>
-                            </div>
-                            <div>
-                                <Label htmlFor="trial_ends_at">Trial Ends At</Label>
-                                <Input
-                                    id="trial_ends_at"
-                                    type="date"
-                                    value={trialForm.data.trial_ends_at}
-                                    onChange={e => trialForm.setData('trial_ends_at', e.target.value)}
-                                    className="mt-1 w-44"
-                                    required
+                        <div className="space-y-3">
+                            {/* Option A */}
+                            <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${form.data.access_option === 'A' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                                <input
+                                    type="radio"
+                                    name="access_option"
+                                    value="A"
+                                    checked={form.data.access_option === 'A'}
+                                    onChange={() => form.setData('access_option', 'A')}
+                                    className="mt-1"
                                 />
-                                {trialForm.errors.trial_ends_at && <p className="text-sm text-red-600 mt-1">{trialForm.errors.trial_ends_at}</p>}
-                            </div>
-                            <Button type="submit" disabled={trialForm.processing}>
-                                Save Trial
-                            </Button>
-                        </form>
-
-                        <div className="border-t pt-4 mt-2">
-                            <p className="text-sm font-medium mb-3">Extend trial by additional days</p>
-                            <form onSubmit={handleExtendSubmit} className="flex flex-wrap items-end gap-4">
-                                <div>
-                                    <Label htmlFor="extend_days">Days to Add</Label>
-                                    <Input
-                                        id="extend_days"
-                                        type="number"
-                                        min={1}
-                                        max={365}
-                                        value={extendForm.data.extend_days}
-                                        onChange={e => extendForm.setData('extend_days', parseInt(e.target.value) || 1)}
-                                        className="mt-1 w-28"
-                                        required
-                                    />
-                                    {extendForm.errors.extend_days && <p className="text-sm text-red-600 mt-1">{extendForm.errors.extend_days}</p>}
-                                </div>
-                                <div className="text-sm text-muted-foreground pb-2">
-                                    {user.is_on_trial
-                                        ? <>Extends from current end date <strong>({user.trial_ends_at})</strong></>
-                                        : 'Extends from today (trial expired or not set)'}
-                                </div>
-                                <Button type="submit" variant="outline" disabled={extendForm.processing}>
-                                    + Extend Trial
-                                </Button>
-                            </form>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* ── Subscription Management ── */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <CreditCard className="h-5 w-5" />
-                            Subscription Management
-                        </CardTitle>
-                        <CardDescription>
-                            Activate a plan manually (wire transfer / bypass Stripe).
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {/* Current subscription status */}
-                        {activeSubscription ? (
-                            <div className="p-3 rounded-lg bg-green-50 border border-green-200 flex items-start gap-3">
-                                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
-                                <div className="text-sm">
-                                    <p className="font-medium text-green-800">
-                                        Active: {activeSubscription.plan_name}
-                                        {activeSubscription.is_manual && <Badge className="ml-2 bg-yellow-100 text-yellow-800 text-xs">Manual</Badge>}
+                                <div className="flex-1">
+                                    <div className="font-medium">Option A — Free Trial</div>
+                                    <p className="text-sm text-muted-foreground">
+                                        User gets a free trial. Paywall appears on the last 4 days with a countdown and a configurable first-month discount.
                                     </p>
-                                    {activeSubscription.current_period_end && (
-                                        <p className="text-green-700">Expires: {activeSubscription.current_period_end}</p>
-                                    )}
-                                    {!activeSubscription.current_period_end && (
-                                        <p className="text-green-700">No expiry set (lifetime)</p>
-                                    )}
-                                    {activeSubscription.admin_note && (
-                                        <p className="text-green-700 mt-1">Note: {activeSubscription.admin_note}</p>
+                                    {form.data.access_option === 'A' && (
+                                        <div className="mt-3 space-y-3">
+                                            <div className="flex flex-wrap gap-4">
+                                                <div>
+                                                    <Label htmlFor="trial_ends_at">Trial End Date</Label>
+                                                    <Input
+                                                        id="trial_ends_at"
+                                                        type="date"
+                                                        value={form.data.trial_ends_at}
+                                                        onChange={e => form.setData('trial_ends_at', e.target.value)}
+                                                        className="w-44 mt-1"
+                                                    />
+                                                    {form.errors.trial_ends_at && <p className="text-sm text-red-600 mt-1">{form.errors.trial_ends_at}</p>}
+                                                </div>
+                                                <div>
+                                                    <Label htmlFor="trial_discount">First Month Discount (%)</Label>
+                                                    <Input
+                                                        id="trial_discount"
+                                                        type="number"
+                                                        min={0}
+                                                        max={100}
+                                                        value={form.data.trial_discount}
+                                                        onChange={e => form.setData('trial_discount', parseInt(e.target.value) || 0)}
+                                                        className="w-24 mt-1"
+                                                    />
+                                                    {form.errors.trial_discount && <p className="text-sm text-red-600 mt-1">{form.errors.trial_discount}</p>}
+                                                </div>
+                                            </div>
+                                            {/* Quick extend shortcut */}
+                                            <div className="border-t pt-3">
+                                                <p className="text-xs text-muted-foreground mb-2">
+                                                    Or extend quickly by days (from{' '}
+                                                    {user.is_on_trial && user.trial_ends_at
+                                                        ? <>current end <strong>({user.trial_ends_at})</strong></>
+                                                        : 'today'}):
+                                                </p>
+                                                <form onSubmit={handleExtendSubmit} className="flex items-end gap-3">
+                                                    <div>
+                                                        <Input
+                                                            type="number"
+                                                            min={1}
+                                                            max={365}
+                                                            value={extendForm.data.extend_days}
+                                                            onChange={e => extendForm.setData('extend_days', parseInt(e.target.value) || 1)}
+                                                            className="w-24"
+                                                            placeholder="days"
+                                                        />
+                                                        {extendForm.errors.extend_days && <p className="text-sm text-red-600 mt-1">{extendForm.errors.extend_days}</p>}
+                                                    </div>
+                                                    <Button type="submit" variant="outline" size="sm" disabled={extendForm.processing}>
+                                                        + Extend
+                                                    </Button>
+                                                </form>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="p-3 rounded-lg bg-gray-50 border text-sm text-muted-foreground">
-                                No active subscription.
-                            </div>
-                        )}
+                            </label>
 
-                        <form onSubmit={handleSubSubmit} className="space-y-4 pt-2">
-                            <p className="text-sm font-medium text-orange-700">
-                                {activeSubscription ? 'Activating a new plan will cancel the existing subscription.' : 'Activate a new subscription:'}
-                            </p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="sub_plan_name">Plan *</Label>
-                                    <select
-                                        id="sub_plan_name"
-                                        value={subForm.data.plan_name}
-                                        onChange={e => subForm.setData('plan_name', e.target.value)}
-                                        className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
-                                    >
-                                        {PLAN_OPTIONS.map(p => (
-                                            <option key={p.value} value={p.value}>{p.label}</option>
-                                        ))}
-                                    </select>
-                                    {subForm.errors.plan_name && <p className="text-sm text-red-600 mt-1">{subForm.errors.plan_name}</p>}
-                                </div>
-                                <div>
-                                    <Label htmlFor="expires_at">Expires At (blank = never)</Label>
-                                    <Input
-                                        id="expires_at"
-                                        type="date"
-                                        value={subForm.data.expires_at}
-                                        onChange={e => subForm.setData('expires_at', e.target.value)}
-                                        className="mt-1"
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <Label htmlFor="sub_admin_note">Admin Note (optional)</Label>
-                                <Textarea
-                                    id="sub_admin_note"
-                                    placeholder="e.g. Wire transfer ref #12345"
-                                    value={subForm.data.admin_note}
-                                    onChange={e => subForm.setData('admin_note', e.target.value)}
+                            {/* Option B */}
+
+                            {/*
+                            <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${form.data.access_option === 'B' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                                <input
+                                    type="radio"
+                                    name="access_option"
+                                    value="B"
+                                    checked={form.data.access_option === 'B'}
+                                    onChange={() => form.setData('access_option', 'B')}
+                                    className="mt-1"
                                 />
-                            </div>
-                            <Button type="submit" disabled={subForm.processing}>
-                                Activate Subscription
-                            </Button>
-                        </form>
+                                <div>
+                                    <div className="font-medium">Option B — Immediate Paywall</div>
+                                    <p className="text-sm text-muted-foreground">
+                                        No free trial. Paywall shows immediately on login. User must subscribe to access features.
+                                    </p>
+                                </div>
+                            </label>
+                                */}
+                            {/* Activate Subscription */}
+                            <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${form.data.access_option === 'subscription' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                                <input
+                                    type="radio"
+                                    name="access_option"
+                                    value="subscription"
+                                    checked={form.data.access_option === 'subscription'}
+                                    onChange={() => form.setData('access_option', 'subscription')}
+                                    className="mt-1"
+                                />
+                                <div className="flex-1">
+                                    <div className="font-medium flex items-center gap-2">
+                                        <CreditCard className="h-4 w-4" />
+                                        Activate Subscription
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">
+                                        No trial. Admin activates a plan directly (wire transfer / manual payment). User gets full access immediately.
+                                        {activeSubscription && <span className="ml-1 text-orange-600 font-medium">Saving will cancel the existing subscription.</span>}
+                                    </p>
+                                    {form.data.access_option === 'subscription' && (
+                                        <div className="mt-3 space-y-3">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <Label htmlFor="plan_name">Plan *</Label>
+                                                    <select
+                                                        id="plan_name"
+                                                        value={form.data.plan_name}
+                                                        onChange={e => form.setData('plan_name', e.target.value)}
+                                                        className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                                                    >
+                                                        {PLAN_OPTIONS.map(p => (
+                                                            <option key={p.value} value={p.value}>{p.label}</option>
+                                                        ))}
+                                                    </select>
+                                                    {form.errors.plan_name && <p className="text-sm text-red-600 mt-1">{form.errors.plan_name}</p>}
+                                                </div>
+                                                <div>
+                                                    <Label htmlFor="expires_at">Expires At (leave blank = never)</Label>
+                                                    <Input
+                                                        id="expires_at"
+                                                        type="date"
+                                                        value={form.data.expires_at}
+                                                        onChange={e => form.setData('expires_at', e.target.value)}
+                                                        className="mt-1"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <Label htmlFor="admin_note">Admin Note (optional)</Label>
+                                                <Textarea
+                                                    id="admin_note"
+                                                    placeholder="e.g. Wire transfer ref #12345"
+                                                    value={form.data.admin_note}
+                                                    onChange={e => form.setData('admin_note', e.target.value)}
+                                                    className="mt-1"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </label>
+
+                            {form.errors.access_option && <p className="text-sm text-red-600">{form.errors.access_option}</p>}
+                        </div>
                     </CardContent>
                 </Card>
+
+                <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => router.visit(route('admin.users.index'))}>Cancel</Button>
+                    <Button type="submit" disabled={form.processing}>Update User</Button>
+                </div>
+                </form>
 
                 {/* ── Feature Overrides ── */}
                 <Card>

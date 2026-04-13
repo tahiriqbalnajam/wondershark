@@ -136,6 +136,7 @@ class UserController extends Controller
     public function edit(User $user)
     {
         $roles = Role::all();
+        $activeSubscription = $user->activeSubscription;
 
         return Inertia::render('users/edit', [
             'user' => [
@@ -145,12 +146,81 @@ class UserController extends Controller
                 'roles' => $user->getRoleNames(),
                 'trial_ends_at' => $user->trial_ends_at?->toDateString(),
                 'trial_type' => $user->trial_type,
+                'trial_discount' => $user->trial_discount ?? 50,
                 'is_on_trial' => $user->isOnTrial(),
                 'trial_days_left' => $user->trialDaysLeft(),
                 'is_trial_expired' => $user->isTrialExpired(),
             ],
             'roles' => $roles,
+            'activeSubscription' => $activeSubscription ? [
+                'id' => $activeSubscription->id,
+                'plan_name' => $activeSubscription->plan_name,
+                'status' => $activeSubscription->status,
+                'is_manual' => $activeSubscription->is_manual,
+                'admin_note' => $activeSubscription->admin_note,
+                'current_period_start' => $activeSubscription->current_period_start?->toDateString(),
+                'current_period_end' => $activeSubscription->current_period_end?->toDateString(),
+            ] : null,
         ]);
+    }
+
+    public function updateAccess(Request $request, User $user): \Illuminate\Http\RedirectResponse
+    {
+        $request->validate([
+            'access_option'  => 'required|in:A,B,subscription',
+            'trial_ends_at'  => 'nullable|date',
+            'trial_discount' => 'nullable|integer|min:0|max:100',
+            'plan_name'      => 'nullable|string|in:trial,free,agency_growth,agency_unlimited',
+            'expires_at'     => 'nullable|date',
+            'admin_note'     => 'nullable|string|max:500',
+        ]);
+
+        DB::transaction(function () use ($request, $user) {
+            if ($request->access_option === 'A') {
+                Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
+
+                $user->update([
+                    'trial_type'             => 'A',
+                    'trial_ends_at'          => $request->trial_ends_at
+                        ? Carbon::parse($request->trial_ends_at)->endOfDay()
+                        : null,
+                    'trial_discount'         => $request->integer('trial_discount', 50),
+                    'free_trial_availed'     => true,
+                    'free_trial_claimed_at'  => $user->free_trial_claimed_at ?? now(),
+                ]);
+            } elseif ($request->access_option === 'B') {
+                Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
+
+                $user->update([
+                    'trial_type'         => 'B',
+                    'trial_ends_at'      => null,
+                    'free_trial_availed' => false,
+                ]);
+            } else {
+                $request->validate([
+                    'plan_name' => 'required|in:trial,free,agency_growth,agency_unlimited',
+                ]);
+
+                $user->update(['trial_type' => null, 'trial_ends_at' => null]);
+
+                Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
+
+                Subscription::create([
+                    'user_id'              => $user->id,
+                    'plan_name'            => $request->plan_name,
+                    'status'               => 'active',
+                    'is_manual'            => true,
+                    'activated_by'         => Auth::id(),
+                    'admin_note'           => $request->admin_note,
+                    'current_period_start' => now(),
+                    'current_period_end'   => $request->expires_at
+                        ? Carbon::parse($request->expires_at)->endOfDay()
+                        : null,
+                ]);
+            }
+        });
+
+        return back()->with('success', 'Account access updated for '.$user->name.'.');
     }
 
     public function extendTrialByDays(Request $request, User $user): \Illuminate\Http\RedirectResponse
@@ -173,24 +243,61 @@ class UserController extends Controller
     public function update(Request $request, User $user)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'password' => 'nullable|string|min:8|confirmed',
-            'roles' => 'array',
-            'roles.*' => 'exists:roles,name',
+            'name'           => 'required|string|max:255',
+            'email'          => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'password'       => 'nullable|string|min:8|confirmed',
+            'roles'          => 'array',
+            'roles.*'        => 'exists:roles,name',
+            'access_option'  => 'required|in:A,B,subscription',
+            'trial_ends_at'  => 'nullable|date',
+            'trial_discount' => 'nullable|integer|min:0|max:100',
+            'plan_name'      => 'nullable|string|in:trial,free,agency_growth,agency_unlimited',
+            'expires_at'     => 'nullable|date',
+            'admin_note'     => 'nullable|string|max:500',
         ]);
 
-        $user->update([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => $request->password ? Hash::make($request->password) : $user->password,
-        ]);
+        DB::transaction(function () use ($request, $user) {
+            $user->update([
+                'name'     => $request->name,
+                'email'    => $request->email,
+                'password' => $request->password ? Hash::make($request->password) : $user->password,
+            ]);
 
-        if ($request->has('roles')) {
-            $user->syncRoles($request->roles);
-        }
+            if ($request->has('roles')) {
+                $user->syncRoles($request->roles);
+            }
 
-        return redirect()->route('users.index')->with('success', 'User updated successfully.');
+            // Access settings
+            if ($request->access_option === 'A') {
+                Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
+                $user->update([
+                    'trial_type'            => 'A',
+                    'trial_ends_at'         => $request->trial_ends_at ? Carbon::parse($request->trial_ends_at)->endOfDay() : null,
+                    'trial_discount'        => $request->integer('trial_discount', 50),
+                    'free_trial_availed'    => true,
+                    'free_trial_claimed_at' => $user->free_trial_claimed_at ?? now(),
+                ]);
+            } elseif ($request->access_option === 'B') {
+                Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
+                $user->update(['trial_type' => 'B', 'trial_ends_at' => null, 'free_trial_availed' => false]);
+            } else {
+                $request->validate(['plan_name' => 'required|in:trial,free,agency_growth,agency_unlimited']);
+                $user->update(['trial_type' => null, 'trial_ends_at' => null]);
+                Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
+                Subscription::create([
+                    'user_id'              => $user->id,
+                    'plan_name'            => $request->plan_name,
+                    'status'               => 'active',
+                    'is_manual'            => true,
+                    'activated_by'         => Auth::id(),
+                    'admin_note'           => $request->admin_note,
+                    'current_period_start' => now(),
+                    'current_period_end'   => $request->expires_at ? Carbon::parse($request->expires_at)->endOfDay() : null,
+                ]);
+            }
+        });
+
+        return redirect()->route('users.edit', $user)->with('success', 'User updated successfully.');
     }
 
     public function destroy(Request $request, User $user)

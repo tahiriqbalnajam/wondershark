@@ -118,6 +118,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit')->middleware('role.permission:edit-users');
         Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update')->middleware('role.permission:edit-users');
         Route::post('users/{user}/extend-trial-by-days', [UserController::class, 'extendTrialByDays'])->name('users.extend-trial-by-days')->middleware('role.permission:edit-users');
+        Route::post('users/{user}/update-access', [UserController::class, 'updateAccess'])->name('users.update-access')->middleware('role.permission:edit-users');
         Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy')->middleware('role.permission:delete-users');
     });
 
@@ -225,6 +226,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('/{user}', [\App\Http\Controllers\Admin\UserController::class, 'destroy'])->name('destroy');
             Route::patch('/{user}/toggle-post-permission', [\App\Http\Controllers\Admin\UserController::class, 'togglePostPermission'])->name('toggle-post-permission');
             Route::post('/bulk-update-post-permissions', [\App\Http\Controllers\Admin\UserController::class, 'bulkUpdatePostPermissions'])->name('bulk-update-post-permissions');
+            Route::post('/{user}/update-access', [\App\Http\Controllers\Admin\UserController::class, 'updateAccess'])->name('update-access');
             Route::post('/{user}/extend-trial', [\App\Http\Controllers\Admin\UserController::class, 'extendTrial'])->name('extend-trial');
             Route::post('/{user}/extend-trial-by-days', [\App\Http\Controllers\Admin\UserController::class, 'extendTrialByDays'])->name('extend-trial-by-days');
             Route::post('/{user}/activate-subscription', [\App\Http\Controllers\Admin\UserController::class, 'activateSubscription'])->name('activate-subscription');
@@ -398,6 +400,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 // Get subscription data (already synced by middleware)
                 $subscription = \App\Models\Subscription::where('user_id', $user->id)
                     ->where('status', 'active')
+                    ->where(function ($q) {
+                        $q->where('is_manual', false)
+                          ->orWhereNull('current_period_end')
+                          ->orWhere('current_period_end', '>=', now());
+                    })
                     ->first();
                 
                 // Get Stripe publishable key
@@ -450,8 +457,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // Get subscription data
             $subscription = \App\Models\Subscription::where('user_id', $user->id)
                 ->where('status', 'active')
+                ->where(function ($q) {
+                    $q->where('is_manual', false)
+                      ->orWhereNull('current_period_end')
+                      ->orWhere('current_period_end', '>=', now());
+                })
                 ->first();
-            
+
             // Sync subscription status before rendering
             if ($subscription) {
                 $controller = app(\App\Http\Controllers\Brand\SubscriptionController::class);

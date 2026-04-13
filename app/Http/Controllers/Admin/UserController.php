@@ -251,6 +251,7 @@ class UserController extends Controller
                 'direct_permissions' => $user->getDirectPermissions()->pluck('name'),
                 'trial_type' => $user->trial_type,
                 'trial_days' => $user->trial_days ?? 7,
+                'trial_discount' => $user->trial_discount ?? 50,
                 'trial_ends_at' => $user->trial_ends_at?->toDateString(),
                 'created_by_admin' => $user->created_by_admin,
                 'is_on_trial' => $user->isOnTrial(),
@@ -279,22 +280,28 @@ class UserController extends Controller
     public function update(Request $request, User $user): RedirectResponse
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|lowercase|email|max:255|unique:users,email,'.$user->id,
-            'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
-            'roles' => 'array',
-            'roles.*' => 'exists:roles,name',
-            'permissions' => 'array',
-            'permissions.*' => 'exists:permissions,name',
-            'can_create_posts' => 'boolean',
+            'name'               => 'required|string|max:255',
+            'email'              => 'required|string|lowercase|email|max:255|unique:users,email,'.$user->id,
+            'password'           => ['nullable', 'confirmed', Rules\Password::defaults()],
+            'roles'              => 'array',
+            'roles.*'            => 'exists:roles,name',
+            'permissions'        => 'array',
+            'permissions.*'      => 'exists:permissions,name',
+            'can_create_posts'   => 'boolean',
             'post_creation_note' => 'nullable|string|max:500',
+            'access_option'      => 'required|in:A,B,subscription',
+            'trial_ends_at'      => 'nullable|date',
+            'trial_discount'     => 'nullable|integer|min:0|max:100',
+            'plan_name'          => 'nullable|string|in:trial,free,agency_growth,agency_unlimited',
+            'expires_at'         => 'nullable|date',
+            'admin_note'         => 'nullable|string|max:500',
         ]);
 
         DB::transaction(function () use ($request, $user) {
             $updateData = [
-                'name' => $request->name,
-                'email' => $request->email,
-                'can_create_posts' => $request->boolean('can_create_posts', false),
+                'name'               => $request->name,
+                'email'              => $request->email,
+                'can_create_posts'   => $request->boolean('can_create_posts', false),
                 'post_creation_note' => $request->post_creation_note,
             ];
 
@@ -304,19 +311,112 @@ class UserController extends Controller
 
             $user->update($updateData);
 
-            // Update roles
             if ($request->has('roles')) {
                 $user->syncRoles($request->roles ?? []);
             }
 
-            // Update direct permissions
             if ($request->has('permissions')) {
                 $user->syncPermissions($request->permissions ?? []);
             }
+
+            // Access settings
+            if ($request->access_option === 'A') {
+                Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
+                $user->update([
+                    'trial_type'            => 'A',
+                    'trial_ends_at'         => $request->trial_ends_at ? Carbon::parse($request->trial_ends_at)->endOfDay() : null,
+                    'trial_discount'        => $request->integer('trial_discount', 50),
+                    'free_trial_availed'    => true,
+                    'free_trial_claimed_at' => $user->free_trial_claimed_at ?? now(),
+                ]);
+            } elseif ($request->access_option === 'B') {
+                Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
+                $user->update(['trial_type' => 'B', 'trial_ends_at' => null, 'free_trial_availed' => false]);
+            } else {
+                $request->validate(['plan_name' => 'required|in:trial,free,agency_growth,agency_unlimited']);
+                $user->update(['trial_type' => null, 'trial_ends_at' => null]);
+                Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
+                Subscription::create([
+                    'user_id'              => $user->id,
+                    'plan_name'            => $request->plan_name,
+                    'status'               => 'active',
+                    'is_manual'            => true,
+                    'activated_by'         => Auth::id(),
+                    'admin_note'           => $request->admin_note,
+                    'current_period_start' => now(),
+                    'current_period_end'   => $request->expires_at ? Carbon::parse($request->expires_at)->endOfDay() : null,
+                ]);
+            }
         });
 
-        return redirect()->route('admin.users.index')
+        return redirect()->route('admin.users.edit', $user)
             ->with('success', 'User updated successfully.');
+    }
+
+    /**
+     * Unified access update: trial A, trial B, or manual subscription.
+     */
+    public function updateAccess(Request $request, User $user): RedirectResponse
+    {
+        $request->validate([
+            'access_option'  => 'required|in:A,B,subscription',
+            'trial_ends_at'  => 'nullable|date',
+            'trial_discount' => 'nullable|integer|min:0|max:100',
+            'plan_name'      => 'nullable|string|in:trial,free,agency_growth,agency_unlimited',
+            'expires_at'     => 'nullable|date',
+            'admin_note'     => 'nullable|string|max:500',
+        ]);
+
+        DB::transaction(function () use ($request, $user) {
+            if ($request->access_option === 'A') {
+                Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
+
+                $user->update([
+                    'trial_type'             => 'A',
+                    'trial_ends_at'          => $request->trial_ends_at
+                        ? Carbon::parse($request->trial_ends_at)->endOfDay()
+                        : null,
+                    'trial_discount'         => $request->integer('trial_discount', 50),
+                    'free_trial_availed'     => true,
+                    'free_trial_claimed_at'  => $user->free_trial_claimed_at ?? now(),
+                ]);
+            } elseif ($request->access_option === 'B') {
+                Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
+
+                $user->update([
+                    'trial_type'         => 'B',
+                    'trial_ends_at'      => null,
+                    'free_trial_availed' => false,
+                ]);
+            } else {
+                // subscription
+                $request->validate([
+                    'plan_name' => 'required|in:trial,free,agency_growth,agency_unlimited',
+                ]);
+
+                $user->update([
+                    'trial_type'    => null,
+                    'trial_ends_at' => null,
+                ]);
+
+                Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
+
+                Subscription::create([
+                    'user_id'              => $user->id,
+                    'plan_name'            => $request->plan_name,
+                    'status'               => 'active',
+                    'is_manual'            => true,
+                    'activated_by'         => Auth::id(),
+                    'admin_note'           => $request->admin_note,
+                    'current_period_start' => now(),
+                    'current_period_end'   => $request->expires_at
+                        ? Carbon::parse($request->expires_at)->endOfDay()
+                        : null,
+                ]);
+            }
+        });
+
+        return back()->with('success', 'Account access updated for '.$user->name.'.');
     }
 
     /**
