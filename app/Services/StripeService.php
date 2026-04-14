@@ -219,7 +219,7 @@ class StripeService
     public function getCheckoutSession(string $sessionId)
     {
         return $this->stripe->checkout->sessions->retrieve($sessionId, [
-            'expand' => ['subscription', 'customer'],
+            'expand' => ['subscription', 'customer', 'subscription.latest_invoice.payment_intent'],
         ]);
     }
 

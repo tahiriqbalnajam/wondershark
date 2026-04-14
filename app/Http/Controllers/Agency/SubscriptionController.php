@@ -103,6 +103,34 @@ class SubscriptionController extends Controller
 
             $user = Auth::user();
 
+            // Check subscription status and payment status from Stripe
+            $subscriptionStatus = $session->subscription->status;
+            $paymentIntentStatus = null;
+            
+            if (isset($session->subscription->latest_invoice->payment_intent)) {
+                $paymentIntentStatus = $session->subscription->latest_invoice->payment_intent->status;
+            }
+
+            // Only proceed if both subscription is active and payment succeeded
+            if ($subscriptionStatus !== 'active' || $paymentIntentStatus !== 'succeeded') {
+                $errorMessage = 'Payment failed or is incomplete. Your subscription was not activated.';
+                
+                // Add more specific error details if available
+                if ($paymentIntentStatus === 'requires_payment_method' && 
+                    isset($session->subscription->latest_invoice->payment_intent->last_payment_error)) {
+                    $errorMessage .= ' Reason: ' . $session->subscription->latest_invoice->payment_intent->last_payment_error->message;
+                }
+                
+                Log::warning('Checkout session payment failed', [
+                    'user_id' => $user->id,
+                    'session_id' => $sessionId,
+                    'subscription_status' => $subscriptionStatus,
+                    'payment_status' => $paymentIntentStatus,
+                ]);
+                
+                return redirect('/agency/billing')->with('error', $errorMessage);
+            }
+
             // Check if subscription already exists
             $existingSubscription = Subscription::where('stripe_subscription_id', $session->subscription->id)->first();
             
@@ -195,6 +223,39 @@ class SubscriptionController extends Controller
                 ],
                 $discountPercent
             );
+
+            // Check if payment was successful
+            $subscriptionStatus = $stripeSubscription->status;
+            $paymentIntentStatus = null;
+            
+            if (isset($stripeSubscription->latest_invoice->payment_intent)) {
+                $paymentIntentStatus = $stripeSubscription->latest_invoice->payment_intent->status;
+            }
+
+            // Only create subscription record if payment succeeded
+            if ($subscriptionStatus !== 'active' || $paymentIntentStatus !== 'succeeded') {
+                // Payment failed or incomplete
+                $errorMessage = 'Payment failed. ';
+                
+                if ($paymentIntentStatus === 'requires_action') {
+                    $errorMessage .= 'Your card requires additional authentication.';
+                } elseif ($paymentIntentStatus === 'requires_payment_method') {
+                    $errorMessage .= 'Please try a different payment method.';
+                } elseif (isset($stripeSubscription->latest_invoice->payment_intent->last_payment_error)) {
+                    $errorMessage .= $stripeSubscription->latest_invoice->payment_intent->last_payment_error->message;
+                } else {
+                    $errorMessage .= 'Please check your payment details and try again.';
+                }
+                
+                Log::warning('Subscription payment failed', [
+                    'user_id' => $user->id,
+                    'subscription_status' => $subscriptionStatus,
+                    'payment_intent_status' => $paymentIntentStatus,
+                    'stripe_subscription_id' => $stripeSubscription->id,
+                ]);
+                
+                return response()->json(['error' => $errorMessage], 402);
+            }
 
             // Store subscription in database
             $subscription = Subscription::create([
