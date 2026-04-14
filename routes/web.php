@@ -28,7 +28,7 @@ Route::post('invitation/accept', [\App\Http\Controllers\Agency\InvitationControl
 // Stripe Webhook - Public route (NO authentication required)
 Route::post('webhook/stripe', [\App\Http\Controllers\Agency\SubscriptionController::class, 'webhook'])->name('stripe.webhook');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
     // Working import routes - using controllers to get proper data
     Route::get('posts/agency-import', [\App\Http\Controllers\PostImportController::class, 'index'])
         ->name('posts.agency-import')
@@ -434,7 +434,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // Brand Subscription Routes
-    Route::prefix('brand')->name('brand.')->middleware(['auth', 'verified', 'role.permission:null,brand'])->group(function () {
+    Route::prefix('brand')->name('brand.')->middleware(['auth', 'verified', 'require.access', 'role.permission:null,brand'])->group(function () {
         // Subscription Management
         Route::post('subscriptions/subscribe', [\App\Http\Controllers\Brand\SubscriptionController::class, 'subscribe'])->name('subscriptions.subscribe');
         Route::post('subscriptions/subscribe-with-card', [\App\Http\Controllers\Brand\SubscriptionController::class, 'subscribeWithPaymentMethod'])->name('subscriptions.subscribe-with-card');

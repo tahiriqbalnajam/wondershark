@@ -287,8 +287,8 @@ export default function AgencyBillingPage() {
         planPrice={isOnTrial && trialDiscount > 0
           ? (subscriptionPlan === 'agency_growth'
               ? `$${Math.round(299 * (1 - trialDiscount / 100))} (${trialDiscount}% off 1st month)`
-              : `$${Math.round(499 * (1 - trialDiscount / 100))} (${trialDiscount}% off 1st month)`)
-          : (subscriptionPlan === 'agency_growth' ? '$299' : '$499')}
+              : `$${Math.round(995 * (1 - trialDiscount / 100))} (${trialDiscount}% off 1st month)`)
+          : (subscriptionPlan === 'agency_growth' ? '$299' : '$995')}
         onSuccess={handleSubscriptionSuccess}
       />
       <CancelSubscriptionModal
@@ -367,7 +367,7 @@ export default function AgencyBillingPage() {
                   </div>
                   <div className="mt-3">
                     <span className="text-xl font-semibold tracking-tight text-strong-950">{subscription.plan_name === 'agency_growth' ? 'Growth' : 'Unlimited'}</span> 
-                    &nbsp;<span className="text-sm font-medium mb-0.5 text-muted-foreground">${subscription.plan_name === 'agency_growth' ? '299' : '499'}/month</span>
+                    &nbsp;<span className="text-sm font-medium mb-0.5 text-muted-foreground">${subscription.plan_name === 'agency_growth' ? '299' : '995'}/month</span>
                   </div>
                   <div className="flex items-center gap-6 mt-2">
                     <div className="flex flex-wrap gap-6">
@@ -575,13 +575,13 @@ export default function AgencyBillingPage() {
               {isOnTrial && trialDiscount > 0 ? (
                 <div className="mb-2">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-black">${Math.round(499 * (1 - trialDiscount / 100))}</span>
-                    <span className="text-sm line-through text-muted-foreground">$499</span>
+                    <span className="text-2xl font-bold text-black">${Math.round(995 * (1 - trialDiscount / 100))}</span>
+                    <span className="text-sm line-through text-muted-foreground">$995</span>
                     <span className="text-base font-normal text-muted-foreground">/mo</span>
                   </div>
                 </div>
               ) : (
-                <div className="text-2xl font-bold text-black mb-2">$499 <span className="text-base font-normal text-muted-foreground">/per month</span></div>
+                <div className="text-2xl font-bold text-black mb-2">$995 <span className="text-base font-normal text-muted-foreground">/per month</span></div>
               )}
                           <div data-orientation="horizontal" role="none" className="shrink-0 bg-border h-px w-full mb-4"></div>
               

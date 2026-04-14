@@ -191,6 +191,30 @@ export function TrialPaywallPopup() {
     // ── Expired Trial ───────────────────────────────────────────────────────
     if (shouldShowExpired) {
         return (
+
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl">
+                            <Lock className="h-5 w-5 text-red-500" />
+                            Subscription Required
+                        </DialogTitle>
+                        <DialogDescription>
+                            A subscription is required to access the platform. Choose a plan to get started.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-center space-y-1">
+                            <div className="text-base font-semibold text-red-700">Full Access Locked</div>
+                            <div className="text-sm text-red-600">Subscribe now to unlock all features.</div>
+                        </div>
+                        <div className="text-center text-sm text-muted-foreground">
+                            Choose a plan below to get started with the platform.
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+            /*
             <Dialog open={open} onOpenChange={setOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
@@ -212,7 +236,7 @@ export function TrialPaywallPopup() {
                         </div>
                     </div>
                 </DialogContent>
-            </Dialog>
+            </Dialog> */
         );
     }
 

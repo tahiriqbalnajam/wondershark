@@ -238,7 +238,7 @@ class StripeService
             [
                 'name' => 'Agency Unlimited',
                 'key' => 'agency_unlimited',
-                'price' => 499*100, // $499 in cents
+                'price' => 995*100, // $995 in cents
                 'description' => 'Unlimited plan with unlimited brands',
             ],
         ];

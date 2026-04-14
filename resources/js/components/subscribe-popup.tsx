@@ -24,7 +24,7 @@ const plans = [
     {
         key: 'agency_unlimited',
         name: 'Unlimited',
-        price: '$499',
+        price: '$995',
         features: [
             { label: 'Brands covered', value: 'Unlimited' },
             { label: 'AI citations tracking', value: 'Unlimited' },

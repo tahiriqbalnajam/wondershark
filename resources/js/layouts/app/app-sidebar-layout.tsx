@@ -6,10 +6,17 @@ import { TrialPaywallPopup } from '@/components/trial-paywall-popup';
 import { type BreadcrumbItem } from '@/types';
 import { usePage } from '@inertiajs/react';
 import { type PropsWithChildren, useEffect } from 'react';
+import { toast } from 'sonner';
 
 export default function AppSidebarLayout({ children, breadcrumbs = [], title, logo, website }: PropsWithChildren<{ breadcrumbs?: BreadcrumbItem[], title?: string, logo?: string, website?: string }>) {
-    const { auth } = usePage().props as any;
-    
+    const { auth, flash } = usePage().props as any;
+
+    useEffect(() => {
+        if (flash?.warning) {
+            toast.warning(flash.warning, { duration: 6000 });
+        }
+    }, [flash?.warning]);
+
     useEffect(() => {
         // Set the agency color CSS custom property
 // const main_agencyId = auth.user?.agency_membership?.agency_id;

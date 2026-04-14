@@ -3,6 +3,7 @@
 use App\Http\Middleware\CheckFeatureLimit;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RequireActiveAccess;
 use App\Http\Middleware\RolePermissionMiddleware;
 use App\Http\Middleware\SyncSubscriptionStatus;
 use Illuminate\Foundation\Application;
@@ -33,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role.permission' => RolePermissionMiddleware::class,
             'sync.subscription' => SyncSubscriptionStatus::class,
             'feature' => CheckFeatureLimit::class,
+            'require.access' => RequireActiveAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
