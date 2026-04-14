@@ -168,6 +168,7 @@ const CardForm: React.FC<{
         <div className="border rounded-md p-3 bg-background">
           <CardElement
             options={{
+              hidePostalCode: true,
               style: {
                 base: {
                   fontSize: '16px',
