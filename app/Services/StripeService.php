@@ -238,7 +238,7 @@ class StripeService
             [
                 'name' => 'Agency Unlimited',
                 'key' => 'agency_unlimited',
-                'price' => 995*100, // $995 in cents
+                'price' => 999*100, // $999 in cents
                 'description' => 'Unlimited plan with unlimited brands',
             ],
         ];
@@ -316,10 +316,20 @@ class StripeService
      */
     public function attachPaymentMethod(string $paymentMethodId, string $customerId)
     {
-        // Attach payment method to customer
-        $this->stripe->paymentMethods->attach($paymentMethodId, [
-            'customer' => $customerId,
-        ]);
+        // Retrieve current state of the payment method
+        $paymentMethod = $this->stripe->paymentMethods->retrieve($paymentMethodId);
+
+        if ($paymentMethod->customer && $paymentMethod->customer !== $customerId) {
+            // PM is attached to a different customer — cannot reuse across accounts
+            throw new \Exception('This card is already associated with another account. Please use a different card.');
+        }
+
+        // Only attach if not already attached to this customer (SetupIntent may have already done it)
+        if (!$paymentMethod->customer) {
+            $this->stripe->paymentMethods->attach($paymentMethodId, [
+                'customer' => $customerId,
+            ]);
+        }
 
         // Set as default payment method
         $this->stripe->customers->update($customerId, [

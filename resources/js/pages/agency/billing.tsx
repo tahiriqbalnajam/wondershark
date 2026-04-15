@@ -287,8 +287,8 @@ export default function AgencyBillingPage() {
         planPrice={isOnTrial && trialDiscount > 0
           ? (subscriptionPlan === 'agency_growth'
               ? `$${Math.round(299 * (1 - trialDiscount / 100))} (${trialDiscount}% off 1st month)`
-              : `$${Math.round(995 * (1 - trialDiscount / 100))} (${trialDiscount}% off 1st month)`)
-          : (subscriptionPlan === 'agency_growth' ? '$299' : '$995')}
+              : `$${Math.round(999 * (1 - trialDiscount / 100))} (${trialDiscount}% off 1st month)`)
+          : (subscriptionPlan === 'agency_growth' ? '$299' : '$999')}
         onSuccess={handleSubscriptionSuccess}
       />
       <CancelSubscriptionModal
@@ -367,7 +367,7 @@ export default function AgencyBillingPage() {
                   </div>
                   <div className="mt-3">
                     <span className="text-xl font-semibold tracking-tight text-strong-950">{subscription.plan_name === 'agency_growth' ? 'Growth' : 'Unlimited'}</span> 
-                    &nbsp;<span className="text-sm font-medium mb-0.5 text-muted-foreground">${subscription.plan_name === 'agency_growth' ? '299' : '995'}/month</span>
+                    &nbsp;<span className="text-sm font-medium mb-0.5 text-muted-foreground">${subscription.plan_name === 'agency_growth' ? '299' : '999'}/month</span>
                   </div>
                   <div className="flex items-center gap-6 mt-2">
                     <div className="flex flex-wrap gap-6">
@@ -412,8 +412,8 @@ export default function AgencyBillingPage() {
               style={{
                 ...(hasActiveSubscription && currentPlan === 'agency_growth'
                   ? {
-                      borderColor: agency?.color || '#ff5b49',
-                      boxShadow: `0 0 0 2px ${agency?.color || '#ff5b49'}, 0 1px 2px 0 rgb(0 0 0 / 0.05)`
+                      borderColor: agency?.color || 'green',
+                      boxShadow: `0 0 0 2px ${agency?.color || 'green'}, 0 1px 2px 0 rgb(0 0 0 / 0.05)`
                     } as React.CSSProperties
                   : {})
               }}
@@ -510,9 +510,7 @@ export default function AgencyBillingPage() {
                 
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">AI MODELS</span>
-                  <div className="inline-flex items-center rounded-sm px-[6px] py-0.5 text-[10px] font-semibold border border-border bg-muted text-muted-foreground">
-                    Daily
-                  </div>
+                 
                 </div>
                 <div className="flex gap-2 items-center">
                   <Tooltip>
@@ -565,8 +563,8 @@ export default function AgencyBillingPage() {
               style={{
                 ...(hasActiveSubscription && currentPlan === 'agency_unlimited'
                   ? {
-                      borderColor: agency?.color || '#ff5b49',
-                      boxShadow: `0 0 0 2px ${agency?.color || '#ff5b49'}, 0 1px 2px 0 rgb(0 0 0 / 0.05)`
+                      borderColor: agency?.color || 'green',
+                      boxShadow: `0 0 0 2px ${agency?.color || 'green'}, 0 1px 2px 0 rgb(0 0 0 / 0.05)`
                     } as React.CSSProperties
                   : {})
               }}
@@ -575,13 +573,13 @@ export default function AgencyBillingPage() {
               {isOnTrial && trialDiscount > 0 ? (
                 <div className="mb-2">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-black">${Math.round(995 * (1 - trialDiscount / 100))}</span>
-                    <span className="text-sm line-through text-muted-foreground">$995</span>
+                    <span className="text-2xl font-bold text-black">${Math.round(999 * (1 - trialDiscount / 100))}</span>
+                    <span className="text-sm line-through text-muted-foreground">$999</span>
                     <span className="text-base font-normal text-muted-foreground">/mo</span>
                   </div>
                 </div>
               ) : (
-                <div className="text-2xl font-bold text-black mb-2">$995 <span className="text-base font-normal text-muted-foreground">/per month</span></div>
+                <div className="text-2xl font-bold text-black mb-2">$999 <span className="text-base font-normal text-muted-foreground">/per month</span></div>
               )}
                           <div data-orientation="horizontal" role="none" className="shrink-0 bg-border h-px w-full mb-4"></div>
               
@@ -663,9 +661,7 @@ export default function AgencyBillingPage() {
                 
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">AI MODELS</span>
-                  <div className="inline-flex items-center rounded-sm px-[6px] py-0.5 text-[10px] font-semibold border border-border bg-muted text-muted-foreground">
-                    Daily
-                  </div>
+                 
                 </div>
                 <div className="flex gap-2 items-center">
                   <Tooltip>

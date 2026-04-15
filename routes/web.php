@@ -476,6 +476,8 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
                 ? \App\Models\SystemSetting::get('stripe_live_publishable_key')
                 : \App\Models\SystemSetting::get('stripe_test_publishable_key');
             
+            $aiModels = \App\Models\AiModel::enabled()->ordered()->get(['name', 'display_name']);
+
             return Inertia::render('brand/billing', [
                 'subscription' => $subscription ? [
                     'plan_name' => $subscription->plan_name,
@@ -486,6 +488,10 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
                     'current_period_start' => $subscription->current_period_start?->format('M d, Y'),
                 ] : null,
                 'stripePublishableKey' => $stripePublishableKey,
+                'aiModels' => $aiModels->map(fn ($m) => [
+                    'name' => $m->name,
+                    'display_name' => $m->display_name,
+                ]),
             ]);
         })->name('billing');
     });

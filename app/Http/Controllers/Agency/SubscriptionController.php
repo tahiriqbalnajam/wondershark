@@ -227,33 +227,42 @@ class SubscriptionController extends Controller
             // Check if payment was successful
             $subscriptionStatus = $stripeSubscription->status;
             $paymentIntentStatus = null;
-            
+
             if (isset($stripeSubscription->latest_invoice->payment_intent)) {
                 $paymentIntentStatus = $stripeSubscription->latest_invoice->payment_intent->status;
             }
 
-            // Only create subscription record if payment succeeded
-            if ($subscriptionStatus !== 'active' || $paymentIntentStatus !== 'succeeded') {
-                // Payment failed or incomplete
-                $errorMessage = 'Payment failed. ';
-                
-                if ($paymentIntentStatus === 'requires_action') {
-                    $errorMessage .= 'Your card requires additional authentication.';
-                } elseif ($paymentIntentStatus === 'requires_payment_method') {
-                    $errorMessage .= 'Please try a different payment method.';
-                } elseif (isset($stripeSubscription->latest_invoice->payment_intent->last_payment_error)) {
-                    $errorMessage .= $stripeSubscription->latest_invoice->payment_intent->last_payment_error->message;
-                } else {
-                    $errorMessage .= 'Please check your payment details and try again.';
+            // Subscription is good if active or trialing
+            $isSubscriptionGood = in_array($subscriptionStatus, ['active', 'trialing']);
+            // Payment is good if there's no payment_intent (free/$0 invoice) or it succeeded
+            $isPaymentGood = ($paymentIntentStatus === null || $paymentIntentStatus === 'succeeded');
+
+            if (!$isSubscriptionGood || !$isPaymentGood) {
+                // Cancel the incomplete Stripe subscription so nothing is left dangling
+                try {
+                    $this->stripeService->cancelSubscription($stripeSubscription->id);
+                } catch (\Exception $cancelEx) {
+                    Log::error('Failed to cancel incomplete subscription: ' . $cancelEx->getMessage());
                 }
-                
+
+                // Build a user-facing error message — prefer Stripe's own error text
+                $stripeError = $stripeSubscription->latest_invoice->payment_intent->last_payment_error->message ?? null;
+
+                if ($stripeError) {
+                    $errorMessage = $stripeError;
+                } elseif ($paymentIntentStatus === 'requires_action') {
+                    $errorMessage = 'Your card requires additional authentication.';
+                } else {
+                    $errorMessage = 'Payment failed. Please try a different payment method.';
+                }
+
                 Log::warning('Subscription payment failed', [
                     'user_id' => $user->id,
                     'subscription_status' => $subscriptionStatus,
                     'payment_intent_status' => $paymentIntentStatus,
                     'stripe_subscription_id' => $stripeSubscription->id,
                 ]);
-                
+
                 return response()->json(['error' => $errorMessage], 402);
             }
 

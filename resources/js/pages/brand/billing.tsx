@@ -19,13 +19,19 @@ interface SubscriptionData {
   current_period_end: string;
 }
 
+interface AiModelData {
+  name: string;
+  display_name: string;
+}
+
 interface PageProps extends Record<string, unknown> {
   subscription: SubscriptionData | null;
   stripePublishableKey: string;
+  aiModels: AiModelData[];
 }
 
 export default function BrandBillingPage() {
-  const { subscription, stripePublishableKey, trial } = usePage<PageProps & { trial?: any }>().props;
+  const { subscription, stripePublishableKey, trial, aiModels = [] } = usePage<PageProps & { trial?: any }>().props;
   const [loading, setLoading] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
   const [cardModalOpen, setCardModalOpen] = useState(false);
@@ -364,8 +370,8 @@ export default function BrandBillingPage() {
             style={{
               ...(hasActiveSubscription
                 ? {
-                    borderColor: '#ff5b49',
-                    boxShadow: `0 0 0 2px #ff5b49, 0 1px 2px 0 rgb(0 0 0 / 0.05)`
+                    borderColor: 'green',
+                    boxShadow: `0 0 0 2px green, 0 1px 2px 0 rgb(0 0 0 / 0.05)`
                   } as React.CSSProperties
                 : {})
             }}
@@ -443,53 +449,27 @@ export default function BrandBillingPage() {
                 </button>
               )}
               <div data-orientation="horizontal" role="none" className="shrink-0 bg-border h-px w-full mb-4 mt-4"></div>
-              <div className="mt-4 space-y-2.5">
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">AI MODELS</span>
-                  <div className="inline-flex items-center rounded-sm px-[6px] py-0.5 text-[10px] font-semibold border border-border bg-muted text-muted-foreground">
-                    Daily
+              {aiModels.length > 0 && (
+                <div className="mt-4 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">AI MODELS</span>
+                  </div>
+                  <div className="flex gap-2 items-center flex-wrap">
+                    {aiModels.map((model) => (
+                      <Tooltip key={model.name}>
+                        <TooltipTrigger asChild>
+                          <img
+                            src={`/images/ai-models/${model.name}.svg`}
+                            alt={model.display_name}
+                            className="w-6 h-6 rounded-full bg-white border"
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent>{model.display_name}</TooltipContent>
+                      </Tooltip>
+                    ))}
                   </div>
                 </div>
-                <div className="flex gap-2 items-center">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <img src="/images/ai-models/openai.svg" alt="ChatGPT" className="w-6 h-6 rounded-full bg-white border" />
-                    </TooltipTrigger>
-                    <TooltipContent>ChatGPT</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <img src="/images/ai-models/perplexity.svg" alt="Perplexity" className="w-6 h-6 rounded-full bg-white border" />
-                    </TooltipTrigger>
-                    <TooltipContent>Perplexity</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <img src="/images/ai-models/google.svg" alt="Google" className="w-6 h-6 rounded-full bg-white border" />
-                    </TooltipTrigger>
-                    <TooltipContent>Google</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <img src="/images/ai-models/gemini.svg" alt="Gemini" className="w-6 h-6 rounded-full bg-white border" />
-                    </TooltipTrigger>
-                    <TooltipContent>Gemini</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <img src="/images/ai-models/copilot.svg" alt="Copilot" className="w-6 h-6 rounded-full bg-white border" />
-                    </TooltipTrigger>
-                    <TooltipContent>Copilot</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <img src="/images/ai-models/grok.svg" alt="Grok" className="w-6 h-6 rounded-full bg-white border" />
-                    </TooltipTrigger>
-                    <TooltipContent>Grok</TooltipContent>
-                  </Tooltip>
-                </div>
-              </div>
+              )}
             </div>
         </section>
         <div>
