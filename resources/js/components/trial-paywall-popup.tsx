@@ -175,12 +175,11 @@ export function TrialPaywallPopup() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-2">
-                        <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-center space-y-1">
+                        <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-center space-y-3">
                             <div className="text-base font-semibold text-red-700">Full Access Locked</div>
-                            <div className="text-sm text-red-600">Subscribe now to unlock all features.</div>
-                        </div>
-                        <div className="text-center text-sm text-muted-foreground">
-                            Choose a plan below to get started with the platform.
+                            <Button className="w-auto" onClick={() => setOpen(false)}>
+                                Subscribe Now to unlock all features
+                            </Button>
                         </div>
                     </div>
                 </DialogContent>
@@ -204,12 +203,11 @@ export function TrialPaywallPopup() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-2">
-                        <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-center space-y-1">
+                        <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-center space-y-3">
                             <div className="text-base font-semibold text-red-700">Full Access Locked</div>
-                            <div className="text-sm text-red-600">Subscribe now to unlock all features.</div>
-                        </div>
-                        <div className="text-center text-sm text-muted-foreground">
-                            Choose a plan below to get started with the platform.
+                            <Button className="w-auto" onClick={() => setOpen(false)}>
+                                Subscribe Now to unlock all features
+                            </Button>
                         </div>
                     </div>
                 </DialogContent>
