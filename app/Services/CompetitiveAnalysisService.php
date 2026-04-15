@@ -648,6 +648,11 @@ CRITICAL INSTRUCTIONS:
         $startDate = now()->subDays($days);
         $endDate   = now();
 
+        // Pre-load competitors so we always display the current name, not the stale
+        // entity_name stored in brand_mentions at analysis time (which can be outdated
+        // if the competitor was renamed after the last analysis run).
+        $competitorsById = $brand->competitors()->get()->keyBy('id');
+
         // 1. Daily entity stats — both prompts (for Visibility) and mentions (for SOV)
         $dailyEntityQuery = BrandMention::where('brand_id', $brand->id)
             ->whereBetween('analyzed_at', [$startDate, $endDate])
@@ -671,6 +676,22 @@ CRITICAL INSTRUCTIONS:
         $dailyEntityStats = $dailyEntityQuery->get();
 
         if ($dailyEntityStats->isEmpty()) {
+            return $this->buildFallbackStats($brand, $aiModelId);
+        }
+
+        // Also fall back when brand_mentions has sparse data (fewer distinct dates than
+        // brand_competitive_stats complete sessions in the same period). This prevents a single
+        // incomplete mention row from producing misleading 0% BVI values for all other entities
+        // while the stats table holds richer historical data.
+        $distinctMentionDates = $dailyEntityStats->pluck('date')->unique()->count();
+        $distinctStatDates = DB::table('brand_competitive_stats')
+            ->where('brand_id', $brand->id)
+            ->whereBetween('analyzed_at', [$startDate, $endDate])
+            ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
+            ->distinct()
+            ->count(DB::raw('DATE(analyzed_at)'));
+
+        if ($distinctMentionDates < $distinctStatDates) {
             return $this->buildFallbackStats($brand, $aiModelId);
         }
 
@@ -785,10 +806,17 @@ CRITICAL INSTRUCTIONS:
 
             $trends = $this->calculateTrendsForEntity($brand, $data['entity_type'], $competitorId, $days, $aiModelId, $competitiveStat, $timezone);
 
+            // Use the current competitor name from the competitors table so that renames
+            // are reflected immediately without requiring a new analysis run.
+            $resolvedName = $data['entity_name'];
+            if ($competitorId && isset($competitorsById[$competitorId])) {
+                $resolvedName = $competitorsById[$competitorId]->name;
+            }
+
             $visibilityStats[] = [
                 'id'                    => $competitiveStat->id ?? 0,
                 'entity_type'           => $data['entity_type'],
-                'entity_name'           => $data['entity_name'],
+                'entity_name'           => $resolvedName,
                 'entity_url'            => $entityUrl,
                 'visibility'            => round($avgVisibility, 2),
                 'sov'                   => round($sov, 2),
