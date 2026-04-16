@@ -454,6 +454,11 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
         Route::get('billing', function () {
             $user = Auth::user();
             
+            // Get user's brand (brand users have their own brand)
+            $brand = \App\Models\Brand::where('user_id', $user->id)
+                ->select('id', 'name', 'website', 'logo')
+                ->first();
+            
             // Get subscription data
             $subscription = \App\Models\Subscription::where('user_id', $user->id)
                 ->where('status', 'active')
@@ -479,6 +484,7 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
             $aiModels = \App\Models\AiModel::enabled()->ordered()->get(['name', 'display_name']);
 
             return Inertia::render('brand/billing', [
+                'brand' => $brand,
                 'subscription' => $subscription ? [
                     'plan_name' => $subscription->plan_name,
                     'status' => $subscription->status,

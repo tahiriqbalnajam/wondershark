@@ -17,8 +17,7 @@ export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: 
     };
     
     const currentBrandId = getCurrentBrandId();
-    // Check URL brands first, then page props brand (for pages like /brand/billing)
-    const selectedBrand = page.props.brands?.find(b => b.id === currentBrandId) || (page.props as any).brand;
+    const selectedBrand = page.props.brands?.find(b => b.id === currentBrandId);
     
     // Show brand name if a brand is selected, otherwise show user name
     const displayName = selectedBrand ? selectedBrand.name : user.name;
@@ -90,20 +89,21 @@ export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: 
     console.log('Selected Brand displayImage:', displayImage);
     console.log('User logo:', user.logo);
     console.log('User logo_thumbnail:', user.logo_thumbnail);
-    console.log('Selected Brand:', selectedBrand);
-    
     // For brand logo, use stored logo if available, otherwise use the logo.dev API
     const brandLogoUrl = selectedBrand?.logo 
-        ? (selectedBrand.logo.startsWith('http') ? selectedBrand.logo : `/storage/${selectedBrand.logo}`)
+        ? `/storage/${selectedBrand.logo}`
         : (selectedBrand?.website ? 
             `https://img.logo.dev/${selectedBrand.website.replace(/^https?:\/\//, '').replace(/^www\./, '')}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA` 
             : null);
 
     // Use agency logo (user.logo or user.logo_thumbnail) for the avatar fallback
-    const agencyLogoUrl = user.logo ? `${user.logo}` : (user.logo_thumbnail ? `${user.logo_thumbnail}` : null);
+    let agencyLogoUrl = user.logo ? `${user.logo}` : (user.logo_thumbnail ? `${user.logo_thumbnail}` : null);
 
-    // Determine which logo to use: brand logo if brand is selected, otherwise agency logo
-    const fallbackLogoUrl = selectedBrand ? brandLogoUrl : agencyLogoUrl;
+     if (!agencyLogoUrl) {
+        agencyLogoUrl = selectedBrand?.website ? 
+            `https://img.logo.dev/${selectedBrand.website.replace(/^https?:\/\//, '').replace(/^www\./, '')}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA` 
+            : null;
+    }
 
 
     return (
@@ -111,10 +111,10 @@ export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: 
             <Avatar className="h-[40px] w-[40px] overflow-hidden rounded-md flex-1 user-img">
                 <AvatarImage src={displayImage} alt={displayName} />
                 <AvatarFallback className="rounded-md bg-transparent text-black font-bold dark:bg-transparent dark:text-white">
-                    {fallbackLogoUrl ? (
+                    {agencyLogoUrl ? (
                         <img
-                            src={fallbackLogoUrl}
-                            alt={displayName}
+                            src={agencyLogoUrl}
+                            alt={user.name}
                             className="vvv w-full h-full object-contain"
                             onError={(e) => {
                                 e.currentTarget.style.display = 'none';
