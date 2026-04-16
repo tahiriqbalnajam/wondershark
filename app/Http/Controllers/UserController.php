@@ -104,6 +104,7 @@ class UserController extends Controller
                             'website' => null,
                             'description' => 'Brand created for '.$request->name,
                             'status' => 'active',
+                            'monthly_posts' => 10, // Default value
                         ]);
                     } catch (\Exception $e) {
                         \Illuminate\Support\Facades\Log::error('Failed to create brand record', [
