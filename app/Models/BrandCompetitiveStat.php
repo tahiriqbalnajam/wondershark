@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BrandCompetitiveStat extends Model
@@ -23,13 +24,17 @@ class BrandCompetitiveStat extends Model
         'raw_data',
         'analysis_session_id',
         'analyzed_at',
+        'is_manual_override',
+        'override_reason',
+        'overridden_by',
     ];
 
     protected $casts = [
-        'raw_data' => 'array',
-        'analyzed_at' => 'datetime',
-        'visibility' => 'decimal:2',
-        'position' => 'decimal:1',
+        'raw_data'           => 'array',
+        'analyzed_at'        => 'datetime',
+        'visibility'         => 'decimal:2',
+        'position'           => 'decimal:1',
+        'is_manual_override' => 'boolean',
     ];
 
     public function brand(): BelongsTo
@@ -45,6 +50,11 @@ class BrandCompetitiveStat extends Model
     public function aiModel(): BelongsTo
     {
         return $this->belongsTo(AiModel::class);
+    }
+
+    public function overriddenBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'overridden_by');
     }
 
     /**

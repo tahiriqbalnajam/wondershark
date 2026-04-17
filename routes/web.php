@@ -255,6 +255,14 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
             Route::put('/{competitor}', [\App\Http\Controllers\Admin\CompetitorController::class, 'update'])->name('update');
             Route::delete('/{competitor}', [\App\Http\Controllers\Admin\CompetitorController::class, 'destroy'])->name('destroy');
         });
+
+           // Visibility Stats Override - Admin only
+        Route::prefix('admin/visibility-stats')->name('admin.visibility-stats.')->middleware('role.permission:view-admin-panel')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\BrandVisibilityStatsController::class, 'index'])->name('index');
+            Route::get('/daily', [\App\Http\Controllers\Admin\BrandVisibilityStatsController::class, 'daily'])->name('daily');
+            Route::post('/', [\App\Http\Controllers\Admin\BrandVisibilityStatsController::class, 'store'])->name('store');
+            Route::delete('/reset', [\App\Http\Controllers\Admin\BrandVisibilityStatsController::class, 'reset'])->name('reset');
+        });
     });
 
     // Brand Creation Routes - For authenticated users during brand creation

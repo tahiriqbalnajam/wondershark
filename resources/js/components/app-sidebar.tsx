@@ -212,6 +212,12 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
                     permission: 'view-admin-panel',
                 },
                 {
+                    title: 'Visibility Stats',
+                    href: '/admin/visibility-stats',
+                    icon: BarChart3,
+                    permission: 'view-admin-panel',
+                },
+                {
                     title: 'Posts',
                     href: '/admin/posts',
                     icon: FileText,
