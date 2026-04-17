@@ -435,6 +435,19 @@ class BrandPromptController extends Controller
                 $sessionId
             );
 
+            // Resolve brand country to ISO 2-letter code
+            $countryNameToCode = [
+                'United States' => 'US', 'Canada' => 'CA', 'United Kingdom' => 'GB',
+                'Ireland' => 'IE', 'Germany' => 'DE', 'France' => 'FR', 'Italy' => 'IT',
+                'Spain' => 'ES', 'Netherlands' => 'NL', 'Sweden' => 'SE', 'Norway' => 'NO',
+                'Denmark' => 'DK', 'Finland' => 'FI', 'Belgium' => 'BE', 'Austria' => 'AT',
+                'Switzerland' => 'CH', 'Australia' => 'AU', 'New Zealand' => 'NZ',
+                'Japan' => 'JP', 'South Korea' => 'KR', 'Singapore' => 'SG', 'India' => 'IN',
+                'Brazil' => 'BR', 'Mexico' => 'MX', 'Argentina' => 'AR', 'Chile' => 'CL',
+                'South Africa' => 'ZA', 'Israel' => 'IL', 'UAE' => 'AE', 'Saudi Arabia' => 'SA',
+            ];
+            $brandCountryCode = $countryNameToCode[$brand->country] ?? 'US';
+
             // Create BrandPrompt records and dispatch analysis jobs
             $brandPrompts = [];
             foreach ($generatedPrompts as $index => $genPrompt) {
@@ -444,6 +457,7 @@ class BrandPromptController extends Controller
                     'is_active' => false, // Suggested prompts start as inactive
                     'session_id' => $sessionId,
                     'order' => $index + 1,
+                    'country_code' => $brandCountryCode,
                 ]);
 
                 // Get assigned AI model for this prompt
