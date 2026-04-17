@@ -75,8 +75,8 @@ type Brand = {
   monthly_posts: number;
   status: 'active' | 'inactive' | 'pending';
   logo?: string | null;
-  // prompts: Array<{ id: number; prompt: string; order: number; is_active: boolean }>;
-  // subreddits: Array<{ id: number; subreddit_name: string; description?: string; status: string }>;
+  trackedName?: string;
+  allies?: string[];
 };
 
 type Props = { brand: Brand };
@@ -90,6 +90,8 @@ type BrandForm = {
   logo: File | null;
   country: string;
   region: string;
+  trackedName: string;
+  allies: string[];
   // prompts: string[];
   // subreddits: string[];
 
@@ -122,6 +124,8 @@ export default function BrandEdit({ brand }: Props) {
     logo: null,
     country: brand.country || '',
     region: brand.region || '',
+    trackedName: brand.trackedName || '',
+    allies: brand.allies || [],
     Verified: false,
     'GPT-4o Search': false,
     'OpenAI (GPT-4)': false,
@@ -261,6 +265,44 @@ export default function BrandEdit({ brand }: Props) {
                 <Input id="monthly_posts" type="number" min={1} max={1000} value={data.monthly_posts} onChange={(e) => setData('monthly_posts', parseInt(e.target.value) || 0)} className="form-control" />
                 <InputError message={errors.monthly_posts} />
               </div> */}
+
+              <div className="space-y-4 border allies-card rounded-lg p-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="trackedName">Tracked Name <small className="text-xs font-normal text-muted-foreground">( Optional )</small></Label>
+                  <Input id="trackedName" value={data.trackedName} onChange={(e) => setData('trackedName', e.target.value)} placeholder="How this brand appears in mentions" className="form-control" />
+                  <InputError message={errors.trackedName} />
+                </div>
+                <div className="grid gap-2">
+                  <div className="flex items-center">
+                    <Label>Alias <small className="text-xs font-normal text-muted-foreground">( Optional )</small></Label>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setData('allies', [...data.allies, ''])}>+ Add Alias</Button>
+                  </div>
+                  {data.allies.map((ally, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <Input
+                        type="text"
+                        placeholder="Alias name"
+                        value={ally}
+                        onChange={(e) => {
+                          const updated = [...data.allies];
+                          updated[index] = e.target.value;
+                          setData('allies', updated);
+                        }}
+                        className="form-control"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setData('allies', data.allies.filter((_, i) => i !== index))}
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  ))}
+                  <InputError message={errors.allies} />
+                </div>
+              </div>
 
               {/* Brand status dropdown */}
               <div className="grid gap-2">

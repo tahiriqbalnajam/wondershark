@@ -29,10 +29,13 @@ class Brand extends Model
         'post_creation_note',
         'logo',
         'logo_thumbnail',
+        'trackedName',
+        'allies',
     ];
 
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'allies' => 'array',
         'can_create_posts' => 'boolean',
     ];
 

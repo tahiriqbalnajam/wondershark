@@ -216,6 +216,9 @@ class BrandController extends Controller
             'description' => 'nullable|string|max:1000',
             'country' => 'nullable|string|max:100',
             'region' => 'nullable|string|max:100',
+            'trackedName' => 'nullable|string|max:255',
+            'allies' => 'nullable|array',
+            'allies.*' => 'nullable|string|max:255',
         ]);
 
         /** @var User $agency */
@@ -228,6 +231,8 @@ class BrandController extends Controller
             'description' => $request->description,
             'country' => $request->country,
             'region' => $request->region,
+            'trackedName' => $request->trackedName,
+            'allies' => $request->allies ?? [],
             'monthly_posts' => 10, // Default value
             'status' => 'pending',
         ]);
@@ -272,6 +277,8 @@ class BrandController extends Controller
                 'country' => $brand->country,
                 'region' => $brand->region,
                 'monthly_posts' => $brand->monthly_posts,
+                'trackedName' => $brand->trackedName ?? '',
+                'allies' => $brand->allies ?? [],
             ],
             'competitors' => [],
             'prompts' => [],
@@ -1088,7 +1095,10 @@ class BrandController extends Controller
         });
 
         return Inertia::render('brands/edit', [
-            'brand' => $brand,
+            'brand' => array_merge($brand->toArray(), [
+                'trackedName' => $brand->trackedName ?? '',
+                'allies' => $brand->allies ?? [],
+            ]),
             'aiModels' => $aiModels,
         ]);
     }
@@ -1126,6 +1136,9 @@ class BrandController extends Controller
             'subreddits' => 'array|max:20',
             'subreddits.*' => 'required|string|max:100',
             'logo' => 'nullable|image|max:2048',
+            'trackedName' => 'nullable|string|max:255',
+            'allies' => 'nullable|array',
+            'allies.*' => 'nullable|string|max:255',
         ]);
 
         if ($request->hasFile('logo') && $request->file('logo')->isValid()) {
@@ -1187,6 +1200,8 @@ class BrandController extends Controller
                 'region' => $request->region,
                 'monthly_posts' => $request->monthly_posts,
                 'status' => $request->status ?? $brand->status,
+                'trackedName' => $request->trackedName,
+                'allies' => $request->allies ?? [],
             ]);
 
             // Delete existing prompts and create new ones
