@@ -63,9 +63,13 @@ interface BrandVisibilityIndexProps {
 }
 
 export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, limit, hoveredDomain, onDomainHover, entities, onShowAllBrands, showAllBrandsButton, totalBrandsCount, brandLogo, brandName }: BrandVisibilityIndexProps) {
-    // Deduplicate by entity_name (case-insensitive), keeping first occurrence
+    // Deduplicate within the same entity_type by name — competitors with identical names are
+    // collapsed, but a competitor sharing a name with the brand is kept as a separate row.
     const dedupedStats = competitiveStats.filter((stat, index, arr) =>
-        arr.findIndex(s => s.entity_name.toLowerCase().trim() === stat.entity_name.toLowerCase().trim()) === index
+        arr.findIndex(s =>
+            s.entity_type === stat.entity_type &&
+            s.entity_name.toLowerCase().trim() === stat.entity_name.toLowerCase().trim()
+        ) === index
     );
     // Sort by visibility (higher is better)
     const sortedStats = [...dedupedStats].sort((a, b) => (b.visibility ?? 0) - (a.visibility ?? 0));

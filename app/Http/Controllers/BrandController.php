@@ -1036,7 +1036,7 @@ class BrandController extends Controller
     /**
      * Display the ranking page with all competitor stats.
      */
-    public function ranking(Brand $brand): Response
+    public function ranking(Request $request, Brand $brand): Response
     {
         /** @var User $user */
         $user = Auth::user();
@@ -1049,7 +1049,8 @@ class BrandController extends Controller
         // Get competitive stats with trends (all competitors)
         // Use mention-based visibility for accurate stats
         $competitiveAnalysisService = app(\App\Services\CompetitiveAnalysisService::class);
-        $competitiveStats = $competitiveAnalysisService->getMentionBasedVisibility($brand, 30);
+        $timezone = $request->input('timezone', '+00:00');
+        $competitiveStats = $competitiveAnalysisService->getMentionBasedVisibility($brand, 30, null, $timezone);
 
         return Inertia::render('brands/ranking', [
             'brand' => $brand,

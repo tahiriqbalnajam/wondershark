@@ -441,6 +441,7 @@ CRITICAL INSTRUCTIONS:
             foreach ($competitors as $index => $competitor) {
                 $placeholders[] = [
                     'id' => 0,
+                    'competitor_id' => $competitor->id,
                     'entity_type' => 'competitor',
                     'entity_name' => $competitor->name,
                     'entity_url' => $competitor->domain,
@@ -485,6 +486,7 @@ CRITICAL INSTRUCTIONS:
             }
             $statsArray[] = [
                 'id'                    => 0,
+                'competitor_id'         => $competitor->id,
                 'entity_type'           => 'competitor',
                 'entity_name'           => $competitor->name,
                 'entity_url'            => $competitor->domain,
@@ -845,7 +847,8 @@ CRITICAL INSTRUCTIONS:
         };
 
         if ($dailyEntityStats->isEmpty()) {
-            return $buildFallbackWithOverrides();
+            $fallback = $buildFallbackWithOverrides();
+            return $this->appendMissingAcceptedCompetitors($brand, $fallback, $days, $aiModelId, $timezone);
         }
 
         // Exclude manual override rows from this count so they never trigger the sparse-data path.
@@ -855,11 +858,12 @@ CRITICAL INSTRUCTIONS:
             ->where('is_manual_override', false)
             ->whereBetween('analyzed_at', [$startDate, $endDate])
             ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
-            ->distinct()
-            ->count(DB::raw('DATE(analyzed_at)'));
+            ->selectRaw("COUNT(DISTINCT DATE(CONVERT_TZ(analyzed_at, '+00:00', '$timezone'))) as cnt")
+            ->value('cnt');
 
         if ($distinctMentionDates < $distinctStatDates) {
-            return $buildFallbackWithOverrides();
+            $fallback = $buildFallbackWithOverrides();
+            return $this->appendMissingAcceptedCompetitors($brand, $fallback, $days, $aiModelId, $timezone);
         }
 
         // 2. Daily totals for SOV metadata (mention_data)
@@ -1010,6 +1014,7 @@ CRITICAL INSTRUCTIONS:
 
             $visibilityStats[] = [
                 'id'                    => $competitiveStat->id ?? 0,
+                'competitor_id'         => $competitorId,
                 'entity_type'           => $data['entity_type'],
                 'entity_name'           => $resolvedName,
                 'entity_url'            => $entityUrl,
@@ -1075,6 +1080,7 @@ CRITICAL INSTRUCTIONS:
 
             $visibilityStats[] = [
                 'id'                    => $competitor->id,
+                'competitor_id'         => $competitor->id,
                 'entity_type'           => 'competitor',
                 'entity_name'           => $competitor->name,
                 'entity_url'            => $competitor->domain ? 'https://'.explode('/', preg_replace('#^https?://(www\.)?#', '', strtolower($competitor->domain)))[0] : '',
@@ -1098,11 +1104,18 @@ CRITICAL INSTRUCTIONS:
             ];
         }
 
-        // Remove duplicates (prefer brand-type entry when name/domain collides)
+        // Remove duplicates within the same entity_type (brand vs competitor are intentionally kept separate).
+        // For URL key: scope by entity_type so a competitor sharing the brand domain is never dropped.
+        // For no-url entries: use competitor_id (reliable FK) instead of id which may be 0 for multiple entries.
         $visibilityStats = collect($visibilityStats)
             ->sortByDesc(fn ($item) => $item['entity_type'] === 'brand')
-            ->unique(fn ($item) => $item['entity_url'] ? strtolower(parse_url($item['entity_url'], PHP_URL_HOST) ?? $item['entity_url']) : 'no-domain-'.$item['id'])
-            ->unique(fn ($item) => strtolower(trim($item['entity_name'])))
+            ->unique(function ($item) {
+                $urlKey = $item['entity_url']
+                    ? strtolower(parse_url($item['entity_url'], PHP_URL_HOST) ?? $item['entity_url'])
+                    : 'no-domain-'.($item['competitor_id'] ?? $item['id']);
+                return $item['entity_type'].'|'.$urlKey;
+            })
+            ->unique(fn ($item) => $item['entity_type'].'|'.strtolower(trim($item['entity_name'])))
             ->values()
             ->all();
 
@@ -1135,6 +1148,90 @@ CRITICAL INSTRUCTIONS:
             ->get();
 
         if ($dailyEntityRows->count() <= 1) {
+            // brand_mentions is sparse — fall back to brand_competitive_stats for trend.
+            // Uses the same formula as the main path: (last - first) / first × 100.
+            $statRows = BrandCompetitiveStat::where('brand_id', $brand->id)
+                ->where('entity_type', $entityType)
+                ->where('is_manual_override', false)
+                ->when($competitorId, fn ($q) => $q->where('competitor_id', $competitorId))
+                ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
+                ->whereBetween('analyzed_at', [$currentPeriodStart, now()])
+                ->selectRaw("DATE(CONVERT_TZ(analyzed_at, '+00:00', '{$timezone}')) as date, AVG(visibility) as avg_vis, AVG(sentiment) as avg_sentiment")
+                ->groupByRaw("DATE(CONVERT_TZ(analyzed_at, '+00:00', '{$timezone}'))")
+                ->orderBy('date')
+                ->get();
+
+            if ($statRows->count() >= 2) {
+                // Build a unified daily series matching the graph's data source:
+                // use brand_mentions SOV where available (same override logic as the graph),
+                // fall back to brand_competitive_stats visibility for dates without mention data.
+                $mentionTotals = BrandMention::where('brand_id', $brand->id)
+                    ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
+                    ->whereBetween('analyzed_at', [$currentPeriodStart, now()])
+                    ->selectRaw("DATE(CONVERT_TZ(analyzed_at, '+00:00', '{$timezone}')) as date, SUM(mention_count) as total")
+                    ->groupByRaw("DATE(CONVERT_TZ(analyzed_at, '+00:00', '{$timezone}'))")
+                    ->get()->keyBy('date');
+
+                $entityMentionsByDate = BrandMention::where('brand_id', $brand->id)
+                    ->where('entity_type', $entityType)
+                    ->when($competitorId, fn ($q) => $q->where('competitor_id', $competitorId))
+                    ->when(! $competitorId, fn ($q) => $q->whereNull('competitor_id'))
+                    ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
+                    ->whereBetween('analyzed_at', [$currentPeriodStart, now()])
+                    ->selectRaw("DATE(CONVERT_TZ(analyzed_at, '+00:00', '{$timezone}')) as date, SUM(mention_count) as entity_mentions")
+                    ->groupByRaw("DATE(CONVERT_TZ(analyzed_at, '+00:00', '{$timezone}'))")
+                    ->get()->keyBy('date');
+
+                $unifiedSeries = [];
+                $sentimentSeries = [];
+                foreach ($statRows as $row) {
+                    $dayTotal = isset($mentionTotals[$row->date]) ? (float) $mentionTotals[$row->date]->total : 0;
+                    if ($dayTotal > 0 && isset($entityMentionsByDate[$row->date])) {
+                        $unifiedSeries[$row->date] = ((float) $entityMentionsByDate[$row->date]->entity_mentions / $dayTotal) * 100;
+                    } else {
+                        $unifiedSeries[$row->date] = (float) $row->avg_vis;
+                    }
+                    $sentimentSeries[$row->date] = (float) ($row->avg_sentiment ?? 50);
+                }
+
+                $visVals  = array_values($unifiedSeries);
+                $sentVals = array_values($sentimentSeries);
+
+                $firstVis  = $visVals[0];
+                $lastVis   = end($visVals);
+                $firstSent = $sentVals[0];
+                $lastSent  = end($sentVals);
+
+                // If first day = 0 there is no valid baseline; return 'new' to avoid
+                // an artificially inflated percentage (e.g. 0→50 would otherwise show 100%).
+                if ($firstVis <= 0) {
+                    return [
+                        'visibility_trend'  => 'new',
+                        'sov_trend'         => 'new',
+                        'sentiment_trend'   => 'stable',
+                        'position_trend'    => 'stable',
+                        'visibility_change' => 0,
+                        'sov_change'        => 0,
+                        'sentiment_change'  => 0,
+                        'position_change'   => 0,
+                    ];
+                }
+
+                $visChange  = (($lastVis  - $firstVis)  / $firstVis)  * 100;
+                $sentChange = $firstSent > 0 ? (($lastSent - $firstSent) / $firstSent) * 100 : 0;
+
+                return [
+                    'visibility_trend'  => $visChange  >  1 ? 'up' : ($visChange  < -1 ? 'down' : 'stable'),
+                    'sov_trend'         => $visChange  >  1 ? 'up' : ($visChange  < -1 ? 'down' : 'stable'),
+                    'sentiment_trend'   => $sentChange >  2 ? 'up' : ($sentChange < -2 ? 'down' : 'stable'),
+                    'position_trend'    => 'stable',
+                    'visibility_change' => round($visChange, 1),
+                    'sov_change'        => round($visChange, 1),
+                    'sentiment_change'  => round($sentChange, 1),
+                    'position_change'   => 0,
+                ];
+            }
+
             return [
                 'visibility_trend'  => 'new',
                 'sov_trend'         => 'new',
@@ -1175,11 +1272,23 @@ CRITICAL INSTRUCTIONS:
         $lastDayPosition   = end($dailyPosition);
 
         // ── Relative trend: (last - first) / first × 100 ────────────────────
+        // No valid baseline — brand just became visible. Return 'new' (same rule as fallback path).
+        if ($firstDaySov <= 0 && $lastDaySov > 0) {
+            return [
+                'visibility_trend'  => 'new',
+                'sov_trend'         => 'new',
+                'sentiment_trend'   => 'stable',
+                'position_trend'    => 'stable',
+                'visibility_change' => 0,
+                'sov_change'        => 0,
+                'sentiment_change'  => 0,
+                'position_change'   => 0,
+            ];
+        }
+
         $visibilityChange = 0;
         if ($firstDaySov > 0) {
             $visibilityChange = (($lastDaySov - $firstDaySov) / $firstDaySov) * 100;
-        } elseif ($lastDaySov > 0) {
-            $visibilityChange = 100;
         }
 
         $sentimentChange = 0;
@@ -1384,5 +1493,78 @@ CRITICAL INSTRUCTIONS:
         unset($dateData);
 
         return $chartData;
+    }
+
+    /**
+     * Append 0% placeholder rows for any accepted competitor not already present in $stats.
+     * Used by getMentionBasedVisibility() fallback paths so the BVI table always shows
+     * the full accepted-competitor set, matching what fillMissingCompetitorsInChartData()
+     * guarantees for the graph.
+     */
+    private function appendMissingAcceptedCompetitors(
+        Brand $brand,
+        array $stats,
+        int $days,
+        ?int $aiModelId,
+        string $timezone
+    ): array {
+        $presentIds = collect($stats)
+            ->where('entity_type', 'competitor')
+            ->pluck('competitor_id')
+            ->filter()
+            ->values()
+            ->all();
+
+        // Recalculate trends for all existing entries using calculateTrendsForEntity.
+        // The model's getTrends() used by buildFallbackStats has a <= 2 dates guard and
+        // a different formula, so it can return 'new' even when a clear trend is visible.
+        foreach ($stats as &$stat) {
+            $cid = isset($stat['competitor_id']) ? ($stat['competitor_id'] ?: null) : null;
+            $stat['trends'] = $this->calculateTrendsForEntity(
+                $brand,
+                $stat['entity_type'],
+                $cid,
+                $days,
+                $aiModelId,
+                null,
+                $timezone
+            );
+        }
+        unset($stat);
+
+        foreach ($brand->competitors()->accepted()->get() as $competitor) {
+            if (in_array($competitor->id, $presentIds)) {
+                continue;
+            }
+            $stats[] = [
+                'id'                    => $competitor->id,
+                'competitor_id'         => $competitor->id,
+                'entity_type'           => 'competitor',
+                'entity_name'           => $competitor->name,
+                'entity_url'            => $competitor->domain
+                    ? 'https://'.explode('/', preg_replace('#^https?://(www\.)?#', '', strtolower($competitor->domain)))[0]
+                    : '',
+                'visibility'            => 0,
+                'sov'                   => 0,
+                'sentiment'             => null,
+                'position'              => 0,
+                'analyzed_at'           => now()->toDateTimeString(),
+                'trends'                => $this->calculateTrendsForEntity($brand, 'competitor', $competitor->id, $days, $aiModelId, null, $timezone),
+                'visibility_percentage' => '0%',
+                'sov_percentage'        => '0%',
+                'position_formatted'    => '#0',
+                'sentiment_level'       => 'N/A',
+                'mention_data'          => [
+                    'prompts_mentioned'  => 0,
+                    'total_prompts'      => 0,
+                    'total_mentions'     => 0,
+                    'total_all_mentions' => 0,
+                    'share_of_voice'     => 0,
+                ],
+            ];
+        }
+
+        usort($stats, fn ($a, $b) => $b['visibility'] <=> $a['visibility']);
+        return $stats;
     }
 }
