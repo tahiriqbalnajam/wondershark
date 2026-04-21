@@ -1126,7 +1126,7 @@ class BrandController extends Controller
             $request->merge(['website' => $website]);
         }
         $request->validate([
-            'name' => 'required|string|max:255|unique:brands,name,'.$brand->id,
+            'name' => 'required|string|max:255',
             'website' => 'nullable|url|max:255',
             'description' => 'nullable|string|max:1000',
             'country' => 'nullable|string|max:100',
