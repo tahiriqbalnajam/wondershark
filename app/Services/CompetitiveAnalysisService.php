@@ -524,7 +524,7 @@ CRITICAL INSTRUCTIONS:
     public function getHistoricalStatsForChart(Brand $brand, ?int $days = 30, ?int $aiModelId = null, string $timezone = '+00:00'): array
     {
         $startDate = now()->subDays($days);
-        $endDate = now();
+        $endDate = now()->endOfDay();
 
         // Get competitive stats ordered by date
         $query = BrandCompetitiveStat::where('brand_id', $brand->id)
@@ -736,7 +736,7 @@ CRITICAL INSTRUCTIONS:
     public function getMentionBasedVisibility(Brand $brand, ?int $days = 30, ?int $aiModelId = null, string $timezone = '+00:00'): array
     {
         $startDate = now()->subDays($days);
-        $endDate   = now();
+        $endDate   = now()->endOfDay();
 
         // Pre-load competitors so we always display the current name, not the stale
         // entity_name stored in brand_mentions at analysis time (which can be outdated
@@ -803,10 +803,20 @@ CRITICAL INSTRUCTIONS:
             })
             ->map(fn ($g) => (float) $g->avg('visibility'));
 
+        // Total distinct days analysed in this period = x-axis points shown in the graph.
+        // Used as denominator so silent days (no mention) still reduce the average.
+        $distinctStatDates = (int) DB::table('brand_competitive_stats')
+            ->where('brand_id', $brand->id)
+            ->where('is_manual_override', false)
+            ->whereBetween('analyzed_at', [$startDate, $endDate])
+            ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
+            ->selectRaw("COUNT(DISTINCT DATE(CONVERT_TZ(analyzed_at, '+00:00', '$timezone'))) as cnt")
+            ->value('cnt');
+
         // Shared logic: build per-entity value lists from AI stats + overrides, then overlay
         // onto buildFallbackStats metadata. Used when mention data is absent or sparse.
         // Rule per day: use manual override if one exists, otherwise use the AI stat value.
-        $buildFallbackWithOverrides = function () use ($brand, $aiModelId, $aiVisibilityByDayKey, $dailyOverrides, $latestOverridePerEntity): array {
+        $buildFallbackWithOverrides = function () use ($brand, $aiModelId, $aiVisibilityByDayKey, $dailyOverrides, $latestOverridePerEntity, $distinctStatDates): array {
             $entityValuesMap = [];
             foreach ($aiVisibilityByDayKey as $dayKey => $aiValue) {
                 [, $entityKey] = explode('|', $dayKey, 2);
@@ -819,16 +829,23 @@ CRITICAL INSTRUCTIONS:
                 if ($aiVisibilityByDayKey->has($overrideKey)) continue;
                 [, $entityKey] = explode('|', $overrideKey, 2);
                 $entityValuesMap[$entityKey][] = $overrideValue;
+
+                
             }
+
+            // To get just the values as a flat array:
+            $overrideValues_check = $dailyOverrides->values()->all();
+           
             if (empty($entityValuesMap)) {
                 return $this->buildFallbackStats($brand, $aiModelId);
             }
             $fallbackResult = $this->buildFallbackStats($brand, $aiModelId);
-            return array_map(function ($stat) use ($entityValuesMap, $latestOverridePerEntity) {
+            $denom = $distinctStatDates > 0 ? $distinctStatDates : max(1, count($overrideValues_check));
+            return array_map(function ($stat) use ($entityValuesMap, $latestOverridePerEntity, $overrideValues_check, $denom) {
+               
                 $entityKey = ($stat['competitor_id'] ?? null) ? 'c_'.$stat['competitor_id'] : 'brand';
-                // If a manual override exists, show it directly instead of averaging.
                 if (isset($latestOverridePerEntity[$entityKey])) {
-                    $overrideVal                   = $latestOverridePerEntity[$entityKey]['value'];
+                    $overrideVal                   = array_sum($overrideValues_check) / $denom;
                     $stat['visibility']            = round($overrideVal, 2);
                     $stat['visibility_percentage'] = round($overrideVal, 1).'%';
                     $stat['sov']                   = round($overrideVal, 2);
@@ -837,7 +854,7 @@ CRITICAL INSTRUCTIONS:
                 }
                 $values = $entityValuesMap[$entityKey] ?? null;
                 if (! $values) return $stat;
-                $avgVis                        = array_sum($values) / count($values);
+                $avgVis                        = array_sum($values) / $denom;
                 $stat['visibility']            = round($avgVis, 2);
                 $stat['visibility_percentage'] = round($avgVis, 1).'%';
                 $stat['sov']                   = round($avgVis, 2);
@@ -853,13 +870,6 @@ CRITICAL INSTRUCTIONS:
 
         // Exclude manual override rows from this count so they never trigger the sparse-data path.
         $distinctMentionDates = $dailyEntityStats->pluck('date')->unique()->count();
-        $distinctStatDates    = DB::table('brand_competitive_stats')
-            ->where('brand_id', $brand->id)
-            ->where('is_manual_override', false)
-            ->whereBetween('analyzed_at', [$startDate, $endDate])
-            ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
-            ->selectRaw("COUNT(DISTINCT DATE(CONVERT_TZ(analyzed_at, '+00:00', '$timezone'))) as cnt")
-            ->value('cnt');
 
         if ($distinctMentionDates < $distinctStatDates) {
             $fallback = $buildFallbackWithOverrides();
@@ -890,12 +900,12 @@ CRITICAL INSTRUCTIONS:
             $dayTotals   = $dailyTotals[$row->date] ?? null;
             $totalMentionsThatDay = $dayTotals?->total_mentions ?? 0;
 
-            // Use the AI-scored visibility from brand_competitive_stats (same source as the graph).
-            // Fall back to mention-based SOV only if no stat exists for this day.
+            // Use SOV from brand_mentions (same formula as the graph) so table values mirror graph.
+            // Fall back to brand_competitive_stats only when no mention data exists for this day.
             $aiDayKey        = $row->date.'|'.$key;
-            $dailyVisibility = $aiVisibilityByDayKey->has($aiDayKey)
-                ? $aiVisibilityByDayKey->get($aiDayKey)
-                : ($totalMentionsThatDay > 0 ? ($row->entity_mentions / $totalMentionsThatDay) * 100 : 0);
+            $dailyVisibility = $totalMentionsThatDay > 0
+                ? ($row->entity_mentions / $totalMentionsThatDay) * 100
+                : ($aiVisibilityByDayKey->has($aiDayKey) ? $aiVisibilityByDayKey->get($aiDayKey) : 0);
 
             // If a per-day manual override exists for this date/entity, use it instead.
             $overrideDayKey = $row->date.'|'.$key;
@@ -951,10 +961,9 @@ CRITICAL INSTRUCTIONS:
         $visibilityStats = [];
 
         foreach ($entityData as $key => $data) {
-            // Visibility = average of daily presence-frequency values
-            $avgVisibility = count($data['visibility_values']) > 0
-                ? array_sum($data['visibility_values']) / count($data['visibility_values'])
-                : 0;
+            // Divide by all graph days so silent days reduce the average.
+            $graphDays     = $distinctStatDates > 0 ? $distinctStatDates : max(1, count($data['visibility_values']));
+            $avgVisibility = array_sum($data['visibility_values']) / $graphDays;
 
             // SOV = aggregate over the full period
             $sov = $totalAllMentions > 0
@@ -1323,7 +1332,7 @@ CRITICAL INSTRUCTIONS:
     public function getHistoricalMentionVisibility(Brand $brand, ?int $days = 30, ?int $aiModelId = null, string $timezone = '+00:00'): array
     {
         $startDate = now()->subDays($days);
-        $endDate = now();
+        $endDate = now()->endOfDay();
 
         // Get daily aggregated mention data (competitor_id included for override matching)
         $dailyStatsQuery = BrandMention::where('brand_id', $brand->id)
