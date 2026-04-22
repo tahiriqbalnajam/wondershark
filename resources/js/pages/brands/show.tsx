@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
 import HeadingSmall from '@/components/heading-small';
-import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Calendar, Trophy, TrendingUp, TrendingDown, Bot, User, Download, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Calendar, Trophy, TrendingUp, TrendingDown, Bot, User, Download, RefreshCw, Clock, Zap } from 'lucide-react';
 import { VisibilityChart } from '@/components/chart/visibility';
 import { BrandVisibilityIndex } from '@/components/dashboard-table/brand-visibility';
 import { AiCitations } from '@/components/chat/ai-citations';
@@ -212,6 +212,28 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
     const [selectedCompetitorDomain, setSelectedCompetitorDomain] = useState<string | null>(null);
     const [triggeringAnalysis, setTriggeringAnalysis] = useState(false);
     const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const { trial } = usePage<{ trial?: { is_on_trial: boolean; has_ever_subscribed: boolean; trial_ends_at: string; trial_discount: number } }>().props;
+    const isOnTrial = !!(trial?.is_on_trial && !trial?.has_ever_subscribed);
+    const trialDiscount: number = trial?.trial_discount ?? 0;
+    const [trialTimeLeft, setTrialTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
+
+    useEffect(() => {
+        if (!isOnTrial || !trial?.trial_ends_at) return;
+        const compute = () => {
+            const diff = new Date(trial.trial_ends_at).getTime() - Date.now();
+            if (diff <= 0) { setTrialTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 }); return; }
+            setTrialTimeLeft({
+                days: Math.floor(diff / 86400000),
+                hours: Math.floor((diff % 86400000) / 3600000),
+                minutes: Math.floor((diff % 3600000) / 60000),
+                seconds: Math.floor((diff % 60000) / 1000),
+            });
+        };
+        compute();
+        const id = setInterval(compute, 1000);
+        return () => clearInterval(id);
+    }, [trial?.trial_ends_at, isOnTrial]);
 
     // Auto-refresh every 30s while analysis is still running
     useEffect(() => {
@@ -738,6 +760,54 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
     return (
         <AppLayout title={brand.name}>
             <Head title={brand.name} />
+
+            {/* ── Trial discount banner ───────────────────────────────────── */}
+            {isOnTrial && trialDiscount > 0 && (
+                <div className="mb-4 rounded-xl border-2 border-orange-300 bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 p-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white">
+                                <Zap className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-2xl font-extrabold text-orange-500">{trialDiscount}% OFF</span>
+                                    <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700 border border-orange-300">1st month only</span>
+                                </div>
+                                <p className="text-sm text-orange-700 mt-0.5">Subscribe during your free trial and get <strong>{trialDiscount}% off</strong> your first month. Discount applied automatically.</p>
+                            </div>
+                        </div>
+                        {trialTimeLeft && (
+                            <div className="flex flex-col items-center sm:items-end gap-1 shrink-0">
+                                <div className="flex items-center gap-1.5 text-xs font-medium text-orange-600">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    <span>Trial ends in</span>
+                                </div>
+                                <div className="flex gap-1">
+                                    {trialTimeLeft.days > 0 && (
+                                        <div className="flex flex-col items-center rounded-lg bg-orange-500 px-2 py-1 text-white min-w-[40px]">
+                                            <span className="text-lg font-bold leading-none tabular-nums">{trialTimeLeft.days}</span>
+                                            <span className="text-[10px]">days</span>
+                                        </div>
+                                    )}
+                                    <div className="flex flex-col items-center rounded-lg bg-orange-500 px-2 py-1 text-white min-w-[40px]">
+                                        <span className="text-lg font-bold leading-none tabular-nums">{String(trialTimeLeft.hours).padStart(2, '0')}</span>
+                                        <span className="text-[10px]">hrs</span>
+                                    </div>
+                                    <div className="flex flex-col items-center rounded-lg bg-orange-500 px-2 py-1 text-white min-w-[40px]">
+                                        <span className="text-lg font-bold leading-none tabular-nums">{String(trialTimeLeft.minutes).padStart(2, '0')}</span>
+                                        <span className="text-[10px]">min</span>
+                                    </div>
+                                    <div className="flex flex-col items-center rounded-lg bg-orange-500 px-2 py-1 text-white min-w-[40px]">
+                                        <span className="text-lg font-bold leading-none tabular-nums">{String(trialTimeLeft.seconds).padStart(2, '0')}</span>
+                                        <span className="text-[10px]">sec</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* ── Analysis-in-progress banner ─────────────────────────────── */}
             {analysisStatus?.has_pending && (
