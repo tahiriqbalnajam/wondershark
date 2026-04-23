@@ -45,6 +45,7 @@ Route::middleware('auth')->group(function () {
 
         Route::get('settings/agency', [AgencyController::class, 'agency'])->name('settings.agency');
         Route::post('settings/agency', [AgencyController::class, 'updateAgency'])->name('settings.agency.update');
+        Route::put('settings/agency/email', [AgencyController::class, 'updateEmail'])->name('settings.agency.update-email');
         Route::delete('settings/agency', [AgencyController::class, 'deleteAgency'])->name('settings.agency.delete');
 
         Route::get('settings/integration', [AgencyController::class, 'integration'])->name('settings.integration');

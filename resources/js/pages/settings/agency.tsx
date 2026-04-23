@@ -34,7 +34,11 @@ type PasswordForm = {
     password_confirmation: string;
 };
 
-export default function Agency({ agency }: { agency: { name: string; url?: string; logo?: string; color?: string } }) {
+type EmailForm = {
+    email: string;
+};
+
+export default function Agency({ agency }: { agency: { name: string; url?: string; logo?: string; color?: string; email?: string } }) {
 const { data, setData, post, errors, processing, recentlySuccessful } = useForm<AgencyForm>({
     name: agency.name || '',
     url: agency.url || '',
@@ -98,6 +102,25 @@ const submitPassword: FormEventHandler = (e) => {
         putPassword(route('password.update'), {
             preserveScroll: true,
             onSuccess: () => resetPassword(),
+        });
+    };
+
+    // Email form
+    const { 
+        data: emailData, 
+        setData: setEmailData, 
+        put: putEmail, 
+        errors: emailErrors, 
+        processing: emailProcessing, 
+        recentlySuccessful: emailRecentlySuccessful,
+    } = useForm<Required<EmailForm>>({
+        email: agency.email || '',
+    });
+
+    const submitEmail: FormEventHandler = (e) => {
+        e.preventDefault();
+        putEmail(route('settings.agency.update-email'), {
+            preserveScroll: true,
         });
     };
 
@@ -350,6 +373,50 @@ const submitPassword: FormEventHandler = (e) => {
                             </form>
                         </CardContent>
                     </Card>
+
+                    {/* Email Update Section */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Email Address</CardTitle>
+                            <CardDescription>Update your email address for account notifications and billing</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={submitEmail} className="space-y-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="email">Email Address</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        className="max-w-md form-control"
+                                        value={emailData.email}
+                                        onChange={(e) => setEmailData('email', e.target.value)}
+                                        autoComplete="email"
+                                        placeholder="Enter email address"
+                                    />
+                                    <InputError className="mt-2" message={emailErrors.email} />
+                                </div>
+
+                                <div className="flex items-center">
+                                    <div className="flex items-center gap-4">
+                                        <Button className='primary-btn' disabled={emailProcessing}>
+                                            {emailProcessing ? 'Updating...' : 'Update Email'}
+                                        </Button>
+
+                                        <Transition
+                                            show={emailRecentlySuccessful}
+                                            enter="transition ease-in-out"
+                                            enterFrom="opacity-0"
+                                            leave="transition ease-in-out"
+                                            leaveTo="opacity-0"
+                                        >
+                                            <p className="text-sm text-green-600">Email updated successfully!</p>
+                                        </Transition>
+                                    </div>
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
+
                     <div className="flex justify-start">
                         <Link className="primary-btn btn-logout" method="post" href={route('logout')} as="button" onClick={handleLogout}>
                             <LogOut className="mr-2" />

@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -164,6 +165,7 @@ class AgencyController extends Controller
                 'url' => $user->url,
                 'logo' => $user->logo ? asset('storage/'.$user->logo) : null,
                 'color' => $user->agency_color ?? '',
+                'email' => $user->email,
             ],
         ]);
     }
@@ -313,6 +315,74 @@ class AgencyController extends Controller
 
 
         return back()->with('status', 'Agency information updated successfully!');
+    }
+
+    /**
+     * Update the agency email address.
+     */
+    public function updateEmail(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,'.Auth::id()],
+        ]);
+
+        /** @var User $user */
+        $user = Auth::user();
+
+        // Get the actual agency user if logged in as agency member
+        if ($user->hasRole('agency_member')) {
+            $agencyId = $user->agencyMembership?->agency_id;
+            $agencyUser = User::find($agencyId);
+            if (!$agencyUser) {
+                return back()->withErrors(['email' => 'Agency account not found.']);
+            }
+            $user = $agencyUser;
+        }
+
+        $oldEmail = $user->email;
+        $newEmail = $request->email;
+
+        // Update the email in the database
+        $user->update([
+            'email' => $newEmail,
+        ]);
+
+        // Update Stripe customer email if user has a subscription with stripe_customer_id
+        $subscription = $user->subscriptions()->whereNotNull('stripe_customer_id')->latest()->first();
+        
+        if ($subscription && $subscription->stripe_customer_id) {
+            try {
+                $stripeService = app(\App\Services\StripeService::class);
+                
+                // Update the email in Stripe using the stored customer ID
+                $stripeService->updateCustomerEmail($subscription->stripe_customer_id, $newEmail);
+                
+                Log::info('Updated Stripe customer email', [
+                    'user_id' => $user->id,
+                    'subscription_id' => $subscription->id,
+                    'stripe_customer_id' => $subscription->stripe_customer_id,
+                    'old_email' => $oldEmail,
+                    'new_email' => $newEmail,
+                ]);
+            } catch (\Exception $e) {
+                Log::warning('Failed to update Stripe customer email', [
+                    'user_id' => $user->id,
+                    'stripe_customer_id' => $subscription->stripe_customer_id,
+                    'old_email' => $oldEmail,
+                    'new_email' => $newEmail,
+                    'error' => $e->getMessage(),
+                ]);
+                // Don't fail the whole operation if Stripe update fails
+            }
+        } else {
+            Log::info('No Stripe customer ID found, skipping Stripe email update', [
+                'user_id' => $user->id,
+                'old_email' => $oldEmail,
+                'new_email' => $newEmail,
+            ]);
+        }
+
+        return back()->with('status', 'Email address updated successfully!');
     }
 
     /**

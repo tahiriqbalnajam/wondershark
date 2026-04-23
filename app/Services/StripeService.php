@@ -57,6 +57,41 @@ class StripeService
     }
 
     /**
+     * Update a Stripe customer's email address
+     */
+    public function updateCustomerEmail(string $customerId, string $newEmail)
+    {
+        return $this->stripe->customers->update($customerId, [
+            'email' => $newEmail,
+        ]);
+    }
+
+    /**
+     * Find a Stripe customer by email address
+     */
+    public function findCustomerByEmail(string $email)
+    {
+        try {
+            $customers = $this->stripe->customers->search([
+                'query' => "email:'{$email}'",
+                'limit' => 1,
+            ]);
+
+            if (count($customers->data) > 0) {
+                return $customers->data[0];
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            \Log::error('Failed to search Stripe customer by email', [
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
      * Get or create a Stripe product
      */
     public function getOrCreateProduct(string $name, string $description = '')

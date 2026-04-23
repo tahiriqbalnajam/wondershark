@@ -120,6 +120,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get user's subscriptions.
+     */
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    /**
      * Check if user can access a brand (either as agency owner or agency member).
      */
     public function canAccessBrand(Brand $brand): bool
