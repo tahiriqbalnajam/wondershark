@@ -386,6 +386,7 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
             Route::get('subscriptions/success', [\App\Http\Controllers\Agency\SubscriptionController::class, 'success'])->name('subscriptions.success');
             Route::post('subscriptions/update', [\App\Http\Controllers\Agency\SubscriptionController::class, 'update'])->name('subscriptions.update');
             Route::post('subscriptions/cancel', [\App\Http\Controllers\Agency\SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
+            Route::post('subscriptions/retention-discount', [\App\Http\Controllers\Agency\SubscriptionController::class, 'applyRetentionDiscount'])->name('subscriptions.retention-discount');
             Route::post('subscriptions/reactivate', [\App\Http\Controllers\Agency\SubscriptionController::class, 'reactivate'])->name('subscriptions.reactivate');
             Route::get('subscriptions/status', [\App\Http\Controllers\Agency\SubscriptionController::class, 'getStatus'])->name('subscriptions.status');
             Route::post('subscriptions/billing-portal', [\App\Http\Controllers\Agency\SubscriptionController::class, 'billingPortal'])->name('subscriptions.billing-portal');
@@ -434,6 +435,7 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
                         'cancel_at_period_end' => $subscription->cancel_at_period_end,
                         'cancel_at' => $subscription->cancel_at?->format('M d, Y'),
                         'current_period_end' => $subscription->current_period_end?->format('M d, Y'),
+                        'has_stripe_subscription' => ! empty($subscription->stripe_subscription_id),
                     ] : null,
                     'stripePublishableKey' => $stripePublishableKey,
                 ]);
@@ -449,6 +451,7 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
         Route::get('subscriptions/success', [\App\Http\Controllers\Brand\SubscriptionController::class, 'success'])->name('subscriptions.success');
         Route::post('subscriptions/update', [\App\Http\Controllers\Brand\SubscriptionController::class, 'update'])->name('subscriptions.update');
         Route::post('subscriptions/cancel', [\App\Http\Controllers\Brand\SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
+        Route::post('subscriptions/retention-discount', [\App\Http\Controllers\Brand\SubscriptionController::class, 'applyRetentionDiscount'])->name('subscriptions.retention-discount');
         Route::post('subscriptions/reactivate', [\App\Http\Controllers\Brand\SubscriptionController::class, 'reactivate'])->name('subscriptions.reactivate');
         Route::get('subscriptions/status', [\App\Http\Controllers\Brand\SubscriptionController::class, 'getStatus'])->name('subscriptions.status');
         Route::post('subscriptions/billing-portal', [\App\Http\Controllers\Brand\SubscriptionController::class, 'billingPortal'])->name('subscriptions.billing-portal');
@@ -500,6 +503,7 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
                     'cancel_at' => $subscription->cancel_at?->format('M d, Y'),
                     'current_period_end' => $subscription->current_period_end?->format('M d, Y'),
                     'current_period_start' => $subscription->current_period_start?->format('M d, Y'),
+                    'has_stripe_subscription' => ! empty($subscription->stripe_subscription_id),
                 ] : null,
                 'stripePublishableKey' => $stripePublishableKey,
                 'aiModels' => $aiModels->map(fn ($m) => [

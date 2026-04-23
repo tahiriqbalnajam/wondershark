@@ -431,6 +431,29 @@ class StripeService
         return $this->stripe->subscriptions->create($params);
     }
 
+        /**
+     * Apply a one-time 50% retention discount to an existing subscription's next invoice.
+     */
+    public function applyRetentionDiscount(string $stripeSubscriptionId): void
+    {
+        $couponId = 'retention_discount_50pct';
+
+        try {
+            $coupon = $this->stripe->coupons->retrieve($couponId);
+        } catch (\Stripe\Exception\InvalidRequestException $e) {
+            $coupon = $this->stripe->coupons->create([
+                'id'          => $couponId,
+                'percent_off' => 50,
+                'duration'    => 'once',
+                'name'        => '50% off next month (retention)',
+            ]);
+        }
+
+        $this->stripe->subscriptions->update($stripeSubscriptionId, [
+            'discounts' => [['coupon' => $coupon->id]],
+        ]);
+    }
+    
     /**
      * Get or create a one-time trial discount coupon (applies to first invoice only).
      */

@@ -559,6 +559,29 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * Apply 50% retention discount to next billing cycle and keep subscription active
+     */
+    public function applyRetentionDiscount(Request $request)
+    {
+        try {
+            $user = Auth::user();
+
+            $subscription = Subscription::where('user_id', $user->id)
+                ->where('status', 'active')
+                ->firstOrFail();
+
+            if (! $subscription->is_manual && $subscription->stripe_subscription_id) {
+                $this->stripeService->applyRetentionDiscount($subscription->stripe_subscription_id);
+            }
+
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            Log::error('Retention discount failed: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to apply discount: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Reactivate subscription that was scheduled for cancellation
      */
     public function reactivate(Request $request)

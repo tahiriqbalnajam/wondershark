@@ -17,6 +17,7 @@ interface SubscriptionData {
   cancel_at_period_end: boolean;
   cancel_at: string | null;
   current_period_end: string;
+  has_stripe_subscription: boolean;
 }
 
 interface AgencyData {
@@ -297,6 +298,8 @@ export default function AgencyBillingPage() {
         onConfirm={confirmCancel}
         loading={loading}
         cancelDate={subscription?.cancel_at || subscription?.current_period_end}
+        retentionEndpoint="/agency/subscriptions/retention-discount"
+        hasStripeSubscription={subscription?.has_stripe_subscription ?? false}
       />
       <div className="w-full overflow-x-hidden">
         <div className="mx-auto md:p-8">

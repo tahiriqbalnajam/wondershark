@@ -17,6 +17,7 @@ interface SubscriptionData {
   cancel_at_period_end: boolean;
   cancel_at: string | null;
   current_period_end: string;
+  has_stripe_subscription: boolean;
 }
 
 interface AiModelData {
@@ -256,6 +257,7 @@ export default function BrandBillingPage() {
         onConfirm={confirmCancel}
         loading={loading}
         cancelDate={subscription?.cancel_at || subscription?.current_period_end}
+        hasStripeSubscription={subscription?.has_stripe_subscription ?? false}
       />
       <div className="w-full overflow-x-hidden">
         <div className="mx-auto p-4 md:p-8">
