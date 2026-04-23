@@ -1372,7 +1372,10 @@ class BrandController extends Controller
         $request->validate([
             'website' => 'required|url',
             'description' => 'nullable|string|max:1000',
+            'brand_id' => 'nullable|integer|exists:brands,id',
         ]);
+
+        $brand = $request->brand_id ? \App\Models\Brand::find($request->brand_id) : null;
 
         try {
             $aiService = app(\App\Services\AIPromptService::class);
@@ -1389,12 +1392,11 @@ class BrandController extends Controller
 
             $allPrompts = [];
             $order = 1;
-            $tempSessionId = 'temp_'.uniqid(); // Temporary session to avoid conflicts
+            $tempSessionId = 'temp_'.uniqid();
 
             // Generate prompts from each enabled model
             foreach ($enabledModels as $aiModel) {
                 try {
-                    // Generate prompts (they'll be stored in GeneratedPrompt temporarily)
                     $generatedPrompts = $aiService->generatePromptsForWebsite(
                         $request->website,
                         $tempSessionId,
@@ -1405,21 +1407,55 @@ class BrandController extends Controller
 
                     if (! empty($generatedPrompts)) {
                         foreach ($generatedPrompts as $generated) {
+                            $visibility = $this->generateMockVisibility();
+                            $sentiment  = $this->generateMockSentiment();
+                            $position   = $this->generateMockPosition();
+                            $volume     = $this->generateMockVolume();
+
+                            // Save directly to brand_prompts if brand_id was provided
+                            if ($brand) {
+                                $existing = \App\Models\BrandPrompt::where('brand_id', $brand->id)
+                                    ->where('prompt', trim($generated->prompt))
+                                    ->first();
+
+                                if (! $existing) {
+                                    $saved = \App\Models\BrandPrompt::create([
+                                        'brand_id'    => $brand->id,
+                                        'prompt'      => trim($generated->prompt),
+                                        'order'       => $order,
+                                        'is_active'   => false,
+                                        'status'      => 'suggested',
+                                        'ai_provider' => $aiModel->name,
+                                        'ai_model_id' => $aiModel->id,
+                                        'visibility'  => $visibility,
+                                        'sentiment'   => $sentiment,
+                                        'position'    => $position,
+                                    ]);
+                                    $promptId  = $saved->id;
+                                    $createdAt = $saved->created_at->toISOString();
+                                } else {
+                                    $promptId  = $existing->id;
+                                    $createdAt = $existing->created_at->toISOString();
+                                }
+                            } else {
+                                $promptId  = 'temp_'.uniqid();
+                                $createdAt = now()->toISOString();
+                            }
+
                             $allPrompts[] = [
-                                'id' => 'temp_'.uniqid(), // Temporary ID until saved to brand_prompts
-                                'prompt' => $generated->prompt,
-                                'source' => $aiModel->name,
+                                'id'          => $promptId,
+                                'prompt'      => $generated->prompt,
+                                'source'      => $aiModel->name,
                                 'ai_provider' => $aiModel->display_name,
                                 'is_selected' => false,
-                                'order' => $order++,
-                                'created_at' => now()->toISOString(),
-                                // Add mock stats
-                                'visibility' => $this->generateMockVisibility(),
-                                'sentiment' => $this->generateMockSentiment(),
-                                'position' => $this->generateMockPosition(),
-                                'mentions' => $this->generateMockMentions(),
-                                'volume' => $this->generateMockVolume(),
-                                'location' => 'USA',
+                                'order'       => $order++,
+                                'created_at'  => $createdAt,
+                                'visibility'  => $visibility,
+                                'sentiment'   => $sentiment,
+                                'position'    => $position,
+                                'mentions'    => $this->generateMockMentions(),
+                                'volume'      => $volume,
+                                'location'    => 'USA',
                             ];
                         }
                     }

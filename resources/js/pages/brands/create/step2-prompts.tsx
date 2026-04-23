@@ -178,9 +178,10 @@ export default function Step2Prompts({
                 const existingIds = new Set(prev.map(p => p.id));
                 const newPrompts = aiGeneratedPrompts.filter(p => !existingIds.has(p.id));
 
-                // Save new prompts to database immediately
-                if (newPrompts.length > 0 && brandId) {
-                    saveBulkPromptsToDatabase(newPrompts);
+                // Only bulk-save prompts that still have temp/non-numeric IDs (real IDs come from the server now)
+                const unsaved = newPrompts.filter(p => !Number.isFinite(p.id) || p.id <= 0);
+                if (unsaved.length > 0 && brandId) {
+                    saveBulkPromptsToDatabase(unsaved);
                 }
 
                 return [...prev, ...newPrompts];

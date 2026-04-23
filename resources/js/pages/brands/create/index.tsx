@@ -417,6 +417,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                     website: data.website,
                     description: data.description,
                     keywords: data.description, // Pass keywords/description for prompt generation
+                    brand_id: existingData.brand?.id ?? null,
                 })
             });
 
