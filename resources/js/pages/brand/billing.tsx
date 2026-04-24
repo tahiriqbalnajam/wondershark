@@ -310,10 +310,7 @@ export default function BrandBillingPage() {
         )}
 
         <section className="mb-8">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold mb-1">Plan</h2>
-            <p className="text-muted-foreground">Designed for every stage of your journey. If you can't find something, message us</p>
-          </div>
+         
           {subscription && (
             <div className="border rounded-lg p-4 mb-4">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -360,7 +357,7 @@ export default function BrandBillingPage() {
           )}
         </section>
         <section className="mb-8">
-          <h2 className="text-lg font-semibold mb-2">Base Plan</h2>
+          <h2 className="text-lg font-semibold mb-2">Do It Yourself Plan</h2>
           <p className="text-muted-foreground mb-4">Select your desired subscription plan</p>
           {/* Growth Plan - Single Plan */}
           <div

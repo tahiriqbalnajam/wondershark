@@ -422,6 +422,8 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
                     ? \App\Models\SystemSetting::get('stripe_live_publishable_key')
                     : \App\Models\SystemSetting::get('stripe_test_publishable_key');
                 
+                $aiModels = \App\Models\AiModel::enabled()->ordered()->get(['name', 'display_name']);
+                
                 return Inertia::render('agency/billing', [
                     'agency' => [
                         'name' => $user->name,
@@ -438,6 +440,10 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
                         'has_stripe_subscription' => ! empty($subscription->stripe_subscription_id),
                     ] : null,
                     'stripePublishableKey' => $stripePublishableKey,
+                    'aiModels' => $aiModels->map(fn ($m) => [
+                        'name' => $m->name,
+                        'display_name' => $m->display_name,
+                    ]),
                 ]);
             })->name('billing')->middleware(['role.permission:null,agency', 'sync.subscription']);
         });
