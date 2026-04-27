@@ -44,7 +44,7 @@ class AiModelSeeder extends Seeder
                 'prompts_per_brand' => 25,
                 'api_config' => [
                     'api_key' => '',
-                    'model' => 'pplx-7b-chat',
+                    'model' => 'sonar-pro',
                     'endpoint' => 'https://api.perplexity.ai/chat/completions',
                 ],
                 'order' => 3,

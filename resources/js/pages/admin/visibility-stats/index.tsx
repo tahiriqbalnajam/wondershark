@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Drawer, DrawerClose, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import AppLayout from '@/layouts/app-layout';
-import { BarChart3, CalendarDays, RotateCcw, Pencil, Check, X } from 'lucide-react';
+import { BarChart3, CalendarDays, RotateCcw, Pencil, Check, X, AlertCircle } from 'lucide-react';
 
 type Stat = {
     id: number;
@@ -225,9 +225,20 @@ export default function AdminVisibilityStatsIndex({ agencies, brands, stats, sel
                 {/* Entity table */}
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <BarChart3 className="h-5 w-5" />
-                            {selectedBrand ? `${selectedBrand.name} — Current Averages` : 'Select a brand to view stats'}
+                        <CardTitle className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <BarChart3 className="h-5 w-5" />
+                                {selectedBrand ? `${selectedBrand.name} — Current Averages` : 'Select a brand to view stats'}
+                            </div>
+                            {selectedBrand && stats.length > 0 && (() => {
+                                const overrideCount = stats.filter(s => s.has_manual_override).length;
+                                return overrideCount > 0 ? (
+                                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                                        <AlertCircle className="h-3 w-3 mr-1" />
+                                        {overrideCount} {overrideCount === 1 ? 'entity' : 'entities'} with overrides
+                                    </Badge>
+                                ) : null;
+                            })()}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -264,8 +275,17 @@ export default function AdminVisibilityStatsIndex({ agencies, brands, stats, sel
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-1">
-                                                    <Button variant="ghost" size="sm" className="h-8 px-2 text-xs gap-1" onClick={() => openDailyDrawer(stat)}>
-                                                        <CalendarDays className="h-3.5 w-3.5" />Edit Days
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className={`h-8 px-2 text-xs gap-1 ${stat.has_manual_override ? 'text-amber-700 hover:text-amber-800' : ''}`}
+                                                        onClick={() => openDailyDrawer(stat)}
+                                                    >
+                                                        <CalendarDays className="h-3.5 w-3.5" />
+                                                        Edit Days
+                                                        {stat.has_manual_override && (
+                                                            <AlertCircle className="h-3 w-3 text-amber-600" />
+                                                        )}
                                                     </Button>
                                                     {stat.has_manual_override && (
                                                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Reset all overrides" onClick={() => resetAll(stat)}>
@@ -287,7 +307,18 @@ export default function AdminVisibilityStatsIndex({ agencies, brands, stats, sel
             <Drawer open={drawerOpen} onOpenChange={open => { setDrawerOpen(open); if (!open) cancelEdit(); }} direction="right">
                 <DrawerContent className="h-screen ml-auto fixed top-0 bottom-0 right-0 flex flex-col mt-0 rounded-none" style={{ width: '40%' }}>
                     <DrawerHeader>
-                        <DrawerTitle>Daily Values — {drawerStat?.entity_name}</DrawerTitle>
+                        <DrawerTitle className="flex items-center justify-between">
+                            <span>Daily Values — {drawerStat?.entity_name}</span>
+                            {!daysLoading && (() => {
+                                const overriddenCount = days.filter(d => d.manual_visibility !== null).length;
+                                return overriddenCount > 0 ? (
+                                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+                                        <AlertCircle className="h-3 w-3 mr-1" />
+                                        {overriddenCount} {overriddenCount === 1 ? 'day' : 'days'} overridden
+                                    </Badge>
+                                ) : null;
+                            })()}
+                        </DrawerTitle>
                         <p className="text-sm text-muted-foreground">Edit individual days. The period average updates automatically.</p>
                     </DrawerHeader>
 

@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BrandCompetitiveStat extends Model
@@ -19,6 +18,7 @@ class BrandCompetitiveStat extends Model
         'entity_name',
         'entity_url',
         'visibility',
+        'visibility_override',
         'sentiment',
         'position',
         'raw_data',
@@ -27,13 +27,16 @@ class BrandCompetitiveStat extends Model
         'is_manual_override',
         'override_reason',
         'overridden_by',
+        'overridden_at',
     ];
 
     protected $casts = [
-        'raw_data'           => 'array',
-        'analyzed_at'        => 'datetime',
-        'visibility'         => 'decimal:2',
-        'position'           => 'decimal:1',
+        'raw_data' => 'array',
+        'analyzed_at' => 'datetime',
+        'overridden_at' => 'datetime',
+        'visibility' => 'decimal:2',
+        'visibility_override' => 'decimal:2',
+        'position' => 'decimal:1',
         'is_manual_override' => 'boolean',
     ];
 
@@ -157,7 +160,23 @@ class BrandCompetitiveStat extends Model
      */
     public function getVisibilityPercentageAttribute(): string
     {
-        return number_format($this->visibility, 1).'%';
+        return number_format($this->getEffectiveVisibility(), 1).'%';
+    }
+
+    /**
+     * Get the effective visibility value (override takes precedence over AI)
+     */
+    public function getEffectiveVisibility(): float
+    {
+        return $this->visibility_override ?? $this->visibility;
+    }
+
+    /**
+     * Check if this stat has an active override
+     */
+    public function hasOverride(): bool
+    {
+        return $this->visibility_override !== null;
     }
 
     /**

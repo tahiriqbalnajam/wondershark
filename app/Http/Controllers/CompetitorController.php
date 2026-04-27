@@ -262,14 +262,21 @@ class CompetitorController extends Controller
         Website: {$brandUrl}
         Description: {$description}{$excludeText}
 
-        Please analyze this brand and identify its main competitors in the same industry/niche. Focus on:
-        1. Direct competitors offering similar products/services
-        2. Companies targeting the same customer base  
-        3. Brands with similar market positioning
+        STEP 1 — Infer the exact business type from the website URL only.
+        Determine precisely what kind of business this is (e.g. "seafood restaurant", "online seafood retailer", "SaaS accounting software"). Be specific — do not use a vague category.
 
-        For each competitor, provide:
-        - Company name
-        - Website domain (full URL with https://)
+        STEP 2 — From your training knowledge, name REAL businesses that are direct competitors of the SAME type.
+        Rules:
+        - Only include businesses you are highly confident are REAL and have an actual website
+        - If the business is a restaurant, return other real restaurants — NOT food suppliers, wholesalers, or distributors
+        - If it is a SaaS product, return other real SaaS products — NOT agencies or consultants
+        - Match the same geographic market where possible (e.g. if it is an Australian restaurant, prefer Australian competitors)
+        - Do NOT make up or guess business names. If you are unsure whether a business is real, leave it out
+        - It is better to return fewer results than to include invented names
+
+        For each competitor provide:
+        - Company name (must be a real, known business)
+        - Website domain (real URL with https://)
         - Estimated mentions/relevance score (10-50)
 
         Return the results as a JSON array with objects containing 'name', 'domain', and 'mentions' fields:
@@ -290,9 +297,25 @@ class CompetitorController extends Controller
         return <<<PROMPT
         You are a competitor analysis expert. Analyze the brand "{$brand->name}" at URL "{$brandUrl}" and identify direct market competitors.
 
-        IMPORTANT: Respond ONLY with a valid JSON array. Do not include any explanatory text, disclaimers, or markdown formatting.
+        STEP 1 — Infer the exact business type from the website URL only.
+        Determine precisely what kind of business this is (e.g. "seafood restaurant", "online seafood retailer", "SaaS accounting software"). Be specific — do not use a vague category.
 
-        Return exactly this JSON structure:
+        STEP 2 — From your training knowledge, name REAL businesses that are direct competitors of the SAME type.
+        Rules:
+        - Only include businesses you are highly confident are REAL and have an actual website
+        - If the business is a restaurant, return other real restaurants — NOT food suppliers, wholesalers, or distributors
+        - If it is a SaaS product, return other real SaaS products — NOT agencies or consultants
+        - Match the same geographic market where possible (e.g. if it is an Australian restaurant, prefer Australian competitors)
+        - Do NOT make up or guess business names. If you are unsure whether a business is real, leave it out
+        - It is better to return fewer results than to include invented names
+
+        Find 5-8 direct competitors. For each competitor provide:
+        - name: The real brand/company name
+        - domain: The official website URL (must include https://)
+        - mentions: Estimated relevance score (10-50)
+
+        IMPORTANT: Respond ONLY with a valid JSON array. No explanatory text, disclaimers, or markdown formatting.
+
         [
             {
                 "name": "Competitor Name",
@@ -300,11 +323,6 @@ class CompetitorController extends Controller
                 "mentions": 10
             }
         ]
-
-        Find 5-8 direct competitors that offer similar products or services to "{$brand->name}". For each competitor, provide:
-        - name: The brand/company name
-        - domain: The official website URL (must include https://)  
-        - mentions: Estimated relevance score (10-50)
 
         Respond with ONLY the JSON array, nothing else.
         PROMPT;
@@ -987,15 +1005,17 @@ Brand name: {$name}
 Description: {$description}
 {$exclusionText}
 
-Please analyze this brand and identify its main competitors in the same industry/niche. Focus on:
-1. Direct competitors offering similar products/services
-2. Companies targeting the same customer base
-3. Brands with similar market positioning
+STEP 1 — Infer the exact business type from the website URL only.
+Determine precisely what kind of business this is (e.g. "seafood restaurant", "online seafood retailer", "SaaS accounting software"). Be specific — do not use a vague category.
 
-For each competitor, provide:
-- Company name
-- Website domain (full URL)
-- Brief reason why they're a competitor
+STEP 2 — From your training knowledge, name REAL businesses that are direct competitors of the SAME type.
+Rules:
+- Only include businesses you are highly confident are REAL and have an actual website
+- If the business is a restaurant, return other real restaurants — NOT food suppliers, wholesalers, or distributors
+- If it is a SaaS product, return other real SaaS products — NOT agencies or consultants
+- Match the same geographic market where possible (e.g. if it is an Australian restaurant, prefer Australian competitors)
+- Do NOT make up or guess business names. If you are unsure whether a business is real, leave it out
+- It is better to return fewer results than to include invented names
 
 Return the results as a JSON array with objects containing 'name' and 'domain' fields only:
 

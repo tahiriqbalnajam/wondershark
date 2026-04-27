@@ -1402,7 +1402,11 @@ class BrandController extends Controller
                         $tempSessionId,
                         $aiModel->name,
                         $request->description ?? '',
-                        $aiModel->prompts_per_brand
+                        $aiModel->prompts_per_brand,
+                        null,
+                        $brand?->name ?? '',
+                        $brand?->trackedName ?? '',
+                        $brand?->allies ?? []
                     );
 
                     if (! empty($generatedPrompts)) {

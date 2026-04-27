@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Log;
 
 class AIPromptService
 {
-    public function generatePromptsForWebsite(string $website, string $sessionId, string $provider = 'openai', string $description = '', ?int $promptCount = null, ?array $brandContext = null): array
+    public function generatePromptsForWebsite(string $website, string $sessionId, string $provider = 'openai', string $description = '', ?int $promptCount = null, ?array $brandContext = null, string $brandName = '', string $trackedName = '', array $aliases = []): array
     {
         $aiModel = $this->getAiModelConfig($provider);
 
@@ -19,7 +19,7 @@ class AIPromptService
             return [];
         }
 
-        $prompt = $this->buildPrompt($website, $description, $promptCount ?? $aiModel->prompts_per_brand, $brandContext);
+        $prompt = $this->buildPrompt($website, $description, $promptCount ?? $aiModel->prompts_per_brand, $brandContext, $brandName, $trackedName, $aliases);
 
         try {
             $response = $this->callAiProvider($aiModel, $prompt);
@@ -120,36 +120,49 @@ class AIPromptService
         }
     }
 
-    protected function buildPrompt(string $website, string $description = '', int $promptCount = 25, ?array $brandContext = null): string
+    protected function buildPrompt(string $website, string $description = '', int $promptCount = 25, ?array $brandContext = null, string $brandName = '', string $trackedName = '', array $aliases = []): string
     {
         if ($brandContext && array_filter($brandContext)) {
             return $this->buildPromptFromContext($brandContext, $website, $promptCount);
         }
 
-        $industryContext = $description ? "\n\n=== CRITICAL INDUSTRY CONTEXT ===\nThe business operates in the following industry/sector: {$description}\nALL generated statements MUST be relevant to this specific industry context. Do NOT generate generic health, wellness, or unrelated industry statements.\nFocus EXCLUSIVELY on user problems, solutions, and search behaviors relevant to: {$description}" : '';
+        $brandBlock = '';
+        if ($brandName) {
+            $brandBlock .= "\nBrand name (EXCLUDE from all queries): {$brandName}";
+        }
+        $includeNames = array_values(array_unique(array_filter(array_merge(
+            $trackedName && $trackedName !== $brandName ? [$trackedName] : [],
+            $aliases
+        ))));
+        if (! empty($includeNames)) {
+            $brandBlock .= "\nTracked name / aliases (you MAY include these in queries where relevant): " . implode(', ', $includeNames);
+        }
 
-        return "Given a website {$website} and a desired number of statements {$promptCount}, analyze the website's content to identify key themes, products, benefits, problems solved, and target user needs. Then, generate {$promptCount} unique, generic statements (a mix of questions and declarative phrases) that reflect natural user intents, as if potential customers are seeking solutions where the website's offerings would be highly relevant.{$industryContext}
+        $industryContext = $description
+            ? "\nIndustry / business context: {$description}\nALL queries MUST be relevant to this specific industry."
+            : '';
 
-                Ensure each statement:
+        return "IMPORTANT: ALL output MUST be in English only. Do NOT use any other language regardless of the website's language or location.
 
-                1. Does NOT include {$website} or any brand name in the text, making the statements fully generic.
-                2. Focuses on user problems, remedies, or comparisons SPECIFICALLY within the described industry domain.
-                3. Varies in intent (e.g., seeking solutions, product comparisons, best options for common issues in this industry).
-                4. Is concise, actionable, and under 20 words, relevant to what users might search for based on the website's described benefits and testimonials.
-                5. Remains generic and does not use website-specific keywords; base phrasing on inferred user needs from content analysis.
-                6. Reflects real search behaviors specific to the industry, like how-to guides, problem-solving suggestions, or best options for common issues addressed by the site.
-                7. When industry context is provided, MUST incorporate industry-specific terminology and concerns into the statements while maintaining a generic, user-intent focused approach.
-                8. CRITICAL: Do NOT generate statements unrelated to the provided industry context. If the industry is 'wildfire prevention', all statements must relate to wildfire topics, NOT health or unrelated sectors.
+I need a list of {$promptCount} commercial-style search queries that a potential buyer might type into an AI or search engine when looking for the types of services and products offered by the website below — without mentioning the brand itself. These should reflect strong buyer intent (commercial or purchase-oriented).
 
-                Requirements:
-                - Return ONLY the statements, one per line
-                - No numbering, bullets, or other formatting
-                - No explanations or additional text
-                - Output should be spreadsheet compatible (each statement on a new line)
-                - Statements should be completely generic and not reference any specific brand names, URLs, or hardcoded terms
-                - ALL statements must be highly relevant to the specified industry
+For each query:
+1. Identify the relevant geographic market the business serves and tailor the query to that location.
+2. Do not include the main brand name — but tracked names, aliases, and competitor names are allowed where appropriate.
+3. Provide variations to capture different search styles — include both short-tail and long-tail phrasings.
+4. Focus on user problems, comparisons, and purchase decisions (e.g., \"best [service] in [city]\", \"[service] near me\", \"[product] vs [competitor]\").
+5. Keep each query concise and under 20 words.
+6. CRITICAL: Do NOT generate queries unrelated to the website's actual products, services, or industry.{$industryContext}
 
-                Generate exactly {$promptCount} statements:";
+Requirements:
+- ALL queries MUST be written in English only, regardless of the website's language
+- Return ONLY the queries, one per line
+- No numbering, bullets, headers, or extra formatting
+- No explanations or additional text
+- Output must be spreadsheet compatible (each query on its own line)
+- ALL queries must reflect genuine buyer intent relevant to the website's products/services and geography
+
+Here is the website: {$website}{$brandBlock}";
     }
 
     /**
