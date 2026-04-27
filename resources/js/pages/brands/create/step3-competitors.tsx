@@ -582,24 +582,54 @@ export default function Step3Competitors({
                 </div>
 
                 {/* Your Brand */}
-                <div className="flex items-center gap-[15px] border rounded-sm min-h-[60px] p-5 mb-1 bg-white flex-wrap">
-                    <p className='text-black'>{data.name || 'Your Brand'}</p>
-                    <Badge className='bg-green-100 text-green-600 h-[40px] w-[110px]'>
-                        <span className='h-3 w-3 rounded-full bg-green-600 mr-2'></span>
-                        Your Brand
-                    </Badge>
-                </div>
+                {(() => {
+                    const yourCleanDomain = (data.website || '').replace(/^https?:\/\//, '').replace(/^www\./, '');
+                    const yourLogoUrl = yourCleanDomain ? `https://img.logo.dev/${yourCleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA` : null;
+                    return (
+                        <div className="flex items-center gap-[15px] border rounded-sm min-h-[60px] p-5 mb-1 bg-white flex-wrap">
+                            {yourLogoUrl && (
+                                <span className='w-[20px] h-[20px] flex items-center justify-center'>
+                                    <img
+                                        src={yourLogoUrl}
+                                        alt={data.name || 'Your Brand'}
+                                        className="w-full h-full object-contain"
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                </span>
+                            )}
+                            <p className='text-black'>{data.name || 'Your Brand'}</p>
+                            <Badge className='bg-green-100 text-green-600 h-[40px] w-[110px]'>
+                                <span className='h-3 w-3 rounded-full bg-green-600 mr-2'></span>
+                                Your Brand
+                            </Badge>
+                        </div>
+                    );
+                })()}
 
                 {/* Accepted Competitors */}
-                {acceptedCompetitors.map((competitor) => (
-                    <div key={competitor.id} className="flex items-center gap-[15px] border rounded-sm min-h-[60px] p-5 bg-white flex-wrap">
-                        <p className='text-black'>{competitor.name}</p>
-                        <Badge variant="outline">{competitor.mentions} mentions</Badge>
-                        <Badge variant={competitor.source === 'ai' ? 'default' : 'secondary'}>
-                            {competitor.source.toUpperCase()}
-                        </Badge>
-                    </div>
-                ))}
+                {acceptedCompetitors.map((competitor) => {
+                    const cleanDomain = (competitor.domain || '').replace(/^https?:\/\//, '').replace(/^www\./, '');
+                    const logoUrl = cleanDomain ? `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA` : null;
+                    return (
+                        <div key={competitor.id} className="flex items-center gap-[15px] border rounded-sm min-h-[60px] p-5 bg-white flex-wrap">
+                            {logoUrl && (
+                                <span className='w-[20px] h-[20px] flex items-center justify-center'>
+                                    <img
+                                        src={logoUrl}
+                                        alt={competitor.name}
+                                        className="w-full h-full object-contain"
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                </span>
+                            )}
+                            <p className='text-black'>{competitor.name}</p>
+                            <Badge variant="outline">{competitor.mentions} mentions</Badge>
+                            <Badge variant={competitor.source === 'ai' ? 'default' : 'secondary'}>
+                                {competitor.source.toUpperCase()}
+                            </Badge>
+                        </div>
+                    );
+                })}
 
                 {acceptedCompetitors.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
