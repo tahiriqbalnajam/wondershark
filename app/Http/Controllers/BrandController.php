@@ -295,22 +295,23 @@ class BrandController extends Controller
         // Load prompts if step >= 3
         if ($step >= 3) {
             $existingData['prompts'] = $brand->prompts()
-                ->select('id', 'prompt', 'ai_model_id', 'is_active', 'status', 'order', 'visibility', 'sentiment', 'position', 'created_at')
+                ->select('id', 'prompt', 'ai_model_id', 'is_active', 'status', 'order', 'visibility', 'sentiment', 'position', 'country_code', 'created_at')
                 ->with('aiModel:id,name')
                 ->orderBy('order')
                 ->get()
-                ->map(function ($prompt) {
+                ->map(function ($prompt) use ($brand) {
                     return [
                         'id' => $prompt->id,
                         'prompt' => $prompt->prompt,
                         'source' => $prompt->aiModel->name ?? 'ai',
                         'ai_provider' => $prompt->aiModel->name ?? 'openai',
                         'is_selected' => $prompt->is_active,
-                        'status' => $prompt->status ?? 'suggested', // Include status: suggested, active, inactive
+                        'status' => $prompt->status ?? 'suggested',
                         'order' => $prompt->order,
                         'visibility' => $prompt->visibility ?? 50,
                         'sentiment' => $prompt->sentiment ?? 'neutral',
                         'position' => $prompt->position ?? 0,
+                        'location' => $prompt->country_code ?? $this->resolveCountryCode($brand->country),
                         'created_at' => $prompt->created_at?->toISOString(),
                     ];
                 })
@@ -1434,6 +1435,7 @@ class BrandController extends Controller
                                         'visibility'  => $visibility,
                                         'sentiment'   => $sentiment,
                                         'position'    => $position,
+                                        'country_code' => $this->resolveCountryCode($brand->country),
                                     ]);
                                     $promptId  = $saved->id;
                                     $createdAt = $saved->created_at->toISOString();
@@ -1459,7 +1461,7 @@ class BrandController extends Controller
                                 'position'    => $position,
                                 'mentions'    => $this->generateMockMentions(),
                                 'volume'      => $volume,
-                                'location'    => 'USA',
+                                'location'    => $this->resolveCountryCode($brand?->country),
                             ];
                         }
                     }
@@ -1740,6 +1742,30 @@ class BrandController extends Controller
     /**
      * Generate mock visibility percentage (10-90%)
      */
+    private function resolveCountryCode(?string $country): string
+    {
+        if (empty($country)) {
+            return 'US';
+        }
+        // Already a 2-letter code
+        if (strlen($country) === 2) {
+            return strtoupper($country);
+        }
+        $map = [
+            'United States'  => 'US', 'Canada'        => 'CA', 'United Kingdom' => 'GB',
+            'Ireland'        => 'IE', 'Germany'       => 'DE', 'France'         => 'FR',
+            'Italy'          => 'IT', 'Spain'         => 'ES', 'Netherlands'    => 'NL',
+            'Sweden'         => 'SE', 'Norway'        => 'NO', 'Denmark'        => 'DK',
+            'Finland'        => 'FI', 'Belgium'       => 'BE', 'Austria'        => 'AT',
+            'Switzerland'    => 'CH', 'Australia'     => 'AU', 'New Zealand'    => 'NZ',
+            'Japan'          => 'JP', 'South Korea'   => 'KR', 'Singapore'      => 'SG',
+            'India'          => 'IN', 'Brazil'        => 'BR', 'Mexico'         => 'MX',
+            'Argentina'      => 'AR', 'Chile'         => 'CL', 'South Africa'   => 'ZA',
+            'Israel'         => 'IL', 'UAE'           => 'AE', 'Saudi Arabia'   => 'SA',
+        ];
+        return $map[$country] ?? 'US';
+    }
+
     private function generateMockVisibility(): string
     {
         return rand(10, 90).'%';
