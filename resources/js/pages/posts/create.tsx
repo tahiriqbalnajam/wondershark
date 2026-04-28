@@ -411,6 +411,7 @@ export default function PostsCreate({
                                                     <SelectContent>
                                                         <SelectItem value="blog">Blog</SelectItem>
                                                         <SelectItem value="forum">Forum</SelectItem>
+                                                        <SelectItem value="ugc">User Generated Content (UGC)</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                                 {errors.post_type && (

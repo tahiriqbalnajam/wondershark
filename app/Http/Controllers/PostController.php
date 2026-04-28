@@ -275,7 +275,7 @@ class PostController extends Controller
             'description' => 'nullable|string|max:1000',
             'status' => 'required|in:published,draft,archived',
             'posted_at' => 'nullable|date',
-            'post_type' => 'required|in:blog,forum',
+            'post_type' => 'required|in:blog,forum,ugc',
         ]);
 
         // Skip permission checks for admin users
@@ -548,7 +548,7 @@ class PostController extends Controller
             'description' => 'nullable|string|max:1000',
             'status' => 'required|in:published,draft,archived',
             'posted_at' => 'nullable|date',
-            'post_type' => 'required|in:blog,forum',
+            'post_type' => 'required|in:blog,forum,ugc',
         ]);
 
         $user = Auth::user();

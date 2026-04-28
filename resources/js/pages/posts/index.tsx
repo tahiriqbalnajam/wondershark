@@ -453,6 +453,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                     <TabsTrigger value="all-posts">All Posts</TabsTrigger>
                                     <TabsTrigger value="blogs">Blogs</TabsTrigger>
                                     <TabsTrigger value="forums">Forums</TabsTrigger>
+                                    <TabsTrigger value="ugc">UGC</TabsTrigger>
                                 </TabsList>
 
                                 <TabsContent value="all-posts">
@@ -554,7 +555,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                            {post.post_type}
+                                                        {post.post_type === 'ugc' ? 'UGC' : post.post_type === 'blog' ? 'Blog' : post.post_type === 'forum' ? 'Forum' : post.post_type}
                                                     </TableCell>
 
                                                     <TableCell>
@@ -796,6 +797,99 @@ export default function PostsIndex({ posts, brand }: Props) {
                                         </TableBody>
                                     </Table>
                                 </TabsContent>
+                                <TabsContent value="ugc">
+                                    <Table className="default-table table-fixed">
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className='text-center'>#</TableHead>
+                                                <TableHead>Publication</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead>Type</TableHead>
+                                                <TableHead>AI Citations</TableHead>
+                                                <TableHead>Posted Date</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {posts.data
+                                                .filter(post => post.post_type === 'ugc')
+                                                .map((post, index) => (
+                                                    <TableRow key={post.id}>
+                                                        <TableCell className='text-center'>{(posts.current_page - 1) * posts.per_page + index + 1}</TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <div>
+                                                                    <span className="font-medium">{post.title}</span>
+                                                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                                                        <ExternalLink className="h-3 w-3" />
+                                                                        <a
+                                                                            href={post.url}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="hover:text-primary truncate max-w-60"
+                                                                        >
+                                                                            {post.url}
+                                                                        </a>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.7em' }}>
+                                                                <Badge className={getStatusColor(post.status)}>
+                                                                    {post.status === 'draft' ? 'Processing' : post.status}
+                                                                </Badge>
+                                                                {post.status === 'draft' && (
+                                                                    <span className="inline-block align-middle" style={{ width: 18, height: 18, position: 'relative', verticalAlign: 'middle' }}>
+                                                                        {[...Array(12)].map((_, i) => (
+                                                                            <span
+                                                                                key={i}
+                                                                                style={{
+                                                                                    position: 'absolute',
+                                                                                    left: '50%',
+                                                                                    top: '50%',
+                                                                                    width: 3,
+                                                                                    height: 8,
+                                                                                    background: '#000',
+                                                                                    borderRadius: 1,
+                                                                                    transform: `rotate(${i * 30}deg) translate(0, -7px)`,
+                                                                                    opacity: 0.2,
+                                                                                    animation: `fade-spinner 1.2s linear infinite`,
+                                                                                    animationDelay: `${i * 0.1}s`,
+                                                                                }}
+                                                                            />
+                                                                        ))}
+                                                                        <style>{`
+                                                                            @keyframes fade-spinner {
+                                                                                0% { opacity: 1; }
+                                                                                100% { opacity: 0.2; }
+                                                                            }
+                                                                        `}</style>
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>UGC</TableCell>
+                                                        <TableCell>
+                                                            {renderCitationsCell(post)}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                                                <Calendar className="h-3 w-3" />
+                                                                {formatDate(post.created_at)}
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            {posts.data.filter(post => post.post_type === 'ugc').length === 0 && (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                                        No UGC posts found
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </TabsContent>
                             </Tabs>
                         )}
                     </CardContent>
@@ -1014,6 +1108,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                 <SelectContent>
                                     <SelectItem value="blog">Blog</SelectItem>
                                     <SelectItem value="forum">Forum</SelectItem>
+                                    <SelectItem value="ugc">User Generated Content (UGC)</SelectItem>
                                 </SelectContent>
                             </Select>
                             {errors.post_type && <p className="text-sm text-red-500">{errors.post_type}</p>}

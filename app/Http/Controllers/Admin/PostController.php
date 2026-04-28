@@ -146,7 +146,7 @@ class PostController extends Controller
             'description' => 'nullable|string|max:1000',
             'status' => 'required|in:published,draft,archived',
             'posted_at' => 'nullable|date',
-            'post_type' => 'required|in:blog,forum',
+            'post_type' => 'required|in:blog,forum,ugc',
         ]);
 
         $brand = Brand::findOrFail($request->brand_id);
@@ -312,7 +312,7 @@ class PostController extends Controller
             'description' => $request->description,
             'status' => $request->status,
             'posted_at' => $request->posted_at,
-            'post_type' => $request->post_type ?? $post->post_type ?? 'blog',
+            'post_type' => $request->post_type ?? $post->post_type,
         ]);
 
         return redirect()->route('admin.posts.create', ['post_id' => $post->id])
