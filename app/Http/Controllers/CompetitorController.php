@@ -795,13 +795,18 @@ class CompetitorController extends Controller
                 }
             }
 
+            // Scrape website content for better AI context
+            $scrapedContent = $this->scrapeWebsiteContent($request->website);
+
             // Prepare the prompt with all existing competitors
-            $prompt = $this->getCompetitorPromptForCreation($brandData, $existingCompetitors);
+            $prompt = $this->getCompetitorPromptForCreation($brandData, $existingCompetitors, $scrapedContent);
 
             Log::info('Fetching competitors for brand creation', [
                 'website' => $request->website,
                 'ai_model' => $aiModel->name,
                 'existing_competitors_count' => count($existingCompetitors),
+                'scraped_content' => $scrapedContent ?: 'EMPTY - scraping failed',
+                'prompt_preview' => substr($prompt, 0, 500),
             ]);
 
             // Make API call based on the model type
@@ -870,22 +875,17 @@ class CompetitorController extends Controller
             // Parse the JSON response
             $competitors = $this->parseCompetitorsFromAI($content);
 
-            if (empty($competitors)) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'No competitors found for this website.',
-                ], 400);
-            }
-
             Log::info('Successfully fetched competitors', [
                 'website' => $request->website,
                 'competitor_count' => count($competitors),
+                'raw_ai_response' => $content,
             ]);
 
             return response()->json([
                 'success' => true,
                 'competitors' => $competitors,
                 'ai_model_used' => $aiModel->display_name,
+                'message' => empty($competitors) ? 'No competitors found. You can add them manually.' : null,
             ]);
 
         } catch (\Exception $e) {
@@ -984,11 +984,18 @@ class CompetitorController extends Controller
     /**
      * Get competitor prompt for brand creation (modified version)
      */
-    private function getCompetitorPromptForCreation(array $brandData, array $existingCompetitors = []): string
+    private function getCompetitorPromptForCreation(array $brandData, array $existingCompetitors = [], string $scrapedContent = ''): string
     {
         $website = $brandData['website'];
         $name = $brandData['name'];
         $description = $brandData['description'];
+
+        $websiteContext = '';
+        if (! empty($scrapedContent)) {
+            $websiteContext = "\n\nWebsite content (scraped from the homepage):\n{$scrapedContent}";
+        }
+
+        $descriptionLine = ! empty($description) ? "Description: {$description}" : '';
 
         $exclusionText = '';
         if (! empty($existingCompetitors)) {
@@ -999,14 +1006,14 @@ class CompetitorController extends Controller
         }
 
         return <<<PROMPT
-I need you to identify the top 5-7 direct competitors for the website: {$website}
+I need you to identify the top 5-7 direct competitors for the following business:
 
+Website: {$website}
 Brand name: {$name}
-Description: {$description}
+{$descriptionLine}{$websiteContext}
 {$exclusionText}
 
-STEP 1 — Infer the exact business type from the website URL only.
-Determine precisely what kind of business this is (e.g. "seafood restaurant", "online seafood retailer", "SaaS accounting software"). Be specific — do not use a vague category.
+STEP 1 — Using the website content and brand details above, determine precisely what kind of business this is (e.g. "seafood restaurant", "SaaS accounting software", "online clothing retailer"). Be specific.
 
 STEP 2 — From your training knowledge, name REAL businesses that are direct competitors of the SAME type.
 Rules:
@@ -1026,6 +1033,61 @@ Return the results as a JSON array with objects containing 'name' and 'domain' f
 
 Respond with ONLY the JSON array, nothing else.
 PROMPT;
+    }
+
+    private function scrapeWebsiteContent(string $url): string
+    {
+        try {
+            $response = Http::timeout(10)
+                ->withHeaders(['User-Agent' => 'Mozilla/5.0 (compatible; WonderShark/1.0)'])
+                ->get($url);
+
+            if (! $response->successful()) {
+                return '';
+            }
+
+            $html = $response->body();
+
+            // Extract title
+            $title = '';
+            if (preg_match('/<title[^>]*>(.*?)<\/title>/is', $html, $m)) {
+                $title = trim(strip_tags($m[1]));
+            }
+
+            // Extract meta description
+            $metaDesc = '';
+            if (preg_match('/<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']+)["\'][^>]*>/i', $html, $m)) {
+                $metaDesc = trim($m[1]);
+            } elseif (preg_match('/<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']description["\'][^>]*>/i', $html, $m)) {
+                $metaDesc = trim($m[1]);
+            }
+
+            // Extract h1 and h2 tags
+            $headings = [];
+            preg_match_all('/<h[12][^>]*>(.*?)<\/h[12]>/is', $html, $m);
+            foreach (array_slice($m[1], 0, 5) as $h) {
+                $text = trim(strip_tags($h));
+                if ($text) {
+                    $headings[] = $text;
+                }
+            }
+
+            // Build context string
+            $parts = array_filter([
+                $title ? "Title: {$title}" : '',
+                $metaDesc ? "Meta description: {$metaDesc}" : '',
+                ! empty($headings) ? 'Headings: '.implode(' | ', $headings) : '',
+            ]);
+
+            $content = implode("\n", $parts);
+
+            // Limit to 600 characters
+            return mb_substr($content, 0, 600);
+        } catch (\Exception $e) {
+            Log::info('Website scraping failed', ['url' => $url, 'error' => $e->getMessage()]);
+
+            return '';
+        }
     }
 
     /**

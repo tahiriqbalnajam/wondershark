@@ -139,6 +139,11 @@ export default function Step3Competitors({
                     source: 'ai' as const
                 }));
 
+                if (newCompetitors.length === 0) {
+                    toast.info('No competitors found. You can add them manually.');
+                    return;
+                }
+
                 setCompetitors([...competitors, ...newCompetitors]);
 
                 // Save to database immediately if we have a brand ID
