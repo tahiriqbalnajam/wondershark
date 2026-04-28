@@ -357,11 +357,13 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
                                         <Button type="submit" disabled={processing} className='primary-btn'>
                                             <Save /> {processing ? (createdPost ? 'Updating...' : 'Creating...') : (createdPost ? 'Update Post' : 'Create Post')}
                                         </Button>
+                                        {/* 
                                         <Link href="/admin/posts">
                                             <Button type="button" variant="outline" className='cancle-btn primary-btn border-0'>
                                                 <X /> Cancel
                                             </Button>
                                         </Link>
+                                        */ }
                                     </div>
                                 </form>
                             </CardContent>
