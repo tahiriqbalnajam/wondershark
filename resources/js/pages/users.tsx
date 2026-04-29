@@ -3,14 +3,20 @@ import AppLayout from '@/layouts/app-layout';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Users as UsersIcon, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useInitials } from '@/hooks/use-initials';
 import { useState } from 'react';
 
 interface User {
     id: number;
     name: string;
     email: string;
+    url?: string;
+    logo?: string;
+    logo_thumbnail?: string;
     roles: string[];
+    first_brand_website?: string;
     created_at: string;
 }
 
@@ -20,7 +26,29 @@ interface UsersPageProps {
 
 export default function Users({ users }: UsersPageProps) {
     const { can } = usePermissions();
+    const getInitials = useInitials();
     const [deletingUser, setDeletingUser] = useState<number | null>(null);
+
+    // Helper function to get logo URL for a user
+    const getUserLogoUrl = (user: User): string | undefined => {
+        // Priority 1: Custom uploaded logo (thumbnail first, then full logo)
+        if (user.logo_thumbnail) return user.logo_thumbnail;
+        if (user.logo) return user.logo;
+        
+        // Priority 2: Fetch from agency URL if set
+        if (user.url) {
+            const cleanUrl = user.url.replace(/^https?:\/\//, '').replace(/^www\./, '');
+            return `https://img.logo.dev/${cleanUrl}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
+        }
+        
+        // Priority 3: Fetch from first brand's website as fallback
+        if (user.first_brand_website) {
+            const cleanUrl = user.first_brand_website.replace(/^https?:\/\//, '').replace(/^www\./, '');
+            return `https://img.logo.dev/${cleanUrl}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
+        }
+        
+        return undefined;
+    };
 
     const handleDeleteUser = async (userId: number) => {
         if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
@@ -63,8 +91,16 @@ export default function Users({ users }: UsersPageProps) {
                         <Card key={user.id}>
                             <CardHeader>
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-2">
-                                        <UsersIcon className="h-5 w-5" />
+                                    <div className="flex items-center space-x-3">
+                                        <Avatar className="h-10 w-10">
+                                            <AvatarImage 
+                                                src={getUserLogoUrl(user)} 
+                                                alt={user.name} 
+                                            />
+                                            <AvatarFallback className="bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
+                                                {getInitials(user.name)}
+                                            </AvatarFallback>
+                                        </Avatar>
                                         <CardTitle>{user.name}</CardTitle>
                                     </div>
                                     <div className="flex items-center space-x-2">

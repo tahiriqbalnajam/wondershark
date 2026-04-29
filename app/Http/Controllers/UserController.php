@@ -18,11 +18,23 @@ class UserController extends Controller
     public function index()
     {
         $users = User::with('roles')->get()->map(function ($user) {
+            // Get first brand for fallback
+            $firstBrand = \App\Models\Brand::where('user_id', $user->id)
+                ->orWhere('agency_id', $user->id)
+                ->whereNotNull('website')
+                ->where('website', '!=', '')
+                ->select('website')
+                ->first();
+            
             return [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'url' => $user->url,
+                'logo' => $user->logo ? asset('storage/'.$user->logo) : null,
+                'logo_thumbnail' => $user->logo_thumbnail ? asset('storage/'.$user->logo_thumbnail) : null,
                 'roles' => $user->getRoleNames(),
+                'first_brand_website' => $firstBrand?->website,
                 'created_at' => $user->created_at,
             ];
         });
