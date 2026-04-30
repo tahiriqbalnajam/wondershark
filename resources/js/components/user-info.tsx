@@ -90,6 +90,8 @@ export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: 
     console.log('User logo:', user.logo);
     console.log('User logo_thumbnail:', user.logo_thumbnail);
     // For brand logo, use stored logo if available, otherwise use the logo.dev API
+
+   
     const brandLogoUrl = selectedBrand?.logo 
         ? `/storage/${selectedBrand.logo}`
         : (selectedBrand?.website ? 
@@ -99,11 +101,20 @@ export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: 
     // Use agency logo (user.logo or user.logo_thumbnail) for the avatar fallback
     let agencyLogoUrl = user.logo ? `${user.logo}` : (user.logo_thumbnail ? `${user.logo_thumbnail}` : null);
 
+    if (!agencyLogoUrl) {
+        agencyLogoUrl = brandLogoUrl;
+    }
      if (!agencyLogoUrl) {
         agencyLogoUrl = selectedBrand?.website ? 
             `https://img.logo.dev/${selectedBrand.website.replace(/^https?:\/\//, '').replace(/^www\./, '')}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA` 
             : null;
     }
+
+    //const hasBrandRole = user.roles?.some((role: any) => role.name === 'brand');
+
+    //if (brandLogoUrl && hasBrandRole) {
+    //    agencyLogoUrl = brandLogoUrl;
+    //}
 
 
     return (
