@@ -256,6 +256,16 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
             Route::delete('/{competitor}', [\App\Http\Controllers\Admin\CompetitorController::class, 'destroy'])->name('destroy');
         });
 
+        // Website URLs Management - Admin only
+        Route::prefix('admin/website-urls')->name('admin.website-urls.')->middleware('role.permission:view-admin-panel')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\WebsiteUrlController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Admin\WebsiteUrlController::class, 'store'])->name('store');
+            Route::get('/{websiteUrl}/edit', [\App\Http\Controllers\Admin\WebsiteUrlController::class, 'edit'])->name('edit');
+            Route::patch('/{websiteUrl}', [\App\Http\Controllers\Admin\WebsiteUrlController::class, 'update'])->name('update');
+            Route::delete('/{websiteUrl}', [\App\Http\Controllers\Admin\WebsiteUrlController::class, 'destroy'])->name('destroy');
+            Route::post('/{websiteUrl}/toggle', [\App\Http\Controllers\Admin\WebsiteUrlController::class, 'toggle'])->name('toggle');
+        });
+
            // Visibility Stats Override - Admin only
         Route::prefix('admin/visibility-stats')->name('admin.visibility-stats.')->middleware('role.permission:view-admin-panel')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\BrandVisibilityStatsController::class, 'index'])->name('index');

@@ -5,7 +5,7 @@ import { type NavItem } from '@/types';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { LogOut } from 'lucide-react';
 import { Link, router} from '@inertiajs/react';
-import { 
+import {
     LayoutGrid,
     Users,
     Shield,
@@ -18,7 +18,8 @@ import {
     Building2,
     CirclePlus,
     Terminal,
-    CreditCard
+    CreditCard,
+    Link2
 } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { usePage } from '@inertiajs/react';
@@ -258,6 +259,12 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
                     href: '/admin/settings/stripe',
                     icon: CreditCard,
                     permission: 'manage-system',
+                },
+                {
+                    title: 'Gap URLs',
+                    href: '/admin/website-urls',
+                    icon: Link2,
+                    permission: 'view-admin-panel',
                 },
                /* {
                     title: 'Plan Features',
