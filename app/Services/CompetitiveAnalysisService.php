@@ -526,7 +526,7 @@ CRITICAL INSTRUCTIONS:
     public function getHistoricalStatsForChart(Brand $brand, ?int $days = 30, ?int $aiModelId = null, string $timezone = '+00:00'): array
     {
         $startDate = now()->subDays($days);
-        $endDate = now()->endOfDay();
+        $endDate = now();
 
         // Get competitive stats ordered by date
         $query = BrandCompetitiveStat::where('brand_id', $brand->id)
