@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Brand;
 use App\Models\Subscription;
 use App\Models\User;
 use Carbon\Carbon;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
+
 
 class UserController extends Controller
 {
@@ -319,6 +321,10 @@ class UserController extends Controller
         if ($user->id === $request->user()->id) {
             return redirect()->route('users.index')->with('error', 'You cannot delete your own account.');
         }
+
+        Brand::where('user_id', $user->id)->delete();
+
+
 
         $user->delete();
 
