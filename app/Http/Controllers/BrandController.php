@@ -827,7 +827,7 @@ class BrandController extends Controller
                     'agency_email' => $b->agency?->email,
                     'has_agency' => ! is_null($b->agency_id),
                     'status' => $b->status,
-                    'created_at' => $b->created_at?->format('M d, Y'),
+                    'created_at' => $b->created_at,
                 ];
             });
 

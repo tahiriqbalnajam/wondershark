@@ -1,5 +1,6 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEventHandler, useState } from 'react';
+import FormattedDate from '@/components/FormattedDate';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -314,7 +315,7 @@ export default function AdminBrands({ brands }: Props) {
                                                     </Badge>
                                                 </td>
                                                 <td className="py-3 px-4 text-sm text-gray-600">
-                                                    {brand.created_at || '—'}
+                                                    <FormattedDate date={brand.created_at} />
                                                 </td>
                                                 <td className="py-3 px-4 text-right">
                                                     <Button

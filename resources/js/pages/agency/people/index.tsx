@@ -1,5 +1,6 @@
 import { useState, FormEventHandler } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
+import FormattedDate from '@/components/FormattedDate';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -129,16 +130,6 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
                 preserveScroll: true,
             });
         }
-    };
-
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit'
-        });
     };
 
     return (
@@ -294,10 +285,10 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
                                     <CardContent>
                                         <div className="space-y-2">
                                             <div className="text-sm text-muted-foreground">
-                                                <strong>Sent:</strong> {formatDate(invitation.created_at)}
+                                                <strong>Sent:</strong> <FormattedDate date={invitation.created_at} format="datetime" />
                                             </div>
                                             <div className="text-sm text-muted-foreground">
-                                                <strong>Expires:</strong> {formatDate(invitation.expires_at)}
+                                                <strong>Expires:</strong> <FormattedDate date={invitation.expires_at} format="datetime" />
                                             </div>
                                             {invitation.rights && invitation.rights.length > 0 && (
                                                 <div>

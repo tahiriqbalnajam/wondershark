@@ -41,7 +41,7 @@ class InvitationController extends Controller
                 'name' => $invitation->name,
                 'email' => $invitation->email,
                 'agency_name' => $invitation->agency->name,
-                'expires_at' => $invitation->expires_at->format('M d, Y g:i A'),
+                'expires_at' => $invitation->expires_at,
             ],
         ]);
     }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import FormattedDate from '@/components/FormattedDate';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -256,8 +257,8 @@ export default function JobsIndex({ stats, jobs, failedJobs, completedJobs }: Pr
                                                     <TableCell className="font-medium">{job.job_name}</TableCell>
                                                     <TableCell>{job.queue}</TableCell>
                                                     <TableCell>{job.attempts}</TableCell>
-                                                    <TableCell>{job.created_at}</TableCell>
-                                                    <TableCell>{job.available_at}</TableCell>
+                                                    <TableCell><FormattedDate date={job.created_at} format="datetime" /></TableCell>
+                                                    <TableCell><FormattedDate date={job.available_at} format="datetime" /></TableCell>
                                                     <TableCell>{getStatusBadge(job.status)}</TableCell>
                                                 </TableRow>
                                             ))}
@@ -310,7 +311,7 @@ export default function JobsIndex({ stats, jobs, failedJobs, completedJobs }: Pr
                                                     <TableCell className="font-medium">{job.job_name}</TableCell>
                                                     <TableCell>{job.queue}</TableCell>
                                                     <TableCell className="max-w-md truncate">{job.exception}</TableCell>
-                                                    <TableCell>{job.failed_at}</TableCell>
+                                                    <TableCell><FormattedDate date={job.failed_at} format="datetime" /></TableCell>
                                                     <TableCell>
                                                         <div className="flex space-x-2">
                                                             <Button
@@ -368,7 +369,7 @@ export default function JobsIndex({ stats, jobs, failedJobs, completedJobs }: Pr
                                                 <TableRow key={index}>
                                                     <TableCell className="font-medium">{job.job_name}</TableCell>
                                                     <TableCell>{job.post_id || '-'}</TableCell>
-                                                    <TableCell>{job.completed_at}</TableCell>
+                                                    <TableCell><FormattedDate date={job.completed_at} format="datetime" /></TableCell>
                                                     <TableCell>{getStatusBadge(job.status)}</TableCell>
                                                 </TableRow>
                                             ))}

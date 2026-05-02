@@ -3,6 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 
+import FormattedDate from '@/components/FormattedDate';
 import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -182,15 +183,7 @@ export default function AdminPostsIndex({ posts, filters, agencies, brands, aiMo
         router.get('/admin/posts');
     };
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        });
-    };
-
-    const filteredBrands = data.agency_id && data.agency_id !== 'all'
+const filteredBrands = data.agency_id && data.agency_id !== 'all'
         ? brands.filter(brand => brand.agency_id.toString() === data.agency_id)
         : brands;
 
@@ -402,7 +395,7 @@ export default function AdminPostsIndex({ posts, filters, agencies, brands, aiMo
                                                 <TableCell>
                                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                                         <Calendar className="h-4 w-4" />
-                                                        {formatDate(post.posted_at)}
+                                                        <FormattedDate date={post.posted_at} />
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>

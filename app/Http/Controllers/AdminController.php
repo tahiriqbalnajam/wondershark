@@ -33,7 +33,7 @@ class AdminController extends Controller
                     'agency_email' => $brand->agency?->email,
                     'has_agency' => ! is_null($brand->agency_id),
                     'status' => $brand->status,
-                    'created_at' => $brand->created_at?->format('M d, Y'),
+                    'created_at' => $brand->created_at,
                 ];
             });
 

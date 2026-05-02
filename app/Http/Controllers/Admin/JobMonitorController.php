@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\DateFormat;
 use App\Http\Controllers\Controller;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -34,8 +35,8 @@ class JobMonitorController extends Controller
                     'queue' => $job->queue,
                     'job_name' => $commandName,
                     'attempts' => $job->attempts,
-                    'created_at' => Carbon::parse($job->created_at)->format('Y-m-d H:i:s'),
-                    'available_at' => Carbon::parse($job->available_at)->format('Y-m-d H:i:s'),
+                    'created_at' => DateFormat::dbToIso($job->created_at),
+                    'available_at' => DateFormat::dbToIso($job->available_at),
                     'status' => 'pending',
                 ];
             });
@@ -57,7 +58,7 @@ class JobMonitorController extends Controller
                     'queue' => $job->queue,
                     'job_name' => $commandName,
                     'exception' => substr($job->exception, 0, 200).'...',
-                    'failed_at' => Carbon::parse($job->failed_at)->format('Y-m-d H:i:s'),
+                    'failed_at' => DateFormat::dbToIso($job->failed_at),
                 ];
             });
 

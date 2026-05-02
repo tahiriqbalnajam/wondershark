@@ -16,6 +16,7 @@ class BrandVisibilityStatsController extends Controller
 {
     public function index(Request $request)
     {
+        $timezone = $request->input('timezone', '+00:00');
         $agencies = User::role('agency')->orderBy('name')->get(['id', 'name']);
         $brands = Brand::with('agency')->orderBy('name')->get(['id', 'name', 'agency_id']);
 
@@ -42,7 +43,7 @@ class BrandVisibilityStatsController extends Controller
                 // Get live visibility (period average with overrides applied) — same value
                 // the brand dashboard shows, so the admin can see what clients will see.
                 $liveStats = app(CompetitiveAnalysisService::class)
-                    ->getMentionBasedVisibility($selectedBrand, 30);
+                    ->getMentionBasedVisibility($selectedBrand, 30, null, $timezone);
                 $liveByEntityKey = collect($liveStats)->keyBy(
                     fn ($s) => ($s['competitor_id'] ?? null) ? 'c_'.$s['competitor_id'] : 'brand'
                 );
@@ -58,7 +59,7 @@ class BrandVisibilityStatsController extends Controller
                     ->unique()
                     ->flip();
 
-                $stats = $rows->map(function ($stat) use ($liveByEntityKey, $entitiesWithOverrides) {
+                $stats = $rows->map(function ($stat) use ($liveByEntityKey, $entitiesWithOverrides, $timezone) {
                     $entityKey = $stat->competitor_id ? 'c_'.$stat->competitor_id : 'brand';
                     $liveVisibility = $liveByEntityKey->has($entityKey)
                         ? (float) $liveByEntityKey->get($entityKey)['visibility']
@@ -74,7 +75,7 @@ class BrandVisibilityStatsController extends Controller
                         'position' => (float) $stat->position,
                         'competitor_id' => $stat->competitor_id,
                         'has_manual_override' => $entitiesWithOverrides->has($entityKey),
-                        'analyzed_at' => $stat->analyzed_at?->toDateTimeString(),
+                        'analyzed_at' => $stat->analyzed_at?->copy()->setTimezone($timezone)->toDateTimeString(),
                     ];
                 });
             }
@@ -88,6 +89,7 @@ class BrandVisibilityStatsController extends Controller
             'filters' => [
                 'agency_id' => $request->agency_id,
                 'brand_id' => $request->brand_id,
+                'timezone' => $timezone,
             ],
         ]);
     }
@@ -105,6 +107,7 @@ class BrandVisibilityStatsController extends Controller
         $brand = Brand::findOrFail($validated['brand_id']);
         $days = (int) ($validated['days'] ?? 30);
         $competitorId = $validated['competitor_id'] ?? null;
+        $timezone = $request->input('timezone', '+00:00');
         $startDate = now()->subDays($days - 1)->startOfDay();
         $endDate = now()->endOfDay();
 
@@ -116,12 +119,10 @@ class BrandVisibilityStatsController extends Controller
             ->whereBetween('analyzed_at', [$startDate, $endDate]);
         $competitorId ? $statsQuery->where('competitor_id', $competitorId) : $statsQuery->whereNull('competitor_id');
 
-        // Group in PHP using app timezone so dates match the loop's ->toDateString() output.
-        // MySQL DATE(analyzed_at) uses UTC which can differ from the app timezone for sessions
-        // running close to midnight UTC, causing lookup misses for those dates.
+        // Group by date in the requested timezone so dates match the dashboard.
         $statsByDate = $statsQuery
             ->get()
-            ->groupBy(fn ($s) => $s->analyzed_at->toDateString())
+            ->groupBy(fn ($s) => $s->analyzed_at->copy()->setTimezone($timezone)->toDateString())
             ->map(function ($dayGroup) {
                 $stat = $dayGroup->last(); // Latest entry for that day
 
@@ -134,7 +135,7 @@ class BrandVisibilityStatsController extends Controller
 
         $result = [];
         for ($i = $days - 1; $i >= 0; $i--) {
-            $date = now()->subDays($i)->toDateString();
+            $date = now()->setTimezone($timezone)->subDays($i)->toDateString();
             $data = $statsByDate[$date] ?? null;
 
             $result[] = [
@@ -170,12 +171,15 @@ class BrandVisibilityStatsController extends Controller
             ->first();
 
         if ($stat) {
-            // Update existing row with override values
+            // Update existing row with override values.
+            // Also fix analyzed_at to noon so the date stays correct after timezone
+            // conversion — late-day timestamps can shift to the next day in +05:00.
             $stat->update([
                 'visibility_override' => $validated['visibility'],
                 'override_reason' => $validated['override_reason'] ?? null,
                 'overridden_by' => Auth::id(),
                 'overridden_at' => now(),
+                'analyzed_at' => Carbon::parse($validated['date'])->setTime(12, 0, 0),
             ]);
         } else {
             // No AI stat exists for this date — create a new row with override

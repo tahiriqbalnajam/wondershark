@@ -1,4 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
+import FormattedDate from '@/components/FormattedDate';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -66,7 +67,7 @@ export default function AcceptInvitation({ invitation }: Props) {
                             <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
                                 <Calendar className="h-5 w-5 text-amber-600" />
                                 <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-900">Expires {invitation.expires_at}</p>
+                                    <p className="text-sm font-medium text-gray-900">Expires <FormattedDate date={invitation.expires_at} format="datetime" /></p>
                                     <p className="text-xs text-amber-600">Accept soon to avoid expiration</p>
                                 </div>
                             </div>

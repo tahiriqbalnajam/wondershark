@@ -637,7 +637,7 @@ class SubscriptionController extends Controller
                 'plan_name' => $subscription->plan_name,
                 'status' => $subscription->status,
                 'cancel_at_period_end' => $subscription->cancel_at_period_end,
-                'current_period_end' => $subscription->current_period_end?->format('M d, Y'),
+                'current_period_end' => $subscription->current_period_end,
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to get subscription status: ' . $e->getMessage());

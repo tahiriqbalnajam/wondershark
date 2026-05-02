@@ -3,6 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import FormattedDate from '@/components/FormattedDate';
 import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -309,15 +310,7 @@ export default function AdminCompetitorsIndex({ competitors, filters, agencies, 
         toast.info('Suggestion removed');
     };
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        });
-    };
-
-    const filteredBrands = data.agency_id && data.agency_id !== 'all'
+const filteredBrands = data.agency_id && data.agency_id !== 'all'
         ? brands.filter(brand => brand.agency_id.toString() === data.agency_id)
         : brands;
 
@@ -715,7 +708,7 @@ export default function AdminCompetitorsIndex({ competitors, filters, agencies, 
 
                                 <div className="space-y-2">
                                     <Label className="text-sm font-semibold text-muted-foreground">Created</Label>
-                                    <p className="text-base">{formatDate(selectedCompetitor.created_at)}</p>
+                                    <p className="text-base"><FormattedDate date={selectedCompetitor.created_at} /></p>
                                 </div>
                             </div>
                         )}

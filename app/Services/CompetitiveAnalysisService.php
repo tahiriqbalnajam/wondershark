@@ -581,13 +581,28 @@ CRITICAL INSTRUCTIONS:
                 $entityName = $stat->brand->name;
             }
 
-            // Use effective visibility (override takes precedence over AI value)
+            // Prefer overridden entries: if the current stat has no override but an
+            // earlier stat for the same date+domain already set an overridden value,
+            // keep the overridden one so admin overrides are not silently discarded.
+            $existing = $groupedByDate[$date][$domain] ?? null;
+            if ($existing && ($existing['_has_override'] ?? false) && $stat->visibility_override === null) {
+                continue;
+            }
+
             $groupedByDate[$date][$domain] = [
                 'entity_name' => $entityName,
                 'visibility' => $stat->getEffectiveVisibility(),
                 'sentiment' => $stat->sentiment,
                 'position' => $stat->position,
+                '_has_override' => $stat->visibility_override !== null,
             ];
+        }
+
+        // Strip internal flag
+        foreach ($groupedByDate as &$domains) {
+            foreach ($domains as &$entry) {
+                unset($entry['_has_override']);
+            }
         }
 
         return $groupedByDate;
@@ -726,10 +741,11 @@ CRITICAL INSTRUCTIONS:
         // dd($dailyEntityStats->toArray());
 
         // Pre-load AI visibility per date/entity from brand_competitive_stats.
-        // Use effective visibility (override takes precedence) and last-session-wins per day
-        // — identical to how getHistoricalStatsForChart builds the chart, so BVI gap-fill
-        // values match what the graph actually renders.
-        $aiVisibilityByDayKey = BrandCompetitiveStat::where('brand_id', $brand->id)
+        // Pre-load AI visibility per date/entity from brand_competitive_stats.
+        // Use effective visibility (override takes precedence) — identical to how
+        // getHistoricalStatsForChart builds the chart, so BVI gap-fill values match
+        // what the graph actually renders.
+        $aiVisibilityStats = BrandCompetitiveStat::where('brand_id', $brand->id)
             ->whereBetween('analyzed_at', [$startDate, $endDate])
             ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
             ->orderBy('analyzed_at')
@@ -739,8 +755,14 @@ CRITICAL INSTRUCTIONS:
                 $k = $s->competitor_id ? 'c_'.$s->competitor_id : 'brand';
 
                 return $d.'|'.$k;
-            })
-            ->map(fn ($g) => (float) $g->last()->getEffectiveVisibility());
+            });
+
+        $aiVisibilityByDayKey = $aiVisibilityStats->map(function ($g) {
+            // Prefer the latest stat that has an explicit override.
+            $overridden = $g->filter(fn ($s) => $s->visibility_override !== null)->last();
+
+            return (float) ($overridden ? $overridden->getEffectiveVisibility() : $g->last()->getEffectiveVisibility());
+        });
 
         // Denominator = all distinct dates that have ANY data (brand_mentions OR AI stats).
         // Use already-loaded in-memory collections so dates match the chart exactly:
@@ -868,7 +890,9 @@ CRITICAL INSTRUCTIONS:
             if (isset($processedDayKeys[$dayKey])) {
                 continue;
             }
-            if (isset($mentionDatesSet[$date])) {
+            $hasOverride = isset($aiVisibilityStats[$dayKey])
+                && $aiVisibilityStats[$dayKey]->contains(fn ($s) => $s->visibility_override !== null);
+            if (isset($mentionDatesSet[$date]) && ! $hasOverride) {
                 continue;
             }
             if (! isset($entityData[$entityKey])) {
@@ -1363,26 +1387,31 @@ CRITICAL INSTRUCTIONS:
         // Sort by date
         ksort($historicalData);
 
-        // If we have mention-based data, merge with existing stats for sentiment/position
-        if (! empty($historicalData)) {
-            $existingStats = $this->getHistoricalStatsForChart($brand, $days, $aiModelId, $timezone);
+        $existingStats = $this->getHistoricalStatsForChart($brand, $days, $aiModelId, $timezone);
 
-            // Only fill in entirely missing dates from existing stats.
-            // Do NOT inject old brand_competitive_stats visibility for entities that had zero
-            // mentions on a date that already has brand_mentions data — that would mix two
-            // incompatible data sources and cause chart/trend inconsistency.
+        if (! empty($historicalData)) {
             foreach ($existingStats as $date => $domains) {
                 if (! isset($historicalData[$date])) {
                     $historicalData[$date] = $domains;
+                } else {
+                    foreach ($domains as $domain => $data) {
+                        if (! isset($historicalData[$date][$domain])) {
+                            $historicalData[$date][$domain] = $data;
+                        }
+                    }
                 }
             }
 
-            // Then update sentiment/position for mention-based records
+            // Then update sentiment/position for mention-based records, and apply
+            // admin overrides on top of mention SOV so overridden values appear on
+            // dates that already have mention data.
             foreach ($historicalData as $date => &$dateData) {
                 foreach ($dateData as $domain => &$entityData) {
-                    // Try to get sentiment/position from existing stats
                     if (isset($existingStats[$date][$domain])) {
-                        // Only update if these are the default values from calculation
+                        // Override visibility from existing stats (override takes priority)
+                        $existingVis = (float) $existingStats[$date][$domain]['visibility'];
+                        $entityData['visibility'] = $existingVis;
+                        // Update sentiment/position if currently at defaults
                         if (($entityData['sentiment'] == 50 && $entityData['position'] == 5) ||
                             (! isset($entityData['sentiment']) || ! isset($entityData['position']))) {
                             $entityData['sentiment'] = $existingStats[$date][$domain]['sentiment'] ?? 50;
@@ -1391,10 +1420,16 @@ CRITICAL INSTRUCTIONS:
                     }
                 }
             }
-
-            // Re-sort by date as we might have added new dates
-            ksort($historicalData);
+        } elseif (! empty($existingStats)) {
+            $historicalData = $existingStats;
+        } else {
+            // No data at all — seed today's date so fillMissingCompetitorsInChartData
+            // can populate zero-value entries and the graph isn't blank.
+            $historicalData[\Carbon\Carbon::now()->setTimezone($timezone)->toDateString()] = [];
         }
+
+        // Re-sort by date as we might have added new dates
+        ksort($historicalData);
 
         return $this->fillMissingCompetitorsInChartData($brand, $historicalData);
     }

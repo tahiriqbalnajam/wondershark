@@ -2,6 +2,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
+import FormattedDate from '@/components/FormattedDate';
 import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -179,15 +180,7 @@ export default function AdminPromptsIndex({ prompts, filters, agencies, brands }
         router.get('/admin/prompts');
     };
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        });
-    };
-
-    const filteredBrands = data.agency_id && data.agency_id !== 'all'
+const filteredBrands = data.agency_id && data.agency_id !== 'all'
         ? brands.filter(brand => brand.agency_id.toString() === data.agency_id)
         : brands;
 
@@ -484,7 +477,7 @@ export default function AdminPromptsIndex({ prompts, filters, agencies, brands }
                                                 <TableCell>
                                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                                         <Calendar className="h-4 w-4" />
-                                                        {formatDate(prompt.created_at)}
+                                                        <FormattedDate date={prompt.created_at} />
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>

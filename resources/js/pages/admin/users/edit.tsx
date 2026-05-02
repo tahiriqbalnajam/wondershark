@@ -1,5 +1,6 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
+import FormattedDate from '@/components/FormattedDate';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -317,7 +318,7 @@ export default function EditUser({ user, roles, permissions, featureKeys, userOv
                                             {activeSubscription.is_manual && <Badge className="ml-2 bg-yellow-100 text-yellow-800 text-xs">Manual</Badge>}
                                         </p>
                                         {activeSubscription.current_period_end
-                                            ? <p className="text-green-700">Expires: {activeSubscription.current_period_end}</p>
+                                            ? <p className="text-green-700">Expires: <FormattedDate date={activeSubscription.current_period_end} format="date" /></p>
                                             : <p className="text-green-700">No expiry set (lifetime)</p>}
                                         {activeSubscription.admin_note && (
                                             <p className="text-green-700 mt-1">Note: {activeSubscription.admin_note}</p>

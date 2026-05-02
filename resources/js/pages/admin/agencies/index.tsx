@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
+import FormattedDate from '@/components/FormattedDate';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -95,7 +96,7 @@ export default function AgenciesIndex({ agencies }: Props) {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                {new Date(agency.created_at).toLocaleDateString()}
+                                                <FormattedDate date={agency.created_at} />
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex items-center justify-end gap-2">

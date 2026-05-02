@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import FormattedDate from '@/components/FormattedDate';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -103,11 +104,7 @@ export default function CitationCheckShow({ post, combinedPrompts }: Props) {
         }
     };
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleString();
-    };
-
-    const getConfidenceColor = (confidence?: number) => {
+const getConfidenceColor = (confidence?: number) => {
         if (!confidence) return 'text-gray-500';
         if (confidence >= 0.8) return 'text-green-600';
         if (confidence >= 0.6) return 'text-yellow-600';
@@ -152,7 +149,7 @@ export default function CitationCheckShow({ post, combinedPrompts }: Props) {
                                 <div className="mt-2 text-sm text-muted-foreground space-y-1">
                                     <div>Brand: <span className="font-medium">{post.brand.name}</span></div>
                                     <div>Created by: <span className="font-medium">{post.user.name}</span></div>
-                                    <div>Created: <span className="font-medium">{formatDate(post.created_at)}</span></div>
+                                    <div>Created: <span className="font-medium"><FormattedDate date={post.created_at} format="datetime" /></span></div>
                                 </div>
                             </div>
                             {post.url && (
@@ -280,7 +277,7 @@ export default function CitationCheckShow({ post, combinedPrompts }: Props) {
                                                 </h3>
                                                 <div className="text-sm text-muted-foreground">
                                                     {citation ? (
-                                                        `Checked: ${formatDate(citation.checked_at)}`
+                                                        <>Checked: <FormattedDate date={citation.checked_at} format="datetime" /></>
                                                     ) : (
                                                         'Not checked yet'
                                                     )}

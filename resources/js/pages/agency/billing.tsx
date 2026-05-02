@@ -1,4 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
+import FormattedDate from '@/components/FormattedDate';
 import { Calendar, CreditCardIcon } from '@/components/billing-icons';
 import { Briefcase, Loader2 } from 'lucide-react';
 import CardUpdateModal from '@/components/card-update-modal';
@@ -393,7 +394,7 @@ export default function AgencyBillingPage() {
                         </div>
                         <div className="flex flex-col gap-0.5">
                           <p className="text-muted-foreground font-medium m-0">{subscription.cancel_at_period_end ? 'Cancels on' : 'Renews'}</p>
-                          <p className="font-semibold leading-3 m-0">{subscription.cancel_at || subscription.current_period_end}</p>
+                          <p className="font-semibold leading-3 m-0"><FormattedDate date={subscription.cancel_at || subscription.current_period_end} format="date" /></p>
                         </div>
                       </div>
                     </div>

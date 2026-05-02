@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import FormattedDate from '@/components/FormattedDate';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -216,7 +217,7 @@ export default function UsersIndex({ users, adminEmail }: Props) {
                                                 {user.email}
                                                 <span>•</span>
                                                 <Calendar className="h-3 w-3" />
-                                                {new Date(user.created_at).toLocaleDateString()}
+                                                <FormattedDate date={user.created_at} />
                                             </div>
                                             
                                             <div className="flex items-center gap-2 mt-2">

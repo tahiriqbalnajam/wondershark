@@ -45,7 +45,7 @@ class PostPromptController extends Controller
                     'ai_provider' => $prompt->ai_provider,
                     'is_selected' => $prompt->is_selected,
                     'order' => $prompt->order,
-                    'created_at' => $prompt->created_at->format('Y-m-d H:i:s'),
+                    'created_at' => $prompt->created_at,
                 ];
             });
 

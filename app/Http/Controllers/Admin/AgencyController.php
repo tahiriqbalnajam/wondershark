@@ -25,7 +25,7 @@ class AgencyController extends Controller
                     'id' => $agency->id,
                     'name' => $agency->name,
                     'email' => $agency->email,
-                    'created_at' => $agency->created_at->format('Y-m-d H:i:s'),
+                    'created_at' => $agency->created_at,
                     'brands_count' => $agency->brands()->count(),
                 ];
             });

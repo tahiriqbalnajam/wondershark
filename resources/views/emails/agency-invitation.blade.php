@@ -112,7 +112,7 @@
                 <a href="{{ $invitationUrl }}" class="button">Accept Invitation</a>
             </div>
 
-            <p class="expires">⏰ This invitation will expire in 48 hours ({{ $invitation->expires_at->format('M d, Y g:i A') }}).</p>
+            <p class="expires">⏰ This invitation will expire in 48 hours ({{ $invitation->expires_at->format('M d, Y g:i A T') }}).</p>
         </div>
 
         <div class="alt-link">

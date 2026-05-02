@@ -162,7 +162,7 @@
 
         <div class="footer">
             <p>This is an automated notification from the AI Model Health Check system.</p>
-            <p class="timestamp">Sent on {{ now()->format('F j, Y \a\t g:i A') }}</p>
+            <p class="timestamp">Sent on {{ now()->format('F j, Y \a\t g:i A T') }}</p>
         </div>
     </div>
 </body>

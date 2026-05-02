@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
 import { type BreadcrumbItem } from '@/types';
 import AppLayout from '@/layouts/app-layout';
+import FormattedDate from '@/components/FormattedDate';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -239,13 +240,7 @@ const Show: React.FC<Props> = ({ post }) => {
                                         <span className="text-sm font-medium">Created:</span>
                                     </div>
                                     <p className="text-sm text-muted-foreground ml-6">
-                                        {new Date(post.created_at).toLocaleDateString('en-US', {
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        })}
+                                        <FormattedDate date={post.created_at} format="datetime" />
                                     </p>
                                 </div>
 
@@ -256,13 +251,7 @@ const Show: React.FC<Props> = ({ post }) => {
                                             <span className="text-sm font-medium">Updated:</span>
                                         </div>
                                         <p className="text-sm text-muted-foreground ml-6">
-                                            {new Date(post.updated_at).toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'long',
-                                                day: 'numeric',
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                            })}
+                                            <FormattedDate date={post.updated_at} format="datetime" />
                                         </p>
                                     </div>
                                 )}
