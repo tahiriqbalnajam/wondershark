@@ -1,6 +1,6 @@
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
 import FormattedDate from '@/components/FormattedDate';
@@ -106,6 +106,7 @@ type Props = {
     filters: Filters;
     agencies: Agency[];
     brands: Brand[];
+    flash?: { success?: string; error?: string };
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -119,7 +120,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function AdminCompetitorsIndex({ competitors, filters, agencies, brands }: Props) {
+export default function AdminCompetitorsIndex({ competitors, filters, agencies, brands, flash }: Props) {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [editDrawerOpen, setEditDrawerOpen] = useState(false);
     const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
@@ -127,6 +128,11 @@ export default function AdminCompetitorsIndex({ competitors, filters, agencies, 
     const [aiLoading, setAiLoading] = useState(false);
     const [suggestedCompetitors, setSuggestedCompetitors] = useState<SuggestedCompetitor[]>([]);
     const [showAiSuggestions, setShowAiSuggestions] = useState(false);
+
+    useEffect(() => {
+        if (flash?.success) toast.success(flash.success);
+        if (flash?.error) toast.error(flash.error);
+    }, [flash]);
     
     const { data, setData, processing } = useForm<Filters>({
         agency_id: filters.agency_id || 'all',
