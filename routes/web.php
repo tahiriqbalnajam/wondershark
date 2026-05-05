@@ -266,6 +266,11 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
             Route::post('/{websiteUrl}/toggle', [\App\Http\Controllers\Admin\WebsiteUrlController::class, 'toggle'])->name('toggle');
         });
 
+        // Gap Analysis - Admin only
+        Route::prefix('admin/gap-analysis')->name('admin.gap-analysis.')->middleware('role.permission:view-admin-panel')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\GapAnalysisController::class, 'index'])->name('index');
+        });
+
            // Visibility Stats Override - Admin only
         Route::prefix('admin/visibility-stats')->name('admin.visibility-stats.')->middleware('role.permission:view-admin-panel')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\BrandVisibilityStatsController::class, 'index'])->name('index');
@@ -476,6 +481,9 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
         Route::post('subscriptions/setup-intent', [\App\Http\Controllers\Brand\SubscriptionController::class, 'createSetupIntent'])->name('subscriptions.setup-intent');
         Route::post('subscriptions/attach-payment-method', [\App\Http\Controllers\Brand\SubscriptionController::class, 'attachPaymentMethod'])->name('subscriptions.attach-payment-method');
         Route::get('subscriptions/payment-methods', [\App\Http\Controllers\Brand\SubscriptionController::class, 'getPaymentMethods'])->name('subscriptions.payment-methods');
+
+        // Email Update
+        Route::put('settings/email', [\App\Http\Controllers\BrandController::class, 'updateEmail'])->name('settings.update-email');
 
         // Billing Page
         Route::get('billing', function () {

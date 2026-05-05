@@ -19,7 +19,8 @@ import {
     CirclePlus,
     Terminal,
     CreditCard,
-    Link2
+    Link2,
+    Search
 } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { usePage } from '@inertiajs/react';
@@ -264,6 +265,12 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
                     title: 'Gap URLs',
                     href: '/admin/website-urls',
                     icon: Link2,
+                    permission: 'view-admin-panel',
+                },
+                {
+                    title: 'Gap Analysis',
+                    href: '/admin/gap-analysis',
+                    icon: Search,
                     permission: 'view-admin-panel',
                 },
                /* {
