@@ -1101,6 +1101,7 @@ class BrandController extends Controller
                 'trackedName' => $brand->trackedName ?? '',
                 'allies' => $brand->allies ?? [],
             ]),
+            'userEmail' => $user->email,
             'aiModels' => $aiModels,
         ]);
     }
@@ -1257,6 +1258,55 @@ class BrandController extends Controller
         ]);
 
         return back()->with('success', 'Brand status updated successfully!');
+    }
+
+    /**
+     * Update the brand user's email address.
+     */
+    public function updateEmail(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,'.Auth::id()],
+        ]);
+
+        /** @var User $user */
+        $user = Auth::user();
+
+        $oldEmail = $user->email;
+        $newEmail = $request->email;
+
+        // Update the email in the database
+        $user->update([
+            'email' => $newEmail,
+        ]);
+
+        // Update Stripe customer email if user has a subscription with stripe_customer_id
+        $subscription = $user->subscriptions()->whereNotNull('stripe_customer_id')->latest()->first();
+
+        if ($subscription && $subscription->stripe_customer_id) {
+            try {
+                $stripeService = app(\App\Services\StripeService::class);
+                $stripeService->updateCustomerEmail($subscription->stripe_customer_id, $newEmail);
+
+                Log::info('Updated Stripe customer email for brand user', [
+                    'user_id' => $user->id,
+                    'subscription_id' => $subscription->id,
+                    'stripe_customer_id' => $subscription->stripe_customer_id,
+                    'old_email' => $oldEmail,
+                    'new_email' => $newEmail,
+                ]);
+            } catch (\Exception $e) {
+                Log::warning('Failed to update Stripe customer email for brand user', [
+                    'user_id' => $user->id,
+                    'stripe_customer_id' => $subscription->stripe_customer_id,
+                    'old_email' => $oldEmail,
+                    'new_email' => $newEmail,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return back()->with('status', 'Email address updated successfully!');
     }
 
     /**

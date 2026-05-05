@@ -1,6 +1,7 @@
 // Full BrandEdit with 7 ON/OFF toggles (styled like the provided image)
 
 import { type BreadcrumbItem } from '@/types';
+import { Transition } from '@headlessui/react';
 import { Head, useForm } from '@inertiajs/react';
 import { useState, FormEventHandler } from 'react';
 
@@ -10,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -53,6 +54,7 @@ const countries = [
   'Other'
 ];
 import AppLayout from '@/layouts/app-layout';
+import { usePermissions } from '@/hooks/use-permissions';
 import { AddPromptDialog } from '@/components/brand/add-prompt-dialog';
 import {
   Plus,
@@ -79,7 +81,7 @@ type Brand = {
   allies?: string[];
 };
 
-type Props = { brand: Brand };
+type Props = { brand: Brand; userEmail?: string };
 
 type BrandForm = {
   name: string;
@@ -110,7 +112,8 @@ const breadcrumbs = (brand: Brand): BreadcrumbItem[] => [
   { title: 'Edit', href: `/brands/${brand.id}/edit` },
 ];
 
-export default function BrandEdit({ brand }: Props) {
+export default function BrandEdit({ brand, userEmail }: Props) {
+  const permissions = usePermissions();
   const [newPrompt, setNewPrompt] = useState('');
   const [newSubreddit, setNewSubreddit] = useState('');
 
@@ -163,6 +166,25 @@ export default function BrandEdit({ brand }: Props) {
 
   // const removeSubreddit = (index: number) => setData('subreddits', data.subreddits.filter((_, i) => i !== index));
   const { delete: destroy } = useForm();
+
+  // Email form
+  const {
+    data: emailData,
+    setData: setEmailData,
+    put: putEmail,
+    errors: emailErrors,
+    processing: emailProcessing,
+    recentlySuccessful: emailRecentlySuccessful,
+  } = useForm<{ email: string }>({
+    email: userEmail || '',
+  });
+
+  const submitEmail: FormEventHandler = (e) => {
+    e.preventDefault();
+    putEmail(route('brand.settings.update-email'), {
+      preserveScroll: true,
+    });
+  };
 
     const handleSubmit: FormEventHandler = (e) => {
       e.preventDefault();
@@ -534,6 +556,51 @@ export default function BrandEdit({ brand }: Props) {
               </Button>
           </div>
         </form>
+
+        {/* Email Update Section - only for brand users */}
+        {permissions.hasRole('brand') && (
+        <Card className="mt-10">
+          <CardHeader>
+            <CardTitle>Email Address</CardTitle>
+            <CardDescription>Update your email address for account notifications and billing</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={submitEmail} className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  className="max-w-md form-control"
+                  value={emailData.email}
+                  onChange={(e) => setEmailData('email', e.target.value)}
+                  autoComplete="email"
+                  placeholder="Enter email address"
+                />
+                <InputError className="mt-2" message={emailErrors.email} />
+              </div>
+
+              <div className="flex items-center">
+                <div className="flex items-center gap-4">
+                  <Button className="primary-btn" disabled={emailProcessing}>
+                    {emailProcessing ? 'Updating...' : 'Update Email'}
+                  </Button>
+
+                  <Transition
+                    show={emailRecentlySuccessful}
+                    enter="transition ease-in-out"
+                    enterFrom="opacity-0"
+                    leave="transition ease-in-out"
+                    leaveTo="opacity-0"
+                  >
+                    <p className="text-sm text-green-600">Email updated successfully!</p>
+                  </Transition>
+                </div>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+        )}
       </div>
     </AppLayout>
   );
