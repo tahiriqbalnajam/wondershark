@@ -79,6 +79,7 @@ class GapAnalysisController extends Controller
                             return [
                                 'competitor_id' => $mention->competitor_id,
                                 'entity_name' => $mention->entity_name,
+                                'entity_domain' => $mention->entity_domain,
                                 'sentiment' => $mention->sentiment,
                             ];
                         })

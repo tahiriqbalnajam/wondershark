@@ -26,6 +26,7 @@ type AiModel = {
 type CompetitorMention = {
     competitor_id: number;
     entity_name: string;
+    entity_domain: string | null;
     sentiment: number | null;
 };
 
@@ -220,7 +221,18 @@ export default function GapAnalysisIndex({ agencies, brands, results, selectedBr
                                                                     variant="outline"
                                                                     className="text-xs gap-1"
                                                                 >
-                                                                    <Building2 className="h-3 w-3" />
+                                                                    {comp.entity_domain ? (
+                                                                        <img
+                                                                            src={`https://www.google.com/s2/favicons?domain=${comp.entity_domain}&sz=16`}
+                                                                            alt=""
+                                                                            className="h-3.5 w-3.5 rounded-sm"
+                                                                            onError={(e) => {
+                                                                                (e.target as HTMLImageElement).style.display = 'none';
+                                                                            }}
+                                                                        />
+                                                                    ) : (
+                                                                        <Building2 className="h-3 w-3" />
+                                                                    )}
                                                                     {comp.entity_name}
                                                                 </Badge>
                                                             ))}
