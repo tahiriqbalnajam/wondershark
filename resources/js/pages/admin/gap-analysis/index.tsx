@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { useState } from 'react';
 import { CheckCircle, XCircle, Building2, ExternalLink, Search } from 'lucide-react';
 
 type Resource = {
@@ -55,22 +56,6 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Gap Analysis', href: '/admin/gap-analysis' },
 ];
 
-const resourceTypeColors: Record<string, string> = {
-    competitor: 'bg-red-100 text-red-800',
-    reddit: 'bg-orange-100 text-orange-800',
-    youtube: 'bg-red-100 text-red-800',
-    social: 'bg-blue-100 text-blue-800',
-    news: 'bg-green-100 text-green-800',
-    blog: 'bg-purple-100 text-purple-800',
-    documentation: 'bg-gray-100 text-gray-800',
-    research: 'bg-indigo-100 text-indigo-800',
-    reviews: 'bg-yellow-100 text-yellow-800',
-    community: 'bg-teal-100 text-teal-800',
-    industry_report: 'bg-cyan-100 text-cyan-800',
-    marketplace: 'bg-pink-100 text-pink-800',
-    other: 'bg-gray-100 text-gray-600',
-};
-
 export default function GapAnalysisIndex({ agencies, brands, results, selectedBrand, filters }: Props) {
     const { data, setData, processing } = useForm({
         agency_id: filters.agency_id || 'all',
@@ -86,6 +71,20 @@ export default function GapAnalysisIndex({ agencies, brands, results, selectedBr
             agency_id: data.agency_id === 'all' ? '' : data.agency_id,
             brand_id: data.brand_id === 'all' ? '' : data.brand_id,
         }, { preserveState: true, preserveScroll: true });
+    };
+
+    const [toggledItems, setToggledItems] = useState<Set<string>>(new Set());
+
+    const toggleItem = (key: string) => {
+        setToggledItems(prev => {
+            const next = new Set(prev);
+            if (next.has(key)) {
+                next.delete(key);
+            } else {
+                next.add(key);
+            }
+            return next;
+        });
     };
 
     const clearFilters = () => {
@@ -182,20 +181,27 @@ export default function GapAnalysisIndex({ agencies, brands, results, selectedBr
                                                 <TableCell>
                                                     <div className="space-y-1.5">
                                                         {result.resources.map((resource, i) => (
-                                                            <div key={i} className="flex items-start gap-2 text-xs">
-                                                                <Badge className={`shrink-0 text-[10px] px-1.5 py-0 ${resourceTypeColors[resource.type] || resourceTypeColors.other}`}>
-                                                                    {resource.type}
-                                                                </Badge>
-                                                                <a
-                                                                    href={resource.url}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="text-blue-600 hover:underline truncate max-w-[250px] inline-flex items-center gap-1"
-                                                                >
-                                                                    {resource.title || resource.url}
-                                                                    <ExternalLink className="h-3 w-3 shrink-0" />
-                                                                </a>
-                                                            </div>
+                                                            <a
+                                                                key={i}
+                                                                href={resource.url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="inline-flex items-center gap-1.5 mr-1.5 mb-1"
+                                                                title={resource.domain || resource.url}
+                                                            >
+                                                                {resource.domain ? (
+                                                                    <img
+                                                                        src={`https://www.google.com/s2/favicons?domain=${resource.domain}&sz=32`}
+                                                                        alt=""
+                                                                        className="h-5 w-5 rounded-sm"
+                                                                        onError={(e) => {
+                                                                            (e.target as HTMLImageElement).style.display = 'none';
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    <ExternalLink className="h-4 w-4" />
+                                                                )}
+                                                            </a>
                                                         ))}
                                                     </div>
                                                 </TableCell>
@@ -215,27 +221,32 @@ export default function GapAnalysisIndex({ agencies, brands, results, selectedBr
                                                 <TableCell>
                                                     {result.competitor_mentions.length > 0 ? (
                                                         <div className="flex flex-wrap gap-1">
-                                                            {result.competitor_mentions.map((comp, i) => (
-                                                                <Badge
-                                                                    key={i}
-                                                                    variant="outline"
-                                                                    className="text-xs gap-1"
-                                                                >
-                                                                    {comp.entity_domain ? (
-                                                                        <img
-                                                                            src={`https://www.google.com/s2/favicons?domain=${comp.entity_domain}&sz=16`}
-                                                                            alt=""
-                                                                            className="h-3.5 w-3.5 rounded-sm"
-                                                                            onError={(e) => {
-                                                                                (e.target as HTMLImageElement).style.display = 'none';
-                                                                            }}
-                                                                        />
-                                                                    ) : (
-                                                                        <Building2 className="h-3 w-3" />
-                                                                    )}
-                                                                    {comp.entity_name}
-                                                                </Badge>
-                                                            ))}
+                                                            {result.competitor_mentions.map((comp, i) => {
+                                                                const compKey = `comp-${result.id}-${i}`;
+                                                                const showDomain = toggledItems.has(compKey);
+                                                                return (
+                                                                    <Badge
+                                                                        key={i}
+                                                                        variant="outline"
+                                                                        className="text-xs gap-1 cursor-pointer hover:bg-accent"
+                                                                        onClick={() => toggleItem(compKey)}
+                                                                    >
+                                                                        {comp.entity_domain ? (
+                                                                            <img
+                                                                                src={`https://www.google.com/s2/favicons?domain=${comp.entity_domain}&sz=16`}
+                                                                                alt=""
+                                                                                className="h-3.5 w-3.5 rounded-sm"
+                                                                                onError={(e) => {
+                                                                                    (e.target as HTMLImageElement).style.display = 'none';
+                                                                                }}
+                                                                            />
+                                                                        ) : (
+                                                                            <Building2 className="h-3 w-3" />
+                                                                        )}
+                                                                        {showDomain && comp.entity_domain ? comp.entity_domain : comp.entity_name}
+                                                                    </Badge>
+                                                                );
+                                                            })}
                                                         </div>
                                                     ) : (
                                                         <span className="text-xs text-muted-foreground">None</span>
