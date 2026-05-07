@@ -1339,6 +1339,10 @@ CRITICAL INSTRUCTIONS:
             // Fall back to existing historical stats, then ensure all competitors are present
             $historicalData = $this->getHistoricalStatsForChart($brand, $days, $aiModelId, $timezone);
 
+            if (empty($historicalData)) {
+                $historicalData = $this->buildHistoricalFallbackFromLatestStats($brand, $aiModelId, $timezone);
+            }
+
             return $this->fillMissingCompetitorsInChartData($brand, $historicalData);
         }
 
@@ -1423,15 +1427,58 @@ CRITICAL INSTRUCTIONS:
         } elseif (! empty($existingStats)) {
             $historicalData = $existingStats;
         } else {
-            // No data at all — seed today's date so fillMissingCompetitorsInChartData
-            // can populate zero-value entries and the graph isn't blank.
-            $historicalData[\Carbon\Carbon::now()->setTimezone($timezone)->toDateString()] = [];
+            $historicalData = $this->buildHistoricalFallbackFromLatestStats($brand, $aiModelId, $timezone);
         }
 
         // Re-sort by date as we might have added new dates
         ksort($historicalData);
 
         return $this->fillMissingCompetitorsInChartData($brand, $historicalData);
+    }
+
+    /**
+     * Build chart-formatted historical data from the latest available complete session,
+     * without date-range filtering. Mirrors the BVI table's buildFallbackStats() so the
+     * visibility graph shows the same data as the BVI table when no mentions or recent
+     * stats exist.
+     */
+    protected function buildHistoricalFallbackFromLatestStats(Brand $brand, ?int $aiModelId, string $timezone): array
+    {
+        $fallbackStats = $this->buildFallbackStats($brand, $aiModelId);
+
+        if (empty($fallbackStats)) {
+            return [\Carbon\Carbon::now()->setTimezone($timezone)->toDateString() => []];
+        }
+
+        $historicalData = [];
+        foreach ($fallbackStats as $stat) {
+            $date = isset($stat['analyzed_at']) && $stat['analyzed_at']
+                ? \Carbon\Carbon::parse($stat['analyzed_at'])->setTimezone($timezone)->format('Y-m-d')
+                : \Carbon\Carbon::now()->setTimezone($timezone)->format('Y-m-d');
+
+            $domain = $stat['entity_url'] ?? $stat['entity_name'] ?? '';
+            $clean = str_replace(['https://', 'http://', 'www.'], '', (string) $domain);
+            $cleanDomain = explode('/', $clean)[0];
+
+            if (empty($cleanDomain)) {
+                continue;
+            }
+
+            if (! isset($historicalData[$date])) {
+                $historicalData[$date] = [];
+            }
+
+            $historicalData[$date][$cleanDomain] = [
+                'entity_name' => $stat['entity_name'] ?? '',
+                'visibility' => (float) ($stat['visibility'] ?? 0),
+                'sentiment' => $stat['sentiment'] ?? 50,
+                'position' => $stat['position'] ?? 5,
+            ];
+        }
+
+        ksort($historicalData);
+
+        return $historicalData;
     }
 
     /**
