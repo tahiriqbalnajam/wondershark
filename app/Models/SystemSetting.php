@@ -24,7 +24,7 @@ class SystemSetting extends Model
             return $default;
         }
 
-        return self::castValue($setting->value, $setting->type);
+        return $setting->value;
     }
 
     public static function set($key, $value, $type = 'string', $description = null)

@@ -10,13 +10,24 @@ use Inertia\Inertia;
 
 class WebsiteUrlController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $websiteUrls = WebsiteUrl::ordered()->get();
+        $query = WebsiteUrl::ordered();
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('url', 'like', "%{$search}%");
+            });
+        }
+
+        $websiteUrls = $query->paginate(50)->withQueryString();
 
         return Inertia::render('admin/website-urls/index', [
             'websiteUrls' => $websiteUrls,
             'googleSheetsConnected' => $this->isGoogleSheetsConnected(),
+            'filters' => $request->only(['search']),
         ]);
     }
 
@@ -163,39 +174,33 @@ class WebsiteUrlController extends Controller
             $response = $service->spreadsheets_values->get($sheetId, 'Sheet1');
             $rows = $response->getValues();
 
-            if (empty($rows)) {
+            if (empty($rows) || count($rows) < 2) {
                 return back()->with('error', 'No data found in the Google Sheet.');
             }
 
-            $headers = array_map('strtolower', array_map('trim', $rows[0]));
             $created = 0;
             $updated = 0;
 
             foreach (array_slice($rows, 1) as $row) {
-                $data = [];
-                foreach ($headers as $i => $header) {
-                    $data[$header] = $row[$i] ?? '';
-                }
+                $title = trim($row[0] ?? '');
 
-                if (empty($data['url'])) {
+                if (empty($title)) {
                     continue;
                 }
 
-                $fields = [
-                    'title' => $data['title'] ?? '',
-                    'url' => $data['url'],
-                    'description' => $data['description'] ?? null,
-                    'is_enabled' => filter_var($data['is_enabled'] ?? true, FILTER_VALIDATE_BOOLEAN),
-                    'order' => is_numeric($data['order'] ?? 0) ? (int) $data['order'] : 0,
-                ];
-
-                $existing = WebsiteUrl::where('url', $fields['url'])->first();
+                $existing = WebsiteUrl::where('title', $title)->first();
 
                 if ($existing) {
-                    $existing->update($fields);
+                    // Don't overwrite fields that the admin may have manually set
                     $updated++;
                 } else {
-                    WebsiteUrl::create($fields);
+                    WebsiteUrl::create([
+                        'title' => $title,
+                        'url' => '',
+                        'description' => 'test',
+                        'is_enabled' => true,
+                        'order' => 0,
+                    ]);
                     $created++;
                 }
             }

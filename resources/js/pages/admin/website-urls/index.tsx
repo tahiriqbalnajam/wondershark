@@ -1,5 +1,5 @@
 import { Head, Link, router, useForm } from "@inertiajs/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, RefreshCw, Unlink, Link2 } from "lucide-react";
+import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, RefreshCw, Unlink, Link2, Search } from "lucide-react";
 import AppLayout from "@/layouts/app-layout";
 import { toast } from "sonner";
 
@@ -43,19 +43,32 @@ interface WebsiteUrl {
   updated_at: string;
 }
 
+interface PaginatedUrls {
+  data: WebsiteUrl[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+  from: number;
+  to: number;
+}
+
 interface Props {
-  websiteUrls: WebsiteUrl[];
+  websiteUrls: PaginatedUrls;
   googleSheetsConnected: boolean;
+  filters: { search?: string };
   flash?: {
     success?: string;
     error?: string;
   };
 }
 
-export default function Index({ websiteUrls, googleSheetsConnected, flash }: Props) {
+export default function Index({ websiteUrls, googleSheetsConnected, filters, flash }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [search, setSearch] = useState(filters.search || '');
+  const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     if (flash?.success) {
@@ -73,6 +86,24 @@ export default function Index({ websiteUrls, googleSheetsConnected, flash }: Pro
     is_enabled: true as boolean,
     order: 0,
   });
+
+  const handleSearch = (value: string) => {
+    setSearch(value);
+    clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      router.get(route('admin.website-urls.index'), { search: value || undefined }, {
+        preserveState: true,
+        replace: true,
+      });
+    }, 300);
+  };
+
+  const handlePageChange = (page: number) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set('page', String(page));
+    if (search) params.set('search', search);
+    router.visit(window.location.pathname + '?' + params.toString(), { preserveScroll: true });
+  };
 
   const handleOpenDrawer = () => {
     reset();
@@ -95,8 +126,11 @@ export default function Index({ websiteUrls, googleSheetsConnected, flash }: Pro
   };
 
   const handleToggle = (websiteUrl: WebsiteUrl) => {
+    const params = new URLSearchParams(window.location.search);
     router.post(route('admin.website-urls.toggle', websiteUrl.id), {}, {
       preserveScroll: true,
+      preserveState: true,
+      data: Object.fromEntries(params),
     });
   };
 
@@ -107,7 +141,7 @@ export default function Index({ websiteUrls, googleSheetsConnected, flash }: Pro
   };
 
   const handleSync = () => {
-    if (!confirm('This will sync website URLs from Google Sheets. Existing URLs matching by URL will be updated, new ones will be added. Continue?')) {
+    if (!confirm('This will sync publications from the first column of your Google Sheet. New publications will be added (existing ones by title are skipped). Continue?')) {
       return;
     }
     setSyncing(true);
@@ -165,16 +199,29 @@ export default function Index({ websiteUrls, googleSheetsConnected, flash }: Pro
 
           <Card>
             <CardHeader>
-              <CardTitle>Gap URLs</CardTitle>
-              <CardDescription>
-                Manage Gap URLs that appear on the site. Toggle status to show/hide.
-              </CardDescription>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Gap URLs</CardTitle>
+                  <CardDescription>
+                    {websiteUrls.total} total URLs. Manage Gap URLs that appear on the site. Toggle status to show/hide.
+                  </CardDescription>
+                </div>
+                <div className="relative w-64">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search title or URL..."
+                    value={search}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Order</TableHead>
+                    <TableHead className="w-16">#</TableHead>
                     <TableHead>Title</TableHead>
                     <TableHead>URL</TableHead>
                     <TableHead>Description</TableHead>
@@ -183,9 +230,11 @@ export default function Index({ websiteUrls, googleSheetsConnected, flash }: Pro
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {websiteUrls.map((websiteUrl) => (
+                  {websiteUrls.data.map((websiteUrl, index) => (
                     <TableRow key={websiteUrl.id}>
-                      <TableCell className="font-medium">{websiteUrl.order}</TableCell>
+                      <TableCell className="font-medium">
+                        {websiteUrls.from + index}
+                      </TableCell>
                       <TableCell>{websiteUrl.title}</TableCell>
                       <TableCell>
                         <a
@@ -236,15 +285,44 @@ export default function Index({ websiteUrls, googleSheetsConnected, flash }: Pro
                       </TableCell>
                     </TableRow>
                   ))}
-                  {websiteUrls.length === 0 && (
+                  {websiteUrls.data.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                        No Gap URLs configured yet.
+                        No Gap URLs found.
                       </TableCell>
                     </TableRow>
                   )}
                 </TableBody>
               </Table>
+
+              {websiteUrls.last_page > 1 && (
+                <div className="flex items-center justify-between px-2 py-4">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {websiteUrls.from} to {websiteUrls.to} of {websiteUrls.total} URLs
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={websiteUrls.current_page <= 1}
+                      onClick={() => handlePageChange(websiteUrls.current_page - 1)}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Page {websiteUrls.current_page} of {websiteUrls.last_page}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={websiteUrls.current_page >= websiteUrls.last_page}
+                      onClick={() => handlePageChange(websiteUrls.current_page + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
