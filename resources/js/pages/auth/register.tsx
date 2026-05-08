@@ -185,7 +185,7 @@ export default function Register() {
                         <div className="rounded-lg border p-5 shadow-xl hover:shadow-2xl account-type">
                             <Label htmlFor="brand" className="flex-1 cursor-pointer">
                                 <div className="font-bold text-orange-600 flex items-center justify-between text-2xl mb-5"><RadioGroupItem value="brand" id="brand" className='radio-btn' /> Brand</div>
-                                <div className="text-md text-muted-foreground leading-5">We'll manage posts snd maximize AI visibility for a standalone brand.</div>
+                                <div className="text-md text-muted-foreground leading-5">We'll manage posts and maximize AI visibility for a standalone brand.</div>
                                 <hr className='my-5' />
                                 <ul className='p-0 m-0'>
                                     <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600' /> Single brand</li>
@@ -236,7 +236,7 @@ export default function Register() {
                         <Input
                             className='form-control !mb-0'
                             id="email"
-                            type="email"
+                            type="text"
                             required
                             tabIndex={2}
                             autoComplete="email"
