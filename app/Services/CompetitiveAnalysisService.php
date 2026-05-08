@@ -528,14 +528,106 @@ CRITICAL INSTRUCTIONS:
         $startDate = now()->subDays($days);
         $endDate = now();
 
-        // Get competitive stats ordered by date
+        // Pre-load competitors for domain/name resolution from brand_mentions
+        $competitorsById = $brand->competitors()->get()->keyBy('id');
+
+        // Resolve domain for a given entity_type + competitor_id
+        $resolveEntityDomain = function (string $entityType, ?int $competitorId) use ($brand, $competitorsById): string {
+            if ($entityType === 'competitor' && $competitorId) {
+                $comp = $competitorsById[$competitorId] ?? null;
+                if ($comp && $comp->domain) {
+                    $clean = str_replace(['https://', 'http://', 'www.'], '', (string) $comp->domain);
+
+                    return explode('/', $clean)[0];
+                }
+            }
+            if ($entityType === 'brand') {
+                $clean = str_replace(['https://', 'http://', 'www.'], '', (string) ($brand->website ?? ''));
+
+                return explode('/', $clean)[0] ?: 'brand';
+            }
+
+            return 'unknown';
+        };
+
+        $groupedByDate = [];
+
+        // --- Step 1: Build chart data from brand_mentions (daily SOV = mirror of BVI table) ---
+        $dailyEntityQuery = BrandMention::where('brand_id', $brand->id)
+            ->whereBetween('analyzed_at', [$startDate, $endDate])
+            ->select(
+                DB::raw("DATE(CONVERT_TZ(analyzed_at, '+00:00', '{$timezone}')) as date"),
+                'entity_type',
+                'entity_name',
+                'entity_domain',
+                'competitor_id',
+                DB::raw('SUM(mention_count) as entity_mentions'),
+                DB::raw('AVG(sentiment) as avg_mention_sentiment'),
+                DB::raw('AVG(position) as avg_position')
+            )
+            ->groupBy(DB::raw("DATE(CONVERT_TZ(analyzed_at, '+00:00', '{$timezone}'))"), 'entity_type', 'entity_name', 'entity_domain', 'competitor_id');
+
+        if ($aiModelId) {
+            $dailyEntityQuery->where('ai_model_id', $aiModelId);
+        }
+
+        $dailyEntityStats = $dailyEntityQuery->get();
+
+        // Daily totals for SOV denominator
+        $dailyTotalsQuery = BrandMention::where('brand_id', $brand->id)
+            ->whereBetween('analyzed_at', [$startDate, $endDate])
+            ->select(
+                DB::raw("DATE(CONVERT_TZ(analyzed_at, '+00:00', '{$timezone}')) as date"),
+                DB::raw('SUM(mention_count) as total_mentions')
+            )
+            ->groupBy(DB::raw("DATE(CONVERT_TZ(analyzed_at, '+00:00', '{$timezone}'))"));
+
+        if ($aiModelId) {
+            $dailyTotalsQuery->where('ai_model_id', $aiModelId);
+        }
+
+        $dailyTotals = $dailyTotalsQuery->get()->keyBy('date');
+
+        $mentionDatesSet = [];
+        foreach ($dailyEntityStats as $row) {
+            $date = $row->date;
+            $mentionDatesSet[$date] = true;
+
+            $domain = $resolveEntityDomain($row->entity_type, $row->competitor_id);
+
+            // Resolve entity name (prefer current competitor/brand name)
+            $entityName = $row->entity_name;
+            if ($row->entity_type === 'competitor' && $row->competitor_id && isset($competitorsById[$row->competitor_id])) {
+                $entityName = $competitorsById[$row->competitor_id]->name;
+            } elseif ($row->entity_type === 'brand') {
+                $entityName = $brand->name;
+            }
+
+            $totalMentionsThatDay = $dailyTotals[$date]->total_mentions ?? 0;
+            $dailyVisibility = $totalMentionsThatDay > 0
+                ? ($row->entity_mentions / $totalMentionsThatDay) * 100
+                : 0;
+
+            if (! isset($groupedByDate[$date])) {
+                $groupedByDate[$date] = [];
+            }
+
+            $groupedByDate[$date][$domain] = [
+                'entity_name' => $entityName,
+                'visibility' => (float) round($dailyVisibility, 2),
+                'sentiment' => $row->avg_mention_sentiment !== null ? (int) round($row->avg_mention_sentiment) : null,
+                'position' => $row->avg_position !== null
+                    ? min(10, max(1, round($row->avg_position / 500, 1)))
+                    : null,
+            ];
+        }
+
+        // --- Step 2: Fill missing dates/entities from brand_competitive_stats ---
         $query = BrandCompetitiveStat::where('brand_id', $brand->id)
             ->whereBetween('analyzed_at', [$startDate, $endDate])
             ->with(['competitor', 'brand'])
             ->where(function ($query) {
-                // Include brand stats (entity_type = 'brand')
                 $query->where('entity_type', 'brand')
-                      // OR competitor stats where the competitor is accepted
                     ->orWhereHas('competitor', function ($subQuery) {
                         $subQuery->accepted();
                     });
@@ -546,13 +638,6 @@ CRITICAL INSTRUCTIONS:
         }
 
         $stats = $query->orderBy('analyzed_at')->get();
-
-        if ($stats->isEmpty()) {
-            return [];
-        }
-
-        // Build grouped chart data using effective visibility (override takes precedence)
-        $groupedByDate = [];
 
         $resolveDomain = function ($stat): string {
             $entityUrl = $stat->entity_url;
@@ -570,6 +655,12 @@ CRITICAL INSTRUCTIONS:
             $date = $stat->analyzed_at->copy()->setTimezone($timezone)->format('Y-m-d');
             $domain = $resolveDomain($stat);
 
+            // If this date already has mention-based data, skip non-overridden stat entries.
+            // Overridden stat entries still win — admin intent takes precedence.
+            if (isset($mentionDatesSet[$date]) && $stat->visibility_override === null) {
+                continue;
+            }
+
             if (! isset($groupedByDate[$date])) {
                 $groupedByDate[$date] = [];
             }
@@ -581,9 +672,7 @@ CRITICAL INSTRUCTIONS:
                 $entityName = $stat->brand->name;
             }
 
-            // Prefer overridden entries: if the current stat has no override but an
-            // earlier stat for the same date+domain already set an overridden value,
-            // keep the overridden one so admin overrides are not silently discarded.
+            // Prefer overridden entries
             $existing = $groupedByDate[$date][$domain] ?? null;
             if ($existing && ($existing['_has_override'] ?? false) && $stat->visibility_override === null) {
                 continue;
@@ -596,6 +685,10 @@ CRITICAL INSTRUCTIONS:
                 'position' => $stat->position,
                 '_has_override' => $stat->visibility_override !== null,
             ];
+        }
+
+        if (empty($groupedByDate)) {
+            return [];
         }
 
         // Strip internal flag
