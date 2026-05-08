@@ -31,7 +31,7 @@ type ValidationErrors = {
 };
 
 export default function Register() {
-    const { data, setData, post, processing, errors, reset, transform } = useForm<Required<RegisterForm>>({
+    const { data, setData, post, processing, errors, reset, transform, clearErrors } = useForm<Required<RegisterForm>>({
         name: '',
         email: '',
         password: '',
@@ -99,12 +99,14 @@ export default function Register() {
 
     const handleNameChange = (value: string) => {
         setData('name', value);
+        clearErrors('name');
         const error = validateName(value);
         setValidationErrors((prev) => ({ ...prev, name: error }));
     };
 
     const handleEmailChange = (value: string) => {
         setData('email', value);
+        clearErrors('email');
         const error = validateEmail(value);
         setValidationErrors((prev) => ({ ...prev, email: error }));
     };
@@ -113,12 +115,14 @@ export default function Register() {
         const processedValue = value.replace(/^https?:\/\//, '');
 
         setData('website', processedValue);
+        clearErrors('website');
         const error = validateWebsite(processedValue);
         setValidationErrors((prev) => ({ ...prev, website: error }));
     };
 
     const handlePasswordChange = (value: string) => {
         setData('password', value);
+        clearErrors('password');
         const error = validatePassword(value);
         setValidationErrors((prev) => ({ ...prev, password: error }));
 
@@ -131,6 +135,7 @@ export default function Register() {
 
     const handlePasswordConfirmationChange = (value: string) => {
         setData('password_confirmation', value);
+        clearErrors('password_confirmation');
         const error = validatePasswordConfirmation(data.password, value);
         setValidationErrors((prev) => ({ ...prev, password_confirmation: error }));
     };
@@ -155,13 +160,9 @@ export default function Register() {
 
         setValidationErrors(newErrors);
 
-        // Check if there are any validation errors
         const hasErrors = Object.values(newErrors).some((error) => error !== undefined);
 
         if (hasErrors) {
-            // Show an alert with the first error
-            const firstError = Object.values(newErrors).find((error) => error !== undefined);
-            alert(firstError);
             return;
         }
 
