@@ -11,6 +11,7 @@
     "require": {
         "php": "^8.2",
         "echolabsdev/prism": "^0.99",
+        "google/apiclient": "^2.19",
         "guzzlehttp/guzzle": "^7.9",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^13.0",

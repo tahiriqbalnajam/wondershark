@@ -28,7 +28,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Plus, Edit, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, RefreshCw, Unlink, Link2 } from "lucide-react";
 import AppLayout from "@/layouts/app-layout";
 import { toast } from "sonner";
 
@@ -45,14 +45,17 @@ interface WebsiteUrl {
 
 interface Props {
   websiteUrls: WebsiteUrl[];
+  googleSheetsConnected: boolean;
   flash?: {
     success?: string;
     error?: string;
   };
 }
 
-export default function Index({ websiteUrls, flash }: Props) {
+export default function Index({ websiteUrls, googleSheetsConnected, flash }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   useEffect(() => {
     if (flash?.success) {
@@ -103,6 +106,28 @@ export default function Index({ websiteUrls, flash }: Props) {
     }
   };
 
+  const handleSync = () => {
+    if (!confirm('This will sync website URLs from Google Sheets. Existing URLs matching by URL will be updated, new ones will be added. Continue?')) {
+      return;
+    }
+    setSyncing(true);
+    router.post(route('admin.website-urls.sync'), {}, {
+      preserveScroll: true,
+      onFinish: () => setSyncing(false),
+    });
+  };
+
+  const handleDisconnect = () => {
+    if (!confirm('Disconnect Google Sheets? You will need to re-authorize to sync again.')) {
+      return;
+    }
+    setDisconnecting(true);
+    router.post(route('admin.website-urls.auth.disconnect'), {}, {
+      preserveScroll: true,
+      onFinish: () => setDisconnecting(false),
+    });
+  };
+
   return (
     <AppLayout>
       <Head title="Gap URLs Management" />
@@ -113,10 +138,29 @@ export default function Index({ websiteUrls, flash }: Props) {
             <h2 className="font-semibold text-xl text-gray-800 leading-tight">
               Gap URLs Management
             </h2>
-            <Button onClick={handleOpenDrawer}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add URL
-            </Button>
+            <div className="flex gap-3">
+              {googleSheetsConnected ? (
+                <>
+                  <Button onClick={handleSync} disabled={syncing} variant="outline">
+                    <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                    {syncing ? 'Syncing...' : 'Sync from Google Sheets'}
+                  </Button>
+                  <Button onClick={handleDisconnect} disabled={disconnecting} variant="outline" className="text-red-600 hover:text-red-700">
+                    <Unlink className="w-4 h-4 mr-2" />
+                    {disconnecting ? 'Disconnecting...' : 'Disconnect'}
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => window.location.href = route('admin.website-urls.auth.redirect')} variant="outline">
+                  <Link2 className="w-4 h-4 mr-2" />
+                  Connect Google Sheets
+                </Button>
+              )}
+              <Button onClick={handleOpenDrawer}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add URL
+              </Button>
+            </div>
           </div>
 
           <Card>

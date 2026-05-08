@@ -260,6 +260,10 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
         Route::prefix('admin/website-urls')->name('admin.website-urls.')->middleware('role.permission:view-admin-panel')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\WebsiteUrlController::class, 'index'])->name('index');
             Route::post('/', [\App\Http\Controllers\Admin\WebsiteUrlController::class, 'store'])->name('store');
+            Route::post('/sync', [\App\Http\Controllers\Admin\WebsiteUrlController::class, 'syncFromGoogleSheet'])->name('sync');
+            Route::get('/auth/redirect', [\App\Http\Controllers\Admin\WebsiteUrlController::class, 'redirectToGoogle'])->name('auth.redirect');
+            Route::get('/auth/callback', [\App\Http\Controllers\Admin\WebsiteUrlController::class, 'handleGoogleCallback'])->name('auth.callback');
+            Route::post('/auth/disconnect', [\App\Http\Controllers\Admin\WebsiteUrlController::class, 'disconnectGoogle'])->name('auth.disconnect');
             Route::get('/{websiteUrl}/edit', [\App\Http\Controllers\Admin\WebsiteUrlController::class, 'edit'])->name('edit');
             Route::patch('/{websiteUrl}', [\App\Http\Controllers\Admin\WebsiteUrlController::class, 'update'])->name('update');
             Route::delete('/{websiteUrl}', [\App\Http\Controllers\Admin\WebsiteUrlController::class, 'destroy'])->name('destroy');

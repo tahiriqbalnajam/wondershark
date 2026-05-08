@@ -54,4 +54,11 @@ return [
         'api_key' => env('PERPLEXITY_API_KEY'),
     ],
 
+    'google_sheets' => [
+        'sheet_id' => env('GOOGLE_SHEET_ID'),
+        'client_id' => env('GOOGLE_SHEET_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_SHEET_CLIENT_SECRET'),
+        'redirect_uri' => env('GOOGLE_SHEET_REDIRECT_URI', '/admin/website-urls/auth/callback'),
+    ],
+
 ];
