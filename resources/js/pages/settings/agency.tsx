@@ -35,7 +35,9 @@ type PasswordForm = {
 };
 
 type EmailForm = {
-    email: string;
+    current_email: string;
+    new_email: string;
+    new_email_confirmation: string;
 };
 
 export default function Agency({ agency }: { agency: { name: string; url?: string; logo?: string; color?: string; email?: string } }) {
@@ -114,13 +116,16 @@ const submitPassword: FormEventHandler = (e) => {
         processing: emailProcessing, 
         recentlySuccessful: emailRecentlySuccessful,
     } = useForm<Required<EmailForm>>({
-        email: agency.email || '',
+        current_email: agency.email || '',
+        new_email: '',
+        new_email_confirmation: '',
     });
 
     const submitEmail: FormEventHandler = (e) => {
         e.preventDefault();
         putEmail(route('settings.agency.update-email'), {
             preserveScroll: true,
+            onSuccess: () => setEmailData({ current_email: '', new_email: '', new_email_confirmation: '' }),
         });
     };
 
@@ -382,18 +387,48 @@ const submitPassword: FormEventHandler = (e) => {
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={submitEmail} className="space-y-4">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="email">Email Address</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        className="max-w-md form-control"
-                                        value={emailData.email}
-                                        onChange={(e) => setEmailData('email', e.target.value)}
-                                        autoComplete="email"
-                                        placeholder="Enter email address"
-                                    />
-                                    <InputError className="mt-2" message={emailErrors.email} />
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="current_email">Current Email</Label>
+                                        <Input
+                                            id="current_email"
+                                            type="email"
+                                            className="form-control"
+                                            value={emailData.current_email}
+                                            onChange={(e) => setEmailData('current_email', e.target.value)}
+                                            autoComplete="email"
+                                            placeholder="Enter current email address"
+                                        />
+                                        <InputError className="mt-2" message={emailErrors.current_email} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="new_email">New Email</Label>
+                                        <Input
+                                            id="new_email"
+                                            type="email"
+                                            className="form-control"
+                                            value={emailData.new_email}
+                                            onChange={(e) => setEmailData('new_email', e.target.value)}
+                                            autoComplete="new-email"
+                                            placeholder="Enter new email address"
+                                        />
+                                        <InputError className="mt-2" message={emailErrors.new_email} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="new_email_confirmation">Confirm New Email</Label>
+                                        <Input
+                                            id="new_email_confirmation"
+                                            type="email"
+                                            className="form-control"
+                                            value={emailData.new_email_confirmation}
+                                            onChange={(e) => setEmailData('new_email_confirmation', e.target.value)}
+                                            autoComplete="new-email"
+                                            placeholder="Confirm new email address"
+                                        />
+                                        <InputError className="mt-2" />
+                                    </div>
                                 </div>
 
                                 <div className="flex items-center">
@@ -410,6 +445,16 @@ const submitPassword: FormEventHandler = (e) => {
                                             leaveTo="opacity-0"
                                         >
                                             <p className="text-sm text-green-600">Email updated successfully!</p>
+                                        </Transition>
+
+                                        <Transition
+                                            show={!emailRecentlySuccessful && !!emailErrors.new_email_confirmation}
+                                            enter="transition ease-in-out"
+                                            enterFrom="opacity-0"
+                                            leave="transition ease-in-out"
+                                            leaveTo="opacity-0"
+                                        >
+                                            <p className="text-sm text-red-600">{emailErrors.new_email_confirmation}</p>
                                         </Transition>
                                     </div>
                                 </div>
