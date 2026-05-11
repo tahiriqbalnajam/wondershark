@@ -202,7 +202,7 @@ export default function CompetitorSelector({
                                                             variant="default"
                                                             onClick={() => handleCompetitorAction(competitor.id, 'accepted')}
                                                             disabled={isLimitReached || (updating?.id === competitor.id && updating?.action === 'accepted')}
-                                                            title={isLimitReached ? 'Maximum 10 competitors allowed' : ''}
+                                                            title={isLimitReached ? 'Maximum 25 competitors allowed' : ''}
                                                         >
                                                             {updating?.id === competitor.id && updating?.action === 'accepted' ? 'Accepting...' : 'Accept'}
                                                         </Button>
@@ -250,7 +250,7 @@ export default function CompetitorSelector({
                                     {/* <span className='text-gray-400 font-normal text-sm'>
                                         {acceptedCompetitors.length > 0 ? `- ${acceptedCompetitors.length}` : ''}+
                                     </span> */}
-                                    {acceptedCompetitors.length > 0 ? `( ${acceptedCompetitors.length}/10)` : ''}
+                                    {acceptedCompetitors.length > 0 ? `( ${acceptedCompetitors.length}/25)` : ''}
                                 </h2>
                             </div>
                         </CardHeader>
@@ -317,6 +317,13 @@ export default function CompetitorSelector({
                             <DrawerHeader className='p-0 mb-5'>
                                 <DrawerTitle className="text-xl font-semibold mb-6 mt-10">Add New Competitor</DrawerTitle>
                             </DrawerHeader>
+                            {acceptedCompetitors.length >= 25 && (
+                                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md w-full">
+                                    <p className="text-sm text-yellow-800">
+                                        You've reached the maximum of 25 accepted competitors. Remove one to add another.
+                                    </p>
+                                </div>
+                            )}
                             <div className="flex items-center w-full">
                                 <form onSubmit={handleSubmit} className="w-full space-y-4">
                                     <div className="space-y-2">
@@ -412,7 +419,7 @@ export default function CompetitorSelector({
                                 <DrawerClose asChild className='w-50 inline-block'>
                                     <Button variant="outline" type="button" className='cancel-btn min-h-12'>Cancel</Button>
                                 </DrawerClose>
-                                <Button type='button' className='df-btn w-50 min-h-12 inline-block' onClick={handleSubmit} disabled={processing} > {processing ? 'Adding...' : 'Add Competitor'} </Button>
+                                <Button type='button' className='df-btn w-50 min-h-12 inline-block' onClick={handleSubmit} disabled={processing || acceptedCompetitors.length >= 25} title={acceptedCompetitors.length >= 25 ? 'Maximum 25 competitors allowed' : ''}> {processing ? 'Adding...' : 'Add Competitor'} </Button>
                             </DrawerFooter>
                         </div>
                     </DrawerContent>
