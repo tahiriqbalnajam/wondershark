@@ -538,16 +538,16 @@ class CompetitorController extends Controller
                 ->where('status', 'accepted')
                 ->count();
 
-            if ($acceptedCount >= 25) {
+            if ($acceptedCount >= 10) {
                 // Handle non-Inertia AJAX requests (like API calls)
                 if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && ! request()->header('X-Inertia')) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'You can only have a maximum of 25 accepted competitors.',
+                        'message' => 'You can only have a maximum of 10 accepted competitors.',
                     ], 422);
                 }
 
-                return back()->with('error', 'You can only have a maximum of 25 accepted competitors.');
+                return back()->with('error', 'You can only have a maximum of 10 accepted competitors.');
             }
         }
 

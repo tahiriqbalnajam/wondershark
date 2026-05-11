@@ -575,10 +575,10 @@ class BrandController extends Controller
             ->where('status', 'accepted')
             ->count();
 
-        if ($countAccepted >= 25 && $request->status === 'accepted') {
+        if ($countAccepted >= 10 && $request->status === 'accepted') {
             return response()->json([
                 'success' => false,
-                'message' => 'Maximum 25 accepted competitors allowed',
+                'message' => 'Maximum 10 accepted competitors allowed',
             ], 400);
         }
 
