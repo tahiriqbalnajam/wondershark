@@ -155,10 +155,10 @@ export default function CompetitorSelector({
                             </div>
                         </CardHeader>
                         <CardContent>
-                            {acceptedCompetitors.length >= 10 && (
+                            {acceptedCompetitors.length >= 25 && (
                                 <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                                     <p className="text-sm text-yellow-800">
-                                        You've reached the maximum of 10 accepted competitors. Remove one to accept another.
+                                        You've reached the maximum of 25 accepted competitors. Remove one to accept another.
                                     </p>
                                 </div>
                             )}
@@ -175,7 +175,7 @@ export default function CompetitorSelector({
                                         .split('/')[0];
 
                                         const logoUrl = `https://img.logo.dev/${cleanDomain}?format=png&token=pk_AVQ085F0QcOVwbX7HOMcUA`;
-                                        const isLimitReached = acceptedCompetitors.length >= 10;
+                                        const isLimitReached = acceptedCompetitors.length >= 25;
                                         return (
                                         <Card key={competitor.id} className="hover:shadow-md transition-shadow pb-0 justify-between">
                                             <CardHeader>
@@ -202,7 +202,7 @@ export default function CompetitorSelector({
                                                             variant="default"
                                                             onClick={() => handleCompetitorAction(competitor.id, 'accepted')}
                                                             disabled={isLimitReached || (updating?.id === competitor.id && updating?.action === 'accepted')}
-                                                            title={isLimitReached ? 'Maximum 10 competitors allowed' : ''}
+                                                            title={isLimitReached ? 'Maximum 25 competitors allowed' : ''}
                                                         >
                                                             {updating?.id === competitor.id && updating?.action === 'accepted' ? 'Accepting...' : 'Accept'}
                                                         </Button>
@@ -250,7 +250,7 @@ export default function CompetitorSelector({
                                     {/* <span className='text-gray-400 font-normal text-sm'>
                                         {acceptedCompetitors.length > 0 ? `- ${acceptedCompetitors.length}` : ''}+
                                     </span> */}
-                                    {acceptedCompetitors.length > 0 ? `( ${acceptedCompetitors.length}/10)` : ''}
+                                    {acceptedCompetitors.length > 0 ? `( ${acceptedCompetitors.length}/25)` : ''}
                                 </h2>
                             </div>
                         </CardHeader>
