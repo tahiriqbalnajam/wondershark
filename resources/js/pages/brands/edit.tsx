@@ -185,7 +185,7 @@ export default function BrandEdit({ brand, userEmail }: Props) {
     e.preventDefault();
     putEmail(route('brand.settings.update-email'), {
       preserveScroll: true,
-      onSuccess: () => setEmailData({ current_email: '', new_email: '', new_email_confirmation: '' }),
+      onSuccess: () => setEmailData((prev) => ({ current_email: prev.new_email, new_email: '', new_email_confirmation: '' })),
     });
   };
 

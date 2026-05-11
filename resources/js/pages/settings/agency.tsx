@@ -125,7 +125,7 @@ const submitPassword: FormEventHandler = (e) => {
         e.preventDefault();
         putEmail(route('settings.agency.update-email'), {
             preserveScroll: true,
-            onSuccess: () => setEmailData({ current_email: '', new_email: '', new_email_confirmation: '' }),
+            onSuccess: () => setEmailData((prev) => ({ current_email: prev.new_email, new_email: '', new_email_confirmation: '' })),
         });
     };
 
