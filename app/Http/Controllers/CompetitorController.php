@@ -499,6 +499,22 @@ class CompetitorController extends Controller
             abort(403, 'You do not have permission to add competitors to this brand.');
         }
 
+        // Check competitor limit
+        $acceptedCount = $brand->competitors()
+            ->where('status', 'accepted')
+            ->count();
+
+        if ($acceptedCount >= 25) {
+            if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && ! request()->header('X-Inertia')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You can only have a maximum of 25 accepted competitors.',
+                ], 422);
+            }
+
+            return back()->with('error', 'You can only have a maximum of 25 accepted competitors.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'trackedName' => 'required|string|max:255',
@@ -538,16 +554,16 @@ class CompetitorController extends Controller
                 ->where('status', 'accepted')
                 ->count();
 
-            if ($acceptedCount >= 10) {
+            if ($acceptedCount >= 25) {
                 // Handle non-Inertia AJAX requests (like API calls)
                 if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && ! request()->header('X-Inertia')) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'You can only have a maximum of 10 accepted competitors.',
+                        'message' => 'You can only have a maximum of 25 accepted competitors.',
                     ], 422);
                 }
 
-                return back()->with('error', 'You can only have a maximum of 10 accepted competitors.');
+                return back()->with('error', 'You can only have a maximum of 25 accepted competitors.');
             }
         }
 

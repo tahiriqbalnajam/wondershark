@@ -322,10 +322,6 @@ class AgencyController extends Controller
      */
     public function updateEmail(Request $request): RedirectResponse
     {
-        $request->validate([
-            'email' => ['required', 'email', 'max:255', 'unique:users,email,'.Auth::id()],
-        ]);
-
         /** @var User $user */
         $user = Auth::user();
 
@@ -339,8 +335,20 @@ class AgencyController extends Controller
             $user = $agencyUser;
         }
 
+        $request->validate([
+            'current_email' => ['required', 'email', function ($attribute, $value, $fail) use ($user) {
+                if ($value !== $user->email) {
+                    $fail('The current email address does not match our records.');
+                }
+            }],
+            'new_email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
+            'new_email_confirmation' => ['required', 'email', 'same:new_email'],
+        ], [
+            'new_email_confirmation.same' => 'The new email field must match new email confirmation.',
+        ]);
+
         $oldEmail = $user->email;
-        $newEmail = $request->email;
+        $newEmail = $request->new_email;
 
         // Update the email in the database
         $user->update([

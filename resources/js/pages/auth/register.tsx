@@ -31,7 +31,7 @@ type ValidationErrors = {
 };
 
 export default function Register() {
-    const { data, setData, post, processing, errors, reset, transform } = useForm<Required<RegisterForm>>({
+    const { data, setData, post, processing, errors, reset, transform, clearErrors } = useForm<Required<RegisterForm>>({
         name: '',
         email: '',
         password: '',
@@ -99,12 +99,14 @@ export default function Register() {
 
     const handleNameChange = (value: string) => {
         setData('name', value);
+        clearErrors('name');
         const error = validateName(value);
         setValidationErrors((prev) => ({ ...prev, name: error }));
     };
 
     const handleEmailChange = (value: string) => {
         setData('email', value);
+        clearErrors('email');
         const error = validateEmail(value);
         setValidationErrors((prev) => ({ ...prev, email: error }));
     };
@@ -113,12 +115,14 @@ export default function Register() {
         const processedValue = value.replace(/^https?:\/\//, '');
 
         setData('website', processedValue);
+        clearErrors('website');
         const error = validateWebsite(processedValue);
         setValidationErrors((prev) => ({ ...prev, website: error }));
     };
 
     const handlePasswordChange = (value: string) => {
         setData('password', value);
+        clearErrors('password');
         const error = validatePassword(value);
         setValidationErrors((prev) => ({ ...prev, password: error }));
 
@@ -131,6 +135,7 @@ export default function Register() {
 
     const handlePasswordConfirmationChange = (value: string) => {
         setData('password_confirmation', value);
+        clearErrors('password_confirmation');
         const error = validatePasswordConfirmation(data.password, value);
         setValidationErrors((prev) => ({ ...prev, password_confirmation: error }));
     };
@@ -155,13 +160,9 @@ export default function Register() {
 
         setValidationErrors(newErrors);
 
-        // Check if there are any validation errors
         const hasErrors = Object.values(newErrors).some((error) => error !== undefined);
 
         if (hasErrors) {
-            // Show an alert with the first error
-            const firstError = Object.values(newErrors).find((error) => error !== undefined);
-            alert(firstError);
             return;
         }
 
@@ -185,7 +186,7 @@ export default function Register() {
                         <div className="rounded-lg border p-5 shadow-xl hover:shadow-2xl account-type">
                             <Label htmlFor="brand" className="flex-1 cursor-pointer">
                                 <div className="font-bold text-orange-600 flex items-center justify-between text-2xl mb-5"><RadioGroupItem value="brand" id="brand" className='radio-btn' /> Brand</div>
-                                <div className="text-md text-muted-foreground leading-5">We'll manage posts snd maximize AI visibility for a standalone brand.</div>
+                                <div className="text-md text-muted-foreground leading-5">We'll manage posts and maximize AI visibility for a standalone brand.</div>
                                 <hr className='my-5' />
                                 <ul className='p-0 m-0'>
                                     <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600' /> Single brand</li>
@@ -236,7 +237,7 @@ export default function Register() {
                         <Input
                             className='form-control !mb-0'
                             id="email"
-                            type="email"
+                            type="text"
                             required
                             tabIndex={2}
                             autoComplete="email"
