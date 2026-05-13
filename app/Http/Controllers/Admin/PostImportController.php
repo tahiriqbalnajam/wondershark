@@ -86,6 +86,40 @@ class PostImportController extends Controller
     }
 
     /**
+     * Sanitize a string to ensure valid UTF-8 for safe JSON encoding.
+     */
+    private function sanitizeUtf8(?string $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        return mb_scrub(trim($value), 'UTF-8');
+    }
+
+    /**
+     * Parse a date string, handling DD/MM/YYYY (Excel localization) in addition to YYYY-MM-DD.
+     */
+    private function parseDate(string $value): ?Carbon
+    {
+        // Explicitly handle DD/MM/YYYY — Carbon::parse() misreads slashes as MM/DD/YYYY
+        if (preg_match('/^\d{1,2}\/\d{1,2}\/\d{4}$/', $value)) {
+            return Carbon::createFromFormat('d/m/Y', $value);
+        }
+
+        // Explicitly handle YYYY-MM-DD
+        if (preg_match('/^\d{4}-\d{1,2}-\d{1,2}$/', $value)) {
+            return Carbon::createFromFormat('Y-m-d', $value);
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (InvalidFormatException $e) {
+            return null;
+        }
+    }
+
+    /**
      * Import posts from CSV for admin
      */
     public function import(Request $request)
@@ -129,8 +163,11 @@ class PostImportController extends Controller
             foreach ($records as $offset => $record) {
                 $lineNumber = $offset + 2;
 
+                // Sanitize all CSV values to ensure valid UTF-8
+                $record = array_map(fn ($v) => $this->sanitizeUtf8($v), $record);
+
                 // Validate required URL
-                $url = trim($record['url'] ?? '');
+                $url = $record['url'];
                 if (empty($url)) {
                     $errors[] = "Line $lineNumber: URL is required";
                     continue;
@@ -162,7 +199,7 @@ class PostImportController extends Controller
                     }
                     $brandId = $brand->id;
                 } elseif (! empty($record['brand_name'])) {
-                    $brand = Brand::where('name', trim($record['brand_name']))->first();
+                    $brand = Brand::where('name', $record['brand_name'])->first();
                     if (! $brand) {
                         $errors[] = "Line $lineNumber: Brand name '{$record['brand_name']}' not found";
                         continue;
@@ -195,21 +232,25 @@ class PostImportController extends Controller
                 }
 
                 // Resolve field values
-                $title = ! empty($record['title']) ? trim($record['title']) : 'Post from '.parse_url($url, PHP_URL_HOST);
-                $description = trim($record['description'] ?? '');
-                $postType = trim($record['post_type'] ?? '') ?: null;
+                $title = ! empty($record['title']) ? $record['title'] : 'Post from '.parse_url($url, PHP_URL_HOST);
+                $description = $record['description'];
+                $postType = $record['post_type'] ?: null;
 
-                $status = ! empty($record['status']) ? trim($record['status']) : $request->default_status;
+                $status = ! empty($record['status']) ? $record['status'] : $request->default_status;
                 if (! in_array($status, ['published', 'draft', 'archived'])) {
                     $status = $request->default_status;
                 }
 
                 $postedAt = now();
                 if (! empty($record['posted_at'])) {
-                    try {
-                        $postedAt = Carbon::parse(trim($record['posted_at']));
-                    } catch (InvalidFormatException $e) {
-                        $errors[] = "Line $lineNumber: Invalid posted_at date format '{$record['posted_at']}' — use YYYY-MM-DD";
+                     // try {
+                      //        $postedAt = Carbon::parse($record['posted_at']);
+                      //    } catch (InvalidFormatException $e) {
+                       //       $errors[] = "Line $lineNumber: Invalid posted_at date format '{$record['posted_at']}' — use YYYY-MM-DD";
+                //Parse a date string, handling DD/MM/YYYY (Excel localization) in addition to YYYY-MM-DD.
+                    $postedAt = $this->parseDate($record['posted_at']);
+                    if (! $postedAt) {
+                        $errors[] = "Line $lineNumber: Invalid posted_at date format '{$record['posted_at']}' — use YYYY-MM-DD or DD/MM/YYYY";
                         continue;
                     }
                 }
