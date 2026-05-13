@@ -182,21 +182,22 @@ class WebsiteUrlController extends Controller
             $updated = 0;
 
             foreach (array_slice($rows, 1) as $row) {
-                $title = trim($row[0] ?? '');
+                $url = trim($row[0] ?? '');
 
-                if (empty($title)) {
+                if (empty($url)) {
                     continue;
                 }
 
-                $existing = WebsiteUrl::where('title', $title)->first();
+                $existing = WebsiteUrl::where('url', $url)->first();
 
                 if ($existing) {
-                    // Don't overwrite fields that the admin may have manually set
                     $updated++;
                 } else {
+                    $title = parse_url($url, PHP_URL_HOST) ?: $url;
+
                     WebsiteUrl::create([
                         'title' => $title,
-                        'url' => '',
+                        'url' => $url,
                         'description' => 'test',
                         'is_enabled' => true,
                         'order' => 0,

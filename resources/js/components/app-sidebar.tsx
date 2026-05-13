@@ -110,6 +110,12 @@ const getPreferenceNavItems = (permissions: ReturnType<typeof usePermissions>, s
             href: `/brands/${selectedBrandId}/prompts`,
             icon: MessageSquare,
         });
+
+        items.push({
+            title: 'Gap Analysis',
+            href: `/brands/${selectedBrandId}/gap-analysis`,
+            icon: Search,
+        });
     }
 
     return items;

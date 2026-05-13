@@ -332,6 +332,9 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
         // Brand Ranking Page
         Route::get('brands/{brand}/ranking', [BrandController::class, 'ranking'])->name('brands.ranking');
 
+        // Gap Analysis Routes
+        Route::get('brands/{brand}/gap-analysis', [\App\Http\Controllers\Brand\GapAnalysisController::class, 'index'])->name('brands.gap-analysis.index');
+
         // Competitive Analysis Routes
         Route::get('brands/{brand}/competitive-stats', [\App\Http\Controllers\Brand\CompetitiveStatsController::class, 'index'])->name('brands.competitive-stats.index');
         Route::post('brands/{brand}/competitive-stats/analyze', [\App\Http\Controllers\Brand\CompetitiveStatsController::class, 'runAnalysis'])->name('brands.competitive-stats.analyze');
