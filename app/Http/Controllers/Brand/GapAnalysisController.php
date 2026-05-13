@@ -44,7 +44,7 @@ class GapAnalysisController extends Controller
                         return false;
                     }
                     foreach ($websiteUrlDomains as $wuDomain) {
-                        if ($resourceDomain === $wuDomain || str_contains($resourceDomain, $wuDomain)) {
+                        if ($resourceDomain === $wuDomain || str_ends_with($resourceDomain, '.' . $wuDomain)) {
                             return true;
                         }
                     }
@@ -81,6 +81,11 @@ class GapAnalysisController extends Controller
                 })
                 ->unique('competitor_id')
                 ->values();
+
+            // Skip prompts with no competitor mentions
+            if ($competitorMentions->isEmpty()) {
+                return null;
+            }
 
             return [
                 'id' => $prompt->id,

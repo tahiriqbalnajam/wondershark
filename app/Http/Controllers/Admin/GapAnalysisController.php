@@ -48,7 +48,7 @@ class GapAnalysisController extends Controller
                                 return false;
                             }
                             foreach ($websiteUrlDomains as $wuDomain) {
-                                if ($resourceDomain === $wuDomain || str_contains($resourceDomain, $wuDomain)) {
+                                if ($resourceDomain === $wuDomain || str_ends_with($resourceDomain, '.' . $wuDomain)) {
                                     return true;
                                 }
                             }

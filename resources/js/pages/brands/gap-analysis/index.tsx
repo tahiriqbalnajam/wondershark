@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import { useState } from 'react';
+
 import { CheckCircle, XCircle, Building2, ExternalLink } from 'lucide-react';
 
 type Resource = {
@@ -47,20 +47,6 @@ export default function GapAnalysisIndex({ brand, results }: Props) {
         { title: brand.name, href: `/brands/${brand.id}` },
         { title: 'Gap Analysis', href: `/brands/${brand.id}/gap-analysis` },
     ];
-    const [toggledItems, setToggledItems] = useState<Set<string>>(new Set());
-
-    const toggleItem = (key: string) => {
-        setToggledItems(prev => {
-            const next = new Set(prev);
-            if (next.has(key)) {
-                next.delete(key);
-            } else {
-                next.add(key);
-            }
-            return next;
-        });
-    };
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`${brand.name} — Gap Analysis`} />
@@ -150,32 +136,25 @@ export default function GapAnalysisIndex({ brand, results }: Props) {
                                                 <TableCell>
                                                     {result.competitor_mentions.length > 0 ? (
                                                         <div className="flex flex-wrap gap-1">
-                                                            {result.competitor_mentions.map((comp, i) => {
-                                                                const compKey = `comp-${result.id}-${i}`;
-                                                                const showDomain = toggledItems.has(compKey);
-                                                                return (
-                                                                    <Badge
-                                                                        key={i}
-                                                                        variant="outline"
-                                                                        className="text-xs gap-1 cursor-pointer hover:bg-accent"
-                                                                        onClick={() => toggleItem(compKey)}
-                                                                    >
-                                                                        {comp.entity_domain ? (
-                                                                            <img
-                                                                                src={`https://www.google.com/s2/favicons?domain=${comp.entity_domain}&sz=16`}
-                                                                                alt=""
-                                                                                className="h-3.5 w-3.5 rounded-sm"
-                                                                                onError={(e) => {
-                                                                                    (e.target as HTMLImageElement).style.display = 'none';
-                                                                                }}
-                                                                            />
-                                                                        ) : (
-                                                                            <Building2 className="h-3 w-3" />
-                                                                        )}
-                                                                        {showDomain && comp.entity_domain ? comp.entity_domain : comp.entity_name}
-                                                                    </Badge>
-                                                                );
-                                                            })}
+                                                            {result.competitor_mentions.map((comp, i) => (
+                                                                <span
+                                                                    key={i}
+                                                                    title={comp.entity_name + (comp.entity_domain ? ` (${comp.entity_domain})` : '')}
+                                                                >
+                                                                    {comp.entity_domain ? (
+                                                                        <img
+                                                                            src={`https://www.google.com/s2/favicons?domain=${comp.entity_domain}&sz=32`}
+                                                                            alt=""
+                                                                            className="h-5 w-5 rounded-sm"
+                                                                            onError={(e) => {
+                                                                                (e.target as HTMLImageElement).style.display = 'none';
+                                                                            }}
+                                                                        />
+                                                                    ) : (
+                                                                        <Building2 className="h-4 w-4" />
+                                                                    )}
+                                                                </span>
+                                                            ))}
                                                         </div>
                                                     ) : (
                                                         <span className="text-xs text-muted-foreground">None</span>
