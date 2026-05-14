@@ -27,7 +27,7 @@ const modelIcon = (name: string): string | null => {
         openai: 'openai.svg',
         gemini: 'gemini.svg',
         perplexity: 'perplexity.svg',
-        'google-ai-overview': 'google.svg',
+        'google-ai-overview': 'google-ai-overview.svg',
         anthropic: 'claude.svg',
         xai: 'grok.svg',
     };
