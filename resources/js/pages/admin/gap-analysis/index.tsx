@@ -32,7 +32,10 @@ const modelIcon = (name: string): string | null => {
         perplexity: 'perplexity.svg',
         'google-ai-overview': 'google.svg',
         anthropic: 'claude.svg',
+        claude: 'claude.svg',
         xai: 'grok.svg',
+        deepseek: 'deepseek.svg',
+        mistral: 'mistral.svg',
     };
     return icons[name] ?? null;
 };
@@ -184,15 +187,16 @@ export default function GapAnalysisIndex({ agencies, brands, results, selectedBr
                                                 </TableCell>
                                                 <TableCell>
                                                     {result.ai_model ? (
-                                                        <Badge variant="outline" className="text-xs inline-flex items-center gap-1.5 overflow-hidden">
+                                                        <Badge variant="outline" className="text-xs inline-flex items-center gap-1.5 overflow-hidden [&_svg]:hidden border-0">
                                                             {modelIcon(result.ai_model.name) && (
                                                                 <img
                                                                     src={`/images/ai-models/New folder/${modelIcon(result.ai_model.name)}`}
                                                                     alt=""
                                                                     className="h-5 w-5 rounded-sm shrink-0"
+                                                                    title={result.ai_model.display_name}
                                                                 />
                                                             )}
-                                                            {result.ai_model.display_name}
+                                                            {/* {result.ai_model.display_name} */}
                                                         </Badge>
                                                     ) : (
                                                         <span className="text-xs text-muted-foreground">—</span>
