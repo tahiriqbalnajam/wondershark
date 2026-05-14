@@ -22,6 +22,19 @@ type Resource = {
 type AiModel = {
     id: number;
     display_name: string;
+    name: string;
+};
+
+const modelIcon = (name: string): string | null => {
+    const icons: Record<string, string> = {
+        openai: 'openai.svg',
+        gemini: 'gemini.svg',
+        perplexity: 'perplexity.svg',
+        'google-ai-overview': 'google.svg',
+        anthropic: 'claude.svg',
+        xai: 'grok.svg',
+    };
+    return icons[name] ?? null;
 };
 
 type CompetitorMention = {
@@ -171,7 +184,14 @@ export default function GapAnalysisIndex({ agencies, brands, results, selectedBr
                                                 </TableCell>
                                                 <TableCell>
                                                     {result.ai_model ? (
-                                                        <Badge variant="outline" className="text-xs">
+                                                        <Badge variant="outline" className="text-xs inline-flex items-center gap-1.5 overflow-hidden">
+                                                            {modelIcon(result.ai_model.name) && (
+                                                                <img
+                                                                    src={`/images/ai-models/New folder/${modelIcon(result.ai_model.name)}`}
+                                                                    alt=""
+                                                                    className="h-5 w-5 rounded-sm shrink-0"
+                                                                />
+                                                            )}
                                                             {result.ai_model.display_name}
                                                         </Badge>
                                                     ) : (

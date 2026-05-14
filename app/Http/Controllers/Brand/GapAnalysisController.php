@@ -93,6 +93,7 @@ class GapAnalysisController extends Controller
                 'ai_model' => $prompt->aiModel ? [
                     'id' => $prompt->aiModel->id,
                     'display_name' => $prompt->aiModel->display_name,
+                    'name' => $prompt->aiModel->name,
                 ] : null,
                 'resources' => $matchingResources,
                 'brand_mentioned' => $brandMentioned,
