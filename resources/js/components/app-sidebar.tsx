@@ -80,6 +80,11 @@ const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, sele
                 },
             ], */
         });
+         items.push({
+            title: 'Gap Analysis',
+            href: `/brands/${selectedBrandId}/gap-analysis`,
+            icon: Search,
+        });
     }
 
     // Search Analytics - for admin users
@@ -111,11 +116,11 @@ const getPreferenceNavItems = (permissions: ReturnType<typeof usePermissions>, s
             icon: MessageSquare,
         });
 
-        items.push({
-            title: 'Gap Analysis',
-            href: `/brands/${selectedBrandId}/gap-analysis`,
-            icon: Search,
-        });
+        //items.push({
+          //  title: 'Gap Analysis',
+            //href: `/brands/${selectedBrandId}/gap-analysis`,
+           // icon: Search,
+        //});
     }
 
     return items;
