@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import CompetitorSelector from '@/components/competitor-selector';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { Info, Loader2, CircleAlert } from 'lucide-react';
 import {
   Drawer,
   DrawerClose,
@@ -46,12 +47,29 @@ interface Props {
 }
 
 const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, totalCompetitors }: Props) => {
+    const { errors: pageErrors, flash } = usePage().props as any;
     const [competitors, setCompetitors] = useState<Competitor[]>([
         ...suggestedCompetitors,
         ...acceptedCompetitors
     ]);
     const [refreshing, setRefreshing] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [analysisMessage, setAnalysisMessage] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (pageErrors?.error) {
+            setErrorMessage(Array.isArray(pageErrors.error) ? pageErrors.error[0] : pageErrors.error);
+            const timeout = setTimeout(() => setErrorMessage(null), 5000);
+            return () => clearTimeout(timeout);
+        }
+
+        if (flash?.analysis_triggered) {
+            setAnalysisMessage('The system is re-analyzing competitive stats and recalculating visibility. This may take a few minutes to complete.');
+            const timeout = setTimeout(() => setAnalysisMessage(null), 60000);
+            return () => clearTimeout(timeout);
+        }
+    }, [pageErrors, flash]);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
@@ -121,6 +139,29 @@ const CompetitorsPage = ({ brand, suggestedCompetitors, acceptedCompetitors, tot
             ]} title="Competitors"
         >
             <Head title={`Competitors for ${brand.name}`} />
+
+            {errorMessage && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-md flex items-center gap-2">
+                    <CircleAlert className="h-5 w-5 text-red-600" />
+                    <p className="text-sm text-red-700 font-medium">{errorMessage}</p>
+                </div>
+            )}
+
+            {analysisMessage && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-md flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="relative">
+                        <Info className="h-5 w-5 text-blue-600" />
+                        <div className="absolute top-0 right-0 -mr-1 -mt-1 w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-semibold text-blue-800">Analysis in Progress</h4>
+                        <p className="text-sm text-blue-700">
+                            The system is re-analyzing competitive stats and recalculating visibility. This may take a few minutes to complete.
+                        </p>
+                    </div>
+                    <Loader2 className="h-4 w-4 text-blue-500 animate-spin ml-auto" />
+                </div>
+            )}
 
             {/* <div className="mx-auto py-6 space-y-6"> */}
                 {/* <div className="flex justify-between items-center"> */}

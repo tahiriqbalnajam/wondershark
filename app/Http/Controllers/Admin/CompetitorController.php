@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\AnalyzeBrandCompetitiveStats;
 use App\Models\AiModel;
 use App\Models\Brand;
 use App\Models\Competitor;
@@ -78,7 +79,18 @@ class CompetitorController extends Controller
 
         Competitor::create($validated);
 
-        return redirect()->back()->with('success', 'Competitor added successfully.');
+        // Trigger competitive analysis since competitor list changed
+        try {
+            $brand = Brand::find($validated['brand_id']);
+            AnalyzeBrandCompetitiveStats::dispatch($brand);
+        } catch (\Exception $e) {
+            Log::error('Failed to dispatch analysis after admin competitor create', [
+                'brand_id' => $validated['brand_id'],
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return redirect()->back()->with('analysis_triggered', true);
     }
 
     public function update(Request $request, Competitor $competitor)
@@ -92,14 +104,22 @@ class CompetitorController extends Controller
 
         $competitor->update($validated);
 
-        return redirect()->back()->with('success', 'Competitor updated successfully.');
+        // Trigger competitive analysis since competitor changed
+        AnalyzeBrandCompetitiveStats::dispatch($competitor->brand);
+
+        return redirect()->back()->with('analysis_triggered', true);
     }
 
     public function destroy(Competitor $competitor)
     {
+        $brandId = $competitor->brand_id;
+        $brand = $competitor->brand;
         $competitor->delete();
 
-        return redirect()->back()->with('success', 'Competitor deleted successfully.');
+        // Trigger competitive analysis since competitor list changed
+        AnalyzeBrandCompetitiveStats::dispatch($brand);
+
+        return redirect()->back()->with('analysis_triggered', true);
     }
 
     /**

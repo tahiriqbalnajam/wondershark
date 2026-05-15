@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\AnalyzeBrandCompetitiveStats;
 use App\Models\AiModel;
 use App\Models\Brand;
 use App\Models\BrandPrompt;
@@ -555,6 +556,11 @@ class BrandController extends Controller
             }
         }
 
+        // Trigger competitive analysis if new competitors were actually saved
+        if (! empty($savedCompetitors)) {
+            AnalyzeBrandCompetitiveStats::dispatch($brand);
+        }
+
         return response()->json([
             'success' => true,
             'competitors' => $savedCompetitors,
@@ -594,6 +600,9 @@ class BrandController extends Controller
         }
 
         $competitor->update(['status' => $request->status]);
+
+        // Trigger competitive analysis since competitor status changed
+        AnalyzeBrandCompetitiveStats::dispatch($brand);
 
         return response()->json([
             'success' => true,

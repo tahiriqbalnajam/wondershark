@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building2, RefreshCw, Loader2 } from 'lucide-react';
 import { Link } from '@inertiajs/react';
+
 import {
   Drawer,
   DrawerClose,
@@ -59,7 +60,7 @@ export default function CompetitorSelector({
     const handleCompetitorAction = (competitorId: number, action: 'accepted' | 'rejected') => {
         setUpdating({id: competitorId, action});
         
-        router.put(route('competitors.update', competitorId), 
+        router.put(route('competitors.update', competitorId),
             { status: action },
             {
                 onSuccess: () => {
@@ -76,7 +77,7 @@ export default function CompetitorSelector({
     const handleRemoveCompetitor = (competitorId: number) => {
         setUpdating({id: competitorId, action: 'remove'});
         
-        router.put(route('competitors.update', competitorId), 
+        router.put(route('competitors.update', competitorId),
             { status: 'suggested' },
             {
                 onSuccess: () => {

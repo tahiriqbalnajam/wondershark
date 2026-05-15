@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\AnalyzeBrandCompetitiveStats;
 use App\Models\Brand;
 use App\Models\Competitor;
 use App\Services\SerpApiStatsExtractor;
@@ -531,7 +532,10 @@ class CompetitorController extends Controller
             'source' => 'manual',
         ]);
 
-        return back()->with('success', 'Competitor added successfully.');
+        // Trigger competitive analysis since competitor list changed
+        AnalyzeBrandCompetitiveStats::dispatch($brand);
+
+        return back()->with('analysis_triggered', true);
     }
 
     public function update(Request $request, Competitor $competitor)
@@ -567,7 +571,9 @@ class CompetitorController extends Controller
             }
         }
 
-        // If status is rejected, delete the competitor permanently
+        $brand = $competitor->brand;
+
+        // If status is rejected, delete the competitor permanently (no analysis needed — was never active)
         if ($request->status === 'rejected') {
             $competitor->delete();
 
@@ -586,6 +592,9 @@ class CompetitorController extends Controller
             'status' => $request->status,
         ]);
 
+        // Trigger competitive analysis since competitor status changed
+        AnalyzeBrandCompetitiveStats::dispatch($brand);
+
         // Handle non-Inertia AJAX requests (like API calls)
         if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && ! request()->header('X-Inertia')) {
             return response()->json([
@@ -594,7 +603,7 @@ class CompetitorController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Competitor status updated.');
+        return back()->with('analysis_triggered', true);
     }
 
     public function destroy(Competitor $competitor)
@@ -607,7 +616,11 @@ class CompetitorController extends Controller
             abort(403, 'You do not have permission to delete this competitor.');
         }
 
+        $brand = $competitor->brand;
         $competitor->delete();
+
+        // Trigger competitive analysis since competitor list changed
+        AnalyzeBrandCompetitiveStats::dispatch($brand);
 
         // Handle non-Inertia AJAX requests (like API calls)
         if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && ! request()->header('X-Inertia')) {
@@ -617,7 +630,7 @@ class CompetitorController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Competitor removed.');
+        return back()->with('analysis_triggered', true);
     }
 
     /**
