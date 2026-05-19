@@ -48,6 +48,13 @@ type Brand = {
     logo?: string;
 };
 
+type MentionedAiModel = {
+    id: number;
+    name: string;
+    display_name: string;
+    icon?: string | null;
+};
+
 type BrandPrompt = {
     id: number;
     prompt: string;
@@ -62,11 +69,41 @@ type BrandPrompt = {
     created_at: string;
     days_ago: number;
     mentions_count?: number | null;
+    mentioned_ai_models?: MentionedAiModel[];
 };
 
 type Props = {
     brand: Brand;
     prompts: BrandPrompt[];
+};
+
+// Map AI model name to static SVG filename (fallback when no DB icon is set)
+const modelIconFallback = (name: string): string | null => {
+    const icons: Record<string, string> = {
+        openai: 'openai.svg',
+        gemini: 'gemini.svg',
+        perplexity: 'perplexity.svg',
+        'google-ai-overview': 'google-ai-overview.svg',
+        anthropic: 'claude.svg',
+        claude: 'claude.svg',
+        xai: 'grok.svg',
+        deepseek: 'deepseek.svg',
+        mistral: 'mistral.svg',
+        groq: 'groq.svg',
+    };
+    return icons[name] ?? null;
+};
+
+// Resolve icon URL: prefer DB icon, fall back to static SVG
+const resolveModelIcon = (model: MentionedAiModel): string | null => {
+    if (model.icon) {
+        return `/storage/${model.icon}`;
+    }
+    const fallback = modelIconFallback(model.name);
+    if (fallback) {
+        return `/images/ai-models/${fallback}`;
+    }
+    return null;
 };
 
 export default function BrandPromptsIndex({ brand, prompts }: Props) {
@@ -316,7 +353,9 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
         // Prepare data for export
         const exportData = activePrompts.map(prompt => ({
             Prompt: prompt.prompt,
-            Mentions: prompt.mentions_count ?? 'N/A',
+            Mentions: prompt.mentioned_ai_models && prompt.mentioned_ai_models.length > 0
+                ? prompt.mentioned_ai_models.map(m => m.display_name || m.name).join(', ')
+                : 'N/A',
             Country: getCountryData(prompt.country_code).name,
             Region: brand.region || '-',
             //Created: Math.floor(prompt.days_ago) === 0 ? 'Today' : Math.floor(prompt.days_ago) === 1 ? '1 day' : `${Math.floor(prompt.days_ago)} days`,
@@ -454,7 +493,40 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        {prompt.mentions_count != null ? prompt.mentions_count : 'N/A'}
+                                                        {prompt.mentioned_ai_models && prompt.mentioned_ai_models.length > 0 ? (
+                                                            <div className="flex items-center gap-1">
+                                                                {prompt.mentioned_ai_models.map((model) => {
+                                                                    const iconUrl = resolveModelIcon(model);
+                                                                    return iconUrl ? (
+                                                                        <Tooltip key={model.id}>
+                                                                            <TooltipTrigger asChild>
+                                                                                <img
+                                                                                    src={iconUrl}
+                                                                                    alt={model.display_name || model.name}
+                                                                                    className="w-5 h-5 object-contain rounded"
+                                                                                />
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent>
+                                                                                <p>{model.display_name || model.name}</p>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                    ) : (
+                                                                        <Tooltip key={model.id}>
+                                                                            <TooltipTrigger asChild>
+                                                                                <span className="w-5 h-5 flex items-center justify-center rounded bg-muted text-[10px] font-medium text-muted-foreground">
+                                                                                    {(model.display_name || model.name).charAt(0).toUpperCase()}
+                                                                                </span>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent>
+                                                                                <p>{model.display_name || model.name}</p>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-muted-foreground text-xs">N/A</span>
+                                                        )}
                                                     </TableCell>
                                                     <TableCell>
                                                         <Tooltip>
@@ -708,22 +780,53 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                             </Badge>
                                                         </TableCell> */}
                                                         <TableCell>
-                                                            { /* prompt.mentions_count != null ? prompt.mentions_count : '--' */}
-                                                            <div className="flex items-center gap-1 justify-center">
-                                                                <div style={{ display: 'flex', alignItems: 'flex-end', height: '22px' }}>
-                                                                    {[...Array(5)].map((_, i) => {
-                                                                        // Heights for wifi-like bars: 6, 10, 14, 18, 22px
-                                                                        const heights = [6, 10, 14, 18, 22];
-                                                                        return (
-                                                                            <span
-                                                                                key={i}
-                                                                                style={{ height: `${heights[i]}px` }}
-                                                                                className={`inline-block w-1 mx-0.5 rounded bg-gray-300 ${prompt.mentions_count && prompt.mentions_count > i ? 'bg-orange-600' : 'bg-gray-200'}`}
-                                                                            />
+                                                            {prompt.mentioned_ai_models && prompt.mentioned_ai_models.length > 0 ? (
+                                                                <div className="flex items-center gap-1 justify-center">
+                                                                    {prompt.mentioned_ai_models.map((model) => {
+                                                                        const iconUrl = resolveModelIcon(model);
+                                                                        return iconUrl ? (
+                                                                            <Tooltip key={model.id}>
+                                                                                <TooltipTrigger asChild>
+                                                                                    <img
+                                                                                        src={iconUrl}
+                                                                                        alt={model.display_name || model.name}
+                                                                                        className="w-5 h-5 object-contain rounded"
+                                                                                    />
+                                                                                </TooltipTrigger>
+                                                                                <TooltipContent>
+                                                                                    <p>{model.display_name || model.name}</p>
+                                                                                </TooltipContent>
+                                                                            </Tooltip>
+                                                                        ) : (
+                                                                            <Tooltip key={model.id}>
+                                                                                <TooltipTrigger asChild>
+                                                                                    <span className="w-5 h-5 flex items-center justify-center rounded bg-muted text-[10px] font-medium text-muted-foreground">
+                                                                                        {(model.display_name || model.name).charAt(0).toUpperCase()}
+                                                                                    </span>
+                                                                                </TooltipTrigger>
+                                                                                <TooltipContent>
+                                                                                    <p>{model.display_name || model.name}</p>
+                                                                                </TooltipContent>
+                                                                            </Tooltip>
                                                                         );
                                                                     })}
                                                                 </div>
-                                                            </div>
+                                                            ) : (
+                                                                <div className="flex items-center gap-1 justify-center">
+                                                                    <div style={{ display: 'flex', alignItems: 'flex-end', height: '22px' }}>
+                                                                        {[...Array(5)].map((_, i) => {
+                                                                            const heights = [6, 10, 14, 18, 22];
+                                                                            return (
+                                                                                <span
+                                                                                    key={i}
+                                                                                    style={{ height: `${heights[i]}px` }}
+                                                                                    className={`inline-block w-1 mx-0.5 rounded bg-gray-300 ${prompt.mentions_count && prompt.mentions_count > i ? 'bg-orange-600' : 'bg-gray-200'}`}
+                                                                                />
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </TableCell>
                                                         <TableCell>
                                                             <div className="flex items-center gap-2">
