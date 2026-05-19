@@ -307,6 +307,7 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
     // Brand Management Routes - For agency, brand, and agency_member users
     Route::middleware('role.permission:null,agency|brand|agency_member')->group(function () {
         Route::resource('brands', BrandController::class);
+        Route::patch('brands/{brand}/name', [BrandController::class, 'updateName'])->name('brands.updateName');
         Route::put('brands/{brand}/status', [BrandController::class, 'updateStatus'])->name('brands.status');
         Route::post('brands/generate-prompts', [BrandController::class, 'generatePrompts'])->name('brands.generatePrompts');
         Route::post('brands/get-prompts-with-ratio', [BrandController::class, 'getPromptsWithRatio'])->name('brands.getPromptsWithRatio');

@@ -6,8 +6,8 @@ import { type BreadcrumbItem as BreadcrumbItemType } from '@/types';
 import { usePage } from '@inertiajs/react';
 
 // Import all icons you might use
-import { UserCheck, LayoutDashboard, Settings, BarChart3, Users,FileDown,Menu,UnfoldHorizontal } from 'lucide-react';
-import { JSX } from 'react';
+import { UserCheck, LayoutDashboard, Settings, BarChart3, Users,FileDown,Menu,UnfoldHorizontal, Pencil, Check, X, Loader2 } from 'lucide-react';
+import { JSX, useState, useRef } from 'react';
 
 export function AppSidebarHeader({ breadcrumbs = [], title, logo, website }: { breadcrumbs?: BreadcrumbItemType[], title?: string, logo?: string, website?: string }) {
     const { url, props } = usePage(); // Current route path and page props
@@ -60,6 +60,50 @@ export function AppSidebarHeader({ breadcrumbs = [], title, logo, website }: { b
     const pageTitle = title || breadcrumbs[breadcrumbs.length - 1]?.title || 'Untitled Page';
 
     const { toggleSidebar } = useSidebar();
+
+    const [displayName, setDisplayName] = useState(brand?.name || pageTitle);
+    const [editingName, setEditingName] = useState(false);
+    const [editedName, setEditedName] = useState('');
+    const [updatingName, setUpdatingName] = useState(false);
+    const nameInputRef = useRef<HTMLInputElement>(null);
+
+    const handleStartEdit = () => {
+        setEditedName(brand?.name || pageTitle);
+        setEditingName(true);
+        setTimeout(() => nameInputRef.current?.focus(), 0);
+    };
+
+    const handleSaveName = async () => {
+        if (!editedName.trim() || !brand?.id || editedName.trim() === brand.name) {
+            setEditingName(false);
+            return;
+        }
+        setUpdatingName(true);
+        try {
+            const response = await fetch(`/brands/${brand.id}/name`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({ name: editedName.trim() }),
+            });
+            if (response.ok) {
+                setDisplayName(editedName.trim());
+                setEditingName(false);
+                setUpdatingName(false);
+            }
+        } catch (error) {
+            console.error('Error updating brand name:', error);
+            setUpdatingName(false);
+        }
+    };
+
+    const handleCancelEdit = () => {
+        setEditingName(false);
+        setEditedName(displayName);
+    };
+
     return (
         <header className="border-b border-sidebar-border/50 pb-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 mb-6">
             <div className="lg:flex justify-between items-center mb-2">
@@ -74,7 +118,51 @@ export function AppSidebarHeader({ breadcrumbs = [], title, logo, website }: { b
                     </button>
                     <h2 className="pageheading font-semibold text-lg flex items-center gap-2">
                         <span className="heading-icon">{pageIcon}</span>
-                        {pageTitle}
+                        {brand ? (
+                            editingName ? (
+                                <>
+                                    <input
+                                        ref={nameInputRef}
+                                        type="text"
+                                        value={editedName}
+                                        onChange={(e) => setEditedName(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleSaveName();
+                                            if (e.key === 'Escape') handleCancelEdit();
+                                        }}
+                                        className="bg-white border border-gray-300 rounded-lg px-2 py-0.5 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-auto min-w-[200px]"
+                                        disabled={updatingName}
+                                    />
+                                    <button
+                                        onClick={handleSaveName}
+                                        disabled={updatingName || !editedName.trim()}
+                                        className="p-1 rounded-md text-green-600 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {updatingName ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                    </button>
+                                    <button
+                                        onClick={handleCancelEdit}
+                                        disabled={updatingName}
+                                        className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    {displayName}
+                                    <button
+                                        onClick={handleStartEdit}
+                                        className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                                        title="Edit brand name"
+                                    >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                    </button>
+                                </>
+                            )
+                        ) : (
+                            pageTitle
+                        )}
                     </h2>
                 </div>
 

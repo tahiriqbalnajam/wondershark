@@ -1875,6 +1875,30 @@ class BrandController extends Controller
     }
 
     /**
+     * Update the brand name via AJAX for inline editing.
+     */
+    public function updateName(Request $request, Brand $brand): \Illuminate\Http\JsonResponse
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (! $user->canAccessBrand($brand)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $brand->update(['name' => $request->name]);
+
+        return response()->json([
+            'success' => true,
+            'name' => $brand->name,
+        ]);
+    }
+
+    /**
      * Create a thumbnail for the uploaded logo
      */
     private function createThumbnail(string $filePath, string $filename, string $extension): ?string
