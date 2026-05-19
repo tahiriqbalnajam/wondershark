@@ -14,6 +14,7 @@ type Resource = {
     type: string;
     title: string;
     domain: string;
+    is_matching: boolean;
 };
 
 type AiModel = {
@@ -125,8 +126,8 @@ export default function GapAnalysisIndex({ brand, results }: Props) {
                                                                 href={resource.url}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
-                                                                className="inline-flex items-center gap-1.5 mr-1.5 mb-1"
-                                                                title={resource.domain || resource.url}
+                                                                className={`inline-flex items-center gap-1.5 mr-1.5 mb-1 ${resource.is_matching ? '' : 'opacity-50'}`}
+                                                                title={(resource.is_matching ? 'Matched — ' : '') + (resource.domain || resource.url)}
                                                             >
                                                                 {resource.domain ? (
                                                                     <img

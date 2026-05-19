@@ -1143,6 +1143,12 @@ class BrandPromptAnalysisService
             return null;
         }
 
+        // Verify the URL actually exists before saving
+        if (! url_exists($url)) {
+            Log::info('Skipping unreachable resource URL', ['url' => $url]);
+            return null;
+        }
+
         $domain = parse_url($url, PHP_URL_HOST);
         $isCompetitorUrl = $this->isCompetitorUrl($url, $domain, $competitors);
 

@@ -36,30 +36,31 @@ class GapAnalysisController extends Controller
             ->get();
 
         $results = $prompts->map(function ($prompt) use ($websiteUrlDomains) {
-            // Filter resources that match website_urls domains
-            $matchingResources = $prompt->promptResources
-                ->filter(function ($resource) use ($websiteUrlDomains) {
+            // Build all resources, flagging which ones match website_urls domains
+            $allResources = $prompt->promptResources
+                ->map(function ($resource) use ($websiteUrlDomains) {
                     $resourceDomain = strtolower($resource->domain ?? '');
-                    if (! $resourceDomain) {
-                        return false;
-                    }
-                    foreach ($websiteUrlDomains as $wuDomain) {
-                        if ($resourceDomain === $wuDomain || str_ends_with($resourceDomain, '.' . $wuDomain)) {
-                            return true;
+                    $matches = false;
+                    if ($resourceDomain) {
+                        foreach ($websiteUrlDomains as $wuDomain) {
+                            if ($resourceDomain === $wuDomain || str_ends_with($resourceDomain, '.' . $wuDomain)) {
+                                $matches = true;
+                                break;
+                            }
                         }
                     }
-                    return false;
+                    return [
+                        'url' => $resource->url,
+                        'type' => $resource->type,
+                        'title' => $resource->title,
+                        'domain' => $resource->domain,
+                        'is_matching' => $matches,
+                    ];
                 })
-                ->values()
-                ->map(fn ($r) => [
-                    'url' => $r->url,
-                    'type' => $r->type,
-                    'title' => $r->title,
-                    'domain' => $r->domain,
-                ]);
+                ->values();
 
             // Skip prompts with no matching resources
-            if ($matchingResources->isEmpty()) {
+            if ($allResources->where('is_matching', true)->isEmpty()) {
                 return null;
             }
 
@@ -87,6 +88,14 @@ class GapAnalysisController extends Controller
                 return null;
             }
 
+            // Filter out unreachable resources before sending to frontend
+            $validResources = $allResources->filter(fn ($r) => url_exists($r['url']))->values();
+
+            // Skip prompts with no valid matching resources
+            if ($validResources->where('is_matching', true)->isEmpty()) {
+                return null;
+            }
+
             return [
                 'id' => $prompt->id,
                 'prompt' => $prompt->prompt,
@@ -95,7 +104,7 @@ class GapAnalysisController extends Controller
                     'display_name' => $prompt->aiModel->display_name,
                     'name' => $prompt->aiModel->name,
                 ] : null,
-                'resources' => $matchingResources,
+                'resources' => $validResources,
                 'brand_mentioned' => $brandMentioned,
                 'competitor_mentions' => $competitorMentions,
             ];
