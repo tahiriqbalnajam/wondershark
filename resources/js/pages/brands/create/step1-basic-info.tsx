@@ -101,6 +101,18 @@ export default function Step1BasicInfo({ data, setData, errors }: StepProps) {
                     </div>
 
                     <div className="grid gap-2">
+                        <Label htmlFor="campaign_indicator">Campaign indicator</Label>
+                        <Input
+                            id="campaign_indicator"
+                            value={data.campaign_indicator}
+                            onChange={(e) => setData('campaign_indicator', e.target.value)}
+                            placeholder="give unique name to your campaign for record keeping purpose"
+                            className="form-control"
+                        />
+                        <InputError message={errors.campaign_indicator} />
+                    </div>
+
+                    <div className="grid gap-2">
                         <Label htmlFor="country">Country</Label>
                         <Select  value={data.country} onValueChange={(value) => setData('country', value)}>
                             <SelectTrigger className="form-control cursor-pointer">

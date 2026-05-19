@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vite *)",
+      "WebFetch(domain:wondershark.test)",
+      "Bash(php artisan *)",
+      "Bash(Test-Path *)",
+      "PowerShell(Copy-Item *)",
+      "PowerShell(npm run *)",
+      "PowerShell(ping *)",
+      "PowerShell(Test-NetConnection *)",
+      "PowerShell(curl.exe -s \"http://wondershark.test/login\" --max-time 10 2>&1)",
+      "Bash(Select-String -Pattern \"campaign|competitive_stats\")",
+      "PowerShell(php artisan migrate --path=database/migrations/2026_05_18_142122_add_campaign_indicator_to_brands_table.php --force 2>&1)",
+      "Bash(npm run *)"
+    ]
+  }
+}

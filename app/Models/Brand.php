@@ -31,6 +31,7 @@ class Brand extends Model
         'logo_thumbnail',
         'trackedName',
         'allies',
+        'campaign_indicator',
     ];
 
     protected $casts = [

@@ -4,6 +4,7 @@ export type BrandForm = {
     description: string;
     trackedName: string;
     allies: string[];
+    campaign_indicator: string;
     country: string;
     region: string;
     prompts: string[];

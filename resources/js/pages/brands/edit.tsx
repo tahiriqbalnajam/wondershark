@@ -79,6 +79,7 @@ type Brand = {
   logo?: string | null;
   trackedName?: string;
   allies?: string[];
+  campaign_indicator?: string;
 };
 
 type Props = { brand: Brand; userEmail?: string };
@@ -94,6 +95,7 @@ type BrandForm = {
   region: string;
   trackedName: string;
   allies: string[];
+  campaign_indicator: string;
   // prompts: string[];
   // subreddits: string[];
 
@@ -129,6 +131,7 @@ export default function BrandEdit({ brand, userEmail }: Props) {
     region: brand.region || '',
     trackedName: brand.trackedName || '',
     allies: brand.allies || [],
+    campaign_indicator: brand.campaign_indicator || '',
     Verified: false,
     'GPT-4o Search': false,
     'OpenAI (GPT-4)': false,
@@ -251,6 +254,20 @@ export default function BrandEdit({ brand, userEmail }: Props) {
                 <Input id="website" type="url" value={data.website} onChange={(e) => setData('website', e.target.value)} placeholder="https://example.com" className="form-control" />
                 <InputError message={errors.website} />
               </div>
+
+              {permissions.hasRole('agency') && (
+              <div className="grid gap-2">
+                <Label htmlFor="campaign_indicator">Campaign indicator</Label>
+                <Input
+                    id="campaign_indicator"
+                    value={data.campaign_indicator}
+                    onChange={(e) => setData('campaign_indicator', e.target.value)}
+                    placeholder="give unique name to your campaign for record keeping purpose"
+                    className="form-control"
+                />
+                <InputError message={errors.campaign_indicator} />
+              </div>
+              )}
 
               {/* Country and Region fields */}
               <div className="grid gap-2">

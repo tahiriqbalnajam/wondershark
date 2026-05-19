@@ -57,6 +57,7 @@ type Props = {
             description: string;
             trackedName: string;
             allies: string[];
+            campaign_indicator: string;
             country: string;
             monthly_posts: number;
         } | null;
@@ -132,6 +133,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
         allies: existingData.brand?.allies || [],
         country: existingData.brand?.country || '',
         region: existingData.brand?.region || '',
+        campaign_indicator: existingData.brand?.campaign_indicator || '',
         prompts: [], // Don't load prompts here - they're passed separately to Step2Prompts
         subreddits: [],
         competitors: [],
@@ -210,6 +212,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                         allies: data.allies,
                         country: data.country,
                         region: data.region,
+                        campaign_indicator: data.campaign_indicator,
                     }),
                 });
                 if (!response.ok) {

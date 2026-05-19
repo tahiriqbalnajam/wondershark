@@ -32,10 +32,10 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
             <div className="dropdown-menu-mail">
                 {brands && brands.length > 0 ? (
                     <>
-                        {brands.map((brand: { id: number; name: string; website: string; logo?: string }) => {
+                        {brands.map((brand: { id: number; name: string; website: string; logo?: string; campaign_indicator?: string }) => {
                             let hostname = '';
                             let faviconUrl = '';
-                            
+
                             try {
                                 if (brand.website) {
                                     hostname = new URL(brand.website).hostname.replace('www.', '');
@@ -48,13 +48,15 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                                 // Invalid URL, use brand name as fallback
                                 hostname = brand.website || 'No URL';
                             }
-                            
+
+                            const displayName = brand.campaign_indicator || brand.name;
+
                             return (
                                 <Link key={brand.id} href={`/brands/${brand.id}`}>
-                                    {brand.name}
+                                    {displayName}
                                     <span className="flex items-center gap-1.5">
                                         {faviconUrl && (
-                                            <img 
+                                            <img
                                                 src={faviconUrl}
                                                 alt={`${brand.name} favicon`}
                                                 className="w-4 h-4"
