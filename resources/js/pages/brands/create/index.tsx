@@ -232,11 +232,12 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                 if (result.success && result.redirect_url) {
                     router.visit(result.redirect_url);
                 } else {
-                    toast.error(result.message || 'Failed to create brand');
+                    toast.error(result.message || 'Failed to create brand1');
                 }
             } catch (error) {
                 console.error('Error creating brand:', error);
-                toast.error('Failed to create brand');
+                toast.warning('Session timed out');
+                window.location.reload();
             }
         } else if (currentStep === 2 && brandId) {
             // Step 2: Update competitors
