@@ -236,7 +236,8 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                 }
             } catch (error) {
                 console.error('Error creating brand:', error);
-                toast.error('Failed to create brand');
+                toast.warning('Session timed out. Please try again.');
+                window.location.reload();
             }
         } else if (currentStep === 2 && brandId) {
             // Step 2: Update competitors

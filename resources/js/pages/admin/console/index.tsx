@@ -185,6 +185,7 @@ export default function ConsoleIndex({ commands }: Props) {
                                             value={params[option.prefix] || ''}
                                             onChange={(e) => handleParamChange(option.prefix, e.target.value)}
                                             placeholder={`Value for ${option.prefix}`}
+                                            disabled={params['--all'] === true}
                                         />
                                     </div>
                                 )}

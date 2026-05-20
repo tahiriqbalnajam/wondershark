@@ -26,13 +26,27 @@ class BrandPromptController extends Controller
         $prompts = $brand->prompts()
             ->with(['mentions' => function ($query) {
                 $query->where('entity_type', 'brand')
+                      ->with('aiModel')
                       ->orderBy('analyzed_at', 'desc');
             }])
             ->orderBy('order')
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($prompt) {
+                // Deduplicate AI models that mentioned this prompt
+                $mentionedModels = $prompt->mentions
+                    ->filter(fn ($m) => $m->aiModel)
+                    ->unique(fn ($m) => $m->ai_model_id)
+                    ->map(fn ($m) => [
+                        'id' => $m->aiModel->id,
+                        'name' => $m->aiModel->name,
+                        'display_name' => $m->aiModel->display_name,
+                        'icon' => $m->aiModel->icon,
+                    ])
+                    ->values();
+
                 $latestMention = $prompt->mentions->first();
+
                 return [
                     'id' => $prompt->id,
                     'prompt' => $prompt->prompt,
@@ -46,6 +60,7 @@ class BrandPromptController extends Controller
                     'created_at' => $prompt->created_at,
                     'days_ago' => $prompt->created_at->diffInDays(now()),
                     'mentions_count' => $latestMention ? $latestMention->mention_count : null,
+                    'mentioned_ai_models' => $mentionedModels,
                 ];
             });
 
