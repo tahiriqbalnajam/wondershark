@@ -48,3 +48,12 @@ Schedule::command('citations:check-daily')
     ->withoutOverlapping()
     ->onOneServer()
     ->runInBackground();
+
+// Clear Laravel log every 2 days at 1 AM UTC
+Schedule::call(function () {
+    $logFile = storage_path('logs/laravel.log');
+    // Truncate — keeps inode/ownership intact
+    file_put_contents($logFile, '');
+    @chown($logFile, 'www-data');
+    @chgrp($logFile, 'www-data');
+})->cron('0 1 */2 * *');
