@@ -28,7 +28,7 @@ const plans = [
         features: [
             { label: 'Brands covered', value: 'Unlimited' },
             { label: 'AI citations tracking', value: 'Unlimited' },
-            { label: 'Competitor analysis', value: '10 per brand' },
+            { label: 'Competitor analysis', value: '25 per brand' },
             { label: 'Posts tracking', value: 'Unlimited' },
             { label: 'Team seats', value: 'Unlimited' },
         ],

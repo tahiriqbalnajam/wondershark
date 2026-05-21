@@ -238,9 +238,9 @@ export default function Step2Prompts({
             return;
         }
 
-        // Check if we've reached the limit of 10 active prompts
-        if (activePrompts.length >= 10) {
-            alert("You've reached the limit of 10 tracked prompts. Please remove one before adding a new one.");
+        // Check if we've reached the limit of 25 active prompts
+        if (activePrompts.length >= 25) {
+            alert("You've reached the limit of 25 tracked prompts. Please remove one before adding a new one.");
             return;
         }
 
@@ -556,8 +556,8 @@ export default function Step2Prompts({
     // Bulk action handlers
     const handleBulkActivate = () => {
         // Check if bulk activation would exceed the limit
-        if (activePrompts.length + selectedPromptIds.size > 10) {
-            alert(`Cannot activate ${selectedPromptIds.size} prompts. You can only have 10 active prompts. Currently you have ${activePrompts.length} active prompts.`);
+        if (activePrompts.length + selectedPromptIds.size > 25) {
+            alert(`Cannot activate ${selectedPromptIds.size} prompts. You can only have 25 active prompts. Currently you have ${activePrompts.length} active prompts.`);
             return;
         }
 
@@ -616,15 +616,15 @@ export default function Step2Prompts({
         <div className="space-y-6 relative mt-15">
             <div className="flex items-center justify-between">
                 <div className="">
-                    <h3 className="text-xl font-semibold">Add Prompt <small className="text-gray-400 text-sm"> - {activePrompts.length}/10 Prompts</small></h3>
+                    <h3 className="text-xl font-semibold">Add Prompt <small className="text-gray-400 text-sm"> - {activePrompts.length}/25 Prompts</small></h3>
                     <p className="text-gray-400 text-sm">Create a competitive prompt without mentioning your own brand. Every line will be a separate prompt.</p>
                 </div>
             </div>
-            {activePrompts.length >= 10 && (
+            {activePrompts.length >= 25 && (
                 <Alert variant="destructive" className="bg-orange-50 border-orange-200">
                     <AlertCircle className="h-4 w-4 text-orange-600" />
                     <AlertDescription className="text-orange-800">
-                        You've reached the limit of 10 tracked prompts. Please remove one before adding a new one.
+                        You've reached the limit of 25 tracked prompts. Please remove one before adding a new one.
                     </AlertDescription>
                 </Alert>
             )}
@@ -871,8 +871,8 @@ export default function Step2Prompts({
                                 type="button"
                                 onClick={handleBulkActivate}
                                 className="active-ch"
-                                disabled={currentTab === 'suggested' && activePrompts.length + selectedPromptIds.size > 10}
-                                title={currentTab === 'suggested' && activePrompts.length + selectedPromptIds.size > 10 ? "Would exceed 10 prompt limit" : ""}
+                                disabled={currentTab === 'suggested' && activePrompts.length + selectedPromptIds.size > 25}
+                                title={currentTab === 'suggested' && activePrompts.length + selectedPromptIds.size > 25 ? "Would exceed 25 prompt limit" : ""}
                             >
                                 <CircleCheckBig className="h-4 w-4" /> Activate
                             </button>

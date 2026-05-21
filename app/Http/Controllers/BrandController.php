@@ -584,10 +584,10 @@ class BrandController extends Controller
             ->where('status', 'accepted')
             ->count();
 
-        if ($countAccepted >= 10 && $request->status === 'accepted') {
+        if ($countAccepted >= 25 && $request->status === 'accepted') {
             return response()->json([
                 'success' => false,
-                'message' => 'Maximum 10 accepted competitors allowed',
+                'message' => 'Maximum 25 accepted competitors allowed',
             ], 400);
         }
 
@@ -694,10 +694,10 @@ class BrandController extends Controller
         $countAccepted = \App\Models\BrandPrompt::where('brand_id', $brand->id)
             ->where('status', 'active')
             ->count();
-        if ($countAccepted >= 10 && $request->status === 'active') {
+        if ($countAccepted >= 25 && $request->status === 'active') {
             return response()->json([
                 'success' => true,
-                'message' => 'Maximum 10 accepted prompts allowed',
+                'message' => 'Maximum 25 accepted prompts allowed',
             ], 400);
         }
         $prompt = \App\Models\BrandPrompt::where('brand_id', $brand->id)

@@ -279,7 +279,7 @@ export default function Step3Competitors({
             console.log('API response:', data); // Debug log
 
             // If backend sends success but message indicates limit
-            if (data.message === "Maximum 10 accepted competitors allowed") {
+            if (data.message === "Maximum 25 accepted competitors allowed") {
                 toast.error(data.message);
                 return;
             }
@@ -344,8 +344,8 @@ export default function Step3Competitors({
             return;
         }
 
-        if (acceptedCompetitors.length >= 10) {
-            toast.error("Maximum 10 competitors allowed");
+        if (acceptedCompetitors.length >= 25) {
+            toast.error("Maximum 25 competitors allowed");
             return;
         }
 

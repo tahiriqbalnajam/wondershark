@@ -46,7 +46,7 @@ export default function CompetitorsIndex({ brands = [] }: Props) {
                                 Select a Brand to Analyze Competitors
                             </CardTitle> */}
                             <div className="flex items-center justify-between">
-                                <h2 className="text-2xl font-bold">Suggested Competitors <span className='text-gray-400 font-normal text-sm'>- 10+</span></h2>
+                                <h2 className="text-2xl font-bold">Suggested Competitors <span className='text-gray-400 font-normal text-sm'>- 25+</span></h2>
                                 
                                 <DrawerTrigger asChild>
                                     <Button variant="outline">Open Drawer</Button>
