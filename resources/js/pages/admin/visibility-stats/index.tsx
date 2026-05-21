@@ -29,6 +29,7 @@ type Stat = {
 };
 
 type DayRow = {
+    id: number | null;
     date: string;
     ai_visibility: number | null;
     manual_visibility: number | null;
@@ -121,6 +122,7 @@ export default function AdminVisibilityStatsIndex({ agencies, brands, stats, sel
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, Accept: 'application/json' },
                 body: JSON.stringify({
+                    id:              day.id ?? null,
                     brand_id:        selectedBrand.id,
                     entity_type:     drawerStat.entity_type,
                     competitor_id:   drawerStat.competitor_id ?? null,

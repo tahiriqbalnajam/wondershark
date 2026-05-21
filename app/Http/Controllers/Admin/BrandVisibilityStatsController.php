@@ -127,6 +127,7 @@ class BrandVisibilityStatsController extends Controller
                 $stat = $dayGroup->last(); // Latest entry for that day
 
                 return [
+                    'id' => $stat->id,
                     'ai_visibility' => round((float) $stat->visibility, 2),
                     'manual_visibility' => $stat->visibility_override ? round((float) $stat->visibility_override, 2) : null,
                     'override_reason' => $stat->override_reason,
@@ -140,6 +141,7 @@ class BrandVisibilityStatsController extends Controller
 
             $result[] = [
                 'date' => $date,
+                'id' => $data['id'] ?? null,
                 'ai_visibility' => $data['ai_visibility'] ?? null,
                 'manual_visibility' => $data['manual_visibility'] ?? null,
                 'override_reason' => $data['override_reason'] ?? null,
@@ -153,6 +155,7 @@ class BrandVisibilityStatsController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'id' => 'nullable|exists:brand_competitive_stats,id',
             'brand_id' => 'required|exists:brands,id',
             'entity_type' => 'required|in:brand,competitor',
             'competitor_id' => 'nullable|exists:competitors,id',
@@ -163,12 +166,17 @@ class BrandVisibilityStatsController extends Controller
             'override_reason' => 'nullable|string|max:1000',
         ]);
 
-        // Find the existing stat row for this date/entity
-        $stat = BrandCompetitiveStat::where('brand_id', $validated['brand_id'])
-            ->where('entity_type', $validated['entity_type'])
-            ->where('competitor_id', $validated['competitor_id'] ?? null)
-            ->whereDate('analyzed_at', $validated['date'])
-            ->first();
+        // If we have the record id, use it directly to avoid timezone mismatches
+        if (!empty($validated['id'])) {
+            $stat = BrandCompetitiveStat::find($validated['id']);
+        } else {
+            // Fallback: find by date/entity (existing behaviour)
+            $stat = BrandCompetitiveStat::where('brand_id', $validated['brand_id'])
+                ->where('entity_type', $validated['entity_type'])
+                ->where('competitor_id', $validated['competitor_id'] ?? null)
+                ->whereDate('analyzed_at', $validated['date'])
+                ->first();
+        }
 
         if ($stat) {
             // Update existing row with override values.
