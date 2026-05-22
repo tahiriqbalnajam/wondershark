@@ -1,6 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
 import { LoaderCircle, Check, Eye, EyeOff } from 'lucide-react';
-import { FormEventHandler, useState } from 'react';
+import { FormEventHandler, useEffect, useState } from 'react';
 
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
@@ -9,7 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { CountrySelector } from '@/components/ui/country-selector';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AuthLayout from '@/layouts/auth-layout';
+import { usStatesCities } from '@/data/us-states-cities';
+import { canadaProvincesCities } from '@/data/canada-provinces-cities';
 
 type RegisterForm = {
     name: string;
@@ -45,6 +48,46 @@ export default function Register() {
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
     const [showPassword, setShowPassword] = useState(false);
     const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
+    const [selectedState, setSelectedState] = useState<string>('');
+    const [selectedProvince, setSelectedProvince] = useState<string>('');
+    const [selectedCity, setSelectedCity] = useState<string>('');
+    const [selectedCACity, setSelectedCACity] = useState<string>('');
+
+    const isUS = data.country === 'US';
+    const isCanada = data.country === 'CA';
+    const usCities = isUS && selectedState ? usStatesCities[selectedState] || [] : [];
+    const caCities = isCanada && selectedProvince ? canadaProvincesCities[selectedProvince] || [] : [];
+
+    const handleCountryChange = (value: string) => {
+        setData('country', value);
+        setSelectedState('');
+        setSelectedProvince('');
+        setSelectedCity('');
+        setSelectedCACity('');
+        setData('region', '');
+    };
+
+    const handleStateChange = (value: string) => {
+        setSelectedState(value);
+        setSelectedCity('');
+        setData('region', value);
+    };
+
+    const handleProvinceChange = (value: string) => {
+        setSelectedProvince(value);
+        setSelectedCACity('');
+        setData('region', value);
+    };
+
+    const handleUSCityChange = (value: string) => {
+        setSelectedCity(value);
+        setData('region', selectedState + ', ' + value);
+    };
+
+    const handleCACityChange = (value: string) => {
+        setSelectedCACity(value);
+        setData('region', selectedProvince + ', ' + value);
+    };
 
     const validateName = (name: string): string | undefined => {
         if (!name.trim()) {
@@ -275,38 +318,97 @@ export default function Register() {
                                 <Label htmlFor="country">Country</Label>
                                 <CountrySelector
                                     value={data.country}
-                                    onValueChange={(value) => setData('country', value)}
+                                    onValueChange={handleCountryChange}
                                     placeholder="Select country..."
                                     className="form-control !mb-0"
                                 />
                                 <InputError message={errors.country} className="-mt-1" />
                             </div>
 
-
-                            <div className="grid gap-2 mb-5">
-                                <Label htmlFor="region">Region</Label>
-                                <Input
-                                    id="region"
-                                    value={data.region}
-                                    onChange={(e) => setData('region', e.target.value)}
-                                    placeholder="Specify States, Provinces, cities, custom areas within the country"
-                                    className="form-control !mb-0"
-                                    tabIndex={4}
-                                />
-                                <InputError message={errors.region} className="-mt-1" />
-                            </div>
-
-
-
-
-
-
-
-
-
-
-
-                            
+                            {isUS ? (
+                                <>
+                                    <div className="grid gap-2 mb-5">
+                                        <Label htmlFor="state">State</Label>
+                                        <Select value={selectedState} onValueChange={handleStateChange}>
+                                            <SelectTrigger className="form-control cursor-pointer !mb-0">
+                                                <SelectValue placeholder="Select a state" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {Object.keys(usStatesCities).map((state) => (
+                                                    <SelectItem key={state} value={state}>
+                                                        {state}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    {selectedState && (
+                                        <div className="grid gap-2 mb-5">
+                                            <Label htmlFor="city">City</Label>
+                                            <Select value={selectedCity} onValueChange={handleUSCityChange}>
+                                                <SelectTrigger className="form-control cursor-pointer !mb-0">
+                                                    <SelectValue placeholder="Select a city" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {usCities.map((city) => (
+                                                        <SelectItem key={city} value={city}>
+                                                            {city}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
+                                </>
+                            ) : isCanada ? (
+                                <>
+                                    <div className="grid gap-2 mb-5">
+                                        <Label htmlFor="province">Province / Territory</Label>
+                                        <Select value={selectedProvince} onValueChange={handleProvinceChange}>
+                                            <SelectTrigger className="form-control cursor-pointer !mb-0">
+                                                <SelectValue placeholder="Select a province or territory" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {Object.keys(canadaProvincesCities).map((prov) => (
+                                                    <SelectItem key={prov} value={prov}>
+                                                        {prov}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    {selectedProvince && (
+                                        <div className="grid gap-2 mb-5">
+                                            <Label htmlFor="city">City</Label>
+                                            <Select value={selectedCACity} onValueChange={handleCACityChange}>
+                                                <SelectTrigger className="form-control cursor-pointer !mb-0">
+                                                    <SelectValue placeholder="Select a city" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {caCities.map((city) => (
+                                                        <SelectItem key={city} value={city}>
+                                                            {city}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="grid gap-2 mb-5">
+                                    <Label htmlFor="region">Region</Label>
+                                    <Input
+                                        id="region"
+                                        value={data.region}
+                                        onChange={(e) => setData('region', e.target.value)}
+                                        placeholder="Specify States, Provinces, cities, custom areas within the country"
+                                        className="form-control !mb-0"
+                                        tabIndex={4}
+                                    />
+                                    <InputError message={errors.region} className="-mt-1" />
+                                </div>
+                            )}
                         </>
                     )}
 
