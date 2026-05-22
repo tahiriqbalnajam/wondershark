@@ -61,47 +61,45 @@ export function AppSidebarHeader({ breadcrumbs = [], title, logo, website }: { b
 
     const { toggleSidebar } = useSidebar();
 
-    const [displayName, setDisplayName] = useState(brand?.name || pageTitle);
-    const [editingName, setEditingName] = useState(false);
-    const [editedName, setEditedName] = useState('');
-    const [updatingName, setUpdatingName] = useState(false);
-    const nameInputRef = useRef<HTMLInputElement>(null);
+    const [editingCampaign, setEditingCampaign] = useState(false);
+    const [campaignValue, setCampaignValue] = useState(brand?.campaign_indicator || '');
+    const [savingCampaign, setSavingCampaign] = useState(false);
+    const campaignInputRef = useRef<HTMLInputElement>(null);
 
-    const handleStartEdit = () => {
-        setEditedName(brand?.name || pageTitle);
-        setEditingName(true);
-        setTimeout(() => nameInputRef.current?.focus(), 0);
+    const handleStartEditCampaign = () => {
+        setCampaignValue(brand?.campaign_indicator || '');
+        setEditingCampaign(true);
+        setTimeout(() => campaignInputRef.current?.focus(), 0);
     };
 
-    const handleSaveName = async () => {
-        if (!editedName.trim() || !brand?.id || editedName.trim() === brand.name) {
-            setEditingName(false);
-            return;
-        }
-        setUpdatingName(true);
+    const handleSaveCampaign = async () => {
+        const trimmed = campaignValue.trim();
+        if (!brand?.id) return;
+        setSavingCampaign(true);
         try {
-            const response = await fetch(`/brands/${brand.id}/name`, {
+            const response = await fetch(`/brands/${brand.id}/campaign-indicator`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
-                body: JSON.stringify({ name: editedName.trim() }),
+                body: JSON.stringify({ campaign_indicator: trimmed }),
             });
             if (response.ok) {
-                setDisplayName(editedName.trim());
-                setEditingName(false);
-                setUpdatingName(false);
+                const data = await response.json();
+                brand.campaign_indicator = data.campaign_indicator;
+                setEditingCampaign(false);
             }
         } catch (error) {
-            console.error('Error updating brand name:', error);
-            setUpdatingName(false);
+            console.error('Error updating campaign indicator:', error);
+        } finally {
+            setSavingCampaign(false);
         }
     };
 
-    const handleCancelEdit = () => {
-        setEditingName(false);
-        setEditedName(displayName);
+    const handleCancelEditCampaign = () => {
+        setEditingCampaign(false);
+        setCampaignValue(brand?.campaign_indicator || '');
     };
 
     return (
@@ -119,30 +117,31 @@ export function AppSidebarHeader({ breadcrumbs = [], title, logo, website }: { b
                     <h2 className="pageheading font-semibold text-lg flex items-center gap-2">
                         <span className="heading-icon">{pageIcon}</span>
                         {brand ? (
-                            editingName ? (
+                            editingCampaign ? (
                                 <>
                                     <input
-                                        ref={nameInputRef}
+                                        ref={campaignInputRef}
                                         type="text"
-                                        value={editedName}
-                                        onChange={(e) => setEditedName(e.target.value)}
+                                        value={campaignValue}
+                                        onChange={(e) => setCampaignValue(e.target.value)}
                                         onKeyDown={(e) => {
-                                            if (e.key === 'Enter') handleSaveName();
-                                            if (e.key === 'Escape') handleCancelEdit();
+                                            if (e.key === 'Enter') handleSaveCampaign();
+                                            if (e.key === 'Escape') handleCancelEditCampaign();
                                         }}
                                         className="bg-white border border-gray-300 rounded-lg px-2 py-0.5 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-auto min-w-[200px]"
-                                        disabled={updatingName}
+                                        disabled={savingCampaign}
+                                        placeholder="Enter campaign indicator"
                                     />
                                     <button
-                                        onClick={handleSaveName}
-                                        disabled={updatingName || !editedName.trim()}
+                                        onClick={handleSaveCampaign}
+                                        disabled={savingCampaign || !campaignValue.trim()}
                                         className="p-1 rounded-md text-green-600 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        {updatingName ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                        {savingCampaign ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                                     </button>
                                     <button
-                                        onClick={handleCancelEdit}
-                                        disabled={updatingName}
+                                        onClick={handleCancelEditCampaign}
+                                        disabled={savingCampaign}
                                         className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                                     >
                                         <X className="h-4 w-4" />
@@ -150,11 +149,13 @@ export function AppSidebarHeader({ breadcrumbs = [], title, logo, website }: { b
                                 </>
                             ) : (
                                 <>
-                                    {displayName}
+                                    {brand.campaign_indicator && (
+                                        <span>{brand.campaign_indicator}</span>
+                                    )}
                                     <button
-                                        onClick={handleStartEdit}
+                                        onClick={handleStartEditCampaign}
                                         className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-                                        title="Edit brand name"
+                                        title={brand.campaign_indicator ? 'edit Campaign indicator' : 'edit Campaign indicator'}
                                     >
                                         <Pencil className="h-3.5 w-3.5" />
                                     </button>

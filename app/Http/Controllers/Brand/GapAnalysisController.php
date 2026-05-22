@@ -114,6 +114,7 @@ class GapAnalysisController extends Controller
             'brand' => [
                 'id' => $brand->id,
                 'name' => $brand->name,
+                'campaign_indicator' => $brand->campaign_indicator,
             ],
             'results' => $results,
         ]);

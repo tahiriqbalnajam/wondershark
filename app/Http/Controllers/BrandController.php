@@ -1898,6 +1898,27 @@ class BrandController extends Controller
         ]);
     }
 
+    public function updateCampaignIndicator(Request $request, Brand $brand): \Illuminate\Http\JsonResponse
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (! $user->canAccessBrand($brand)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'campaign_indicator' => 'nullable|string|max:255',
+        ]);
+
+        $brand->update(['campaign_indicator' => $request->campaign_indicator]);
+
+        return response()->json([
+            'success' => true,
+            'campaign_indicator' => $brand->campaign_indicator,
+        ]);
+    }
+
     /**
      * Create a thumbnail for the uploaded logo
      */
