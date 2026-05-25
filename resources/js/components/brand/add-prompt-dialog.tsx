@@ -132,6 +132,8 @@ export function AddPromptDialog({ brandId, className, onPromptAdd }: AddPromptDi
     Papa.parse(csvFile, {
       header: true,
       skipEmptyLines: true,
+      encoding: 'UTF-8',
+      transformHeader: (header: string) => header.replace(/^﻿/, '').trim(),
       complete: async (results) => {
         const data = results.data;
         // Validate required fields
@@ -238,10 +240,11 @@ export function AddPromptDialog({ brandId, className, onPromptAdd }: AddPromptDi
       ['Tell me about the latest gaming trends', 'GB'],
       ['Which gaming console should I buy?', 'CA']
     ];
-    const csvContent = [headers, ...sampleData].map(row => 
+    const BOM = '﻿';
+    const csvContent = BOM + [headers, ...sampleData].map(row =>
       row.map(field => `"${field}"`).join(',')
     ).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
