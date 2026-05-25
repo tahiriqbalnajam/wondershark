@@ -3,6 +3,7 @@
 namespace App\Helpers;
 
 use Carbon\Carbon;
+use Carbon\Exceptions\InvalidFormatException;
 
 class DateFormat
 {
@@ -26,7 +27,11 @@ class DateFormat
         }
 
         if (is_string($date)) {
-            $date = Carbon::parse($date);
+            try {
+                $date = Carbon::parse($date);
+            } catch (InvalidFormatException) {
+                return '—';
+            }
         }
 
         return $date->format($format);
@@ -43,7 +48,11 @@ class DateFormat
         }
 
         if (is_string($date)) {
-            $date = Carbon::parse($date);
+            try {
+                $date = Carbon::parse($date);
+            } catch (InvalidFormatException) {
+                return null;
+            }
         }
 
         return $date->toISOString();
@@ -59,6 +68,10 @@ class DateFormat
             return null;
         }
 
-        return Carbon::parse($dbTimestamp)->toISOString();
+        try {
+            return Carbon::parse($dbTimestamp)->toISOString();
+        } catch (InvalidFormatException) {
+            return null;
+        }
     }
 }
