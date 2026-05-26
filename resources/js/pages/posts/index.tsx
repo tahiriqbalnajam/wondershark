@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -1125,6 +1126,19 @@ export default function PostsIndex({ posts, brand }: Props) {
                                 className={errors.title ? 'border-red-500' : ''}
                             />
                             {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="description">Description (optional)</Label>
+                            <Textarea
+                                id="description"
+                                value={data.description}
+                                onChange={(e) => setData('description', e.target.value)}
+                                placeholder="Brief description of the post (or leave empty for AI to generate)"
+                                rows={3}
+                                className={errors.description ? 'border-red-500' : ''}
+                            />
+                            {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
                         </div>
 
                         <div className="space-y-2">

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AiModel;
 use App\Models\Post;
 use App\Models\PostPrompt;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class PostPromptService extends AIPromptService
@@ -863,5 +864,69 @@ Respond ONLY with this exact JSON format (no additional text):
         }
 
         return $results;
+    }
+
+    /**
+     * Fetch a URL and use AI to generate a concise description.
+     */
+    public function generateDescription(string $url): ?string
+    {
+        $html = $this->fetchUrl($url);
+        if (! $html) {
+            return null;
+        }
+
+        $text = $this->extractTextFromHtml($html);
+        if (empty(trim($text))) {
+            return null;
+        }
+
+        $text = substr($text, 0, 4000);
+
+        $aiModel = AiModel::where('is_enabled', true)->first();
+        if (! $aiModel) {
+            return null;
+        }
+
+        $prompt = "Based on the following webpage content, write a concise 1-2 sentence description (under 500 characters) summarizing what this article/post is about. Return only the description, nothing else.\n\nURL: {$url}\n\nContent:\n{$text}";
+
+        try {
+            $description = $this->callAI($aiModel, $prompt);
+            $description = trim($description, "\"' \t\n\r\0\x0B");
+            if (strlen($description) > 1000) {
+                $description = substr($description, 0, 997) . '...';
+            }
+
+            return $description ?: null;
+        } catch (\Exception $e) {
+            Log::warning('Failed to generate description for URL', [
+                'url' => $url,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    private function fetchUrl(string $url): ?string
+    {
+        try {
+            $response = Http::timeout(10)
+                ->withHeaders(['User-Agent' => 'Mozilla/5.0 (compatible; WonderShark/1.0)'])
+                ->get($url);
+
+            return $response->successful() ? $response->body() : null;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    private function extractTextFromHtml(string $html): string
+    {
+        $html = preg_replace('/<(script|style|nav|header|footer|noscript)[^>]*>.*?<\/\1>/si', '', $html);
+        $text = strip_tags($html);
+        $text = preg_replace('/\s+/', ' ', $text);
+
+        return trim($text);
     }
 }

@@ -7,6 +7,7 @@ use App\Models\Brand;
 use App\Models\Post;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Services\PostPromptService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -313,12 +314,18 @@ class PostController extends Controller
             }
         }
 
+        // Auto-generate description if user didn't provide one
+        $description = $request->description;
+        if (empty(trim($description ?? ''))) {
+            $description = app(PostPromptService::class)->generateDescription($request->url);
+        }
+
         $post = Post::create([
             'brand_id' => $brand->id,
             'user_id' => $user->id,
             'title' => $request->title,
             'url' => $request->url,
-            'description' => $request->description,
+            'description' => $description,
             'status' => $request->status,
             'posted_at' => $request->posted_at ?: now(),
             'post_type' => $request->post_type,

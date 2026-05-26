@@ -50,6 +50,19 @@ class GeneratePostPrompts implements ShouldQueue
                 return;
             }
 
+            // Auto-generate description if post doesn't have one
+            if (empty(trim($this->post->description ?? ''))) {
+                $generated = $postPromptService->generateDescription($this->post->url);
+                if ($generated) {
+                    $this->post->update(['description' => $generated]);
+                    $this->description = $generated;
+                    Log::info('Auto-generated description for post', [
+                        'post_id' => $this->post->id,
+                        'description' => $generated,
+                    ]);
+                }
+            }
+
             // Delete existing prompts if requested
             if ($this->replaceExisting) {
                 $this->post->prompts()->delete();
