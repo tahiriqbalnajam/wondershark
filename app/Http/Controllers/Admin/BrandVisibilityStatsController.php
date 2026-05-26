@@ -78,6 +78,49 @@ class BrandVisibilityStatsController extends Controller
                         'analyzed_at' => $stat->analyzed_at?->copy()->setTimezone($timezone)->toDateTimeString(),
                     ];
                 });
+
+                // Add entities from liveStats that have NO row in brand_competitive_stats
+                // (e.g., brand or competitors with 0% visibility that haven't been analyzed yet).
+                // This keeps the admin table consistent with the brand dashboard BVI table.
+                $presentKeys = [];
+                foreach ($stats as $s) {
+                    $presentKeys[($s['competitor_id'] ?? null) ? 'c_'.$s['competitor_id'] : 'brand'] = true;
+                }
+
+                foreach ($liveStats as $liveStat) {
+                    $entityKey = ($liveStat['competitor_id'] ?? null) ? 'c_'.$liveStat['competitor_id'] : 'brand';
+                    if (isset($presentKeys[$entityKey])) {
+                        continue;
+                    }
+                    $presentKeys[$entityKey] = true;
+
+                    $analyzedAt = $liveStat['analyzed_at'] ?? null;
+                    if ($analyzedAt instanceof \DateTimeInterface) {
+                        $analyzedAt = $analyzedAt->setTimezone(new \DateTimeZone($timezone))->format('Y-m-d H:i:s');
+                    } elseif (is_string($analyzedAt)) {
+                        $analyzedAt = Carbon::parse($analyzedAt)->setTimezone($timezone)->toDateTimeString();
+                    } else {
+                        $analyzedAt = null;
+                    }
+
+                    $stats->push([
+                        'id' => $liveStat['id'] ?? 0,
+                        'entity_type' => $liveStat['entity_type'],
+                        'entity_name' => $liveStat['entity_name'],
+                        'entity_url' => $liveStat['entity_url'] ?? '',
+                        'visibility' => (float) $liveStat['visibility'],
+                        'sentiment' => $liveStat['sentiment'] ?? null,
+                        'position' => (float) ($liveStat['position'] ?? 0),
+                        'competitor_id' => $liveStat['competitor_id'] ?? null,
+                        'has_manual_override' => false,
+                        'analyzed_at' => $analyzedAt,
+                    ]);
+                }
+
+                // Re-sort by visibility descending (brand first)
+                $stats = $stats->sortByDesc(function ($s) {
+                    return ($s['entity_type'] === 'brand' ? 1000 : 0) + (float) $s['visibility'];
+                })->values();
             }
         }
 
