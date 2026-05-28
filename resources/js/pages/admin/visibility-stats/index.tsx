@@ -37,13 +37,13 @@ type DayRow = {
 };
 
 type Agency = { id: number; name: string };
-type Brand  = { id: number; name: string; agency_id: number | null };
+type Brand  = { id: number; name: string; agency_id: number | null; campaign_indicator: string | null };
 
 type Props = {
     agencies: Agency[];
     brands: Brand[];
     stats: Stat[];
-    selectedBrand: { id: number; name: string } | null;
+    selectedBrand: { id: number; name: string; campaign_indicator: string | null } | null;
     filters: { agency_id?: string; brand_id?: string };
 };
 
@@ -214,7 +214,7 @@ export default function AdminVisibilityStatsIndex({ agencies, brands, stats, sel
                                     <SelectTrigger className="w-[220px]"><SelectValue placeholder="Select a brand" /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">Select a brand</SelectItem>
-                                        {filteredBrands.map(b => <SelectItem key={b.id} value={b.id.toString()}>{b.name}</SelectItem>)}
+                                        {filteredBrands.map(b => <SelectItem key={b.id} value={b.id.toString()}>{b.campaign_indicator || b.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -230,7 +230,7 @@ export default function AdminVisibilityStatsIndex({ agencies, brands, stats, sel
                         <CardTitle className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <BarChart3 className="h-5 w-5" />
-                                {selectedBrand ? `${selectedBrand.name} — Current Averages` : 'Select a brand to view stats'}
+                                {selectedBrand ? `${selectedBrand.campaign_indicator || selectedBrand.name} — Current Averages` : 'Select a brand to view stats'}
                             </div>
                             {selectedBrand && stats.length > 0 && (() => {
                                 const overrideCount = stats.filter(s => s.has_manual_override).length;
@@ -263,7 +263,7 @@ export default function AdminVisibilityStatsIndex({ agencies, brands, stats, sel
                                     {stats.map(stat => (
                                         <TableRow key={stat.id}>
                                             <TableCell>
-                                                <div className="font-medium text-sm">{stat.entity_name}</div>
+                                                <div className="font-medium text-sm">{stat.entity_type === 'brand' && selectedBrand?.campaign_indicator ? selectedBrand.campaign_indicator : stat.entity_name}</div>
                                                 {stat.entity_url && <div className="text-xs text-muted-foreground truncate max-w-[180px]">{stat.entity_url.replace(/^https?:\/\//, '')}</div>}
                                             </TableCell>
                                             <TableCell>
@@ -310,7 +310,7 @@ export default function AdminVisibilityStatsIndex({ agencies, brands, stats, sel
                 <DrawerContent className="h-screen ml-auto fixed top-0 bottom-0 right-0 flex flex-col mt-0 rounded-none" style={{ width: '40%' }}>
                     <DrawerHeader>
                         <DrawerTitle className="flex items-center justify-between">
-                            <span>Daily Values — {drawerStat?.entity_name}</span>
+                            <span>Daily Values — {drawerStat?.entity_type === 'brand' && selectedBrand?.campaign_indicator ? selectedBrand.campaign_indicator : drawerStat?.entity_name}</span>
                             {!daysLoading && (() => {
                                 const overriddenCount = days.filter(d => d.manual_visibility !== null).length;
                                 return overriddenCount > 0 ? (

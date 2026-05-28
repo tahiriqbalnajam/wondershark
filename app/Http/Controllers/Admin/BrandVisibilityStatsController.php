@@ -18,7 +18,7 @@ class BrandVisibilityStatsController extends Controller
     {
         $timezone = $request->input('timezone', '+00:00');
         $agencies = User::role('agency')->orderBy('name')->get(['id', 'name']);
-        $brands = Brand::with('agency')->orderBy('name')->get(['id', 'name', 'agency_id']);
+        $brands = Brand::with('agency')->orderBy('name')->get(['id', 'name', 'agency_id', 'campaign_indicator']);
 
         $stats = collect();
         $selectedBrand = null;
@@ -128,7 +128,7 @@ class BrandVisibilityStatsController extends Controller
             'agencies' => $agencies,
             'brands' => $brands,
             'stats' => $stats,
-            'selectedBrand' => $selectedBrand ? ['id' => $selectedBrand->id, 'name' => $selectedBrand->name] : null,
+            'selectedBrand' => $selectedBrand ? ['id' => $selectedBrand->id, 'name' => $selectedBrand->name, 'campaign_indicator' => $selectedBrand->campaign_indicator] : null,
             'filters' => [
                 'agency_id' => $request->agency_id,
                 'brand_id' => $request->brand_id,
