@@ -99,7 +99,7 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
                         };
                     })
                     .filter(item => item !== null)
-                    .slice(0, 10) || [];
+                    .slice(0, 12) || [];
 
                 // Format date - normalize both dates to midnight in user's local timezone
                 const daysAgo = prompt.analysis_completed_at
