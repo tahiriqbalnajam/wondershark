@@ -1308,8 +1308,10 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                                         )}
 
                                         {/* Competitor Resources */}
-                                        {selectedPrompt.prompt_resources && selectedPrompt.prompt_resources.length > 0 ? (
-                                            selectedPrompt.prompt_resources.map((resource: { url: string; type: string; title: string; description: string; domain: string; is_competitor_url: boolean; }, index: number) => {
+                                        {(() => {
+                                            const validResources = (selectedPrompt.prompt_resources || []).filter((r: any) => r.title && r.url);
+                                            if (validResources.length === 0) return <p className="text-sm text-muted-foreground">No resources found for this prompt.</p>;
+                                            return validResources.map((resource: { url: string; type: string; title: string; description: string; domain: string; is_competitor_url: boolean; }, index: number) => {
                                                 const cleanDomain = resource.domain?.replace(/^www\./, '') || '';
                                                 return (
                                                     <div
@@ -1347,10 +1349,8 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                                                         </div>
                                                     </div>
                                                 );
-                                            })
-                                        ) : (
-                                            <p className="text-sm text-muted-foreground">No resources found for this prompt.</p>
-                                        )}
+                                            });
+                                        })()}
                                     </div>
                                 </div>
                             </div>
