@@ -560,8 +560,12 @@ class BrandController extends Controller
         }
 
         // Trigger competitive analysis if new competitors were actually saved
-        if (! empty($savedCompetitors)) {
-            AnalyzeBrandCompetitiveStats::dispatch($brand);
+        // Only dispatch for active brands whose owner has an active subscription or trial
+        if (! empty($savedCompetitors) && $brand->status === 'active') {
+            $brandUser = \App\Models\User::find($brand->user_id ?? $brand->agency_id);
+            if ($brandUser && $brandUser->canProcessAnalysis()) {
+                AnalyzeBrandCompetitiveStats::dispatch($brand);
+            }
         }
 
         return response()->json([
