@@ -45,9 +45,12 @@ class FetchPublishedPostPromptsStats extends Command
         $days = (int) $this->option('days');
         $limit = $this->option('limit') ? (int) $this->option('limit') : null;
 
-        // Build query for published posts
+        // Build query for published posts from active brands only
         $query = Post::query()
             ->where('status', 'published')
+            ->whereHas('brand', function ($q) {
+                $q->where('status', 'active');
+            })
             ->with(['prompts', 'brand'])
             ->orderBy('posted_at', 'desc');
 

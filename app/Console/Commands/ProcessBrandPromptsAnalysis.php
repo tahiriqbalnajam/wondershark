@@ -52,13 +52,13 @@ class ProcessBrandPromptsAnalysis extends Command
         }
 
         if ($processAll) {
-            $brands = Brand::all();
-            $this->info('Processing prompts for all '.$brands->count().' brands...');
+            $brands = Brand::where('status', 'active')->get();
+            $this->info('Processing prompts for all '.$brands->count().' active brands...');
         } else {
             // Filter out empty values
             $brandIds = array_filter($brandIds);
-            
-            $brands = Brand::whereIn('id', $brandIds)->get();
+
+            $brands = Brand::whereIn('id', $brandIds)->where('status', 'active')->get();
             $notFound = array_diff($brandIds, $brands->pluck('id')->toArray());
 
             if (! empty($notFound)) {

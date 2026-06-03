@@ -32,6 +32,27 @@ class AnalyzeBrandCompetitiveStats implements ShouldQueue
                 'brand_name' => $this->brand->name,
             ]);
 
+            // Only run for active brands
+            if ($this->brand->status !== 'active') {
+                Log::info('Skipping competitive analysis — brand is not active', [
+                    'brand_id' => $this->brand->id,
+                    'brand_status' => $this->brand->status,
+                ]);
+
+                return;
+            }
+
+            // Block AI processing if the brand owner's trial has expired and they have no active subscription
+            $brandUser = \App\Models\User::find($this->brand->user_id ?? $this->brand->agency_id);
+            if ($brandUser && ! $brandUser->canProcessAnalysis()) {
+                Log::info('Skipping competitive analysis — trial expired, no active subscription', [
+                    'brand_id' => $this->brand->id,
+                    'user_id' => $brandUser->id,
+                ]);
+
+                return;
+            }
+
             $competitiveAnalysis = new CompetitiveAnalysisService(new AIPromptService);
             $competitiveAnalysis->analyzeBrandCompetitiveStats($this->brand);
 

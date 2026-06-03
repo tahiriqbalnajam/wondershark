@@ -32,7 +32,10 @@ class CheckDailyCitationsCommand extends Command
         $postId = $this->option('post');
         $brandId = $this->option('brand');
 
-        $query = Post::where('status', 'published');
+        $query = Post::where('status', 'published')
+            ->whereHas('brand', function ($q) {
+                $q->where('status', 'active');
+            });
 
         if ($postId) {
             $this->info("Checking citations for specific post ID: {$postId}");
