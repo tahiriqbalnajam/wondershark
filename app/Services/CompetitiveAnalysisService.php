@@ -938,10 +938,20 @@ CRITICAL INSTRUCTIONS:
 
             // Use SOV from brand_mentions (same formula as the graph) so table values mirror graph.
             // Fall back to brand_competitive_stats only when no mention data exists for this day.
+            // IMPORTANT: an admin override on brand_competitive_stats always wins — even when
+            // mention data exists for the same entity+date. This keeps the BVI table consistent
+            // with the visibility graph (getHistoricalStatsForChart).
             $aiDayKey = $row->date.'|'.$key;
-            $dailyVisibility = $totalMentionsThatDay > 0
-                ? ($row->entity_mentions / $totalMentionsThatDay) * 100
-                : ($aiVisibilityByDayKey->has($aiDayKey) ? $aiVisibilityByDayKey->get($aiDayKey) : 0);
+            $hasOverrideForDay = isset($aiVisibilityStats[$aiDayKey])
+                && $aiVisibilityStats[$aiDayKey]->contains(fn ($s) => $s->visibility_override !== null);
+
+            if ($hasOverrideForDay) {
+                $dailyVisibility = $aiVisibilityByDayKey->get($aiDayKey);
+            } elseif ($totalMentionsThatDay > 0) {
+                $dailyVisibility = ($row->entity_mentions / $totalMentionsThatDay) * 100;
+            } else {
+                $dailyVisibility = $aiVisibilityByDayKey->has($aiDayKey) ? $aiVisibilityByDayKey->get($aiDayKey) : 0;
+            }
 
             $processedDayKeys[$aiDayKey] = true;
 
