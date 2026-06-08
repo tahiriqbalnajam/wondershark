@@ -525,8 +525,8 @@ CRITICAL INSTRUCTIONS:
      */
     public function getHistoricalStatsForChart(Brand $brand, ?int $days = 30, ?int $aiModelId = null, string $timezone = '+00:00'): array
     {
-        $startDate = now()->subDays($days);
-        $endDate = now();
+        $startDate = now()->subDays($days)->startOfDay();
+        $endDate = now()->endOfDay();
 
         // Pre-load competitors for domain/name resolution from brand_mentions
         $competitorsById = $brand->competitors()->get()->keyBy('id');
@@ -802,8 +802,8 @@ CRITICAL INSTRUCTIONS:
      */
     public function getMentionBasedVisibility(Brand $brand, ?int $days = 30, ?int $aiModelId = null, string $timezone = '+00:00'): array
     {
-        $startDate = now()->subDays($days);
-        $endDate = now();
+        $startDate = now()->subDays($days)->startOfDay();
+        $endDate = now()->endOfDay();
 
         // Pre-load competitors so we always display the current name, not the stale
         // entity_name stored in brand_mentions at analysis time (which can be outdated
@@ -1416,8 +1416,8 @@ CRITICAL INSTRUCTIONS:
      */
     public function getHistoricalMentionVisibility(Brand $brand, ?int $days = 30, ?int $aiModelId = null, string $timezone = '+00:00'): array
     {
-        $startDate = now()->subDays($days);
-        $endDate = now();
+        $startDate = now()->subDays($days)->startOfDay();
+        $endDate = now()->endOfDay();
 
         // Get daily aggregated mention data (competitor_id included for override matching)
         $dailyStatsQuery = BrandMention::where('brand_id', $brand->id)
