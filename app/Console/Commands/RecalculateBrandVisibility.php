@@ -46,7 +46,9 @@ class RecalculateBrandVisibility extends Command
                 return 1;
             }
         } else {
-            $brands = Brand::with(['competitors' => fn ($q) => $q->accepted()])->get();
+            $brands = Brand::with(['competitors' => fn ($q) => $q->accepted()])
+                ->where('status', 'active')
+                ->get();
         }
 
         $this->info("Processing {$brands->count()} brand(s)...");
@@ -55,6 +57,18 @@ class RecalculateBrandVisibility extends Command
         $bar->start();
 
         foreach ($brands as $brand) {
+            // Skip if the brand owner's trial has expired and they have no active subscription
+            $brandUser = \App\Models\User::find($brand->user_id ?? $brand->agency_id);
+            if ($brandUser && ! $brandUser->canProcessAnalysis()) {
+                Log::info('Skipping brand visibility recalculation — trial expired, no active subscription', [
+                    'brand_id' => $brand->id,
+                    'user_id' => $brandUser->id,
+                ]);
+                $bar->advance();
+
+                continue;
+            }
+
             try {
                 if ($regenerate) {
                     // Regenerate mentions from existing AI responses

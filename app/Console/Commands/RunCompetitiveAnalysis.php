@@ -86,6 +86,17 @@ class RunCompetitiveAnalysis extends Command
             $progressBar->setMessage("Analyzing: {$brand->name}");
             $progressBar->advance();
 
+            // Skip if the brand owner's trial has expired and they have no active subscription
+            $brandUser = \App\Models\User::find($brand->user_id ?? $brand->agency_id);
+            if ($brandUser && ! $brandUser->canProcessAnalysis()) {
+                Log::info('Skipping competitive analysis — trial expired, no active subscription', [
+                    'brand_id' => $brand->id,
+                    'user_id' => $brandUser->id,
+                ]);
+
+                continue;
+            }
+
             try {
                 $analysisResults = $this->competitiveAnalysisService->analyzeBrandCompetitiveStats($brand);
 

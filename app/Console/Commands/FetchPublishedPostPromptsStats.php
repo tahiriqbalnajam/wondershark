@@ -87,6 +87,19 @@ class FetchPublishedPostPromptsStats extends Command
 
         foreach ($posts as $post) {
             try {
+                // Skip if the brand owner's trial has expired and they have no active subscription
+                $brandUser = \App\Models\User::find($post->brand->user_id ?? $post->brand->agency_id);
+                if ($brandUser && ! $brandUser->canProcessAnalysis()) {
+                    Log::info('Skipping post prompt stats fetch — trial expired, no active subscription', [
+                        'post_id' => $post->id,
+                        'brand_id' => $post->brand_id,
+                        'user_id' => $brandUser->id,
+                    ]);
+                    $progressBar->advance();
+
+                    continue;
+                }
+
                 $prompts = $post->prompts;
 
                 if ($prompts->isEmpty()) {

@@ -91,6 +91,18 @@ class ProcessBrandPromptsAnalysis extends Command
         $progressBar->start();
 
         foreach ($brands as $brand) {
+            // Skip if the brand owner's trial has expired and they have no active subscription
+            $brandUser = \App\Models\User::find($brand->user_id ?? $brand->agency_id);
+            if ($brandUser && ! $brandUser->canProcessAnalysis()) {
+                Log::info('Skipping brand prompt analysis dispatch — trial expired, no active subscription', [
+                    'brand_id' => $brand->id,
+                    'user_id' => $brandUser->id,
+                ]);
+                $progressBar->advance();
+
+                continue;
+            }
+
             // Get total prompts without any filtering (to debug)
             $allPromptsCount = BrandPrompt::withoutGlobalScopes()->where('brand_id', $brand->id)->count();
             $activePromptsCount = BrandPrompt::withoutGlobalScopes()->where('brand_id', $brand->id)->where('is_active', true)->count();

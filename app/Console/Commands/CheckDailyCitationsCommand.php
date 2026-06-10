@@ -64,6 +64,18 @@ class CheckDailyCitationsCommand extends Command
 
         $count = 0;
         foreach ($posts as $post) {
+            // Skip if the brand owner's trial has expired and they have no active subscription
+            $brandUser = \App\Models\User::find($post->brand->user_id ?? $post->brand->agency_id);
+            if ($brandUser && ! $brandUser->canProcessAnalysis()) {
+                Log::info('Skipping citation check dispatch — trial expired, no active subscription', [
+                    'post_id' => $post->id,
+                    'brand_id' => $post->brand_id,
+                    'user_id' => $brandUser->id,
+                ]);
+
+                continue;
+            }
+
             CheckPostCitationsJob::dispatch($post);
             $count++;
         }
