@@ -250,6 +250,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
 
     // Initialize from URL params
     const queryParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const rankingQueryString = typeof window !== 'undefined' ? window.location.search : '';
     const initialDateRange = queryParams?.get('date_range') || '30';
     const initialAIModel = queryParams?.get('ai_model') || 'all';
 
@@ -1062,6 +1063,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                             totalBrandsCount={competitiveStats.length}
                             brandLogo={brand.logo ? `/storage/${brand.logo}` : null}
                             brandName={brand.name}
+                            rankingQueryString={rankingQueryString}
                         />
                     </Card>
                 </div>

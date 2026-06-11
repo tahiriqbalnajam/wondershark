@@ -60,9 +60,10 @@ interface BrandVisibilityIndexProps {
     totalBrandsCount?: number;
     brandLogo?: string | null;
     brandName?: string;
+    rankingQueryString?: string;
 }
 
-export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, limit, hoveredDomain, onDomainHover, entities, onShowAllBrands, showAllBrandsButton, totalBrandsCount, brandLogo, brandName }: BrandVisibilityIndexProps) {
+export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, limit, hoveredDomain, onDomainHover, entities, onShowAllBrands, showAllBrandsButton, totalBrandsCount, brandLogo, brandName, rankingQueryString }: BrandVisibilityIndexProps) {
     // Deduplicate within the same entity_type by name — competitors with identical names are
     // collapsed, but a competitor sharing a name with the brand is kept as a separate row.
     const dedupedStats = competitiveStats.filter((stat, index, arr) =>
@@ -301,7 +302,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
 
                 {hasMore && brandId && (
                     <div className="flex justify-end mt-4 px-4 print:hidden pdf-export-hidden">
-                        <Link href={`/brands/${brandId}/ranking`}>
+                        <Link href={`/brands/${brandId}/ranking${rankingQueryString || ''}`}>
                             <Button variant="outline" size="sm">
                                 Show All
                             </Button>

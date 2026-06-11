@@ -1063,11 +1063,17 @@ class BrandController extends Controller
             abort(403);
         }
 
+        // Read filter params from query string (same as dashboard/show)
+        $days = (int) $request->input('date_range', 30);
+        $aiModelId = $request->input('ai_model') && $request->input('ai_model') !== 'all'
+            ? AiModel::where('name', $request->input('ai_model'))->value('id')
+            : null;
+        $timezone = $request->input('timezone', '+00:00');
+
         // Get competitive stats with trends (all competitors)
         // Use mention-based visibility for accurate stats
         $competitiveAnalysisService = app(\App\Services\CompetitiveAnalysisService::class);
-        $timezone = $request->input('timezone', '+00:00');
-        $competitiveStats = $competitiveAnalysisService->getMentionBasedVisibility($brand, 30, null, $timezone);
+        $competitiveStats = $competitiveAnalysisService->getMentionBasedVisibility($brand, $days, $aiModelId, $timezone);
 
         return Inertia::render('brands/ranking', [
             'brand' => $brand,
