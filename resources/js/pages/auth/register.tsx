@@ -39,7 +39,7 @@ export default function Register() {
         email: '',
         password: '',
         password_confirmation: '',
-        role: 'brand', // Default to brand role
+        role: 'agency', // Default to agency role
         website: '',
         country: '',
         region: '',
@@ -220,13 +220,15 @@ export default function Register() {
     };
 
     return (
-        <AuthLayout title="Account Type " description="">
+        <AuthLayout title="Sign Up " description="">
             <Head title="Register" />
             <form className="flex flex-col gap-6" onSubmit={submit}>
 
-                <div className="grid gap-3">
-                    <RadioGroup value={data.role} onValueChange={(value: string) => setData('role', value)} className="grid grid-cols-1 lg:grid-cols-2 gap-3" >
-                        <div className="rounded-lg border p-5 shadow-xl hover:shadow-2xl account-type">
+                
+                 
+                <div className="">
+                    <RadioGroup value={data.role} onValueChange={(value: string) => setData('role', value)} className="grid grid-cols-1 lg:grid-cols-1 gap-3" >
+                     { /*  <div className="rounded-lg border p-5 shadow-xl hover:shadow-2xl account-type">
                             <Label htmlFor="brand" className="flex-1 cursor-pointer">
                                 <div className="font-bold text-orange-600 flex items-center justify-between text-2xl mb-5"><RadioGroupItem value="brand" id="brand" className='radio-btn' /> Brand</div>
                                 <div className="text-md text-muted-foreground leading-5">We'll manage posts and maximize AI visibility for a standalone brand.</div>
@@ -237,14 +239,14 @@ export default function Register() {
                                     <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600' /> Brand optimization</li>
                                 </ul>
                             </Label>
-                        </div>
+                        </div>*/  }
                         <div className="rounded-lg border p-5 shadow-xl hover:shadow-2xl account-type">
                             <Label htmlFor="agency" className="flex-1 cursor-pointer">
-                                <div className="font-bold text-orange-600 flex items-center justify-between text-2xl mb-5"><RadioGroupItem value="agency" id="agency" className='radio-btn' /> Agency</div>
-                                <div className="text-md text-muted-foreground leading-5">We'll enhance AI visibility and manage posts for an agency serving multiple brand clients.</div>
+                                <div className="hidden font-bold text-orange-600 flex items-center justify-between text-2xl mb-5"><RadioGroupItem value="agency" id="agency" className='radio-btn' /> </div>
+                                <div className="text-md text-muted-foreground leading-5">We'll enhance AI visibility and manage posts for an company serving multiple campaigns and brand clients.</div>
                                 <hr className='my-5' />
                                 <ul className='p-0 m-0'>
-                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600' /> Multiple brands</li>
+                                    <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600' /> Multiple campaigns</li>
                                     <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600' /> Client Management</li>
                                     <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600' /> Multi-brand analytics</li>
                                 </ul>
@@ -253,6 +255,8 @@ export default function Register() {
                     </RadioGroup>
                     <InputError message={errors.role} />
                 </div>
+                    
+               
 
 
 
