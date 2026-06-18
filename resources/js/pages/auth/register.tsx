@@ -227,7 +227,7 @@ export default function Register() {
                 
                  
                 <div className="">
-                    <RadioGroup value={data.role} onValueChange={(value: string) => setData('role', value)} className="grid grid-cols-1 lg:grid-cols-1 gap-3" >
+                    <RadioGroup value={data.role} onValueChange={(value: string) => setData('role', value)} className="grid grid-cols-1 gap-3 max-w-sm mx-auto" >
                      { /*  <div className="rounded-lg border p-5 shadow-xl hover:shadow-2xl account-type">
                             <Label htmlFor="brand" className="flex-1 cursor-pointer">
                                 <div className="font-bold text-orange-600 flex items-center justify-between text-2xl mb-5"><RadioGroupItem value="brand" id="brand" className='radio-btn' /> Brand</div>
@@ -242,7 +242,6 @@ export default function Register() {
                         </div>*/  }
                         <div className="rounded-lg border p-5 shadow-xl hover:shadow-2xl account-type">
                             <Label htmlFor="agency" className="flex-1 cursor-pointer">
-                                <div className="hidden font-bold text-orange-600 flex items-center justify-between text-2xl mb-5"><RadioGroupItem value="agency" id="agency" className='radio-btn' /> </div>
                                 <div className="text-md text-muted-foreground leading-5">We'll enhance AI visibility and manage posts for an company serving multiple campaigns and brand clients.</div>
                                 <hr className='my-5' />
                                 <ul className='p-0 m-0'>

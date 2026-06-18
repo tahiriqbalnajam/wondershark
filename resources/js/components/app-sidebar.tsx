@@ -141,7 +141,7 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
     // Brand - for agency and brand users, brand users must have brand ID
     if (permissions.hasAnyRole(['agency', 'brand']) && selectedBrandId) {
         items.push({
-            title: 'Brand',
+            title: 'Campaign',
             href: `/brands/${selectedBrandId}/edit`,
             icon: Package,
         });
@@ -150,7 +150,7 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
     // Agency settings - only for agency users
     if (permissions.hasRole('agency')) {
         items.push({
-            title: 'Agency',
+            title: 'Company',
             href: '/settings/agency',
             icon: Building2,
         });

@@ -94,7 +94,7 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                     <DropdownMenuItem asChild className='btn-default'>
                         <Link href="/brands/create" className='btn-default'>
                             <CirclePlus className="h-4 w-4" />
-                            New Brand
+                            New Campaign
                         </Link>
                     </DropdownMenuItem>)
             }
