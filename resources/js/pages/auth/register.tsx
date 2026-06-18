@@ -242,7 +242,7 @@ export default function Register() {
                         </div>*/  }
                         <div className="rounded-lg border p-5 shadow-xl hover:shadow-2xl account-type">
                             <Label htmlFor="agency" className="flex-1 cursor-pointer">
-                                <div className="text-md text-muted-foreground leading-5">We'll enhance AI visibility and manage posts for an company serving multiple campaigns and brand clients.</div>
+                                <div className="text-md text-muted-foreground leading-5">We'll enhance AI visibility and manage posts for a company serving multiple campaigns and brand clients.</div>
                                 <hr className='my-5' />
                                 <ul className='p-0 m-0'>
                                     <li className='flex gap-2 items-center text-muted-foreground'><Check className='w-5 font-bold text-orange-600' /> Multiple campaigns</li>
