@@ -61,6 +61,7 @@ class RequireActiveAccess
         'agency.invitation.accept',
         'agency.invitation.store',
         'home',
+        'posts.index',
     ];
 
     public function handle(Request $request, Closure $next): Response
@@ -89,6 +90,11 @@ class RequireActiveAccess
             if ($agencyId) {
                 $accountUser = \App\Models\User::find($agencyId) ?? $user;
             }
+        }
+
+        // Option D: Unlimited access — always allow
+        if ($accountUser->trial_type === 'D') {
+            return $next($request);
         }
 
         // Allow access if active trial or active subscription exists

@@ -43,8 +43,9 @@ export default function CreateUser({ roles, permissions }: Props) {
         post_creation_note: '',
         roles: [] as string[],
         permissions: [] as string[],
-        trial_option: 'A' as 'A' | 'B' | 'subscription',
+        trial_option: 'C' as 'A' | 'B' | 'C' | 'D' | 'subscription',
         trial_days: 7,
+        trial_ends_at: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
         trial_discount: 50,
         plan_name: 'agency_growth',
         subscription_expires_at: '',
@@ -260,6 +261,61 @@ export default function CreateUser({ roles, permissions }: Props) {
                                             <div className="font-medium">Option B — Immediate Paywall</div>
                                             <p className="text-sm text-muted-foreground">
                                                 No free trial. Paywall shows immediately on first login. User must subscribe to access features.
+                                            </p>
+                                        </div>
+                                    </label>
+
+                                    {/* Option C */}
+                                    <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${form.data.trial_option === 'C' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                                        <input
+                                            type="radio"
+                                            name="trial_option"
+                                            value="C"
+                                            checked={form.data.trial_option === 'C'}
+                                            onChange={() => form.setData('trial_option', 'C')}
+                                            className="mt-1"
+                                        />
+                                        <div className="flex-1">
+                                            <div className="font-medium">Option C — Full access - Pitch period</div>
+                                            <p className="text-sm text-muted-foreground">
+                                                Full account access for the pitch period. Account auto-restricts when expired.
+                                            </p>
+                                            {form.data.trial_option === 'C' && (
+                                                <div className="mt-3 space-y-3">
+                                                    <div className="flex flex-wrap gap-4">
+                                                        <div>
+                                                            <Label htmlFor="trial_ends_at">Pitch End Date</Label>
+                                                            <Input
+                                                                id="trial_ends_at"
+                                                                type="date"
+                                                                value={form.data.trial_ends_at}
+                                                                onChange={(e) => form.setData('trial_ends_at', e.target.value)}
+                                                                className="w-44 mt-1"
+                                                            />
+                                                            {form.errors.trial_ends_at && (
+                                                                <p className="text-sm text-red-600 mt-1">{form.errors.trial_ends_at}</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </label>
+
+                                    {/* Option D - Activate platform access */}
+                                    <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${form.data.trial_option === 'D' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                                        <input
+                                            type="radio"
+                                            name="trial_option"
+                                            value="D"
+                                            checked={form.data.trial_option === 'D'}
+                                            onChange={() => form.setData('trial_option', 'D')}
+                                            className="mt-1"
+                                        />
+                                        <div>
+                                            <div className="font-medium">Option D - Activate platform access</div>
+                                            <p className="text-sm text-muted-foreground">
+                                                Account closes. Admin activates the account directly (payment from Stripe or Wire)
                                             </p>
                                         </div>
                                     </label>

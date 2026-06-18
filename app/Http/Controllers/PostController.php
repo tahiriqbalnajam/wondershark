@@ -561,7 +561,7 @@ class PostController extends Controller
         $user = Auth::user();
 
         // Only subscribed users (or admins) can create posts
-        if (! $user->hasRole('admin') && ! $user->activeSubscription) {
+        if (! $user->hasRole('admin') && ! $user->activeSubscription && $user->trial_type !== 'D') {
             abort(403, 'Add Post is a premium feature. Please subscribe to a plan to create posts.');
         }
 

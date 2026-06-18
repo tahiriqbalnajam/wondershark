@@ -59,7 +59,7 @@ class AuthenticatedSessionController extends Controller
             }
 
 
-            if ($user->trial_type === 'A' && $user->isTrialExpired() && !$user->activeSubscription) {
+            if ($user->trial_type === 'A' && $user->isTrialExpired() && ! $user->activeSubscription) {
                 if ($user->hasRole('agency')) {
                     return redirect()->route('agency.billing');
                 } elseif ($user->hasRole('brand')) {
@@ -67,6 +67,17 @@ class AuthenticatedSessionController extends Controller
                 }
                 return redirect()->route('agency.billing');
             }
+            
+
+            // Option C: Pitch period expired — redirect to posts page instead of billing
+            if ($user->trial_type === 'C' && $user->isTrialExpired()) {
+                return redirect()->route('posts.index');
+            }
+
+
+            //if ($user->trial_type === 'D') {
+            //    return redirect()->intended(route('dashboard', absolute: false));
+          //  }
         }
 
         return redirect()->intended(route('dashboard', absolute: false));

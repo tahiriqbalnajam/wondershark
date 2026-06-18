@@ -33,9 +33,10 @@ export default function CreateUser({ roles }: CreateUserPageProps) {
         password: '',
         password_confirmation: '',
         roles: [] as string[],
-        trial_option: 'A' as 'A' | 'B' | 'subscription',
-        trial_days: 7,
-        trial_discount: 50,
+        trial_option: 'C' as 'A' | 'B' | 'C' | 'D' | 'subscription',
+        trial_days: 30,
+        trial_ends_at: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+        trial_discount: 0,
         plan_name: 'agency_growth',
         subscription_expires_at: '',
         admin_note: '',
@@ -238,7 +239,60 @@ export default function CreateUser({ roles }: CreateUserPageProps) {
                                     </div>
                                 </label>
 
-                                {/* Activate Subscription */}
+                                {/* Option C */}
+                                <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${data.trial_option === 'C' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                                    <input
+                                        type="radio"
+                                        name="trial_option"
+                                        value="C"
+                                        checked={data.trial_option === 'C'}
+                                        onChange={() => setData('trial_option', 'C')}
+                                        className="mt-1"
+                                    />
+                                    <div className="flex-1">
+                                        <div className="font-medium">Option C — Full access - Pitch period</div>
+                                        <p className="text-sm text-muted-foreground">
+                                            The user receives full account access for 30 days. After expiry the account is automatically restricted.
+                                        </p>
+                                        {data.trial_option === 'C' && (
+                                            <div className="mt-3 space-y-3">
+                                                <div className="flex flex-wrap gap-4">
+                                                    <div>
+                                                        <Label htmlFor="trial_ends_at">Pitch End Date</Label>
+                                                        <Input
+                                                            id="trial_ends_at"
+                                                            type="date"
+                                                            value={data.trial_ends_at}
+                                                            onChange={e => setData('trial_ends_at', e.target.value)}
+                                                            className="w-44 mt-1"
+                                                        />
+                                                        {errors.trial_ends_at && <p className="text-sm text-red-500 mt-1">{errors.trial_ends_at}</p>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </label>
+
+                                {/* Option D - Activate platform access */}
+                                <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${data.trial_option === 'D' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                                    <input
+                                        type="radio"
+                                        name="trial_option"
+                                        value="D"
+                                        checked={data.trial_option === 'D'}
+                                        onChange={() => setData('trial_option', 'D')}
+                                        className="mt-1"
+                                    />
+                                    <div>
+                                        <div className="font-medium">Option D - Activate platform access</div>
+                                        <p className="text-sm text-muted-foreground">
+                                            Account closes. Admin activates the account directly (payment from Stripe or Wire)
+                                        </p>
+                                    </div>
+                                </label>
+
+                                {/* Option E (Activate Subscription) */}
                                 <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${data.trial_option === 'subscription' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
                                     <input
                                         type="radio"
@@ -251,7 +305,7 @@ export default function CreateUser({ roles }: CreateUserPageProps) {
                                     <div className="flex-1">
                                         <div className="font-medium flex items-center gap-2">
                                             <CreditCard className="h-4 w-4" />
-                                            Activate Subscription Now
+                                            Option E (Activate Subscription) Now
                                         </div>
                                         <p className="text-sm text-muted-foreground">
                                             No trial. Admin activates a plan directly (wire transfer / manual payment). User gets full access immediately.

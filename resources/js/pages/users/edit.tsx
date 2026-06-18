@@ -65,7 +65,10 @@ export default function EditUser({ user, roles, activeSubscription, flash }: Edi
 
     const initialAccessOption = activeSubscription
         ? 'subscription'
-        : user.trial_type === 'B' ? 'B' : 'A';
+        : user.trial_type === 'B' ? 'B'
+        : user.trial_type === 'C' ? 'C'
+        : user.trial_type === 'D' ? 'D'
+        : 'A';
 
     const { data, setData, patch, processing, errors } = useForm({
         name: user.name,
@@ -74,7 +77,7 @@ export default function EditUser({ user, roles, activeSubscription, flash }: Edi
         password_confirmation: '',
         roles: user.roles || [],
         // access fields
-        access_option: initialAccessOption as 'A' | 'B' | 'subscription',
+        access_option: initialAccessOption as 'A' | 'B' | 'C' | 'D' | 'subscription',
         trial_ends_at: user.trial_ends_at || '',
         trial_discount: user.trial_discount ?? 50,
         plan_name: (activeSubscription?.plan_name || 'agency_growth') as string,
@@ -223,13 +226,20 @@ export default function EditUser({ user, roles, activeSubscription, flash }: Edi
                             </CardTitle>
                             <CardDescription>
                                 Choose how this user accesses the platform.
+                                {user.trial_type === 'D' && (
+                                    <span className="ml-1 text-blue-600 font-medium">
+                                        Unlimited Access — No expiry.
+                                    </span>
+                                )}
                                 {user.is_on_trial && (
                                     <span className="ml-1 text-green-600 font-medium">
-                                        Active trial — {user.trial_days_left} day{user.trial_days_left !== 1 ? 's' : ''} left.
+                                        {user.trial_type === 'C' ? 'Active pitch' : 'Active trial'} — {user.trial_days_left} day{user.trial_days_left !== 1 ? 's' : ''} left.
                                     </span>
                                 )}
                                 {user.is_trial_expired && (
-                                    <span className="ml-1 text-red-600 font-medium">Trial expired.</span>
+                                    <span className="ml-1 text-red-600 font-medium">
+                                        {user.trial_type === 'C' ? 'Pitch period expired.' : 'Trial expired.'}
+                                    </span>
                                 )}
                             </CardDescription>
                         </CardHeader>
@@ -251,8 +261,24 @@ export default function EditUser({ user, roles, activeSubscription, flash }: Edi
                             )}
 
                             <div className="flex flex-wrap gap-2">
-                                {user.is_on_trial && <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />On Trial</Badge>}
-                                {user.is_trial_expired && <Badge variant="destructive"><AlertTriangle className="w-3 h-3 mr-1" />Trial Expired</Badge>}
+                                {user.trial_type === 'D' && (
+                                    <Badge className="bg-blue-100 text-blue-800">
+                                        <CheckCircle className="w-3 h-3 mr-1" />
+                                        Unlimited Access
+                                    </Badge>
+                                )}
+                                {user.is_on_trial && (
+                                    <Badge className="bg-green-100 text-green-800">
+                                        <CheckCircle className="w-3 h-3 mr-1" />
+                                        {user.trial_type === 'C' ? 'Pitch Active' : 'On Trial'}
+                                    </Badge>
+                                )}
+                                {user.is_trial_expired && (
+                                    <Badge variant="destructive">
+                                        <AlertTriangle className="w-3 h-3 mr-1" />
+                                        {user.trial_type === 'C' ? 'Pitch Expired' : 'Trial Expired'}
+                                    </Badge>
+                                )}
                             </div>
 
                             {/* Option A */}
@@ -328,7 +354,6 @@ export default function EditUser({ user, roles, activeSubscription, flash }: Edi
                             </label>
 
                             {/* Option B */}
-                            {/*
                             <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${data.access_option === 'B' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}>
                                 <input
                                     type="radio"
@@ -345,9 +370,61 @@ export default function EditUser({ user, roles, activeSubscription, flash }: Edi
                                     </p>
                                 </div>
                             </label>
-                            */}
 
-                            {/* Activate Subscription */}
+                            {/* Option C */}
+                            <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${data.access_option === 'C' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                                <input
+                                    type="radio"
+                                    name="access_option"
+                                    value="C"
+                                    checked={data.access_option === 'C'}
+                                    onChange={() => setData('access_option', 'C')}
+                                    className="mt-1"
+                                />
+                                <div className="flex-1">
+                                    <div className="font-medium">Option C — Full access - Pitch period</div>
+                                    <p className="text-sm text-muted-foreground">
+                                        Full account access for the pitch period. Account auto-restricts when expired.
+                                    </p>
+                                    {data.access_option === 'C' && (
+                                        <div className="mt-3 space-y-3">
+                                            <div className="flex flex-wrap gap-4">
+                                                <div>
+                                                    <Label htmlFor="trial_ends_at">Pitch End Date</Label>
+                                                    <Input
+                                                        id="trial_ends_at"
+                                                        type="date"
+                                                        value={data.trial_ends_at}
+                                                        onChange={e => setData('trial_ends_at', e.target.value)}
+                                                        className="w-44 mt-1"
+                                                    />
+                                                    {errors.trial_ends_at && <p className="text-sm text-red-600 mt-1">{errors.trial_ends_at}</p>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </label>
+
+                            {/* Option D - Activate platform access */}
+                            <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${data.access_option === 'D' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                                <input
+                                    type="radio"
+                                    name="access_option"
+                                    value="D"
+                                    checked={data.access_option === 'D'}
+                                    onChange={() => setData('access_option', 'D')}
+                                    className="mt-1"
+                                />
+                                <div>
+                                    <div className="font-medium">Option D - Activate platform access</div>
+                                    <p className="text-sm text-muted-foreground">
+                                        Account closes. Admin activates the account directly (payment from Stripe or Wire)
+                                    </p>
+                                </div>
+                            </label>
+
+                            {/* Option E (Activate Subscription) */}
                             <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${data.access_option === 'subscription' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
                                 <input
                                     type="radio"
@@ -360,7 +437,7 @@ export default function EditUser({ user, roles, activeSubscription, flash }: Edi
                                 <div className="flex-1">
                                     <div className="font-medium flex items-center gap-2">
                                         <CreditCard className="h-4 w-4" />
-                                        Activate Subscription
+                                        Option E (Activate Subscription)
                                     </div>
                                     <p className="text-sm text-muted-foreground">
                                         No trial. Admin activates a plan directly (wire transfer / manual payment). User gets full access immediately.

@@ -88,8 +88,9 @@ class UserController extends Controller
             'permissions.*' => 'exists:permissions,name',
             'can_create_posts' => 'boolean',
             'post_creation_note' => 'nullable|string|max:500',
-            'trial_option' => 'required|in:A,B,subscription',
+            'trial_option' => 'required|in:A,B,C,D,subscription',
             'trial_days' => 'nullable|integer|min:1|max:365',
+            'trial_ends_at' => 'nullable|date',
             'trial_discount' => 'nullable|integer|min:0|max:100',
             'plan_name' => 'nullable|string|in:trial,free,agency_growth,agency_unlimited,brand_growth,brand_growth',
             'subscription_expires_at' => 'nullable|date|after:today',
@@ -119,6 +120,20 @@ class UserController extends Controller
                 $userData['trial_discount'] = $request->integer('trial_discount', 50);
                 $userData['free_trial_availed'] = true;
                 $userData['free_trial_claimed_at'] = now();
+            } elseif ($trialOption === 'C') {
+                $trialEndsAt = $request->date('trial_ends_at') ?? now()->addDays(30);
+                $userData['trial_type'] = 'C';
+                $userData['trial_days'] = (int) now()->diffInDays($trialEndsAt);
+                $userData['trial_ends_at'] = $trialEndsAt;
+                $userData['trial_discount'] = 0;
+                $userData['free_trial_availed'] = true;
+                $userData['free_trial_claimed_at'] = now();
+            } elseif ($trialOption === 'D') {
+                $userData['trial_type'] = 'D';
+                $userData['trial_days'] = 0;
+                $userData['trial_ends_at'] = null;
+                $userData['trial_discount'] = 0;
+                $userData['free_trial_availed'] = false;
             } elseif ($trialOption === 'B') {
                 $userData['trial_type'] = 'B';
                 $userData['trial_days'] = 0;
@@ -289,7 +304,7 @@ class UserController extends Controller
             'permissions.*'      => 'exists:permissions,name',
             'can_create_posts'   => 'boolean',
             'post_creation_note' => 'nullable|string|max:500',
-            'access_option'      => 'required|in:A,B,subscription',
+            'access_option'      => 'required|in:A,B,C,D,subscription',
             'trial_ends_at'      => 'nullable|date',
             'trial_discount'     => 'nullable|integer|min:0|max:100',
             'plan_name'          => 'nullable|string|in:trial,free,agency_growth,agency_unlimited,brand_growth',
@@ -329,6 +344,25 @@ class UserController extends Controller
                     'free_trial_availed'    => true,
                     'free_trial_claimed_at' => $user->free_trial_claimed_at ?? now(),
                 ]);
+            } elseif ($request->access_option === 'C') {
+                Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
+                $user->update([
+                    'trial_type'            => 'C',
+                    'trial_ends_at'         => $request->trial_ends_at
+                        ? Carbon::parse($request->trial_ends_at)->endOfDay()
+                        : now()->addDays(30)->endOfDay(),
+                    'trial_discount'        => 0,
+                    'free_trial_availed'    => true,
+                    'free_trial_claimed_at' => $user->free_trial_claimed_at ?? now(),
+                ]);
+            } elseif ($request->access_option === 'D') {
+                Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
+                $user->update([
+                    'trial_type'         => 'D',
+                    'trial_ends_at'      => null,
+                    'trial_discount'     => 0,
+                    'free_trial_availed' => false,
+                ]);
             } elseif ($request->access_option === 'B') {
                 Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
                 $user->update(['trial_type' => 'B', 'trial_ends_at' => null, 'free_trial_availed' => false]);
@@ -359,7 +393,7 @@ class UserController extends Controller
     public function updateAccess(Request $request, User $user): RedirectResponse
     {
         $request->validate([
-            'access_option'  => 'required|in:A,B,subscription',
+            'access_option'  => 'required|in:A,B,C,subscription',
             'trial_ends_at'  => 'nullable|date',
             'trial_discount' => 'nullable|integer|min:0|max:100',
             'plan_name'      => 'nullable|string|in:trial,free,agency_growth,agency_unlimited,brand_growth',
@@ -379,6 +413,27 @@ class UserController extends Controller
                     'trial_discount'         => $request->integer('trial_discount', 50),
                     'free_trial_availed'     => true,
                     'free_trial_claimed_at'  => $user->free_trial_claimed_at ?? now(),
+                ]);
+            } elseif ($request->access_option === 'C') {
+                Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
+
+                $user->update([
+                    'trial_type'             => 'C',
+                    'trial_ends_at'          => $request->trial_ends_at
+                        ? Carbon::parse($request->trial_ends_at)->endOfDay()
+                        : now()->addDays(30)->endOfDay(),
+                    'trial_discount'         => 0,
+                    'free_trial_availed'     => true,
+                    'free_trial_claimed_at'  => $user->free_trial_claimed_at ?? now(),
+                ]);
+            } elseif ($request->access_option === 'D') {
+                Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
+
+                $user->update([
+                    'trial_type'         => 'D',
+                    'trial_ends_at'      => null,
+                    'trial_discount'     => 0,
+                    'free_trial_availed' => false,
                 ]);
             } elseif ($request->access_option === 'B') {
                 Subscription::where('user_id', $user->id)->where('status', 'active')->update(['status' => 'canceled']);
@@ -426,7 +481,7 @@ class UserController extends Controller
     {
         $request->validate([
             'trial_ends_at' => 'required|date',
-            'trial_type' => 'nullable|in:A,B',
+            'trial_type' => 'nullable|in:A,B,C,D',
         ]);
 
         $user->update([

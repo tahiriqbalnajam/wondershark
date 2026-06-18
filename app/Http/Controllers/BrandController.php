@@ -983,26 +983,33 @@ class BrandController extends Controller
         })->values()->toArray();
 
         // Show free trial popup once for brand/agency users with no active subscription.
-        // Skip entirely for Option B users — they have no free trial and are handled by TrialPaywallPopup.
         $showTrialPopup = false;
         $showSubscribePopup = false;
-        if (! $user->hasRole('admin') && $user->trial_type !== 'B') {
-            $hasActiveSubscription = Subscription::where('user_id', $user->id)
-                ->where('status', 'active')
-                ->exists();
 
-            if (! $hasActiveSubscription) {
-                if (! $user->free_trial_availed && ! Subscription::where('user_id', $user->id)->exists()) {
-                    // First visit, no subscription history → give free trial
-                    $showTrialPopup = true;
-                    $user->free_trial_availed = true;
-                    $user->free_trial_claimed_at = now();
-                    $user->save();
-                } elseif ($user->free_trial_availed && ! $user->subscribe_popup_shown && $user->free_trial_claimed_at && $user->free_trial_claimed_at->addDays(7)->isPast()) {
-                    // Trial has expired, popup not yet shown → show once and mark it
-                    $showSubscribePopup = true;
-                    $user->subscribe_popup_shown = true;
-                    $user->save();
+        // Admin: skip trial popup
+        if (! $user->hasRole('admin')) {
+            // Option B: no free trial, handled by TrialPaywallPopup
+            if ($user->trial_type !== 'B') {
+                // Option D: unlimited access, no popup needed
+                if ($user->trial_type !== 'D') {
+                    $hasActiveSubscription = Subscription::where('user_id', $user->id)
+                        ->where('status', 'active')
+                        ->exists();
+
+                    if (! $hasActiveSubscription) {
+                        if (! $user->free_trial_availed && ! Subscription::where('user_id', $user->id)->exists()) {
+                            // First visit, no subscription history → give free trial
+                            $showTrialPopup = true;
+                            $user->free_trial_availed = true;
+                            $user->free_trial_claimed_at = now();
+                            $user->save();
+                        } elseif ($user->free_trial_availed && ! $user->subscribe_popup_shown && $user->free_trial_claimed_at && $user->free_trial_claimed_at->addDays(7)->isPast()) {
+                            // Trial has expired, popup not yet shown → show once and mark it
+                            $showSubscribePopup = true;
+                            $user->subscribe_popup_shown = true;
+                            $user->save();
+                        }
+                    }
                 }
             }
         }

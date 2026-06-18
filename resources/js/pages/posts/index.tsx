@@ -164,7 +164,8 @@ export default function PostsIndex({ posts, brand }: Props) {
     const urlParams = new URLSearchParams(url.split('?')[1] || '');
     const isSubscribed: boolean = !!(auth?.user?.activeSubscription);
     const isAdmin: boolean = !!(auth?.roles?.includes('admin'));
-    const canCreatePost = isAdmin || isSubscribed;
+    const isUnlimitedAccess: boolean = !!(auth?.user?.trial_type === 'D');
+    const canCreatePost = isAdmin || isSubscribed || isUnlimitedAccess;
     const brandId = urlParams.get('brand_id');
 
     // Construct the create post URL - use brand-specific route if brand prop exists
@@ -405,20 +406,23 @@ export default function PostsIndex({ posts, brand }: Props) {
                                 <TooltipTrigger asChild>
                                     <span>
                                         <Button
-                                            onClick={() => canCreatePost && setIsCreatePostOpen(true)}
+                                           // onClick={() => canCreatePost && setIsCreatePostOpen(true)}
+                                            onClick={() => setIsCreatePostOpen(true)}
                                             className='primary-btn'
-                                            disabled={!canCreatePost}
+                                            //disabled={!canCreatePost}
                                         >
                                             <CirclePlus className="h-4 w-4 mr-2" />
                                             Create Post
                                         </Button>
                                     </span>
                                 </TooltipTrigger>
-                                {!canCreatePost && (
+                                { /** 
+                                !canCreatePost && (
                                     <TooltipContent>
                                         <p>Add Post is a premium feature. Subscribe to a plan to create posts.</p>
                                     </TooltipContent>
-                                )}
+                                )*/
+                                }
                             </Tooltip>
                         </TooltipProvider>
                     </div>

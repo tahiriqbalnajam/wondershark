@@ -252,6 +252,10 @@ class User extends Authenticatable
             return true;
         }
 
+        if ($this->trial_type === 'D') {
+            return true;
+        }
+
         if ($this->activeSubscription) {
             return true;
         }

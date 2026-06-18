@@ -126,7 +126,7 @@ const getPreferenceNavItems = (permissions: ReturnType<typeof usePermissions>, s
     return items;
 };
 
-const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, selectedBrandId?: number): NavItem[] => {
+const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, selectedBrandId?: number, userEmail?: string, trialType?: string, activeSubscription?: boolean): NavItem[] => {
     const items: NavItem[] = [];
 
     // People - for agency only
@@ -154,22 +154,35 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
             href: '/settings/agency',
             icon: Building2,
         });
-            // Billing - only for agency users
+
+      
+        if (userEmail === 'agency@example.com' || trialType === 'A' || trialType === 'B' || activeSubscription) {
             items.push({
                 title: 'Billing',
                 href: '/agency/billing',
                 icon: CreditCard,
             });
+        }
+
     }
 
-    // Billing - for brand users
-    if (permissions.hasRole('brand')) {
+    // Billing for brand users - only for A, B, or subscription
+    if (permissions.hasRole('brand') && (trialType === 'A' || trialType === 'B' || activeSubscription)) {
         items.push({
             title: 'Billing',
             href: '/brand/billing',
             icon: CreditCard,
         });
     }
+
+    // Billing - only for agency@example.com account
+  //  if (userEmail === 'agency@example.com') {
+    //    items.push({
+      //      title: 'Billing',
+       //     href: '/agency/billing',
+       //     icon: CreditCard,
+       // });
+   // }
 
     // User Management - only for admin users (skip for agency and brand)
     if (permissions.can('viewUsers') && permissions.hasRole('admin')) {
@@ -353,7 +366,7 @@ export function AppSidebar() {
     
     const generalNavItems = getGeneralNavItems(permissions, brandIdForMenu, isRankingPage);
     const preferenceNavItems = getPreferenceNavItems(permissions, brandIdForMenu);
-    const settingsNavItems = getSettingsNavItems(permissions, brandIdForMenu);
+    const settingsNavItems = getSettingsNavItems(permissions, brandIdForMenu, user?.email, user?.trial_type, user?.activeSubscription);
     const orderNavItems = getOrderNavItems(permissions, brandIdForMenu);
     const docsFilesNavItems = getDocsFilesNavItems(permissions);
 
