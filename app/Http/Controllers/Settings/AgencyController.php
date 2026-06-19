@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Mail\AgencyEmailChanged;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -354,6 +356,9 @@ class AgencyController extends Controller
         $user->update([
             'email' => $newEmail,
         ]);
+
+        // Send notification to the OLD email address for security
+        Mail::to('contact@wondershark.ai')->send(new AgencyEmailChanged($user, $oldEmail, $newEmail));
 
         // Update Stripe customer email if user has a subscription with stripe_customer_id
         $subscription = $user->subscriptions()->whereNotNull('stripe_customer_id')->latest()->first();

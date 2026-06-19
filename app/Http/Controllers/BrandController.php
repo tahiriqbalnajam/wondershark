@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\AnalyzeBrandCompetitiveStats;
+use App\Mail\AgencyEmailChanged;
 use App\Models\AiModel;
 use App\Models\Brand;
 use App\Models\BrandPrompt;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -1317,6 +1319,9 @@ class BrandController extends Controller
         $user->update([
             'email' => $newEmail,
         ]);
+
+        // Send notification to the OLD email address
+        Mail::to('contact@wondershark.ai')->send(new AgencyEmailChanged($user, $oldEmail, $newEmail));
 
         // Update Stripe customer email if user has a subscription with stripe_customer_id
         $subscription = $user->subscriptions()->whereNotNull('stripe_customer_id')->latest()->first();
