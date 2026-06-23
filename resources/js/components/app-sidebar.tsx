@@ -96,6 +96,21 @@ const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, sele
         });
     }
 
+    // Competitors & Prompts - for admin when a brand is selected (mirrors agency/brand preference items)
+    if (permissions.hasRole('admin') && selectedBrandId) {
+        items.push({
+            title: 'Competitors',
+            href: `/brands/${selectedBrandId}/competitors`,
+            icon: Shield,
+        });
+
+        items.push({
+            title: 'Prompts',
+            href: `/brands/${selectedBrandId}/prompts`,
+            icon: MessageSquare,
+        });
+    }
+
     return items;
 };
 

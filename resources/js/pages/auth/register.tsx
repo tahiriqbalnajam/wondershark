@@ -227,7 +227,7 @@ export default function Register() {
                 
                  
                 <div className="">
-                    <RadioGroup value={data.role} onValueChange={(value: string) => setData('role', value)} className="grid grid-cols-1 gap-3 max-w-sm mx-auto" >
+                    <RadioGroup value={data.role} onValueChange={(value: string) => setData('role', value)} className="grid grid-cols-1 gap-3" >
                      { /*  <div className="rounded-lg border p-5 shadow-xl hover:shadow-2xl account-type">
                             <Label htmlFor="brand" className="flex-1 cursor-pointer">
                                 <div className="font-bold text-orange-600 flex items-center justify-between text-2xl mb-5"><RadioGroupItem value="brand" id="brand" className='radio-btn' /> Brand</div>
@@ -261,7 +261,7 @@ export default function Register() {
 
                 <div className="grid">
                     <div className="grid gap-2 mb-5">
-                        <Label htmlFor="name">{data.role === 'brand' ? 'Brand Name' : 'Agency Name'}</Label>
+                        <Label htmlFor="name">{data.role === 'brand' ? 'Brand Name' : 'Company Name'}</Label>
                         <Input
                             className='form-control !mb-0'
                             id="name"
@@ -273,7 +273,7 @@ export default function Register() {
                             value={data.name}
                             onChange={(e) => handleNameChange(e.target.value)}
                             disabled={processing}
-                            placeholder={data.role === 'brand' ? 'Your brand name' : 'Your agency name'}
+                            placeholder={data.role === 'brand' ? 'Your brand name' : 'Your company name'}
                         />
                         <InputError message={validationErrors.name || errors.name} className="-mt-1" />
                     </div>
