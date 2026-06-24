@@ -119,7 +119,7 @@ export default function StepNavigation({
                         disabled={!canProceed || processing}
                         className="flex items-center gap-2 button-single"
                     >
-                        {processing ? 'Creating Brand...' : 'Create Brand'} <CircleCheckBig/>
+                        {processing ? 'Creating Campaign...' : 'Create Campaign'} <CircleCheckBig/>
                     </Button>
                 ) : (
                     <Button

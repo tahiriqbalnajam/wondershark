@@ -130,15 +130,15 @@ export default function Step1BasicInfo({ data, setData, errors }: StepProps) {
     return (
         <div className="space-y-6">
             <div>
-                <h3 className="text-xl font-semibold mb-6 mt-10">Basic Brand Information</h3>
+                <h3 className="text-xl font-semibold mb-6 mt-10">Basic Campaign Information</h3>
                 <div className="space-y-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="name">Brand Name *</Label>
+                        <Label htmlFor="name">Campaign Name *</Label>
                         <Input
                             id="name"
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
-                            placeholder="Enter your brand name"
+                            placeholder="Enter your campaign name"
                             required
                             className="form-control"
                         />
