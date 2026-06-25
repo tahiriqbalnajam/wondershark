@@ -380,10 +380,10 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
             const result = await response.json();
 
             if (result.success && result.redirect_url) {
-                toast.success(result.message || 'Brand created successfully!');
+                toast.success(result.message || 'Campaign created successfully!');
                 router.visit(result.redirect_url);
             } else {
-                toast.error(result.message || 'Failed to finalize brand');
+                toast.error(result.message || 'Failed to finalize campaign');
             }
         } catch (error) {
             console.error('Error finalizing brand:', error);

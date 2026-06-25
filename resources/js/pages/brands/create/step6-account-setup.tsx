@@ -14,7 +14,7 @@ export default function Step6AccountSetup({ }: StepProps) {
 
                 <h3 className="text-2xl font-semibold mb-3">Ready to Complete Setup!</h3>
                 <p className="text-muted-foreground text-lg mb-6 max-w-[900px] mx-auto">
-                    You’ve successfully configured your brand.</p>
+                    You’ve successfully configured your campaign.</p>
 
                  { /* <p className="text-muted-foreground text-lg mb-6 max-w-[900px] mx-auto">
                     You’ve successfully configured your brand. Select your plan and click “<b>Get Started</b>” below to activate your brand and start using the platform. An invoice will be sent to your email shortly.

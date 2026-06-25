@@ -196,7 +196,7 @@ class BrandController extends Controller
         // Store the newly created brand in session
         session(['selected_brand_id' => $brand->id]);
 
-        return redirect()->route('brands.dashboard', $brand)->with('success', 'Brand created successfully!');
+        return redirect()->route('brands.dashboard', $brand)->with('success', 'Campaign created successfully!');
     }
 
     /**
@@ -507,7 +507,7 @@ class BrandController extends Controller
             'success' => true,
             'brand_id' => $brand->id,
             'redirect_url' => route('brands.dashboard', $brand),
-            'message' => 'Brand created successfully! Analysis is running in the background.',
+            'message' => 'Campaign created successfully! Analysis is running in the background.',
             'analysis_queued' => $activePrompts->count(),
         ]);
     }

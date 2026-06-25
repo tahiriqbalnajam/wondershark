@@ -82,7 +82,7 @@ export default function Step3Competitors({
 
         setLoading(true);
         setProgress(0);
-        setProgressText('Analyzing your brand...');
+        setProgressText('Analyzing your Campaign...');
 
         try {
             const fetchEndpoint = sessionId
@@ -583,7 +583,7 @@ export default function Step3Competitors({
 
             <div className="bg-sidebar flex flex-col gap-6 rounded-xl border p-10 shadow-sm mt-[50px]">
                 <div className="block mb-5">
-                    <h3 className="text-xl font-semibold">Selected Brands</h3>
+                    <h3 className="text-xl font-semibold">Selected Campaigns</h3>
                 </div>
 
                 {/* Your Brand */}
@@ -596,16 +596,16 @@ export default function Step3Competitors({
                                 <span className='w-[20px] h-[20px] flex items-center justify-center'>
                                     <img
                                         src={yourLogoUrl}
-                                        alt={data.name || 'Your Brand'}
+                                        alt={data.name || 'Your Campaign'}
                                         className="w-full h-full object-contain"
                                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                     />
                                 </span>
                             )}
-                            <p className='text-black'>{data.name || 'Your Brand'}</p>
+                            <p className='text-black'>{data.name || 'Your Campaign'}</p>
                             <Badge className='bg-green-100 text-green-600 h-[40px] w-[110px]'>
                                 <span className='h-3 w-3 rounded-full bg-green-600 mr-2'></span>
-                                Your Brand
+                                Your Campaign
                             </Badge>
                         </div>
                     );

@@ -169,14 +169,16 @@ export function AppSidebarHeader({ breadcrumbs = [], title, logo, website }: { b
 
                 <div className="flex items-center gap-3">
                     {/* Button only visible on Dashboard */}
-                    {isDashboard && (
+                    {
+                       /* 
+                    isDashboard && (
                         <Button
                             onClick={() => console.log('Dashboard button clicked')}
                             className="primary-btn"
                         >
                             Generate a PDF Report <FileDown/>
                         </Button>
-                    )}
+                    ) */ }
                 </div>
             </div>
         </header>

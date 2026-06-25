@@ -617,7 +617,7 @@ export default function Step2Prompts({
             <div className="flex items-center justify-between">
                 <div className="">
                     <h3 className="text-xl font-semibold">Add Prompt <small className="text-gray-400 text-sm"> - {activePrompts.length}/25 Prompts</small></h3>
-                    <p className="text-gray-400 text-sm">Create a competitive prompt without mentioning your own brand. Every line will be a separate prompt.</p>
+                    <p className="text-gray-400 text-sm">Create a competitive prompt without mentioning your own campaign. Every line will be a separate prompt.</p>
                 </div>
             </div>
             {activePrompts.length >= 25 && (
@@ -723,7 +723,7 @@ export default function Step2Prompts({
                 </TabsContent>
                 <TabsContent value="suggested" className="active-table-prompt">
                     <div className="suggested-prompts-box flex justify-between items-center p-4 border rounded-sm mb-5">
-                        <p className='flex items-center gap-3 text-sm'><Sparkles className='text-orange-600' /><b>Suggested prompts.</b> Expand your brand's presence with suggested prompts.</p>
+                        <p className='flex items-center gap-3 text-sm'><Sparkles className='text-orange-600' /><b>Suggested prompts.</b> Expand your campaign's presence with suggested prompts.</p>
                         <button
                             onClick={generateAIPrompts}
                             disabled={isGeneratingPrompts}
