@@ -189,6 +189,7 @@ export default function EditUser({ user, roles, activeSubscription, flash }: Edi
                                 </div>
                             </div>
 
+                        { /** 
                             <div className="space-y-2">
                                 <Label>Roles</Label>
                                 <div className="grid grid-cols-2 gap-2">
@@ -204,7 +205,7 @@ export default function EditUser({ user, roles, activeSubscription, flash }: Edi
                                     ))}
                                 </div>
                                 {errors.roles && <p className="text-sm text-red-500">{errors.roles}</p>}
-                            </div>
+                            </div>*/}
 
                             <div className="flex gap-2 pt-2">
                                 <Button type="submit" disabled={processing}>
