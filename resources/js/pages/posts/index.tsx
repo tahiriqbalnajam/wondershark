@@ -263,7 +263,7 @@ export default function PostsIndex({ posts, brand }: Props) {
         });
 
         if (validCitations.length === 0) {
-            return <span className="text-xs text-muted-foreground">No AI model matches</span>;
+            return <span className="text-xs text-muted-foreground"></span>;
         }
 
         return (

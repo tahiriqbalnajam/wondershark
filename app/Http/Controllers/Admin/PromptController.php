@@ -138,6 +138,7 @@ class PromptController extends Controller
                 'prompt' => $validated['prompt'],
                 'country_code' => $validated['country_code'],
                 'is_active' => true,
+                'status' => 'active',
             ]);
         } else {
             PostPrompt::create([
@@ -145,6 +146,7 @@ class PromptController extends Controller
                 'prompt' => $validated['prompt'],
                 'country_code' => $validated['country_code'],
                 'is_active' => true,
+                'status' => 'active',
             ]);
         }
 

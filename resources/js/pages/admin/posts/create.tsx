@@ -105,7 +105,7 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
     const [openBrand, setOpenBrand] = useState(false);
 
     const filteredBrands = selectedAgency !== 'all'
-        ? brands.filter(brand => brand.agency_id.toString() === selectedAgency)
+        ? brands.filter(brand => brand.agency_id?.toString() === selectedAgency)
         : brands;
 
     // Type assertion for additional error fields
