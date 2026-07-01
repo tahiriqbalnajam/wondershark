@@ -46,6 +46,7 @@ type Brand = {
     can_create_posts: boolean;
     post_creation_note?: string;
     monthly_posts: number;
+    campaign_indicator?: string | null;
 };
 
 type Props = {
@@ -201,9 +202,13 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
                                                             !data.brand_id && "text-muted-foreground"
                                                         )}
                                                     >
-                                                        {data.brand_id
-                                                            ? brands.find((brand) => brand.id.toString() === data.brand_id)?.name
-                                                            : "Select brand"}
+                                                        {(() => {
+                                                            const selected = brands.find((brand) => brand.id.toString() === data.brand_id);
+                                                            if (!selected) return "Select brand";
+                                                            return selected.campaign_indicator
+                                                                ? `${selected.name} (${selected.campaign_indicator})`
+                                                                : selected.name;
+                                                        })()}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
                                                 </PopoverTrigger>
@@ -217,7 +222,7 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
                                                                     <CommandItem
                                                                         key={brand.id}
                                                                         value={brand.id.toString()}
-                                                                        keywords={[brand.name]}
+                                                                        keywords={[brand.name, brand.campaign_indicator || '']}
                                                                         onSelect={(currentValue) => {
                                                                             setData('brand_id', brand.id.toString())
                                                                             setOpenBrand(false)
@@ -230,7 +235,12 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
                                                                             )}
                                                                         />
                                                                         <div className="flex items-center gap-2">
-                                                                            <span>{brand.name}</span>
+                                                                            <span>
+                                                                                {brand.name}
+                                                                                {brand.campaign_indicator && (
+                                                                                    <span className="text-muted-foreground ml-1">({brand.campaign_indicator})</span>
+                                                                                )}
+                                                                            </span>
                                                                             {!brand.can_create_posts && (
                                                                                 <Badge variant="destructive" className="text-xs">
                                                                                     Restricted

@@ -18,6 +18,7 @@ interface Brand {
     post_creation_note?: string;
     monthly_posts: number;
     agency_id: number;
+    campaign_indicator?: string | null;
 }
 
 interface Agency {
@@ -162,13 +163,26 @@ const Edit: React.FC<Props> = ({ post, agencies, brands }) => {
                                     <Label htmlFor="brand_id">Brand *</Label>
                                     <Select value={data.brand_id} onValueChange={(value) => setData('brand_id', value)}>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select brand" />
+                                            <SelectValue placeholder="Select brand">
+                                                {(() => {
+                                                    const selected = brands.find((b) => b.id.toString() === data.brand_id);
+                                                    if (!selected) return "Select brand";
+                                                    return selected.campaign_indicator
+                                                        ? `${selected.name} (${selected.campaign_indicator})`
+                                                        : selected.name;
+                                                })()}
+                                            </SelectValue>
                                         </SelectTrigger>
                                         <SelectContent>
                                             {filteredBrands.map((brand) => (
                                                 <SelectItem key={brand.id} value={brand.id.toString()}>
                                                     <div className="flex items-center gap-2">
-                                                        <span>{brand.name}</span>
+                                                        <span>
+                                                            {brand.name}
+                                                            {brand.campaign_indicator && (
+                                                                <span className="text-muted-foreground ml-1">({brand.campaign_indicator})</span>
+                                                            )}
+                                                        </span>
                                                         {!brand.can_create_posts && (
                                                             <Badge variant="destructive" className="text-xs">
                                                                 Restricted

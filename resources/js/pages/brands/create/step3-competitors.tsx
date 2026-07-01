@@ -603,8 +603,8 @@ export default function Step3Competitors({
                                 </span>
                             )}
                             <p className='text-black'>{data.name || 'Your Campaign'}</p>
-                            <Badge className='bg-green-100 text-green-600 h-[40px] w-[110px]'>
-                                <span className='h-3 w-3 rounded-full bg-green-600 mr-2'></span>
+                            <Badge className='bg-green-100 text-green-600 h-[40px] w-[150px]'>
+                                <span className='h-3 w-3 rounded-full bg-green-600 mr-1'></span>
                                 Your Campaign
                             </Badge>
                         </div>

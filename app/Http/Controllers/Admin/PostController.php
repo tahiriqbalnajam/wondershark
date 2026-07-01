@@ -106,7 +106,7 @@ class PostController extends Controller
     {
         // Get all agencies and brands for admin
         $agencies = User::role('agency')->orderBy('name')->get(['id', 'name']);
-        $brands = Brand::with('agency')->orderBy('name')->get(['id', 'name', 'can_create_posts', 'post_creation_note', 'monthly_posts', 'agency_id']);
+        $brands = Brand::with('agency')->orderBy('name')->get(['id', 'name', 'can_create_posts', 'post_creation_note', 'monthly_posts', 'agency_id', 'campaign_indicator']);
 
         $adminEmail = SystemSetting::get('admin_contact_email', 'admin@wondershark.com');
 
@@ -258,7 +258,7 @@ class PostController extends Controller
     public function edit(Post $post)
     {
         $agencies = User::role('agency')->orderBy('name')->get(['id', 'name']);
-        $brands = Brand::orderBy('name')->get(['id', 'name', 'can_create_posts', 'post_creation_note', 'monthly_posts', 'agency_id']);
+        $brands = Brand::orderBy('name')->get(['id', 'name', 'can_create_posts', 'post_creation_note', 'monthly_posts', 'agency_id', 'campaign_indicator']);
 
         $post->load(['brand.user', 'brand.agency']);
 
