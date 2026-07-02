@@ -77,7 +77,7 @@ type Brand = {
   website?: string;
   description: string;
   monthly_posts: number;
-  status: 'active' | 'inactive' | 'pending';
+  status: 'active' | 'inactive';
   logo?: string | null;
   trackedName?: string;
   allies?: string[];
@@ -93,7 +93,7 @@ type BrandForm = {
   website: string;
   description: string;
   monthly_posts: number;
-  status: 'active' | 'inactive' | 'pending';
+  status: 'active' | 'inactive';
   logo: File | null;
   country: string;
   region: string;
@@ -506,7 +506,7 @@ export default function BrandEdit({ brand, userEmail }: Props) {
               {/* Brand status dropdown */}
               <div className="grid gap-2">
                 <Label htmlFor="status">Brand Status</Label>
-                <Select value={data.status} onValueChange={(v: 'active' | 'inactive' | 'pending') => setData('status', v)}>
+                <Select value={data.status} onValueChange={(v: 'active' | 'inactive') => setData('status', v)}>
                   <SelectTrigger className="form-control">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
@@ -514,11 +514,6 @@ export default function BrandEdit({ brand, userEmail }: Props) {
                     <SelectItem value="active">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-green-500" /> Active
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="pending">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-yellow-500" /> Pending
                       </div>
                     </SelectItem>
                     <SelectItem value="inactive">

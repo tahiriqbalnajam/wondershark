@@ -12,7 +12,7 @@ import {
     DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import AppLayout from '@/layouts/app-layout';
-import { Plus, Building2, Globe, Calendar, MoreVertical, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Plus, Building2, Globe, Calendar, MoreVertical, CheckCircle, XCircle } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -28,7 +28,7 @@ type Brand = {
     description: string;
     country?: string;
     monthly_posts: number;
-    status: 'active' | 'inactive' | 'pending';
+    status: 'active' | 'inactive';
     created_at: string;
     current_month_posts: number;
     total_posts: number;
@@ -53,8 +53,6 @@ export default function BrandsIndex({ brands }: Props) {
                 return <CheckCircle className="h-3 w-3" />;
             case 'inactive':
                 return <XCircle className="h-3 w-3" />;
-            case 'pending':
-                return <Clock className="h-3 w-3" />;
             default:
                 return null;
         }
@@ -66,8 +64,6 @@ export default function BrandsIndex({ brands }: Props) {
                 return 'default' as const;
             case 'inactive':
                 return 'destructive' as const;
-            case 'pending':
-                return 'secondary' as const;
             default:
                 return 'outline' as const;
         }
@@ -163,13 +159,6 @@ export default function BrandsIndex({ brands }: Props) {
                                                 >
                                                     <CheckCircle className="h-4 w-4 text-green-600" />
                                                     Active
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem 
-                                                    onClick={() => handleStatusChange(brand.id, 'pending')}
-                                                    className="flex items-center gap-2"
-                                                >
-                                                    <Clock className="h-4 w-4 text-yellow-600" />
-                                                    Pending
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem 
                                                     onClick={() => handleStatusChange(brand.id, 'inactive')}

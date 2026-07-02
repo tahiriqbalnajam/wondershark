@@ -239,7 +239,7 @@ class BrandController extends Controller
             'trackedName' => $request->trackedName,
             'allies' => $request->allies ?? [],
             'monthly_posts' => 10, // Default value
-            'status' => 'pending',
+            'status' => 'active',
         ]);
 
         return response()->json([
@@ -263,8 +263,8 @@ class BrandController extends Controller
             abort(403);
         }
 
-        // Ensure brand is in pending status (being created)
-        if ($brand->status !== 'pending') {
+        // Ensure brand setup is not yet completed
+        if ($brand->is_completed) {
             return redirect()->route('brands.dashboard', $brand)
                 ->with('info', 'This brand has already been created.');
         }
@@ -1164,7 +1164,7 @@ class BrandController extends Controller
             'description' => 'nullable|string|max:1000',
             'country' => 'nullable|string|max:100',
             'monthly_posts' => 'required|integer|min:1|max:1000',
-            'status' => 'nullable|in:active,inactive,pending',
+            'status' => 'nullable|in:active,inactive',
             'prompts' => 'array|max:25',
             'prompts.*' => 'required|string|max:500',
             'subreddits' => 'array|max:20',
@@ -1282,7 +1282,7 @@ class BrandController extends Controller
         }
 
         $request->validate([
-            'status' => 'required|in:active,inactive,pending',
+            'status' => 'required|in:active,inactive',
         ]);
 
         $brand->update([

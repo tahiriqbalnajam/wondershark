@@ -72,7 +72,7 @@ class RegisteredUserController extends Controller
                     'website' => $validated['website'],
                     'country' => $validated['country'],
                     'region' => $validated['region'] ?? null,
-                    'status' => 'pending',
+                    'status' => 'active',
                     'is_completed' => false,
                     'current_step' => 1,
                     'monthly_posts' => 10, // Default value
