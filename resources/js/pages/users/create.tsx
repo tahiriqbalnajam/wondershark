@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { UserPlus, ArrowLeft, Clock, CreditCard } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 
@@ -42,12 +42,8 @@ export default function CreateUser({ roles }: CreateUserPageProps) {
         admin_note: '',
     });
 
-    const handleRoleChange = (roleName: string, checked: boolean) => {
-        if (checked) {
-            setData('roles', [...data.roles, roleName]);
-        } else {
-            setData('roles', data.roles.filter(role => role !== roleName));
-        }
+    const handleRoleChange = (roleName: string) => {
+        setData('roles', [roleName]);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -139,23 +135,21 @@ export default function CreateUser({ roles }: CreateUserPageProps) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label>Roles</Label>
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <Label>Role</Label>
+                                    <RadioGroup
+                                        value={data.roles[0] || ''}
+                                        onValueChange={(value) => handleRoleChange(value)}
+                                        className="grid grid-cols-2 gap-2"
+                                    >
                                         {roles.map((role) => (
                                             <div key={role.id} className="flex items-center space-x-2">
-                                                <Checkbox
-                                                    id={`role-${role.id}`}
-                                                    checked={data.roles.includes(role.name)}
-                                                    onCheckedChange={(checked) =>
-                                                        handleRoleChange(role.name, checked as boolean)
-                                                    }
-                                                />
-                                                <Label htmlFor={`role-${role.id}`} className="text-sm">
+                                                <RadioGroupItem value={role.name} id={`role-${role.id}`} />
+                                                <Label htmlFor={`role-${role.id}`} className="text-sm cursor-pointer">
                                                     {role.name}
                                                 </Label>
                                             </div>
                                         ))}
-                                    </div>
+                                    </RadioGroup>
                                     {errors.roles && <p className="text-sm text-red-500">{errors.roles}</p>}
                                 </div>
                             </CardContent>
