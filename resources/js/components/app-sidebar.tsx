@@ -20,7 +20,8 @@ import {
     Terminal,
     CreditCard,
     Link2,
-    Search
+    Search,
+    Activity
 } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { usePage } from '@inertiajs/react';
@@ -304,6 +305,12 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
                     title: 'Gap URLs',
                     href: '/admin/website-urls',
                     icon: Link2,
+                    permission: 'view-admin-panel',
+                },
+                {
+                    title: 'Analysis Monitor',
+                    href: '/admin/analysis-monitor',
+                    icon: Activity,
                     permission: 'view-admin-panel',
                 },
                 {

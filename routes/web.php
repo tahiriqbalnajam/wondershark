@@ -275,6 +275,11 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\GapAnalysisController::class, 'index'])->name('index');
         });
 
+        // Analysis Monitor - Admin only
+        Route::prefix('admin/analysis-monitor')->name('admin.analysis-monitor.')->middleware('role.permission:view-admin-panel')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\AnalysisMonitorController::class, 'index'])->name('index');
+        });
+
            // Visibility Stats Override - Admin only
         Route::prefix('admin/visibility-stats')->name('admin.visibility-stats.')->middleware('role.permission:view-admin-panel')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\BrandVisibilityStatsController::class, 'index'])->name('index');
