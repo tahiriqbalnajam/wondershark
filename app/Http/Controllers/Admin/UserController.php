@@ -383,8 +383,50 @@ class UserController extends Controller
             }
         });
 
+        // Dispatch brand analysis for Agency Services Plans (C or D)
+        $queuedBrands = 0;
+        if (in_array($request->access_option, ['C', 'D'])) {
+            $brands = \App\Models\Brand::where(function ($query) use ($user) {
+                $query->where('user_id', $user->id)
+                      ->orWhere('agency_id', $user->id);
+            })->get();
+
+            Log::info('Admin user update — checking brands for analysis dispatch', [
+                'user_id' => $user->id,
+                'access_option' => $request->access_option,
+                'brands_found' => $brands->count(),
+                'brand_ids' => $brands->pluck('id')->toArray(),
+            ]);
+
+            foreach ($brands as $brand) {
+                try {
+                    \Illuminate\Support\Facades\Artisan::call('brand:analyze-prompts', [
+                        '--brand' => [$brand->id],
+                        '--force' => true,
+                    ]);
+
+                    \Illuminate\Support\Facades\Artisan::call('brand:recalculate-visibility', [
+                        '--brand' => $brand->id,
+                        '--regenerate' => true,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Failed to run brand analysis commands after user update', [
+                        'brand_id' => $brand->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            $queuedBrands = $brands->count();
+        }
+
+        $message = 'User updated successfully.';
+        if ($queuedBrands > 0) {
+            $message .= " Brand analysis queued for {$queuedBrands} brand(s).";
+        }
+
         return redirect()->route('admin.users.edit', $user)
-            ->with('success', 'User updated successfully.');
+            ->with('success', $message);
     }
 
     /**

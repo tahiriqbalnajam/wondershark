@@ -337,7 +337,7 @@ export default function EditUser({ user, roles, activeSubscription, flash }: Edi
                                         <div>
                                             <div className="font-medium">Option B - Activate platform access</div>
                                             <p className="text-sm text-muted-foreground">
-                                                Account closes. Admin activates the account directly (payment from Stripe or Wire)
+                                                Admin activates the account directly (payment from Stripe or Wire)
                                             </p>
                                         </div>
                                     </label>
