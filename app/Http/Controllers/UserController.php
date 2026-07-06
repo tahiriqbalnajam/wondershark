@@ -365,7 +365,42 @@ class UserController extends Controller
             }
         });
 
-        return redirect()->route('users.edit', $user)->with('success', 'User updated successfully.');
+        // Dispatch brand analysis for Agency Services Plans (C or D)
+        $queuedBrands = 0;
+        if (in_array($request->access_option, ['C', 'D'])) {
+            $brands = \App\Models\Brand::where(function ($query) use ($user) {
+                $query->where('user_id', $user->id)
+                      ->orWhere('agency_id', $user->id);
+            })->get();
+
+            foreach ($brands as $brand) {
+                try {
+                    \Illuminate\Support\Facades\Artisan::call('brand:analyze-prompts', [
+                        '--brand' => [$brand->id],
+                        '--force' => true,
+                    ]);
+
+                    \Illuminate\Support\Facades\Artisan::call('brand:recalculate-visibility', [
+                        '--brand' => $brand->id,
+                        '--regenerate' => true,
+                    ]);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Failed to run brand analysis commands after user update', [
+                        'brand_id' => $brand->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            $queuedBrands = $brands->count();
+        }
+
+        $message = 'User updated successfully.';
+        if ($queuedBrands > 0) {
+            $message .= " Brand analysis queued for {$queuedBrands} brand(s).";
+        }
+
+        return redirect()->route('users.edit', $user)->with('success', $message);
     }
 
     public function destroy(Request $request, User $user)

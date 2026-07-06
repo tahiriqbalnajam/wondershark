@@ -315,7 +315,7 @@ export default function CreateUser({ roles, permissions }: Props) {
                                         <div>
                                             <div className="font-medium">Option D - Activate platform access</div>
                                             <p className="text-sm text-muted-foreground">
-                                                Account closes. Admin activates the account directly (payment from Stripe or Wire)
+                                                Admin activates the account directly (payment from Stripe or Wire)
                                             </p>
                                         </div>
                                     </label>
