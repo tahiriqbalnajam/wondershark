@@ -278,6 +278,8 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
         // Analysis Monitor - Admin only
         Route::prefix('admin/analysis-monitor')->name('admin.analysis-monitor.')->middleware('role.permission:view-admin-panel')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\AnalysisMonitorController::class, 'index'])->name('index');
+            Route::post('/analyze-all', [\App\Http\Controllers\Admin\AnalysisMonitorController::class, 'analyzeAll'])->name('analyze-all');
+            Route::post('/{brand}/analyze', [\App\Http\Controllers\Admin\AnalysisMonitorController::class, 'analyze'])->name('analyze');
         });
 
            // Visibility Stats Override - Admin only

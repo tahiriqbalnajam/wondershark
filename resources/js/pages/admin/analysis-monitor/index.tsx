@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ interface Owner {
 interface Plan {
     selected_option: string;
     trial_ends_at: string | null;
+    is_trial_expired: boolean;
 }
 
 interface Brand {
@@ -33,17 +34,19 @@ interface Brand {
     total_active_prompts: number;
     last_analysis_date: string | null;
     days_since_analysis: number | null;
-    analyzed_this_month: boolean;
+    analyzed_today: boolean;
 }
 
 interface Props {
     brands: Brand[];
-    currentMonth: string;
+    today: string;
     totalCount: number;
 }
 
-export default function AnalysisMonitorIndex({ brands, currentMonth, totalCount }: Props) {
+export default function AnalysisMonitorIndex({ brands, today, totalCount }: Props) {
     const [searchTerm, setSearchTerm] = useState('');
+    const [analyzingBrandId, setAnalyzingBrandId] = useState<number | null>(null);
+    const [isAnalyzingAll, setIsAnalyzingAll] = useState(false);
 
     const filteredBrands = brands.filter((brand) =>
         brand.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -53,17 +56,20 @@ export default function AnalysisMonitorIndex({ brands, currentMonth, totalCount 
         String(brand.id).includes(searchTerm)
     );
 
-    const getDaysBadge = (days: number | null) => {
-        if (days === null) {
-            return <Badge variant="destructive">Never</Badge>;
-        }
-        if (days > 30) {
-            return <Badge variant="destructive">{days} days</Badge>;
-        }
-        if (days > 14) {
-            return <Badge variant="outline" className="text-orange-600 border-orange-300">{days} days</Badge>;
-        }
-        return <Badge variant="outline" className="text-yellow-600 border-yellow-300">{days} days</Badge>;
+    const handleAnalyze = (brandId: number) => {
+        setAnalyzingBrandId(brandId);
+        router.post(route('admin.analysis-monitor.analyze', brandId), {}, {
+            preserveScroll: true,
+            onFinish: () => setAnalyzingBrandId(null),
+        });
+    };
+
+    const handleAnalyzeAll = () => {
+        setIsAnalyzingAll(true);
+        router.post(route('admin.analysis-monitor.analyze-all'), {}, {
+            preserveScroll: true,
+            onFinish: () => setIsAnalyzingAll(false),
+        });
     };
 
     return (
@@ -75,17 +81,38 @@ export default function AnalysisMonitorIndex({ brands, currentMonth, totalCount 
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight">Analysis Monitor</h1>
                         <p className="text-muted-foreground">
-                            Brands with no analysis completed in {currentMonth}
+                            Brands with no analysis completed today ({today})
                         </p>
                     </div>
-                    <Button
-                        onClick={() => window.location.reload()}
-                        variant="outline"
-                        size="sm"
-                    >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Refresh
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        {totalCount > 0 && (
+                            <Button
+                                onClick={handleAnalyzeAll}
+                                disabled={isAnalyzingAll}
+                                size="sm"
+                            >
+                                {isAnalyzingAll ? (
+                                    <>
+                                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                        Analyzing All...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Activity className="w-4 h-4 mr-2" />
+                                        Analyze All
+                                    </>
+                                )}
+                            </Button>
+                        )}
+                        <Button
+                            onClick={() => window.location.reload()}
+                            variant="outline"
+                            size="sm"
+                        >
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Refresh
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Summary Cards */}
@@ -98,7 +125,7 @@ export default function AnalysisMonitorIndex({ brands, currentMonth, totalCount 
                         <CardContent>
                             <div className="text-2xl font-bold text-destructive">{totalCount}</div>
                             <p className="text-xs text-muted-foreground">
-                                No analysis this month
+                                No analysis today
                             </p>
                         </CardContent>
                     </Card>
@@ -120,13 +147,13 @@ export default function AnalysisMonitorIndex({ brands, currentMonth, totalCount 
 
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Current Month</CardTitle>
+                            <CardTitle className="text-sm font-medium">Today</CardTitle>
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{currentMonth}</div>
+                            <div className="text-2xl font-bold">{today}</div>
                             <p className="text-xs text-muted-foreground">
-                                Showing stale brands
+                                Showing brands not analyzed today
                             </p>
                         </CardContent>
                     </Card>
@@ -136,7 +163,7 @@ export default function AnalysisMonitorIndex({ brands, currentMonth, totalCount 
                     <Alert variant="destructive">
                         <AlertTriangle className="h-4 w-4" />
                         <AlertDescription>
-                            {totalCount} active brand{totalCount !== 1 ? 's' : ''} ha{totalCount !== 1 ? 've' : 's'} not been analyzed in {currentMonth}.
+                            {totalCount} active brand{totalCount !== 1 ? 's' : ''} ha{totalCount !== 1 ? 've' : 's'} not been analyzed today.
                             Run <code className="font-mono bg-black/10 px-1 rounded">brand:analyze-prompts --all --force</code> to process them.
                         </AlertDescription>
                     </Alert>
@@ -164,14 +191,14 @@ export default function AnalysisMonitorIndex({ brands, currentMonth, totalCount 
                             Brands Missing Analysis
                         </CardTitle>
                         <CardDescription>
-                            Active brands with prompts that have not been analyzed in {currentMonth}
+                            Active brands with prompts that have not been analyzed today
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         {filteredBrands.length === 0 ? (
                             <div className="text-center py-8 text-muted-foreground">
                                 <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                {searchTerm ? 'No brands match your search' : 'All brands have been analyzed this month!'}
+                                {searchTerm ? 'No brands match your search' : 'All brands have been analyzed today!'}
                             </div>
                         ) : (
                             <Table>
@@ -185,7 +212,6 @@ export default function AnalysisMonitorIndex({ brands, currentMonth, totalCount 
                                         <TableHead>Trial Ends</TableHead>
                                         <TableHead>Active Prompts</TableHead>
                                         <TableHead>Last Analysis</TableHead>
-                                        <TableHead>Days Since</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -215,13 +241,14 @@ export default function AnalysisMonitorIndex({ brands, currentMonth, totalCount 
                                             </TableCell>
                                             <TableCell>
                                                 {brand.plan?.trial_ends_at ? (
-                                                    <span className="text-sm">
-                                                        {new Date(brand.plan.trial_ends_at).toLocaleDateString('en-US', {
-                                                            month: 'short',
-                                                            day: 'numeric',
-                                                            year: 'numeric',
-                                                        })}
-                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-sm ${brand.plan.is_trial_expired ? 'text-destructive font-medium' : ''}`}>
+                                                            {brand.plan.trial_ends_at}
+                                                        </span>
+                                                        {brand.plan.is_trial_expired && (
+                                                            <Badge variant="destructive" className="text-[10px] px-1 py-0">Expired</Badge>
+                                                        )}
+                                                    </div>
                                                 ) : (
                                                     <span className="text-sm text-muted-foreground">-</span>
                                                 )}
@@ -242,9 +269,23 @@ export default function AnalysisMonitorIndex({ brands, currentMonth, totalCount 
                                                     <span className="text-sm text-muted-foreground">Never</span>
                                                 )}
                                             </TableCell>
-                                            <TableCell>{getDaysBadge(brand.days_since_analysis)}</TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-2">
+                                                    <Button
+                                                        variant="default"
+                                                        size="sm"
+                                                        disabled={analyzingBrandId === brand.id}
+                                                        onClick={() => handleAnalyze(brand.id)}
+                                                    >
+                                                        {analyzingBrandId === brand.id ? (
+                                                            <>
+                                                                <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                                                                Analyzing...
+                                                            </>
+                                                        ) : (
+                                                            'Analyze Now'
+                                                        )}
+                                                    </Button>
                                                     <Link href={`/brands/${brand.id}`}>
                                                         <Button variant="outline" size="sm">
                                                             View
