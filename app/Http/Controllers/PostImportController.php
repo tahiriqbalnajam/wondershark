@@ -105,9 +105,53 @@ class PostImportController extends Controller
             'Another description',
             'draft',
             date('Y-m-d'),
-            'news',
+            'forum',
             '',
             'Sample Brand Name',
+        ]);
+
+        $csv->insertOne([
+            'https://example.com/sample-pr-replacement',
+            'PR Replacement Post',
+            'Description for PR replacement',
+            'published',
+            date('Y-m-d'),
+            'pr_replacement',
+            '1',
+            '',
+        ]);
+
+        $csv->insertOne([
+            'https://example.com/sample-ugc-post',
+            'User Generated Content Post',
+            'UGC description here',
+            'published',
+            date('Y-m-d'),
+            'ugc',
+            '1',
+            '',
+        ]);
+
+        $csv->insertOne([
+            'https://example.com/sample-directory-listing',
+            'Directory Listing Post',
+            'Directory or listing description',
+            'published',
+            date('Y-m-d'),
+            'directory_listings',
+            '1',
+            '',
+        ]);
+
+        $csv->insertOne([
+            'https://example.com/sample-website-content',
+            'Website Content Post',
+            'Website content description',
+            'published',
+            date('Y-m-d'),
+            'website_content',
+            '1',
+            '',
         ]);
 
         $filename = 'post-import-template-'.date('Y-m-d').'.csv';

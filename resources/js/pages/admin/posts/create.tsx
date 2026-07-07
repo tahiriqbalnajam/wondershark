@@ -285,6 +285,9 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
                                                 <SelectItem value="blog">Blog</SelectItem>
                                                 <SelectItem value="forum">Forum</SelectItem>
                                                 <SelectItem value="ugc">User Generated Content (UGC)</SelectItem>
+                                                <SelectItem value="pr_replacement">PR Replacement</SelectItem>
+                                                <SelectItem value="directory_listings">Directory/Listings</SelectItem>
+                                                <SelectItem value="website_content">Website Content</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         {errors.post_type && (

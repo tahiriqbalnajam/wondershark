@@ -146,7 +146,7 @@ class PostController extends Controller
             'description' => 'nullable|string|max:1000',
             'status' => 'required|in:published,draft,archived',
             'posted_at' => 'nullable|date',
-            'post_type' => 'required|in:blog,forum,ugc',
+            'post_type' => 'required|in:blog,forum,ugc,pr_replacement,directory_listings,website_content',
         ]);
 
         $brand = Brand::findOrFail($request->brand_id);

@@ -337,7 +337,7 @@ export default function PostImport({
                                                 <code>posted_at</code> — Date in YYYY-MM-DD format
                                             </li>
                                             <li>
-                                                <code>post_type</code> — e.g. blog, news, article
+                                                <code>post_type</code> — blog, forum, ugc, pr_replacement, directory_listings, website_content
                                             </li>
                                         </ul>
                                     </div>
