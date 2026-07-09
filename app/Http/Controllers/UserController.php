@@ -430,7 +430,7 @@ class UserController extends Controller
         }
 
         try {
-            Mail::to('wiyet28172@epaynine.com')->send(new ComplimentaryAccountDeactivationRequest($user));
+            Mail::to('contact@wondershark.ai')->send(new ComplimentaryAccountDeactivationRequest($user));
             return redirect()->back()->with('success', 'Deactivation request sent.');
         } catch (\Exception $e) {
             \Log::error('Failed to send deactivation request email: ' . $e->getMessage());
