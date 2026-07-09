@@ -554,6 +554,9 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
         })->name('billing');
     });
 
+    // Complimentary account deactivation request
+    Route::post('request-deactivation', [UserController::class, 'requestDeactivation'])->name('request-deactivation');
+
     // Search Analytics / Industry Analysis Routes
     Route::prefix('search-analytics')->name('search-analytics.')->group(function () {
         Route::get('/', [IndustryAnalysisController::class, 'index'])->name('index');

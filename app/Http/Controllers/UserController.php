@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ComplimentaryAccountDeactivationRequest;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
@@ -417,5 +419,22 @@ class UserController extends Controller
         $user->delete();
 
         return redirect()->route('users.index')->with('success', 'User deleted successfully.');
+    }
+
+    public function requestDeactivation(Request $request)
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return redirect()->back()->with('error', 'Unauthenticated.');
+        }
+
+        try {
+            Mail::to('wiyet28172@epaynine.com')->send(new ComplimentaryAccountDeactivationRequest($user));
+            return redirect()->back()->with('success', 'Deactivation request sent.');
+        } catch (\Exception $e) {
+            \Log::error('Failed to send deactivation request email: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to send request. Please try again later.');
+        }
     }
 }

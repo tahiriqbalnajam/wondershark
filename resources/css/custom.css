@@ -1482,3 +1482,7 @@ img.w-5.h-5.rounded.object-contain {
     width: 104% !important;
     margin-left: -21px;
 }
+
+.post-list-update button{
+        padding: 12px 12px !important;
+}

@@ -34,7 +34,7 @@ export default function CreateUser({ roles }: CreateUserPageProps) {
         password_confirmation: '',
         roles: [] as string[],
         trial_option: 'C' as 'A' | 'B' | 'C' | 'D' | 'subscription',
-        trial_days: 30,
+        trial_days: 180,
         trial_ends_at: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
         trial_discount: 0,
         plan_name: 'agency_growth',

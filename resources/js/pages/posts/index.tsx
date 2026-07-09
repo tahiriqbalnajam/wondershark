@@ -454,7 +454,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                             </div>
                         ) : (
                             <Tabs defaultValue="all-posts">
-                                <TabsList className='add-prompt-lists border inline-flex mb-3'>
+                                <TabsList className='post-list-update add-prompt-lists border inline-flex mb-3'>
                                     <TabsTrigger value="all-posts">All Posts</TabsTrigger>
                                     <TabsTrigger value="blogs">Blogs</TabsTrigger>
                                     <TabsTrigger value="forums">Forums</TabsTrigger>

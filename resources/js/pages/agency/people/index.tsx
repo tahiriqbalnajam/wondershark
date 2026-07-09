@@ -48,18 +48,18 @@ interface Props {
 const availablePermissions = [
     { 
         id: 'agency_admin', 
-        label: 'Agency Admin', 
-        description: 'Full access to all brands\'dashboard and posts, plus control of preferences and settings'
+        label: 'Company Admin', 
+        description: 'Full access to all Campaigns\' dashboard and posts, plus control of preferences and settings'
     },
     { 
         id: 'agency_manager', 
-        label: 'Agency Manager', 
-        description: 'Can view all brands\' dashboards and posts, and can manage competitors and prompts'
+        label: 'Company Manager', 
+        description: 'Can view all Campaigns\' dashboards and posts, and can manage competitors and prompts'
     },
     { 
         id: 'brand_user', 
-        label: 'Brand User Access', 
-        description: 'Can view all brands\' dashboards and posts'
+        label: 'Campaign User Access', 
+        description: 'Can view all Campaigns\' dashboards and posts'
     },
 ];
 
@@ -154,7 +154,7 @@ export default function PeopleIndex({ members, pendingInvitations }: Props) {
                             <DialogHeader>
                                 <DialogTitle>Add New Team Member</DialogTitle>
                                 <DialogDescription>
-                                    Invite a new member to your agency team.
+                                    Invite a new member to your Company team.
                                 </DialogDescription>
                             </DialogHeader>
                             <form onSubmit={submit}>

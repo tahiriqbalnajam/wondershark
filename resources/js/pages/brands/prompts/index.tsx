@@ -503,7 +503,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                                                 <img
                                                                                     src={iconUrl}
                                                                                     alt={model.display_name || model.name}
-                                                                                    className="w-5 h-5 object-contain rounded"
+                                                                                    className="w-6 h-6 object-contain rounded"
                                                                                 />
                                                                             </TooltipTrigger>
                                                                             <TooltipContent>
@@ -790,7 +790,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                                                     <img
                                                                                         src={iconUrl}
                                                                                         alt={model.display_name || model.name}
-                                                                                        className="w-5 h-5 object-contain rounded"
+                                                                                        className="w-6 h-6 object-contain rounded"
                                                                                     />
                                                                                 </TooltipTrigger>
                                                                                 <TooltipContent>

@@ -505,7 +505,7 @@ export default function BrandEdit({ brand, userEmail }: Props) {
 
               {/* Brand status dropdown */}
               <div className="grid gap-2">
-                <Label htmlFor="status">Brand Status</Label>
+                <Label htmlFor="status">Campaign Status</Label>
                 <Select value={data.status} onValueChange={(v: 'active' | 'inactive') => setData('status', v)}>
                   <SelectTrigger className="form-control">
                     <SelectValue placeholder="Select status" />

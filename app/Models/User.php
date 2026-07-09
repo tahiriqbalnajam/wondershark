@@ -256,6 +256,11 @@ class User extends Authenticatable
             return true;
         }
 
+        // Option C (Pitch period) — allowed while trial is active, no subscription needed
+        if ($this->trial_type === 'C' && $this->isOnTrial()) {
+            return true;
+        }
+
         if ($this->activeSubscription) {
             return true;
         }

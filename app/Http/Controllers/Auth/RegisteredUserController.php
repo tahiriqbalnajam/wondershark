@@ -52,8 +52,8 @@ class RegisteredUserController extends Controller
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
                 'trial_type' => 'C',
-                'trial_days' => 30,
-                'trial_ends_at' => now()->addDays(30),
+                'trial_days' => 180,
+                'trial_ends_at' => now()->addDays(180),
                 'trial_discount' => 0,
                 'free_trial_availed' => true,
                 'free_trial_claimed_at' => now(),
@@ -87,9 +87,9 @@ class RegisteredUserController extends Controller
 
             // Send welcome email
             try {
-                Mail::to($user)->send(new WelcomeEmail($user));
+                //Mail::to($user)->send(new WelcomeEmail($user));
             } catch (\Exception $e) {
-                \Log::error('Failed to send welcome email: ' . $e->getMessage());
+                //\Log::error('Failed to send welcome email: ' . $e->getMessage());
             }
 
             // Redirect brand users to multi-step creation process
