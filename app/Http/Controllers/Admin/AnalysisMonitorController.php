@@ -177,4 +177,67 @@ class AnalysisMonitorController extends Controller
                 ->with('error', "Failed to analyze {$brand->name}: " . $e->getMessage());
         }
     }
+
+    public function recalculateAll()
+    {
+        $staleBrands = $this->getStaleBrands();
+        $count = 0;
+        $failed = [];
+
+        foreach ($staleBrands as $brandData) {
+            $brand = Brand::find($brandData['id']);
+            if (! $brand) {
+                continue;
+            }
+
+            try {
+                Artisan::call('brand:recalculate-visibility', [
+                    '--brand' => $brand->id,
+                    '--regenerate' => true,
+                ]);
+
+                $count++;
+            } catch (\Exception $e) {
+                $failed[] = $brand->name;
+                Log::error('Failed to trigger visibility recalculation in bulk', [
+                    'brand_id' => $brand->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        if (count($failed) > 0) {
+            return redirect()->route('admin.analysis-monitor.index')
+                ->with('error', "Recalculated {$count} brands. Failed for: " . implode(', ', $failed));
+        }
+
+        return redirect()->route('admin.analysis-monitor.index')
+            ->with('success', "Visibility recalculation triggered for {$count} brand(s).");
+    }
+
+    public function recalculate(Brand $brand)
+    {
+        try {
+            Artisan::call('brand:recalculate-visibility', [
+                '--brand' => $brand->id,
+                '--regenerate' => true,
+            ]);
+
+            Log::info('Admin triggered visibility recalculation from monitor', [
+                'brand_id' => $brand->id,
+                'brand_name' => $brand->name,
+            ]);
+
+            return redirect()->route('admin.analysis-monitor.index')
+                ->with('success', "Visibility recalculation triggered for {$brand->name}.");
+        } catch (\Exception $e) {
+            Log::error('Failed to trigger visibility recalculation from monitor', [
+                'brand_id' => $brand->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->route('admin.analysis-monitor.index')
+                ->with('error', "Failed to recalculate visibility for {$brand->name}: " . $e->getMessage());
+        }
+    }
 }

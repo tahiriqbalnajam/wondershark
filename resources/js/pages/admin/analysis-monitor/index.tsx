@@ -47,6 +47,8 @@ export default function AnalysisMonitorIndex({ brands, today, totalCount }: Prop
     const [searchTerm, setSearchTerm] = useState('');
     const [analyzingBrandId, setAnalyzingBrandId] = useState<number | null>(null);
     const [isAnalyzingAll, setIsAnalyzingAll] = useState(false);
+    const [recalculatingBrandId, setRecalculatingBrandId] = useState<number | null>(null);
+    const [isRecalculatingAll, setIsRecalculatingAll] = useState(false);
 
     const filteredBrands = brands.filter((brand) =>
         brand.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -72,6 +74,22 @@ export default function AnalysisMonitorIndex({ brands, today, totalCount }: Prop
         });
     };
 
+    const handleRecalculate = (brandId: number) => {
+        setRecalculatingBrandId(brandId);
+        router.post(route('admin.analysis-monitor.recalculate', brandId), {}, {
+            preserveScroll: true,
+            onFinish: () => setRecalculatingBrandId(null),
+        });
+    };
+
+    const handleRecalculateAll = () => {
+        setIsRecalculatingAll(true);
+        router.post(route('admin.analysis-monitor.recalculate-all'), {}, {
+            preserveScroll: true,
+            onFinish: () => setIsRecalculatingAll(false),
+        });
+    };
+
     return (
         <AppLayout>
             <Head title="Analysis Monitor - Admin" />
@@ -86,23 +104,43 @@ export default function AnalysisMonitorIndex({ brands, today, totalCount }: Prop
                     </div>
                     <div className="flex items-center gap-2">
                         {totalCount > 0 && (
-                            <Button
-                                onClick={handleAnalyzeAll}
-                                disabled={isAnalyzingAll}
-                                size="sm"
-                            >
-                                {isAnalyzingAll ? (
-                                    <>
-                                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                                        Analyzing All...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Activity className="w-4 h-4 mr-2" />
-                                        Analyze All
-                                    </>
-                                )}
-                            </Button>
+                            <>
+                                <Button
+                                    onClick={handleAnalyzeAll}
+                                    disabled={isAnalyzingAll}
+                                    size="sm"
+                                >
+                                    {isAnalyzingAll ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                            Analyzing All...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Activity className="w-4 h-4 mr-2" />
+                                            Analyze All
+                                        </>
+                                    )}
+                                </Button>
+                                <Button
+                                    onClick={handleRecalculateAll}
+                                    disabled={isRecalculatingAll}
+                                    size="sm"
+                                    variant="outline"
+                                >
+                                    {isRecalculatingAll ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                            Recalculating All...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 mr-2" />
+                                            Recalculate All
+                                        </>
+                                    )}
+                                </Button>
+                            </>
                         )}
                         <Button
                             onClick={() => window.location.reload()}
@@ -284,6 +322,21 @@ export default function AnalysisMonitorIndex({ brands, today, totalCount }: Prop
                                                             </>
                                                         ) : (
                                                             'Analyze Now'
+                                                        )}
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={recalculatingBrandId === brand.id}
+                                                        onClick={() => handleRecalculate(brand.id)}
+                                                    >
+                                                        {recalculatingBrandId === brand.id ? (
+                                                            <>
+                                                                <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                                                                Recalculating...
+                                                            </>
+                                                        ) : (
+                                                            'Recalculate Visibility'
                                                         )}
                                                     </Button>
                                                     <Link href={`/brands/${brand.id}`}>
