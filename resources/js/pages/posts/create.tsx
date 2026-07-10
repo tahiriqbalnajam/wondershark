@@ -409,10 +409,10 @@ export default function PostsCreate({
                                                         <SelectValue placeholder="Select post type" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="blog">Blog</SelectItem>
-                                                        <SelectItem value="forum">Forum</SelectItem>
+                                                        <SelectItem value="blog">Blogs</SelectItem>
+                                                        <SelectItem value="forum">Forums</SelectItem>
                                                         <SelectItem value="ugc">User Generated Content (UGC)</SelectItem>
-                                                        <SelectItem value="pr_replacement">PR Replacement</SelectItem>
+                                                        <SelectItem value="pr_replacement">PR Replacements</SelectItem>
                                                         <SelectItem value="directory_listings">Directory/Listings</SelectItem>
                                                         <SelectItem value="website_content">Website Content</SelectItem>
                                                     </SelectContent>
