@@ -459,7 +459,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                     <TabsTrigger value="blogs">Blogs</TabsTrigger>
                                     <TabsTrigger value="forums">Forums</TabsTrigger>
                                     <TabsTrigger value="ugc">UGC</TabsTrigger>
-                                    <TabsTrigger value="pr_replacement">PR Replacement</TabsTrigger>
+                                    <TabsTrigger value="pr_replacement">PR Placements</TabsTrigger>
                                     <TabsTrigger value="directory_listings">Directory/Listings</TabsTrigger>
                                     <TabsTrigger value="website_content">Website Content</TabsTrigger>
                                 </TabsList>
@@ -563,7 +563,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        {post.post_type === 'ugc' ? 'UGC' : post.post_type === 'blog' ? 'Blog' : post.post_type === 'forum' ? 'Forum' : post.post_type === 'pr_replacement' ? 'PR Replacement' : post.post_type === 'directory_listings' ? 'Directory/Listings' : post.post_type === 'website_content' ? 'Website Content' : post.post_type}
+                                                        {post.post_type === 'ugc' ? 'UGC' : post.post_type === 'blog' ? 'Blog' : post.post_type === 'forums' ? 'Forum' : post.post_type === 'pr_replacement' ? 'PR Placement' : post.post_type === 'directory_listings' ? 'Directory/Listings' : post.post_type === 'website_content' ? 'Website Content' : post.post_type}
                                                     </TableCell>
 
                                                     <TableCell>
@@ -1393,10 +1393,10 @@ export default function PostsIndex({ posts, brand }: Props) {
                                     <SelectValue placeholder="Select post type" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="blog">Blog</SelectItem>
-                                    <SelectItem value="forum">Forum</SelectItem>
+                                    <SelectItem value="blog">Blogs</SelectItem>
+                                    <SelectItem value="forum">Forums</SelectItem>
                                     <SelectItem value="ugc">User Generated Content (UGC)</SelectItem>
-                                    <SelectItem value="pr_replacement">PR Replacement</SelectItem>
+                                    <SelectItem value="pr_replacement">PR Placements</SelectItem>
                                     <SelectItem value="directory_listings">Directory/Listings</SelectItem>
                                     <SelectItem value="website_content">Website Content</SelectItem>
                                 </SelectContent>
@@ -1405,7 +1405,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="title">Title (optional)</Label>
+                            <Label htmlFor="title">Title (optionalsss)</Label>
                             <Input
                                 id="title"
                                 type="text"

@@ -285,7 +285,7 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
                                                 <SelectItem value="blog">Blogs</SelectItem>
                                                 <SelectItem value="forum">Forums</SelectItem>
                                                 <SelectItem value="ugc">User Generated Content (UGC)</SelectItem>
-                                                <SelectItem value="pr_replacement">PR Replacements</SelectItem>
+                                                <SelectItem value="pr_replacement">PR Placements</SelectItem>
                                                 <SelectItem value="directory_listings">Directory/Listings</SelectItem>
                                                 <SelectItem value="website_content">Website Content</SelectItem>
                                             </SelectContent>
