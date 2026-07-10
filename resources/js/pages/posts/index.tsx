@@ -506,20 +506,19 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                         </div>
                                                     </TableCell> */}
                                                     <TableCell>
-                                                        <div className="flex items-center gap-2">
-                                                            <div>
-                                                                <span className="font-medium">{post.title}</span>
-                                                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                                    <ExternalLink className="h-3 w-3" />
-                                                                    <a
-                                                                        href={post.url}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="hover:text-primary truncate max-w-60"
-                                                                    >
-                                                                        {post.url}
-                                                                    </a>
-                                                                </div>
+                                                        <div className="max-w-[260px]">
+                                                            <a
+                                                                href={post.url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="font-medium text-sm block truncate hover:underline"
+                                                                title={post.title}
+                                                            >
+                                                                {post.title}
+                                                            </a>
+                                                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                                <ExternalLink className="h-3 w-3 shrink-0" />
+                                                                <span className="truncate max-w-[240px]">{post.url}</span>
                                                             </div>
                                                         </div>
                                                     </TableCell>
@@ -969,7 +968,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                                                 )}
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell>PR Replacement</TableCell>
+                                                        <TableCell>PR Placement</TableCell>
                                                         <TableCell>
                                                             {renderCitationsCell(post)}
                                                         </TableCell>
@@ -984,7 +983,7 @@ export default function PostsIndex({ posts, brand }: Props) {
                                             {posts.data.filter(post => post.post_type === 'pr_replacement').length === 0 && (
                                                 <TableRow>
                                                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                                                        No PR Replacement posts found
+                                                        No PR Placement posts found
                                                     </TableCell>
                                                 </TableRow>
                                             )}
