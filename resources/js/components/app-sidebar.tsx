@@ -81,11 +81,19 @@ const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, sele
                 },
             ], */
         });
-         items.push({
+        items.push({
             title: 'Gap Analysis',
             href: `/brands/${selectedBrandId}/gap-analysis`,
             icon: Search,
         });
+        if(selectedBrandId === 8){
+          items.push({
+            title: 'Weekly Report',
+            href: `/brands/${selectedBrandId}/weekly-report`,
+            icon: Activity,
+         });
+        }
+        
     }
 
     // Search Analytics - for admin users

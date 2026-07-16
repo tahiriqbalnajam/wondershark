@@ -6,8 +6,10 @@ use App\Jobs\AnalyzeBrandCompetitiveStats;
 use App\Mail\AgencyEmailChanged;
 use App\Models\AiModel;
 use App\Models\Brand;
+use App\Models\BrandMention;
 use App\Models\BrandPrompt;
 use App\Models\BrandSubreddit;
+use App\Models\Post;
 use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -1099,6 +1101,163 @@ class BrandController extends Controller
         // (brands/show with analysis banner, competitive stats, etc.) is rendered
         // instead of the generic empty dashboard page.
         return $this->show($request, $brand);
+    }
+
+    /**
+     * Display the weekly report for a brand.
+     */
+    public function weeklyReport(Request $request, Brand $brand): Response
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (! $user->canAccessBrand($brand)) {
+            abort(403);
+        }
+
+        $days = (int) $request->input('days', 7);
+        $timezone = $request->input('timezone', '+00:00');
+
+        $startDate = now()->subDays($days)->startOfDay();
+        $endDate = now()->endOfDay();
+        $previousStartDate = now()->subDays($days * 2)->startOfDay();
+        $previousEndDate = now()->subDays($days)->endOfDay();
+
+        $competitiveAnalysisService = app(\App\Services\CompetitiveAnalysisService::class);
+        $reportData = $competitiveAnalysisService->getWeeklyReportData($brand, $timezone, $days);
+
+        // New posts added in current period
+        $newPosts = Post::where('brand_id', $brand->id)
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->orderByDesc('created_at')
+            ->get();
+
+        // Prompt stats
+        $promptsAdded = BrandPrompt::where('brand_id', $brand->id)
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->where('status', 'active')
+            ->count();
+
+        $promptsRemoved = BrandPrompt::where('brand_id', $brand->id)
+            ->whereBetween('updated_at', [$startDate, $endDate])
+            ->where('status', 'inactive')
+            ->count();
+
+        $activePrompts = BrandPrompt::where('brand_id', $brand->id)
+            ->where('is_active', true)
+            ->count();
+
+        $suggestedPrompts = BrandPrompt::where('brand_id', $brand->id)
+            ->where('status', 'suggested')
+            ->count();
+
+        // AI Citations (mentions) in current period
+        $brandMentions = BrandMention::where('brand_id', $brand->id)
+            ->where('entity_type', 'brand')
+            ->whereBetween('analyzed_at', [$startDate, $endDate])
+            ->sum('mention_count');
+
+        $competitorMentions = BrandMention::where('brand_id', $brand->id)
+            ->where('entity_type', 'competitor')
+            ->whereBetween('analyzed_at', [$startDate, $endDate])
+            ->sum('mention_count');
+
+        $topSources = BrandMention::where('brand_id', $brand->id)
+            ->whereBetween('analyzed_at', [$startDate, $endDate])
+            ->selectRaw('entity_domain, SUM(mention_count) as total_mentions')
+            ->groupBy('entity_domain')
+            ->orderByDesc('total_mentions')
+            ->limit(5)
+            ->pluck('entity_domain')
+            ->toArray();
+
+        return Inertia::render('brands/weekly-report', [
+            'brand' => $brand->only(['id', 'name', 'website', 'logo']),
+            'reportData' => $reportData,
+            'posts' => $newPosts->map(fn ($post) => [
+                'id' => $post->id,
+                'title' => $post->title,
+                'url' => $post->url,
+                'status' => $post->status,
+                'post_type' => $post->post_type,
+                'created_at' => $post->created_at->toDateTimeString(),
+            ]),
+            'promptStats' => [
+                'added' => $promptsAdded,
+                'removed' => $promptsRemoved,
+                'active' => $activePrompts,
+                'suggested' => $suggestedPrompts,
+            ],
+            'citationStats' => [
+                'brand_citations' => (int) $brandMentions,
+                'competitor_citations' => (int) $competitorMentions,
+                'top_sources' => $topSources,
+            ],
+            'days' => $days,
+            'brandColor' => $user->agency_color,
+        ]);
+    }
+
+    /**
+     * Email the weekly report to the authenticated user.
+     */
+    public function emailWeeklyReport(Request $request, Brand $brand): RedirectResponse
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (! $user->canAccessBrand($brand)) {
+            abort(403);
+        }
+
+        try {
+            $days = (int) $request->input('days', 7);
+            $timezone = $request->input('timezone', '+00:00');
+
+            $competitiveAnalysisService = app(\App\Services\CompetitiveAnalysisService::class);
+            $reportData = $competitiveAnalysisService->getWeeklyReportData($brand, $timezone, $days);
+
+            // Email sending is disabled for now — UI button visible only
+            // Mail::to($user->email)->send(new \App\Mail\WeeklyReportEmail($brand, $reportData, $user, $days));
+
+            return redirect()->route('brands.weekly-report', $brand->id)
+                ->with('success', 'Email report feature coming soon.');
+        } catch (\Exception $e) {
+            Log::error('Failed to send weekly report email', [
+                'brand_id' => $brand->id,
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->route('brands.weekly-report', $brand->id)
+                ->with('error', 'Failed to send weekly report email. Please try again.');
+        }
+    }
+
+    /**
+     * Display full competitor visibility data for a brand.
+     */
+    public function brandCompetitors(Request $request, Brand $brand): Response
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (! $user->canAccessBrand($brand)) {
+            abort(403);
+        }
+
+        $days = (int) $request->input('days', 7);
+        $timezone = $request->input('timezone', '+00:00');
+
+        $competitiveAnalysisService = app(\App\Services\CompetitiveAnalysisService::class);
+        $reportData = $competitiveAnalysisService->getWeeklyReportData($brand, $timezone, $days);
+
+        return Inertia::render('brands/competitors', [
+            'brand' => $brand->only(['id', 'name', 'website', 'logo']),
+            'reportData' => $reportData,
+            'days' => $days,
+            'brandColor' => $user->agency_color,
+        ]);
     }
 
     /**

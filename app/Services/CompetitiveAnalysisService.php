@@ -800,10 +800,14 @@ CRITICAL INSTRUCTIONS:
      *
      * Both Visibility and SOV have independent trends via the relative growth formula.
      */
-    public function getMentionBasedVisibility(Brand $brand, ?int $days = 30, ?int $aiModelId = null, string $timezone = '+00:00'): array
+    public function getMentionBasedVisibility(Brand $brand, ?int $days = 30, ?int $aiModelId = null, string $timezone = '+00:00', $startDate = null, $endDate = null): array
     {
-        $startDate = now()->subDays($days)->startOfDay();
-        $endDate = now()->endOfDay();
+        if (! $startDate) {
+            $startDate = now()->subDays($days)->startOfDay();
+        }
+        if (! $endDate) {
+            $endDate = now()->endOfDay();
+        }
 
         // Pre-load competitors so we always display the current name, not the stale
         // entity_name stored in brand_mentions at analysis time (which can be outdated
@@ -1695,5 +1699,110 @@ CRITICAL INSTRUCTIONS:
         usort($stats, fn ($a, $b) => $b['visibility'] <=> $a['visibility']);
 
         return $stats;
+    }
+
+    /**
+     * Get weekly report data comparing last 7 days vs previous 7 days.
+     * Returns structured data for visibility, sentiment, and position changes.
+     */
+    public function getWeeklyReportData(Brand $brand, string $timezone = '+00:00', ?int $days = 7): array
+    {
+        $currentPeriodStart = now()->subDays($days)->startOfDay();
+        $currentPeriodEnd = now()->endOfDay();
+        $previousPeriodStart = now()->subDays($days * 2)->startOfDay();
+        $previousPeriodEnd = now()->subDays($days)->endOfDay();
+
+        // Use the same visibility engine as the ranking page for consistent numbers.
+        // Pass explicit date ranges so current and previous periods are computed correctly.
+        $currentStats = collect($this->getMentionBasedVisibility($brand, $days, null, $timezone, $currentPeriodStart, $currentPeriodEnd))
+            ->keyBy(fn ($s) => ($s['competitor_id'] ?? null) ? 'c_'.$s['competitor_id'] : 'brand');
+
+        $previousStats = collect($this->getMentionBasedVisibility($brand, $days, null, $timezone, $previousPeriodStart, $previousPeriodEnd))
+            ->keyBy(fn ($s) => ($s['competitor_id'] ?? null) ? 'c_'.$s['competitor_id'] : 'brand');
+
+        $competitorsById = $brand->competitors()->accepted()->get()->keyBy('id');
+
+        // Build report for brand + competitors
+        $entities = [
+            ['type' => 'brand', 'id' => null, 'name' => $brand->name, 'domain' => $brand->website],
+        ];
+
+        foreach ($competitorsById as $competitor) {
+            $entities[] = [
+                'type' => 'competitor',
+                'id' => $competitor->id,
+                'name' => $competitor->name,
+                'domain' => $competitor->domain,
+            ];
+        }
+
+        $reportData = [];
+        foreach ($entities as $entity) {
+            $key = $entity['id'] ? 'c_'.$entity['id'] : 'brand';
+            $current = $currentStats->get($key);
+            $previous = $previousStats->get($key);
+
+            $currentVisibility = $current ? (float) $current['visibility'] : null;
+            $previousVisibility = $previous ? (float) $previous['visibility'] : null;
+            $currentSentiment = $current ? ($current['sentiment'] ?? null) : null;
+            $previousSentiment = $previous ? ($previous['sentiment'] ?? null) : null;
+            $currentPosition = $current ? ($current['position'] ?? null) : null;
+            $previousPosition = $previous ? ($previous['position'] ?? null) : null;
+
+            $visibilityChange = null;
+            $sentimentChange = null;
+            $positionChange = null;
+
+            if ($currentVisibility !== null && $previousVisibility !== null) {
+                $visibilityChange = $currentVisibility - $previousVisibility;
+            }
+            if ($currentSentiment !== null && $previousSentiment !== null && $previousSentiment > 0) {
+                $sentimentChange = (($currentSentiment - $previousSentiment) / $previousSentiment) * 100;
+            }
+            if ($currentPosition !== null && $previousPosition !== null && $previousPosition > 0) {
+                $positionChange = $previousPosition - $currentPosition; // Lower is better
+            }
+
+            $reportData[] = [
+                'entity_type' => $entity['type'],
+                'entity_name' => $entity['name'],
+                'entity_domain' => $entity['domain'],
+                'competitor_id' => $entity['id'],
+                'current_period' => [
+                    'start' => $currentPeriodStart->toDateString(),
+                    'end' => $currentPeriodEnd->toDateString(),
+                    'visibility' => $currentVisibility,
+                    'sentiment' => $currentSentiment,
+                    'position' => $currentPosition,
+                ],
+                'previous_period' => [
+                    'start' => $previousPeriodStart->toDateString(),
+                    'end' => $previousPeriodEnd->toDateString(),
+                    'visibility' => $previousVisibility,
+                    'sentiment' => $previousSentiment,
+                    'position' => $previousPosition,
+                ],
+                'changes' => [
+                    'visibility_change_pct' => $visibilityChange !== null ? round($visibilityChange, 1) : null,
+                    'sentiment_change_pct' => $sentimentChange !== null ? round($sentimentChange, 1) : null,
+                    'position_change' => $positionChange !== null ? round($positionChange, 1) : null,
+                    'visibility_trend' => $visibilityChange > 0.5 ? 'up' : ($visibilityChange < -0.5 ? 'down' : 'stable'),
+                    'sentiment_trend' => $sentimentChange > 2 ? 'up' : ($sentimentChange < -2 ? 'down' : 'stable'),
+                    'position_trend' => $positionChange > 0.1 ? 'up' : ($positionChange < -0.1 ? 'down' : 'stable'),
+                ],
+                'has_data' => $current !== null && $previous !== null,
+            ];
+        }
+
+        return [
+            'brand' => $brand->only(['id', 'name', 'website']),
+            'report_period' => [
+                'current_week_start' => $currentPeriodStart->toDateString(),
+                'current_week_end' => $currentPeriodEnd->toDateString(),
+                'previous_week_start' => $previousPeriodStart->toDateString(),
+                'previous_week_end' => $previousPeriodEnd->toDateString(),
+            ],
+            'entities' => $reportData,
+        ];
     }
 }

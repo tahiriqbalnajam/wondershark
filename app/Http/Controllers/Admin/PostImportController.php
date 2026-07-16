@@ -79,8 +79,8 @@ class PostImportController extends Controller
 
         $csv->insertOne([
             'https://example.com/sample-pr-replacement',
-            'PR Replacement Post',
-            'Description for PR replacement',
+            'PR Placement Post',
+            'Description for PR Placement',
             'published',
             date('Y-m-d'),
             'pr_replacement',       // post_type (optional)
