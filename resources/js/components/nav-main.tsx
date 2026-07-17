@@ -34,8 +34,13 @@ export function NavMain({ items = [], label = 'General' }: { items: NavItem[], l
                     const isBrandsListPage = itemHref === '/brands' && currentUrl === '/brands';
                     
                     // For other routes, use startsWith but ensure it's not a brand dashboard conflict or brands list
-                    const isStartsWithMatch = currentUrl.startsWith(itemHref) && 
-                                             !itemHref.match(/^\/brands\/\d+$/) && 
+                    // Also ensure the next char after itemHref is /, ?, or # to avoid prefix matches like /competitors matching /competitors-visibility
+                    const isStartsWithMatch = currentUrl.startsWith(itemHref) &&
+                                             (currentUrl.length === itemHref.length ||
+                                              currentUrl[itemHref.length] === '/' ||
+                                              currentUrl[itemHref.length] === '?' ||
+                                              currentUrl[itemHref.length] === '#') &&
+                                             !itemHref.match(/^\/brands\/\d+$/) &&
                                              itemHref !== '/brands';
                     
                     const isActive = isExactMatch || isBrandDashboard || isBrandsListPage || isStartsWithMatch;

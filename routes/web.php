@@ -346,7 +346,7 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
         // Weekly Report Page
         Route::get('brands/{brand}/weekly-report', [BrandController::class, 'weeklyReport'])->name('brands.weekly-report');
         Route::post('brands/{brand}/weekly-report/email', [BrandController::class, 'emailWeeklyReport'])->name('brands.weekly-report.email');
-        Route::get('brands/{brand}/competitors', [BrandController::class, 'brandCompetitors'])->name('brands.competitors');
+        Route::get('brands/{brand}/competitors-visibility', [BrandController::class, 'brandCompetitorsVisibility'])->name('brands.competitors-visibility');
 
         // Gap Analysis Routes
         Route::get('brands/{brand}/gap-analysis', [\App\Http\Controllers\Brand\GapAnalysisController::class, 'index'])->name('brands.gap-analysis.index');

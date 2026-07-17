@@ -642,7 +642,7 @@ export default function WeeklyReport({ brand, reportData, posts, promptStats, ci
                             )}
                             {competitorEntities.length > 0 && (
                                 <div className="mt-4">
-                                    <Link href={`/brands/${brand.id}/competitors?days=${selectedDays}&timezone=${encodeURIComponent(getBrowserTimezone())}`}>
+                                    <Link href={`/brands/${brand.id}/competitors-visibility?days=${selectedDays}&timezone=${encodeURIComponent(getBrowserTimezone())}`}>
                                         <Button variant="outline" size="sm">View All Competitors</Button>
                                     </Link>
                                 </div>

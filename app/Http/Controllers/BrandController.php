@@ -1237,7 +1237,7 @@ class BrandController extends Controller
     /**
      * Display full competitor visibility data for a brand.
      */
-    public function brandCompetitors(Request $request, Brand $brand): Response
+    public function brandCompetitorsVisibility(Request $request, Brand $brand): Response
     {
         /** @var User $user */
         $user = Auth::user();
@@ -1252,7 +1252,7 @@ class BrandController extends Controller
         $competitiveAnalysisService = app(\App\Services\CompetitiveAnalysisService::class);
         $reportData = $competitiveAnalysisService->getWeeklyReportData($brand, $timezone, $days);
 
-        return Inertia::render('brands/competitors', [
+        return Inertia::render('brands/competitors-visibility', [
             'brand' => $brand->only(['id', 'name', 'website', 'logo']),
             'reportData' => $reportData,
             'days' => $days,

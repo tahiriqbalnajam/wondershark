@@ -90,7 +90,7 @@ export default function BrandCompetitors({ brand, reportData, days, brandColor }
 
     const handleDateRangeChange = (value: string) => {
         setSelectedDays(value);
-        router.get(route('brands.competitors', brand.id), { days: value, timezone: getBrowserTimezone() }, {
+        router.get(route('brands.competitors-visibility', brand.id), { days: value, timezone: getBrowserTimezone() }, {
             preserveState: true,
             preserveScroll: true,
             replace: true,
@@ -101,7 +101,7 @@ export default function BrandCompetitors({ brand, reportData, days, brandColor }
     useEffect(() => {
         const url = new URL(window.location.href);
         if (!url.searchParams.has('timezone')) {
-            router.get(route('brands.competitors', brand.id), { days: selectedDays, timezone: getBrowserTimezone() }, {
+            router.get(route('brands.competitors-visibility', brand.id), { days: selectedDays, timezone: getBrowserTimezone() }, {
                 preserveState: true,
                 preserveScroll: true,
                 replace: true,

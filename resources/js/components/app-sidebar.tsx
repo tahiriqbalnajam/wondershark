@@ -91,6 +91,19 @@ const getGeneralNavItems = (permissions: ReturnType<typeof usePermissions>, sele
             title: 'Weekly Report',
             href: `/brands/${selectedBrandId}/weekly-report`,
             icon: Activity,
+            alwaysOpenSubmenu: true,
+            items: [
+                {
+                    title: 'Overview',
+                    href: `/brands/${selectedBrandId}/weekly-report`,
+                    icon: Activity,
+                },
+                {
+                    title: 'Competitor Visibility',
+                    href: `/brands/${selectedBrandId}/competitors-visibility`,
+                    icon: BarChart3,
+                },
+            ],
          });
         }
         
