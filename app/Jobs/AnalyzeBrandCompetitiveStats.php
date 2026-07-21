@@ -2,13 +2,16 @@
 
 namespace App\Jobs;
 
+use App\Jobs\ProcessBrandPromptAnalysis;
 use App\Models\Brand;
+use App\Models\BrandPrompt;
 use App\Services\AIPromptService;
 use App\Services\CompetitiveAnalysisService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class AnalyzeBrandCompetitiveStats implements ShouldQueue
 {
@@ -55,6 +58,23 @@ class AnalyzeBrandCompetitiveStats implements ShouldQueue
 
             $competitiveAnalysis = new CompetitiveAnalysisService(new AIPromptService);
             $competitiveAnalysis->analyzeBrandCompetitiveStats($this->brand);
+
+            // Dispatch prompt analysis for all active brand prompts
+            $prompts = BrandPrompt::where('brand_id', $this->brand->id)
+                ->where('is_active', true)
+                ->get();
+
+            $sessionId = Str::uuid()->toString();
+            foreach ($prompts as $prompt) {
+                ProcessBrandPromptAnalysis::dispatch($prompt, $sessionId, false, null)
+                    ->onQueue('default');
+            }
+
+            Log::info('Dispatched brand prompt analysis jobs', [
+                'brand_id' => $this->brand->id,
+                'prompt_count' => $prompts->count(),
+                'session_id' => $sessionId,
+            ]);
 
             Artisan::call('brand:recalculate-visibility', [
                 '--brand' => $this->brand->id,
