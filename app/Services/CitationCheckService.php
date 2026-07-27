@@ -24,6 +24,13 @@ class CitationCheckService
      */
     protected array $providerConfigCache = [];
 
+    /**
+     * Cache of resolved canonical URLs for reddit share links, keyed by the
+     * original share-link URL. Avoids re-following the same 301 redirect for
+     * every prompt/provider during a single citation check run.
+     */
+    protected array $canonicalUrlCache = [];
+
     // -------------------------------------------------------------------------
     // Public API
     // -------------------------------------------------------------------------
@@ -304,10 +311,30 @@ class CitationCheckService
 
     protected function buildCitationCheckPrompt(string $url, string $prompt): string
     {
+        // Normalize the target URL so reddit share links (/s/<token>) and deep
+        // comment permalinks (/comments/<id>/comment/<id>) are matched against
+        // their canonical thread URL, which is the form AI search engines
+        // actually surface and cite.
+        $canonical = $this->normalizeRedditUrl($url);
+
+        $targets = array_values(array_unique(array_filter(
+            [$url, $canonical],
+            fn ($u) => $u !== null && $u !== ''
+        )));
+
+        if (count($targets) > 1) {
+            $targetList = implode(' or ', array_map(fn ($u) => "\"{$u}\"", $targets));
+            $targetClause = "check whether any of these URLs appear in your response or in the sources you referenced: {$targetList}";
+        } else {
+            $targetClause = "check whether the URL \"{$url}\" appears in your response or in the sources you referenced";
+        }
+
+        $targetClause .= ". Consider the post cited if a source references the same content under a different URL form (for example, a Reddit thread cited by its canonical comments URL rather than a share link such as \"/s/<token>\").";
+
         return <<<PROMPT
         You are a real-time web search assistant. Search the web right now and answer this prompt: "{$prompt}"
 
-        After answering, check if the URL "{$url}" appears in your response or in the sources you referenced.
+        After answering, {$targetClause}
 
         Respond ONLY with a valid JSON object — no markdown, no extra text:
         {
@@ -318,11 +345,85 @@ class CitationCheckService
           "resources": [<array of all source URLs cited>],
           "confidence": <float 0-1>,
           "source_url": "{$url}",
+          "matched_url": <string|null>,
           "prompts_analyzed": 1,
           "prompts_mentioning_url": <0 or 1>,
           "search_context": <string>
         }
         PROMPT;
+    }
+
+    /**
+     * Normalize a post URL to the form AI search engines actually cite.
+     *
+     * For Reddit URLs this resolves share links (/s/<token>) to their
+     * canonical thread URL (via the 301 redirect) and strips deep
+     * comment-permalink segments + query strings down to the thread root:
+     *   https://www.reddit.com/r/<sub>/comments/<threadId>/
+     *
+     * Non-Reddit URLs are returned with their query string/fragment removed.
+     */
+    protected function normalizeRedditUrl(string $url): string
+    {
+        // Deep comment permalink: /r/<sub>/comments/<threadId>/comment/<commentId>
+        if (preg_match('~reddit\.com/r/([^/]+)/comments/([^/?#]+)~i', $url, $m)) {
+            return 'https://www.reddit.com/r/' . $m[1] . '/comments/' . $m[2] . '/';
+        }
+
+        // Share link: /r/<sub>/s/<token> — resolve via 301 redirect.
+        if (preg_match('~reddit\.com/r/([^/]+)/s/([^/?#]+)~i', $url)) {
+            return $this->resolveShareLink($url) ?? $this->stripQueryAndFragment($url);
+        }
+
+        return $this->stripQueryAndFragment($url);
+    }
+
+    /**
+     * Follow the 301 redirect of a Reddit share link to its canonical thread URL.
+     * Returns the normalized canonical URL, or null if resolution fails.
+     */
+    protected function resolveShareLink(string $url): ?string
+    {
+        if (array_key_exists($url, $this->canonicalUrlCache)) {
+            return $this->canonicalUrlCache[$url];
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (compatible; CitationBot/1.0)',
+            ])
+                ->withoutRedirecting()
+                ->timeout(15)
+                ->get($url);
+
+            if ($response->status() >= 300 && $response->status() < 400) {
+                $location = $response->header('Location');
+                $location = is_array($location) ? ($location[0] ?? null) : $location;
+
+                if ($location) {
+                    // The redirect target may itself be a comments URL with a
+                    // slug + share query params; normalize it to the thread root.
+                    $canonical = $this->normalizeRedditUrl($location);
+                    $this->canonicalUrlCache[$url] = $canonical;
+
+                    return $canonical;
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Failed to resolve reddit share link', [
+                'url'   => $url,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        $this->canonicalUrlCache[$url] = null;
+
+        return null;
+    }
+
+    protected function stripQueryAndFragment(string $url): string
+    {
+        return preg_replace('~[?#].*$~', '', $url);
     }
 
     // -------------------------------------------------------------------------
@@ -484,6 +585,7 @@ class CitationCheckService
             'resources'              => (array)  ($jsonData['resources']              ?? []),
             'confidence'             => (float)  ($jsonData['confidence']             ?? 0.5),
             'source_url'             =>           $jsonData['source_url']             ?? null,
+            'matched_url'            =>           $jsonData['matched_url']             ?? null,
             'prompts_analyzed'       => (int)    ($jsonData['prompts_analyzed']       ?? 0),
             'prompts_mentioning_url' => (int)    ($jsonData['prompts_mentioning_url'] ?? 0),
             'search_context'         =>           $jsonData['search_context']         ?? null,
@@ -524,6 +626,7 @@ class CitationCheckService
                     'provider'               => $provider,
                     'success'                => $result['success']               ?? false,
                     'source_url'             => $result['source_url']            ?? $post->url,
+                    'matched_url'            => $result['matched_url']           ?? null,
                     'referrer_url'           => $result['referrer_url']          ?? null,
                     'resources'              => $result['resources']             ?? [],
                     'search_context'         => $result['search_context']        ?? null,

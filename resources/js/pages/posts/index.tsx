@@ -252,15 +252,13 @@ export default function PostsIndex({ posts, brand }: Props) {
             return <span className="text-xs text-muted-foreground">No citations</span>;
         }
 
-        const validCitations = post.citations!.filter((citation) => {
-            const resources = citation.metadata?.resources || [];
-            if (!resources || resources.length === 0) return false;
-
-            // Post is a resource if its URL is in the resources
-            // Strip scheme and query string for loose match
-            const postMatchPattern = post.url.replace(/^https?:\/\//, '').split('?')[0].replace(/\/$/, '');
-            return resources.some((r: string) => r.includes(postMatchPattern));
-        });
+        // A citation badge is shown for each AI model that reported the post as
+        // mentioned (is_mentioned). The backend citation check resolves reddit
+        // share links / comment permalinks to their canonical thread URL before
+        // asking the AI, so is_mentioned is the authoritative signal — the old
+        // "raw post URL must appear in resources" filter was too strict for
+        // reddit URLs and hid legitimately-mentioned posts.
+        const validCitations = post.citations!.filter((citation) => citation.is_mentioned === true);
 
         if (validCitations.length === 0) {
             return <span className="text-xs text-muted-foreground"></span>;
