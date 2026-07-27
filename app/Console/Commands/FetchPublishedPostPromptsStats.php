@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\FetchPostPromptsStatsJob;
 use App\Models\Post;
 use App\Services\PostPromptService;
 use Illuminate\Console\Command;
@@ -14,10 +15,12 @@ class FetchPublishedPostPromptsStats extends Command
      *
      * @var string
      */
-    protected $signature = 'posts:fetch-prompts-stats 
+    protected $signature = 'posts:fetch-prompts-stats
                            {--post= : Specific post ID to analyze}
+                           {--brand= : Specific brand ID to analyze}
                            {--days=7 : Number of days to look back for published posts}
-                           {--limit= : Limit number of posts to process}';
+                           {--limit= : Limit number of posts to process}
+                           {--all : Process all published posts across all brands}';
 
     /**
      * The console command description.
@@ -39,9 +42,11 @@ class FetchPublishedPostPromptsStats extends Command
      */
     public function handle(): int
     {
-        $this->info('🚀 Starting to fetch post prompt stats...');
+        $this->info('Starting to queue post prompt stats fetch...');
 
         $postId = $this->option('post');
+        $brandId = $this->option('brand');
+        $processAll = $this->option('all');
         $days = (int) $this->option('days');
         $limit = $this->option('limit') ? (int) $this->option('limit') : null;
 
@@ -51,13 +56,20 @@ class FetchPublishedPostPromptsStats extends Command
             ->whereHas('brand', function ($q) {
                 $q->where('status', 'active');
             })
-            ->with(['prompts', 'brand'])
+            ->with(['brand'])
             ->orderBy('posted_at', 'desc');
 
         if ($postId) {
             // Process specific post
             $query->where('id', $postId);
             $this->info("Processing specific post ID: {$postId}");
+        } elseif ($brandId) {
+            // Process specific brand
+            $query->where('brand_id', $brandId);
+            $this->info("Processing posts for brand ID: {$brandId}");
+        } elseif ($processAll) {
+            // Process ALL published posts from active brands
+            $this->info('Processing all published posts from active brands');
         } else {
             // Process posts from the last N days
             $query->where('posted_at', '>=', now()->subDays($days));
@@ -78,12 +90,8 @@ class FetchPublishedPostPromptsStats extends Command
 
         $this->info("Found {$posts->count()} post(s) to process");
 
-        $progressBar = $this->output->createProgressBar($posts->count());
-        $progressBar->start();
-
-        $successCount = 0;
-        $errorCount = 0;
-        $promptsProcessed = 0;
+        $queuedCount = 0;
+        $skippedCount = 0;
 
         foreach ($posts as $post) {
             try {
@@ -95,91 +103,38 @@ class FetchPublishedPostPromptsStats extends Command
                         'brand_id' => $post->brand_id,
                         'user_id' => $brandUser->id,
                     ]);
-                    $progressBar->advance();
+                    $skippedCount++;
 
                     continue;
                 }
 
-                $prompts = $post->prompts;
-
-                if ($prompts->isEmpty()) {
-                    $this->newLine();
-                    $this->comment("Post #{$post->id} has no prompts - skipping");
-                    $progressBar->advance();
-
-                    continue;
-                }
-
-                foreach ($prompts as $prompt) {
-                    try {
-                        // Analyze and update stats for this prompt
-                        $stats = $this->postPromptService->analyzePromptStatsWithAI($prompt, $post);
-
-                        // Update prompt with new stats
-                        $prompt->update([
-                            'visibility' => $stats['visibility'],
-                            'position' => $stats['position'],
-                            'sentiment' => $stats['sentiment'],
-                            'volume' => $stats['volume'],
-                            'analysis_completed_at' => now(),
-                            'analysis_failed_at' => null,
-                            'analysis_error' => null,
-                        ]);
-
-                        $promptsProcessed++;
-
-                        Log::info('Post prompt stats updated', [
-                            'post_id' => $post->id,
-                            'prompt_id' => $prompt->id,
-                            'stats' => $stats,
-                        ]);
-                    } catch (\Exception $e) {
-                        $errorCount++;
-
-                        // Log error on the prompt
-                        $prompt->update([
-                            'analysis_failed_at' => now(),
-                            'analysis_error' => $e->getMessage(),
-                        ]);
-
-                        Log::error('Failed to analyze post prompt', [
-                            'post_id' => $post->id,
-                            'prompt_id' => $prompt->id,
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
-                }
-
-                $successCount++;
-
+                $this->line("  Queuing stats fetch for post #{$post->id}...");
+                FetchPostPromptsStatsJob::dispatch($post)->onQueue('default');
+                $queuedCount++;
             } catch (\Exception $e) {
-                $errorCount++;
-                $this->newLine();
-                $this->error("Failed to process post #{$post->id}: {$e->getMessage()}");
+                $this->error("Failed to queue post #{$post->id}: {$e->getMessage()}");
 
-                Log::error('Failed to process post for prompt stats', [
+                Log::error('Failed to queue post for prompt stats', [
                     'post_id' => $post->id,
                     'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
                 ]);
             }
-
-            $progressBar->advance();
         }
 
-        $progressBar->finish();
         $this->newLine(2);
-
-        // Display summary
-        $this->info('✅ Post prompt stats fetch completed!');
+        $this->info('Post prompt stats fetch queued!');
         $this->table(
             ['Metric', 'Count'],
             [
-                ['Posts Processed', $successCount],
-                ['Prompts Updated', $promptsProcessed],
-                ['Errors', $errorCount],
+                ['Posts Checked', $posts->count()],
+                ['Jobs Queued', $queuedCount],
+                ['Posts Skipped (trial expired)', $skippedCount],
             ]
         );
+
+        if ($queuedCount > 0) {
+            $this->info('Monitor progress with: php artisan queue:work');
+        }
 
         return self::SUCCESS;
     }

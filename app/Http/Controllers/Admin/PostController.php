@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\GeneratePostPrompts;
 use App\Models\AiModel;
 use App\Models\Brand;
 use App\Models\Post;
@@ -144,7 +145,7 @@ class PostController extends Controller
             'title' => 'nullable|string|max:255',
             'url' => 'required|url|max:2000',
             'description' => 'nullable|string|max:1000',
-            'status' => 'required|in:published,draft,archived',
+            'status' => 'required|in:published,draft,archived,removed',
             'posted_at' => 'nullable|date',
             'post_type' => 'required|in:blog,forum,ugc,pr_replacement,directory_listings,website_content',
         ]);
@@ -164,35 +165,20 @@ class PostController extends Controller
             'post_type' => $request->post_type,
         ]);
 
-        // Generate prompts synchronously so they are immediately saved and activated
+        // Dispatch prompt generation and citation checks in the background
         try {
-            $postPromptService = app(\App\Services\PostPromptService::class);
             $sessionId = 'admin-' . uniqid();
 
-            $prompts = $postPromptService->generatePromptsFromMultipleModelsForPost(
-                $post,
-                $sessionId,
-                $post->description ?? ''
-            );
-
-            // Activate all generated prompts automatically
-            $promptIds = collect($prompts)->pluck('id')->filter()->toArray();
-            if (! empty($promptIds)) {
-                \App\Models\PostPrompt::whereIn('id', $promptIds)->update(['status' => 'active']);
-            }
-
-            $promptCount = count($promptIds);
-
-            // Dispatch citation check as background job (non-blocking)
+            \App\Jobs\GeneratePostPrompts::dispatch($post, $sessionId, $post->description ?? '');
             \App\Jobs\CheckPostCitationsJob::dispatch($post);
 
-            $successMessage = "Post created successfully. {$promptCount} prompts have been automatically generated and activated.";
+            $successMessage = 'Post created successfully. Prompts are being generated in the background.';
         } catch (\Exception $e) {
-            \Log::error('Failed to generate prompts during post creation', [
+            \Log::error('Failed to queue prompt generation during post creation', [
                 'post_id' => $post->id,
                 'error'   => $e->getMessage(),
             ]);
-            $successMessage = 'Post created successfully. Prompt generation failed — please try regenerating from the post detail page.';
+            $successMessage = 'Post created successfully. Prompt generation will be retried automatically.';
         }
 
         return redirect()->route('admin.posts.index')->with('success', $successMessage);
@@ -298,7 +284,7 @@ class PostController extends Controller
             'title' => 'nullable|string|max:255',
             'url' => 'required|url|max:2000',
             'description' => 'nullable|string|max:1000',
-            'status' => 'required|in:published,draft,archived',
+            'status' => 'required|in:published,draft,archived,removed',
             'posted_at' => 'nullable|date',
         ]);
 

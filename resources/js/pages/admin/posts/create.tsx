@@ -336,6 +336,7 @@ export default function AdminPostsCreate({ agencies, brands, post: createdPost }
                                                     <SelectItem value="draft">Draft</SelectItem>
                                                     <SelectItem value="published">Published</SelectItem>
                                                     <SelectItem value="archived">Archived</SelectItem>
+                                                    <SelectItem value="removed">Removed</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>

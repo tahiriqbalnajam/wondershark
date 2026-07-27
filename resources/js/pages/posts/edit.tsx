@@ -28,7 +28,7 @@ type Post = {
     title: string;
     url: string;
     description?: string;
-    status: 'published' | 'draft' | 'archived';
+    status: 'published' | 'draft' | 'archived' | 'removed';
     posted_at: string;
     post_type: string;
     brand_id: number;
@@ -242,6 +242,7 @@ export default function PostsEdit({ post, brands }: Props) {
                                                 <SelectItem value="draft">Draft</SelectItem>
                                                 <SelectItem value="published">Published</SelectItem>
                                                 <SelectItem value="archived">Archived</SelectItem>
+                                                <SelectItem value="removed">Removed</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         {errors.status && (

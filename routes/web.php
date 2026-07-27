@@ -270,6 +270,14 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
             Route::post('/{websiteUrl}/toggle', [\App\Http\Controllers\Admin\WebsiteUrlController::class, 'toggle'])->name('toggle');
         });
 
+        // Post Prompt Analytics - Admin only
+        Route::prefix('admin/post-prompts')->name('admin.post-prompts.')
+            ->middleware('role.permission:view-admin-panel')
+            ->group(function () {
+                Route::get('/', [\App\Http\Controllers\Admin\PostPromptAnalyticsController::class, 'index'])->name('index');
+                Route::get('/{post}', [\App\Http\Controllers\Admin\PostPromptAnalyticsController::class, 'show'])->name('show');
+            });
+
         // Gap Analysis - Admin only
         Route::prefix('admin/gap-analysis')->name('admin.gap-analysis.')->middleware('role.permission:view-admin-panel')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\GapAnalysisController::class, 'index'])->name('index');

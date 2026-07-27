@@ -64,7 +64,7 @@ type Post = {
     title: string;
     url: string;
     description?: string;
-    status: 'published' | 'draft' | 'archived';
+    status: 'published' | 'draft' | 'archived' | 'removed';
     posted_at: string;
     created_at: string;
     post_type: string;
@@ -121,6 +121,8 @@ export default function PostsShow({ post }: Props) {
                 return 'bg-yellow-100 text-yellow-800';
             case 'archived':
                 return 'bg-gray-100 text-gray-800';
+            case 'removed':
+                return 'bg-red-100 text-red-800';
             default:
                 return 'bg-gray-100 text-gray-800';
         }

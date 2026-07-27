@@ -33,6 +33,13 @@ class ConsoleController extends Controller
             [
                 'signature' => 'posts:fetch-prompts-stats',
                 'description' => 'Post Prompt Stats Fetching - Runs daily at 3 AM UTC',
+                'options' => [
+                    ['name' => 'post', 'type' => 'text', 'label' => 'Post ID (Optional)', 'prefix' => '--post='],
+                    ['name' => 'brand', 'type' => 'text', 'label' => 'Brand ID (Optional)', 'prefix' => '--brand='],
+                    ['name' => 'all', 'type' => 'boolean', 'label' => 'All Brands', 'prefix' => '--all', 'default' => false],
+                    ['name' => 'days', 'type' => 'text', 'label' => 'Days Lookback', 'prefix' => '--days=', 'default' => '7'],
+                    ['name' => 'limit', 'type' => 'text', 'label' => 'Limit (Optional)', 'prefix' => '--limit='],
+                ]
             ],
             [
                 'signature' => 'brand:recalculate-visibility',
@@ -49,6 +56,24 @@ class ConsoleController extends Controller
                 'options' => [
                     ['name' => 'post', 'type' => 'text', 'label' => 'Specific Post ID (Optional)', 'prefix' => '--post='],
                     ['name' => 'brand', 'type' => 'text', 'label' => 'Specific Brand ID (Optional)', 'prefix' => '--brand='],
+                ]
+            ],
+            [
+                'signature' => 'posts:check-urls',
+                'description' => 'Check Post URLs - Runs daily at 7 AM UTC',
+                'options' => [
+                    // ['name' => 'post', 'type' => 'text', 'label' => 'Specific Post ID (Optional)', 'prefix' => '--post='],
+                    ['name' => 'all-brands', 'type' => 'boolean', 'label' => 'All Brands', 'prefix' => '--all-brands', 'default' => false],
+                    ['name' => 'brand', 'type' => 'text', 'label' => 'Specific Brand ID (Optional)', 'prefix' => '--brand='],
+                ]
+            ],
+            [
+                'signature' => 'posts:generate-additional-prompts',
+                'description' => 'Generate additional prompts for posts below target count (default target: 10)',
+                'options' => [
+                    ['name' => 'post', 'type' => 'text', 'label' => 'Specific Post ID (Optional)', 'prefix' => '--post='],
+                    ['name' => 'brand', 'type' => 'text', 'label' => 'Specific Brand ID (Optional)', 'prefix' => '--brand='],
+                    ['name' => 'target', 'type' => 'text', 'label' => 'Target Prompt Count', 'prefix' => '--target=', 'default' => '10'],
                 ]
             ],
         ];
@@ -75,6 +100,8 @@ class ConsoleController extends Controller
             'posts:fetch-prompts-stats',
             'brand:recalculate-visibility',
             'citations:check-daily',
+            'posts:check-urls',
+            'posts:generate-additional-prompts',
         ];
 
         if (!in_array($command, $allowedCommands)) {

@@ -67,6 +67,9 @@ class PostPromptService extends AIPromptService
                         'position' => $stats['position'],
                         'sentiment' => $stats['sentiment'],
                         'volume' => $stats['volume'],
+                        'analysis_completed_at' => now(),
+                        'analysis_failed_at' => null,
+                        'analysis_error' => null,
                     ]);
 
                     // Save referrers as potential citations
@@ -112,55 +115,102 @@ class PostPromptService extends AIPromptService
     {
         $aiModels = $this->getEnabledAiModels();
         $allGeneratedPrompts = [];
-        $targetLimit = 5;
-        
+        $targetLimit = 10;
+
         if ($aiModels->isEmpty()) {
             return [];
         }
 
-        // Calculate distribution based on 'prompts_per_brand' weight mapping to total limit
-        $totalWeight = $aiModels->sum('prompts_per_brand') ?: $aiModels->count();
-        $allocations = [];
-        $remainingPrompts = $targetLimit;
-        
-        foreach ($aiModels as $aiModel) {
-            $weight = $aiModel->prompts_per_brand > 0 ? $aiModel->prompts_per_brand : 1;
-            // Floor division to allocate proportional amount
-            $allocated = (int) floor(($weight / $totalWeight) * $targetLimit);
-            $allocations[$aiModel->id] = $allocated;
-            $remainingPrompts -= $allocated;
-        }
-        
-        // Distribute any remainder to highest weight models
-        if ($remainingPrompts > 0) {
-            $sortedModels = $aiModels->sortByDesc('prompts_per_brand')->values();
-            for ($i = 0; $i < $remainingPrompts; $i++) {
-                $modelId = $sortedModels[$i % $sortedModels->count()]->id;
-                $allocations[$modelId]++;
-            }
-        }
+        // Generate prompts in round-robin order across all enabled models
+        $modelList = $aiModels->values();
+        $modelCount = $modelList->count();
+        $generatedByModel = collect();
 
-        foreach ($aiModels as $aiModel) {
+        for ($i = 0; $i < $targetLimit; $i++) {
+            $model = $modelList[$i % $modelCount];
             try {
-                // Generate based on AI model calculated configuration distribution limit
-                $promptCount = $allocations[$aiModel->id] ?? 0;
-                
-                if ($promptCount > 0) {
-                    $prompts = $this->generatePromptsForPost($post, $sessionId, $aiModel->name, $description, $promptCount);
-                    $allGeneratedPrompts = array_merge($allGeneratedPrompts, $prompts);
+                $batch = $this->generatePromptsForPost($post, $sessionId, $model->name, $description, 1);
+                if (! empty($batch)) {
+                    $generatedByModel->push([
+                        'model_id' => $model->id,
+                        'prompt' => $batch[0],
+                    ]);
                 }
             } catch (\Exception $e) {
-                Log::warning("Failed to generate prompts from {$aiModel->display_name} for post", [
-                    'error' => $e->getMessage(),
+                Log::warning("Round-robin prompt generation failed", [
                     'post_id' => $post->id,
-                    'post_url' => $post->url,
-                    'model' => $aiModel->name,
+                    'model' => $model->name,
+                    'round' => $i + 1,
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
 
+        // Interleave prompts so order is round-robin: A, B, C, D...
+        $grouped = $generatedByModel->groupBy('model_id')->map->values();
+        $interleaved = [];
+        $maxGroupSize = $grouped->map->count()->max() ?? 0;
+
+        for ($round = 0; $round < $maxGroupSize; $round++) {
+            foreach ($grouped as $items) {
+                if (isset($items[$round])) {
+                    $interleaved[] = $items[$round]['prompt'];
+                }
+            }
+        }
+
+        // Update order field to match interleaved sequence
+        foreach ($interleaved as $idx => $prompt) {
+            $prompt->update(['order' => $idx + 1]);
+        }
+
+        $allGeneratedPrompts = $interleaved;
+
         // Remove duplicates and similar prompts
         $uniquePrompts = $this->removeDuplicatePostPrompts($allGeneratedPrompts);
+
+        // Ensure post title is included as one of the prompts
+        if (! empty($post->title)) {
+            $titleExists = collect($uniquePrompts)->contains(function ($prompt) use ($post) {
+                return strtolower(trim($prompt->prompt ?? $prompt['prompt'] ?? '')) === strtolower(trim($post->title));
+            });
+
+            if (! $titleExists) {
+                $existingTitlePrompt = PostPrompt::forPost($post->id)
+                    ->whereRaw('LOWER(prompt) = ?', [strtolower(trim($post->title))])
+                    ->first();
+
+                if (! $existingTitlePrompt) {
+                    $countryCode = $post->brand->country_code ?? null;
+                    if ($countryCode && strlen($countryCode) > 2) {
+                        $countryCode = substr($countryCode, 0, 2);
+                    }
+
+                    $firstModel = $aiModels->first();
+
+                    $titlePrompt = PostPrompt::create([
+                        'brand_id' => $post->brand_id,
+                        'post_id' => $post->id,
+                        'session_id' => $sessionId,
+                        'prompt' => trim($post->title),
+                        'source' => 'ai_generated',
+                        'ai_provider' => $firstModel?->name ?? 'system',
+                        'ai_model_id' => $firstModel?->id ?? null,
+                        'order' => 0,
+                        'is_selected' => true,
+                        'is_active' => true,
+                        'country_code' => $countryCode,
+                        'position' => 0,
+                        'sentiment' => 0,
+                        'visibility' => 0,
+                        'volume' => 'low',
+                        'location' => $post->brand->country_code ?? null,
+                        'status' => 'suggested',
+                    ]);
+                    array_unshift($uniquePrompts, $titlePrompt);
+                }
+            }
+        }
 
         // Limit to exactly the limit asked
         $limitedPrompts = array_slice($uniquePrompts, 0, $targetLimit);
@@ -790,7 +840,7 @@ Respond ONLY with this exact JSON format (no additional text):
     /**
      * Save referrers as potential citations in post_citations table
      */
-    protected function saveReferrersAsCitations(Post $post, PostPrompt $prompt, array $referrers, string $provider): void
+     public function saveReferrersAsCitations(Post $post, PostPrompt $prompt, array $referrers, string $provider): void
     {
         foreach ($referrers as $index => $referrerUrl) {
             try {

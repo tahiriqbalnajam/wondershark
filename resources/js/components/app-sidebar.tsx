@@ -269,6 +269,12 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
                     permission: 'view-admin-panel',
                 },
                 {
+                    title: 'View Prompts Status',
+                    href: '/admin/post-prompts',
+                    icon: FileText,
+                    permission: 'view-admin-panel',
+                },
+                {
                     title: 'Competitors',
                     href: '/admin/competitors',
                     icon: Shield,

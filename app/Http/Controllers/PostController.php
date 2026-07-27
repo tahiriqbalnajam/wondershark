@@ -274,7 +274,7 @@ class PostController extends Controller
             'title' => 'nullable|string|max:255',
             'url' => 'required|url|max:2000',
             'description' => 'nullable|string|max:1000',
-            'status' => 'required|in:published,draft,archived',
+            'status' => 'required|in:published,draft,archived,removed',
             'posted_at' => 'nullable|date',
             'post_type' => 'required|in:blog,forum,ugc,pr_replacement,directory_listings,website_content',
         ]);
@@ -553,7 +553,7 @@ class PostController extends Controller
             'title' => 'nullable|string|max:255',
             'url' => 'required|url|max:2000',
             'description' => 'nullable|string|max:1000',
-            'status' => 'required|in:published,draft,archived',
+            'status' => 'required|in:published,draft,archived,removed',
             'posted_at' => 'nullable|date',
             'post_type' => 'required|in:blog,forum,ugc,pr_replacement,directory_listings,website_content',
         ]);
@@ -752,7 +752,7 @@ class PostController extends Controller
             'title' => 'nullable|string|max:255',
             'url' => 'required|url|max:2000',
             'description' => 'nullable|string|max:1000',
-            'status' => 'required|in:published,draft,archived',
+            'status' => 'required|in:published,draft,archived,removed',
             'posted_at' => 'nullable|date',
         ]);
 

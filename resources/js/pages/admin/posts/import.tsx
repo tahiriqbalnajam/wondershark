@@ -70,7 +70,7 @@ export default function AdminPostImport({
     const { data, setData, post, processing, errors } = useForm({
         csv_file: null as File | null,
         default_brand_id: 'none',
-        default_status: 'published' as 'published' | 'draft' | 'archived',
+        default_status: 'published' as 'published' | 'draft' | 'archived' | 'removed',
     });
 
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -298,7 +298,7 @@ export default function AdminPostImport({
                                         <Label htmlFor="default_status">Default Status</Label>
                                         <Select
                                             value={data.default_status}
-                                            onValueChange={(value: 'published' | 'draft' | 'archived') =>
+                                            onValueChange={(value: 'published' | 'draft' | 'archived' | 'removed') =>
                                                 setData('default_status', value)
                                             }
                                         >
@@ -309,6 +309,7 @@ export default function AdminPostImport({
                                                 <SelectItem value="published">Published</SelectItem>
                                                 <SelectItem value="draft">Draft</SelectItem>
                                                 <SelectItem value="archived">Archived</SelectItem>
+                                                <SelectItem value="removed">Removed</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <div className="text-sm text-gray-600">Used for rows without a status column value</div>
@@ -399,7 +400,7 @@ export default function AdminPostImport({
                                                 <code>description</code> — Can be empty
                                             </li>
                                             <li>
-                                                <code>status</code> — published / draft / archived
+                                                <code>status</code> — published / draft / archived / removed
                                             </li>
                                             <li>
                                                 <code>posted_at</code> — Date in YYYY-MM-DD format

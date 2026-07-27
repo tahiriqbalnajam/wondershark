@@ -75,7 +75,7 @@ type Post = {
     title: string;
     url: string;
     description?: string;
-    status: 'Published' | 'Draft' | 'Archived';
+    status: 'Published' | 'Draft' | 'Archived' | 'Removed';
     posted_at: string;
     created_at: string;
     post_type: string;
@@ -300,6 +300,8 @@ export default function PostsIndex({ posts, brand }: Props) {
                 return 'bg-yellow-100 text-yellow-800';
             case 'archived':
                 return 'bg-gray-100 text-gray-800';
+            case 'removed':
+                return 'bg-red-100 text-red-800';
             default:
                 return 'bg-gray-100 text-gray-800';
         }

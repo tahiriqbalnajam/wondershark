@@ -23,7 +23,8 @@ Schedule::command('brand:analyze-prompts --all --force')
     ->runInBackground();
 
 // Post Prompt Stats Fetching - Runs daily at 3 AM UTC
-Schedule::command('posts:fetch-prompts-stats')
+//Schedule::command('posts:fetch-prompts-stats')
+Schedule::command('posts:fetch-prompts-stats --all')
     ->dailyAt('03:00')
     ->withoutOverlapping()
     ->onOneServer()
@@ -45,6 +46,13 @@ Schedule::command('brand:recalculate-visibility --regenerate')
 // Check Post Citations - Runs daily at 6 AM UTC
 Schedule::command('citations:check-daily')
     ->dailyAt('06:00')
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->runInBackground();
+
+// Check Post URLs - Runs daily at 7 AM UTC
+Schedule::command('posts:check-urls')
+    ->dailyAt('07:00')
     ->withoutOverlapping()
     ->onOneServer()
     ->runInBackground();

@@ -8,13 +8,13 @@ use Carbon\Exceptions\InvalidFormatException;
 class DateFormat
 {
     /** Default format for date+time display */
-    public const string DATETIME = 'M j, Y g:i A';
+    public const DATETIME = 'M j, Y g:i A';
 
     /** Default format for date-only display */
-    public const string DATE = 'M j, Y';
+    public const DATE = 'M j, Y';
 
     /** Default format for ISO conversion */
-    public const string ISO = 'Y-m-d\TH:i:s.000000\Z';
+    public const ISO = 'Y-m-d\TH:i:s.000000\Z';
 
     /**
      * Format a Carbon date for display (server-side rendering like emails).

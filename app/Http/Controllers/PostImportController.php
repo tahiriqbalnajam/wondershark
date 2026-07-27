@@ -174,7 +174,7 @@ class PostImportController extends Controller
         $request->validate([
             'csv_file'         => 'required|file|mimes:csv,txt|max:10240', // 10 MB
             'default_brand_id' => 'nullable|exists:brands,id',
-            'default_status'   => 'required|in:published,draft,archived',
+            'default_status'   => 'required|in:published,draft,archived,removed',
         ]);
 
         $user = Auth::user();
