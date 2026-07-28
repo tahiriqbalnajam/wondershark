@@ -25,6 +25,7 @@ export default function Create() {
       api_key: '',
       model: '',
       endpoint: '',
+      search_model: '',
     },
     order: 1,
   });
@@ -225,6 +226,27 @@ export default function Create() {
                       />
                       {errors['api_config.model'] && (
                         <p className="text-sm text-red-600">{errors['api_config.model']}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="search_model">Web Search Model (citations)</Label>
+                      <Input
+                        id="search_model"
+                        value={data.api_config.search_model}
+                        onChange={(e) => setData('api_config', {
+                          ...data.api_config,
+                          search_model: e.target.value
+                        })}
+                        placeholder="e.g., gpt-5.5 (leave blank to use Model)"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Optional. Reasoning model used only by the citation web-search check
+                        (Responses API + web_search tool). Falls back to the Model above if empty.
+                        Keep the general Model as a chat model (e.g., gpt-4o).
+                      </p>
+                      {errors['api_config.search_model'] && (
+                        <p className="text-sm text-red-600">{errors['api_config.search_model']}</p>
                       )}
                     </div>
 

@@ -48,6 +48,7 @@ class AiModelController extends Controller
             'prompts_per_brand' => 'required|integer|min:0',
             'api_config.api_key' => 'nullable|string',
             'api_config.model' => 'nullable|string',
+            'api_config.search_model' => 'nullable|string',
             'api_config.endpoint' => 'nullable|url',
             'order' => 'required|integer|min:1|max:10',
         ]);
@@ -105,6 +106,7 @@ class AiModelController extends Controller
             'prompts_per_brand' => 'required|integer|min:0',
             'api_config.api_key' => 'nullable|string',
             'api_config.model' => 'nullable|string',
+            'api_config.search_model' => 'nullable|string',
             'api_config.endpoint' => 'nullable|url',
             'order' => 'required|integer|min:1|max:10',
         ]);

@@ -37,6 +37,17 @@ class CitationCheckService
 
     public function runCitationCheck(Post $post): array
     {
+        // Only check published posts. Draft/archived/removed posts are skipped
+        // regardless of their prompts' status. (Mirrors the daily command's
+        // Post::where('status', 'published') gate.)
+        if ($post->status !== 'published') {
+            return [
+                'success' => false,
+                'message' => "Post is not published (status={$post->status}); skipping citation check.",
+                'results' => [],
+            ];
+        }
+
         // Pre-load all enabled provider configs in a single query
         $this->warmProviderCache();
 
@@ -154,9 +165,11 @@ class CitationCheckService
      */
     protected function getSelectedPrompts(Post $post): array
     {
+        // All selected prompts are checked regardless of prompt status
+        // (suggested/active/inactive). The gate is the post's status, not the
+        // prompt's — see runCitationCheck() for the published-post guard.
         $promptsByProvider = $post->prompts()
             ->where('is_selected', true)
-            ->where('status', 'active')
             ->get(['ai_provider', 'prompt'])   // Only select needed columns
             ->groupBy('ai_provider');
 
@@ -221,7 +234,6 @@ class CitationCheckService
     {
         $promptsByProvider = $post->prompts()
             ->where('is_selected', true)
-            ->where('status', 'active')
             ->get(['ai_provider', 'prompt'])
             ->groupBy('ai_provider');
 
@@ -434,28 +446,70 @@ class CitationCheckService
     {
         $aiModel = $this->getProviderConfig('openai');
 
-        $model = $aiModel->api_config['model'] ?? 'gpt-4o-search-preview';
+        // Use the Responses API with the built-in `web_search` tool so the
+        // model actually browses the web (plain chat models like gpt-4o cannot
+        // search and always return empty resources). The deprecated
+        // gpt-4o-search-preview chat-completions models were shut down
+        // 2026-07-23; the modern path is Responses + web_search.
+        //
+        // Uses the dedicated `search_model` config (a reasoning model such as
+        // gpt-5.5) so the general chat `model` (used by the rest of the app and
+        // the admin "test AI model" button) can stay a plain chat model.
+        $model = $aiModel->api_config['search_model'] ?? $aiModel->api_config['model'] ?? 'gpt-5.5';
 
         $response = Http::withHeaders([
             'Authorization' => "Bearer {$aiModel->api_config['api_key']}",
             'Content-Type'  => 'application/json',
-        ])->timeout(60)->post('https://api.openai.com/v1/chat/completions', [
-            'model'    => $model,
-            'messages' => [
-                ['role' => 'system', 'content' => 'You are a citation verification assistant. Respond with JSON only.'],
-                ['role' => 'user',   'content' => $prompt],
-            ],
-            'max_tokens'  => 1000,
-            'temperature' => 0.1,
+        ])->timeout(120)->post('https://api.openai.com/v1/responses', [
+            'model'         => $model,
+            'tools'         => [['type' => 'web_search', 'search_context_size' => 'medium']],
+            'instructions'  => 'You are a citation verification assistant. Respond with JSON only.',
+            'input'         => $prompt,
+            'max_output_tokens' => 2000,
         ]);
 
         if (! $response->successful()) {
             throw new \Exception('OpenAI API error: ' . $response->body());
         }
 
-        $content = $response->json()['choices'][0]['message']['content'] ?? '';
+        $json = $response->json();
 
-        return $this->parseAIResponse($content, 'openai');
+        // The final answer lives in the `message` output item's content. The
+        // top-level `output_text` can be empty when reasoning is interleaved,
+        // so read the message item directly.
+        $content = '';
+        $annotationUrls = [];
+        foreach ($json['output'] ?? [] as $item) {
+            if (($item['type'] ?? '') !== 'message') {
+                continue;
+            }
+            foreach ($item['content'] ?? [] as $c) {
+                if (($c['type'] ?? '') === 'output_text' && ! empty($c['text'])) {
+                    $content = $c['text'];
+                }
+                foreach ($c['annotations'] ?? [] as $a) {
+                    if (($a['type'] ?? '') === 'url_citation' && ! empty($a['url_citation']['url'])) {
+                        $annotationUrls[] = $a['url_citation']['url'];
+                    }
+                }
+            }
+        }
+        if ($content === '') {
+            $content = $json['output_text'] ?? '';
+        }
+
+        $parsed = $this->parseAIResponse($content, 'openai');
+
+        // Merge any URL-citation annotations the model attached, in case it did
+        // not list them inside the JSON `resources` field.
+        if (! empty($annotationUrls)) {
+            $parsed['resources'] = array_values(array_unique(array_merge(
+                $parsed['resources'] ?? [],
+                $annotationUrls
+            )));
+        }
+
+        return $parsed;
     }
 
     protected function checkWithGemini(string $prompt): array
