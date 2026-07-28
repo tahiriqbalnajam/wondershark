@@ -876,6 +876,30 @@ CRITICAL INSTRUCTIONS:
         $allDataDates = $mentionDatesList->merge($statDatesList)->unique()->sort()->values();
         $totalDays = max(1, $allDataDates->count());
 
+        // Per-day override wins: for each day, the effective visibility is override ?? visibility
+        // (already baked into $aiVisibilityByDayKey). Apply the per-day average to any entity
+        // that has AI stat rows in the window — including accepted competitors that were added
+        // as 0% rows by appendMissingAcceptedCompetitors because their override rows have
+        // analysis_session_id = NULL and so were ignored by buildFallbackStats.
+        $applyDailyAverageWithOverrides = function (array &$stats) use ($aiVisibilityByDayKey, $totalDays): void {
+            $entityValuesMap = [];
+            foreach ($aiVisibilityByDayKey as $dayKey => $effectiveValue) {
+                [, $entityKey] = explode('|', $dayKey, 2);
+                $entityValuesMap[$entityKey][] = $effectiveValue;
+            }
+            foreach ($stats as &$stat) {
+                $entityKey = ($stat['competitor_id'] ?? null) ? 'c_'.$stat['competitor_id'] : 'brand';
+                $values = $entityValuesMap[$entityKey] ?? null;
+                if (! $values) {
+                    continue;
+                }
+                $avgVis = array_sum($values) / $totalDays;
+                $stat['visibility'] = round($avgVis, 2);
+                $stat['visibility_percentage'] = round($avgVis, 1).'%';
+            }
+            unset($stat);
+        };
+
         // Shared logic: build per-entity value lists from AI stats (with overrides already applied),
         // then overlay onto buildFallbackStats metadata. Used when mention data is absent or sparse.
         $buildFallbackWithOverrides = function () use ($brand, $aiModelId, $aiVisibilityByDayKey, $totalDays): array {
@@ -910,8 +934,10 @@ CRITICAL INSTRUCTIONS:
 
         if ($dailyEntityStats->isEmpty()) {
             $fallback = $buildFallbackWithOverrides();
+            $fallback = $this->appendMissingAcceptedCompetitors($brand, $fallback, $days, $aiModelId, $timezone);
+            $applyDailyAverageWithOverrides($fallback);
 
-            return $this->appendMissingAcceptedCompetitors($brand, $fallback, $days, $aiModelId, $timezone);
+            return $fallback;
         }
 
         $distinctMentionDates = $dailyEntityStats->pluck('date')->unique()->count();
