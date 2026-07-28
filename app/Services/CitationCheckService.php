@@ -313,12 +313,37 @@ class CitationCheckService
     {
         $builtPrompt = $this->buildCitationCheckPrompt($post->url, $promptText);
 
-        return match ($provider) {
+        $result = match ($provider) {
             'openai'     => $this->checkWithOpenAI($builtPrompt),
             'gemini'     => $this->checkWithGemini($builtPrompt),
             'perplexity' => $this->checkWithPerplexity($builtPrompt),
             default      => throw new \InvalidArgumentException("Unsupported provider: {$provider}"),
         };
+
+        // The model frequently surfaces the target URL in its `resources`
+        // (search results) but still reports is_mentioned=false, because it
+        // distinguishes "appeared in results" from "cited in the answer".
+        // For our purpose, the post being returned in the search results for
+        // this query counts as mentioned — so match the target URL against the
+        // returned resources ourselves and override accordingly.
+        $targets = $this->targetUrls($post->url);
+        if (! empty($result['resources']) && ! empty($targets)) {
+            foreach ($result['resources'] as $resourceUrl) {
+                $matched = $this->urlMatchesTarget((string) $resourceUrl, $targets);
+                if ($matched !== null) {
+                    $result['matched_url']  = $matched;
+                    $result['is_mentioned'] = true;
+                    break;
+                }
+            }
+        }
+
+        // If the model reported its own matched_url, honour it.
+        if (! empty($result['matched_url'])) {
+            $result['is_mentioned'] = true;
+        }
+
+        return $result;
     }
 
     protected function buildCitationCheckPrompt(string $url, string $prompt): string
@@ -334,30 +359,28 @@ class CitationCheckService
             fn ($u) => $u !== null && $u !== ''
         )));
 
-        if (count($targets) > 1) {
-            $targetList = implode(' or ', array_map(fn ($u) => "\"{$u}\"", $targets));
-            $targetClause = "check whether any of these URLs appear in your response or in the sources you referenced: {$targetList}";
-        } else {
-            $targetClause = "check whether the URL \"{$url}\" appears in your response or in the sources you referenced";
-        }
-
-        $targetClause .= ". Consider the post cited if a source references the same content under a different URL form (for example, a Reddit thread cited by its canonical comments URL rather than a share link such as \"/s/<token>\").";
+        $targetList = implode(' or ', array_map(fn ($u) => "\"{$u}\"", $targets));
 
         return <<<PROMPT
-        You are a real-time web search assistant. Search the web right now and answer this prompt: "{$prompt}"
+        A user asks you the following question. Answer it the way you normally would for that user — use web search and cite the sources you genuinely reference in your answer. Do not go looking for any specific page; answer naturally.
 
-        After answering, {$targetClause}
+        Question: "{$prompt}"
+
+        After answering, report whether the page below was among the sources you actually cited in your answer:
+        Target URL(s): {$targetList}
+
+        It counts as cited only if you referenced it (or its canonical form — for example a Reddit thread cited by its canonical comments URL rather than a "/s/<token>" share link, or a comment permalink rather than the thread root) as a source. If it did not come up as a source, report not mentioned.
 
         Respond ONLY with a valid JSON object — no markdown, no extra text:
         {
-          "is_mentioned": <boolean>,
+          "is_mentioned": <boolean — true only if the target URL/canonical was one of your cited sources>,
           "position": <integer|null>,
           "citation_text": <string|null>,
           "referrer_url": <string|null>,
-          "resources": [<array of all source URLs cited>],
+          "resources": [<array of the source URLs you actually cited in your answer>],
           "confidence": <float 0-1>,
           "source_url": "{$url}",
-          "matched_url": <string|null>,
+          "matched_url": <the target URL that was cited, or null>,
           "prompts_analyzed": 1,
           "prompts_mentioning_url": <0 or 1>,
           "search_context": <string>
@@ -438,6 +461,92 @@ class CitationCheckService
         return preg_replace('~[?#].*$~', '', $url);
     }
 
+    /**
+     * The set of URLs to match a post against: the raw post URL plus its
+     * normalized/canonical form (e.g. a Reddit share link resolved to its
+     * canonical thread URL).
+     */
+    protected function targetUrls(string $url): array
+    {
+        $canonical = $this->normalizeRedditUrl($url);
+
+        return array_values(array_unique(array_filter(
+            [$url, $canonical],
+            fn ($u) => $u !== null && $u !== ''
+        )));
+    }
+
+    /**
+     * A stable comparison key for a URL. Reddit URLs are reduced to their
+     * thread identity (r/<sub>/comments/<threadId>); everything else is
+     * compared by lowercased host + path (query/fragment stripped).
+     */
+    protected function urlMatchKey(string $url): ?string
+    {
+        if (preg_match('~reddit\.com/r/([^/]+)/comments/([^/?#]+)~i', $url, $m)) {
+            return 'reddit:' . strtolower($m[1]) . ':' . $m[2];
+        }
+
+        $stripped = $this->stripQueryAndFragment($url);
+        $host = parse_url($stripped, PHP_URL_HOST);
+        $path = parse_url($stripped, PHP_URL_PATH);
+
+        if ($host === null) {
+            return null;
+        }
+
+        return strtolower($host) . ($path ?: '/');
+    }
+
+    /**
+     * Return the target URL that a given resource URL matches, or null.
+     */
+    protected function urlMatchesTarget(string $resourceUrl, array $targets): ?string
+    {
+        $resKey = $this->urlMatchKey($resourceUrl);
+        if ($resKey === null) {
+            return null;
+        }
+
+        foreach ($targets as $target) {
+            if ($this->urlMatchKey($target) === $resKey) {
+                return $target;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * JSON Schema used to force OpenAI Structured Outputs for the citation
+     * response. Strict mode requires every property to be declared and listed
+     * in `required`; nullable fields use a [type, "null"] union.
+     */
+    protected function citationResponseSchema(): array
+    {
+        return [
+            'type'                 => 'object',
+            'additionalProperties' => false,
+            'properties'           => [
+                'is_mentioned'           => ['type' => 'boolean'],
+                'position'               => ['type' => ['integer', 'null']],
+                'citation_text'          => ['type' => ['string', 'null']],
+                'referrer_url'           => ['type' => ['string', 'null']],
+                'resources'              => ['type' => 'array', 'items' => ['type' => 'string']],
+                'confidence'             => ['type' => 'number'],
+                'matched_url'            => ['type' => ['string', 'null']],
+                'prompts_analyzed'       => ['type' => 'integer'],
+                'prompts_mentioning_url' => ['type' => 'integer'],
+                'search_context'         => ['type' => 'string'],
+            ],
+            'required' => [
+                'is_mentioned', 'position', 'citation_text', 'referrer_url',
+                'resources', 'confidence', 'matched_url', 'prompts_analyzed',
+                'prompts_mentioning_url', 'search_context',
+            ],
+        ];
+    }
+
     // -------------------------------------------------------------------------
     // Provider API Callers
     // -------------------------------------------------------------------------
@@ -457,15 +566,28 @@ class CitationCheckService
         // the admin "test AI model" button) can stay a plain chat model.
         $model = $aiModel->api_config['search_model'] ?? $aiModel->api_config['model'] ?? 'gpt-5.5';
 
+        // Force the exact JSON schema via Structured Outputs so reasoning
+        // models (gpt-5.5) can't drift into their own field names, and give
+        // enough output budget that the model actually invokes web_search —
+        // with only ~2000 tokens, gpt-5.5 skips search (reasoning alone eats
+        // ~1700) and answers from memory, returning empty resources.
         $response = Http::withHeaders([
             'Authorization' => "Bearer {$aiModel->api_config['api_key']}",
             'Content-Type'  => 'application/json',
         ])->timeout(120)->post('https://api.openai.com/v1/responses', [
-            'model'         => $model,
-            'tools'         => [['type' => 'web_search', 'search_context_size' => 'medium']],
-            'instructions'  => 'You are a citation verification assistant. Respond with JSON only.',
-            'input'         => $prompt,
-            'max_output_tokens' => 2000,
+            'model'             => $model,
+            'tools'             => [['type' => 'web_search', 'search_context_size' => 'medium']],
+            'instructions'      => 'You are a citation verification assistant. Answer the user\'s question as you normally would using web search, and list only the sources you actually cite in your answer in the resources field. Do not hunt for any particular page. Respond with the JSON schema only.',
+            'input'             => $prompt,
+            'max_output_tokens' => 8000,
+            'text'              => [
+                'format' => [
+                    'type'   => 'json_schema',
+                    'name'   => 'citation_result',
+                    'strict' => true,
+                    'schema' => $this->citationResponseSchema(),
+                ],
+            ],
         ]);
 
         if (! $response->successful()) {
