@@ -276,6 +276,7 @@ Route::middleware(['auth', 'verified', 'require.access'])->group(function () {
             ->group(function () {
                 Route::get('/', [\App\Http\Controllers\Admin\PostPromptAnalyticsController::class, 'index'])->name('index');
                 Route::get('/{post}', [\App\Http\Controllers\Admin\PostPromptAnalyticsController::class, 'show'])->name('show');
+                Route::put('/prompts/{postPrompt}/ai-model', [\App\Http\Controllers\Admin\PostPromptAnalyticsController::class, 'updateAiModel'])->name('update-ai-model');
             });
 
         // Gap Analysis - Admin only

@@ -69,11 +69,21 @@ class ConsoleController extends Controller
             ],
             [
                 'signature' => 'posts:generate-additional-prompts',
-                'description' => 'Generate additional prompts for posts below target count (default target: 10)',
+                'description' => 'Generate additional prompts for posts below target count (default target: 5)',
                 'options' => [
                     ['name' => 'post', 'type' => 'text', 'label' => 'Specific Post ID (Optional)', 'prefix' => '--post='],
                     ['name' => 'brand', 'type' => 'text', 'label' => 'Specific Brand ID (Optional)', 'prefix' => '--brand='],
-                    ['name' => 'target', 'type' => 'text', 'label' => 'Target Prompt Count', 'prefix' => '--target=', 'default' => '10'],
+                    ['name' => 'target', 'type' => 'text', 'label' => 'Target Prompt Count', 'prefix' => '--target=', 'default' => '5'],
+                ]
+            ],
+            [
+                'signature' => 'posts:remove-additional-prompts',
+                'description' => 'Trim post prompts to keep only the first N prompts, deleting the rest',
+                'options' => [
+                    ['name' => 'post', 'type' => 'text', 'label' => 'Specific Post ID (Optional)', 'prefix' => '--post='],
+                    ['name' => 'brand', 'type' => 'text', 'label' => 'Specific Brand ID (Optional)', 'prefix' => '--brand='],
+                    ['name' => 'keep', 'type' => 'text', 'label' => 'Prompts to Keep', 'prefix' => '--keep=', 'default' => '5'],
+                    ['name' => 'dry-run', 'type' => 'boolean', 'label' => 'Dry Run (no deletion)', 'prefix' => '--dry-run', 'default' => false],
                 ]
             ],
         ];
@@ -102,6 +112,7 @@ class ConsoleController extends Controller
             'citations:check-daily',
             'posts:check-urls',
             'posts:generate-additional-prompts',
+            'posts:remove-additional-prompts',
         ];
 
         if (!in_array($command, $allowedCommands)) {

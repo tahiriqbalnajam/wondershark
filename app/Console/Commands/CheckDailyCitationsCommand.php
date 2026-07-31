@@ -62,18 +62,45 @@ class CheckDailyCitationsCommand extends Command
             $this->info("Starting the citations check dispatch for all active posts.");
         }
 
-        $count = 0;
+        $count       = 0;
+        $skippedOld  = 0;
+        $sevenDaysAgo = now()->subDays(7);
+
         foreach ($posts as $post) {
             // Skip if the brand owner's trial has expired and they have no active subscription
             $brandUser = \App\Models\User::find($post->brand->user_id ?? $post->brand->agency_id);
             if ($brandUser && ! $brandUser->canProcessAnalysis()) {
                 Log::info('Skipping citation check dispatch — trial expired, no active subscription', [
-                    'post_id' => $post->id,
+                    'post_id'  => $post->id,
                     'brand_id' => $post->brand_id,
-                    'user_id' => $brandUser->id,
+                    'user_id'  => $brandUser->id,
                 ]);
 
                 continue;
+            }
+
+            // Skip posts where every prompt was checked within the last 7 days
+            $selectedPrompts = $post->prompts()
+                ->where('is_selected', true)
+                ->pluck('prompt')
+                ->toArray();
+
+            if (! empty($selectedPrompts)) {
+                $promptHashes = array_map('md5', $selectedPrompts);
+                $providers    = ['openai', 'gemini', 'perplexity'];
+
+                $totalChecksNeeded = count($selectedPrompts) * count($providers);
+
+                $recentChecks = \App\Models\PostCitation::where('post_id', $post->id)
+                    ->whereIn('prompt_hash', $promptHashes)
+                    ->whereIn('ai_model', $providers)
+                    ->where('checked_at', '>=', $sevenDaysAgo)
+                    ->count();
+
+                if ($recentChecks >= $totalChecksNeeded) {
+                    $skippedOld++;
+                    continue;
+                }
             }
 
             CheckPostCitationsJob::dispatch($post);
@@ -81,5 +108,8 @@ class CheckDailyCitationsCommand extends Command
         }
 
         $this->info("Dispatched {$count} citation check jobs successfully.");
+        if ($skippedOld > 0) {
+            $this->info("Skipped {$skippedOld} posts (all prompts checked within last 7 days).");
+        }
     }
 }

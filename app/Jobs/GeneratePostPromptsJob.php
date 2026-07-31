@@ -39,7 +39,7 @@ class GeneratePostPromptsJob implements ShouldQueue
                 return;
             }
 
-            // Generate prompts. Service handles the limit of 5.
+            // Generate prompts. Service handles the limit.
             $prompts = $service->generatePromptsFromMultipleModelsForPost(
                 $this->post,
                 'job-' . uniqid(),

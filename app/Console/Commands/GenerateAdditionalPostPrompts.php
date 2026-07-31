@@ -16,7 +16,7 @@ class GenerateAdditionalPostPrompts extends Command
                             {--post= : Specific post ID to process}
                             {--brand= : Specific brand ID to process}
                             {--all : Process all active posts across all brands}
-                            {--target=10 : Target number of prompts per post}';
+                            {--target=5 : Target number of prompts per post}';
 
     /**
      * The console command description.

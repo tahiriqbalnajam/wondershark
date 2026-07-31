@@ -1,10 +1,19 @@
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
 import FormattedDate from '@/components/FormattedDate';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -25,17 +34,18 @@ import {
     Brain,
 } from 'lucide-react';
 
-type AiModel = {
+type AiModelOption = {
     id: number;
     name: string;
-} | null;
+    display_name: string;
+};
 
 type Prompt = {
     id: number;
     prompt: string;
     source: string;
     ai_provider: string | null;
-    ai_model: AiModel;
+    ai_model: AiModelOption | null;
     order: number;
     is_selected: boolean;
     is_active: boolean;
@@ -78,9 +88,10 @@ type Props = {
     post: Post;
     prompts: Prompt[];
     summary: Summary;
+    aiModels: AiModelOption[];
 };
 
-export default function PostPromptsShow({ post, prompts, summary }: Props) {
+export default function PostPromptsShow({ post, prompts, summary, aiModels }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Admin', href: '/admin' },
         { title: 'Post Prompts', href: '/admin/post-prompts' },
@@ -96,6 +107,20 @@ export default function PostPromptsShow({ post, prompts, summary }: Props) {
         };
         const c = config[source] || { variant: 'secondary', label: source };
         return <Badge variant={c.variant}>{c.label}</Badge>;
+    };
+
+    const handleAiModelChange = (promptId: number, aiModelId: string) => {
+        router.put(`/admin/post-prompts/prompts/${promptId}/ai-model`, {
+            ai_model_id: Number(aiModelId),
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('AI model updated');
+            },
+            onError: () => {
+                toast.error('Failed to update AI model');
+            },
+        });
     };
 
     const getStatusBadge = (promptStatus: string, postStatus: string) => {
@@ -243,19 +268,21 @@ export default function PostPromptsShow({ post, prompts, summary }: Props) {
                                         </TableCell>
                                         <TableCell>{getSourceBadge(prompt.source)}</TableCell>
                                         <TableCell>
-                                            {prompt.ai_provider ? (
-                                                <img
-                                                    src={`/images/ai-models/${prompt.ai_provider}.svg`}
-                                                    alt={prompt.ai_provider}
-                                                    title={prompt.ai_provider}
-                                                    className="w-6 h-6 rounded-full bg-white border"
-                                                    onError={(e) => {
-                                                        (e.target as HTMLImageElement).style.display = 'none';
-                                                    }}
-                                                />
-                                            ) : (
-                                                <span className="text-muted-foreground">—</span>
-                                            )}
+                                            <Select
+                                                value={String(prompt.ai_model?.id ?? prompt.ai_provider ?? '')}
+                                                onValueChange={(value) => handleAiModelChange(prompt.id, value)}
+                                            >
+                                                <SelectTrigger className="w-36 h-8 text-xs">
+                                                    <SelectValue placeholder="Select model" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {aiModels.map((model) => (
+                                                        <SelectItem key={model.id} value={String(model.id)}>
+                                                            {model.display_name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </TableCell>
                                         <TableCell>{getStatusBadge(prompt.status, post.status)}</TableCell>
                                         <TableCell>

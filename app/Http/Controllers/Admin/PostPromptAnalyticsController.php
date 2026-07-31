@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AiModel;
 use App\Models\Brand;
 use App\Models\Post;
+use App\Models\PostPrompt;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -189,6 +190,9 @@ class PostPromptAnalyticsController extends Controller
             ->whereNull('analysis_failed_at')
             ->count();
 
+        $aiModels = AiModel::where('is_enabled', true)
+            ->get(['id', 'name', 'display_name']);
+
         return Inertia::render('admin/post-prompts/show', [
             'post' => [
                 'id' => $post->id,
@@ -213,6 +217,30 @@ class PostPromptAnalyticsController extends Controller
                 'failed' => $failedCount,
                 'never_analyzed' => $neverAnalyzedCount,
             ],
+            'aiModels' => $aiModels,
         ]);
+    }
+
+    /**
+     * Update the AI model for a specific post prompt.
+     */
+    public function updateAiModel(Request $request, PostPrompt $postPrompt)
+    {
+        $request->validate([
+            'ai_model_id' => 'required|integer|exists:ai_models,id',
+        ]);
+
+        $aiModel = AiModel::find($request->ai_model_id);
+
+        if (! $aiModel || ! $aiModel->is_enabled) {
+            return redirect()->back()->with('error', 'Selected AI model is not enabled.');
+        }
+
+        $postPrompt->update([
+            'ai_provider' => $aiModel->name,
+            'ai_model_id' => $aiModel->id,
+        ]);
+
+        return redirect()->back()->with('success', 'AI model updated successfully.');
     }
 }

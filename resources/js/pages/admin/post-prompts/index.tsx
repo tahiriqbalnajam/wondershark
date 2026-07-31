@@ -18,6 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { toast } from 'sonner';
 import {
     Table,
     TableBody,
@@ -178,6 +179,20 @@ export default function PostPromptsIndex({ posts, filters, agencies, brands, aiM
         if (flash?.success) toast.success(flash.success);
         if (flash?.error) toast.error(flash.error);
     }, [flash]);
+
+    const handleAiModelChange = (promptId: number, aiModelId: string) => {
+        router.put(`/admin/post-prompts/prompts/${promptId}/ai-model`, {
+            ai_model_id: Number(aiModelId),
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('AI model updated');
+            },
+            onError: () => {
+                toast.error('Failed to update AI model');
+            },
+        });
+    };
 
     const togglePost = (postId: number) => {
         setExpandedPosts((prev) => {
@@ -497,7 +512,23 @@ export default function PostPromptsIndex({ posts, filters, agencies, brands, aiM
                                                                             </div>
                                                                         )}
                                                                     </TableCell>
-                                                                    <TableCell>{getAiProviderDisplay(prompt)}</TableCell>
+                                                                    <TableCell>
+                                                                        <Select
+                                                                            value={String(prompt.ai_model_id ?? prompt.ai_provider ?? '')}
+                                                                            onValueChange={(value) => handleAiModelChange(prompt.id, value)}
+                                                                        >
+                                                                            <SelectTrigger className="w-36 h-8 text-xs">
+                                                                                <SelectValue placeholder="Select model" />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent>
+                                                                                {aiModels.map((model) => (
+                                                                                    <SelectItem key={model.id} value={String(model.id)}>
+                                                                                        {model.display_name}
+                                                                                    </SelectItem>
+                                                                                ))}
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </TableCell>
                                                                     <TableCell>{getPromptStatusBadge(prompt.status, post.status)}</TableCell>
                                                                     <TableCell>
                                                                         {prompt.analysis_completed_at ? (

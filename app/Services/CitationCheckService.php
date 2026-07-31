@@ -268,6 +268,7 @@ class CitationCheckService
 
     /**
      * Run citation checks — one API call per prompt, stored individually.
+     * Skips prompts that were already checked within the last 7 days.
      */
     protected function runProviderChecks(Post $post, array $prompts, string $provider): array
     {
@@ -275,8 +276,24 @@ class CitationCheckService
         $promptsMentioned = 0;
         $allResources     = [];
         $promptResults    = [];
+        $skippedCount     = 0;
+        $sevenDaysAgo     = now()->subDays(7);
 
         foreach ($prompts as $promptText) {
+            $promptHash = md5($promptText);
+
+            // Skip if this prompt was checked within the last 7 days
+            $recentExists = PostCitation::where('post_id', $post->id)
+                ->where('ai_model', $provider)
+                ->where('prompt_hash', $promptHash)
+                ->where('checked_at', '>=', $sevenDaysAgo)
+                ->exists();
+
+            if ($recentExists) {
+                $skippedCount++;
+                continue;
+            }
+
             $result = $this->checkCitationWithProvider($post, $promptText, $provider);
 
             // Store this prompt's result as its own DB row immediately
@@ -300,12 +317,13 @@ class CitationCheckService
         }
 
         return [
-            'success'               => true,
-            'is_mentioned'          => $isMentioned,
-            'prompts_analyzed'      => count($prompts),
+            'success'                => true,
+            'is_mentioned'           => $isMentioned,
+            'prompts_analyzed'       => count($promptResults),
+            'prompts_skipped'        => $skippedCount,
             'prompts_mentioning_url' => $promptsMentioned,
-            'resources'             => array_values(array_unique($allResources)),
-            'prompt_results'        => $promptResults,
+            'resources'              => array_values(array_unique($allResources)),
+            'prompt_results'         => $promptResults,
         ];
     }
 
