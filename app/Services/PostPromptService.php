@@ -121,13 +121,30 @@ class PostPromptService extends AIPromptService
             return [];
         }
 
-        // Generate prompts in round-robin order across all enabled models
+        // Generate prompts in round-robin order across all enabled models,
+        // resuming from the last model already used on this post if any.
         $modelList = $aiModels->values();
         $modelCount = $modelList->count();
         $generatedByModel = collect();
 
+        $lastPrompt = PostPrompt::forPost($post->id)
+            ->whereNotNull('ai_model_id')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $startIndex = 0;
+        if ($lastPrompt) {
+            foreach ($modelList as $idx => $m) {
+                if ($m->id == $lastPrompt->ai_model_id) {
+                    $startIndex = $idx + 1;
+                    break;
+                }
+            }
+        }
+
         for ($i = 0; $i < $targetLimit; $i++) {
-            $model = $modelList[$i % $modelCount];
+            $modelIndex = ($startIndex + $i) % $modelCount;
+            $model = $modelList[$modelIndex];
             try {
                 $batch = $this->generatePromptsForPost($post, $sessionId, $model->name, $description, 1);
                 if (! empty($batch)) {
@@ -186,7 +203,17 @@ class PostPromptService extends AIPromptService
                         $countryCode = substr($countryCode, 0, 2);
                     }
 
-                    $firstModel = $aiModels->first();
+                    $lastModelId = $lastPrompt?->ai_model_id ?? null;
+                    $titleModelIndex = 0;
+                    if ($lastModelId) {
+                        foreach ($modelList as $idx => $m) {
+                            if ($m->id == $lastModelId) {
+                                $titleModelIndex = ($idx + 1) % $modelCount;
+                                break;
+                            }
+                        }
+                    }
+                    $titleModel = $modelList[$titleModelIndex] ?? $aiModels->first();
 
                     $titlePrompt = PostPrompt::create([
                         'brand_id' => $post->brand_id,
@@ -194,8 +221,8 @@ class PostPromptService extends AIPromptService
                         'session_id' => $sessionId,
                         'prompt' => trim($post->title),
                         'source' => 'ai_generated',
-                        'ai_provider' => $firstModel?->name ?? 'system',
-                        'ai_model_id' => $firstModel?->id ?? null,
+                        'ai_provider' => $titleModel?->name ?? 'system',
+                        'ai_model_id' => $titleModel?->id ?? null,
                         'order' => 0,
                         'is_selected' => true,
                         'is_active' => true,

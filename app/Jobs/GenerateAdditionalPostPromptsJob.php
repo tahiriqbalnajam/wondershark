@@ -80,13 +80,38 @@ class GenerateAdditionalPostPromptsJob implements ShouldQueue
 
             $newPrompts = [];
 
+            $modelList = $aiModels->values();
+            $modelCount = $modelList->count();
+
+            // Find the last assigned model from existing prompts so we continue
+            // round-robin from the next one instead of always restarting at 0.
+            $lastPrompt = \App\Models\PostPrompt::forPost($post->id)
+                ->whereNotNull('ai_model_id')
+                ->orderBy('id', 'desc')
+                ->first();
+
+            $startIndex = 0;
+            if ($lastPrompt) {
+                foreach ($modelList as $idx => $m) {
+                    if ($m->id == $lastPrompt->ai_model_id) {
+                        $startIndex = $idx + 1;
+                        break;
+                    }
+                }
+            }
+
+            Log::info('Resuming round-robin from next model', [
+                'post_id' => $post->id,
+                'last_ai_model_id' => $lastPrompt?->ai_model_id,
+                'start_index' => $startIndex,
+            ]);
+
             if ($aiNeeded > 0) {
-                $modelList = $aiModels->values();
-                $modelCount = $modelList->count();
                 $generatedByModel = collect();
 
                 for ($i = 0; $i < $aiNeeded; $i++) {
-                    $model = $modelList[$i % $modelCount];
+                    $modelIndex = ($startIndex + $i) % $modelCount;
+                    $model = $modelList[$modelIndex];
                     try {
                         $batch = $postPromptService->generatePromptsForPost(
                             $post,
@@ -147,7 +172,18 @@ class GenerateAdditionalPostPromptsJob implements ShouldQueue
                     $countryCode = substr($countryCode, 0, 2);
                 }
 
-                $firstModel = $aiModels->first();
+                // Use the next model after the last generated (or existing) prompt
+                $lastModelId = $lastPrompt?->ai_model_id ?? null;
+                $titleModelIndex = 0;
+                if ($lastModelId) {
+                    foreach ($modelList as $idx => $m) {
+                        if ($m->id == $lastModelId) {
+                            $titleModelIndex = ($idx + 1) % $modelCount;
+                            break;
+                        }
+                    }
+                }
+                $titleModel = $modelList[$titleModelIndex] ?? $aiModels->first();
 
                 $titlePrompt = \App\Models\PostPrompt::create([
                     'brand_id' => $post->brand_id,
@@ -155,8 +191,8 @@ class GenerateAdditionalPostPromptsJob implements ShouldQueue
                     'session_id' => $this->sessionId,
                     'prompt' => trim($post->title),
                     'source' => 'ai_generated',
-                    'ai_provider' => $firstModel?->name ?? 'system',
-                    'ai_model_id' => $firstModel?->id ?? null,
+                    'ai_provider' => $titleModel?->name ?? 'system',
+                    'ai_model_id' => $titleModel?->id ?? null,
                     'order' => 0,
                     'is_selected' => true,
                     'is_active' => true,
@@ -172,12 +208,12 @@ class GenerateAdditionalPostPromptsJob implements ShouldQueue
                 $newPrompts[] = $titlePrompt;
                 Log::info("  -> Created title prompt for post #{$post->id}", [
                     'post_id' => $post->id,
-                    'model' => $firstModel?->display_name ?? 'system',
+                    'model' => $titleModel?->display_name ?? 'system',
                 ]);
 
                 // Analyze title prompt stats immediately (mirrors what generatePromptsForPost does for AI prompts)
                 try {
-                    $stats = $postPromptService->analyzePromptStatsWithAI($titlePrompt, $post, $firstModel?->name ?? 'openai');
+                    $stats = $postPromptService->analyzePromptStatsWithAI($titlePrompt, $post, $titleModel?->name ?? 'openai');
                     $titlePrompt->update([
                         'visibility' => $stats['visibility'],
                         'position' => $stats['position'],
@@ -189,7 +225,7 @@ class GenerateAdditionalPostPromptsJob implements ShouldQueue
                     ]);
 
                     if (! empty($stats['referrers'])) {
-                        $postPromptService->saveReferrersAsCitations($post, $titlePrompt, $stats['referrers'], $firstModel?->name ?? 'openai');
+                        $postPromptService->saveReferrersAsCitations($post, $titlePrompt, $stats['referrers'], $titleModel?->name ?? 'openai');
                     }
 
                     Log::info('Title prompt stats analyzed and saved', [
