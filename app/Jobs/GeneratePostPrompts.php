@@ -14,7 +14,7 @@ class GeneratePostPrompts implements ShouldQueue
 
     public int $timeout = 300; // 5 minutes timeout
 
-    public int $tries = 3;
+    public int $tries = 1;
 
     /**
      * Create a new job instance.

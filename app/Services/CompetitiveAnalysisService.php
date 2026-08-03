@@ -212,8 +212,8 @@ CRITICAL INSTRUCTIONS:
                         'messages' => [
                             ['role' => 'user', 'content' => $prompt],
                         ],
-                        'temperature' => 0.7,
-                        'max_tokens' => 4000, // More tokens for detailed analysis
+                        // temperature omitted: gpt-5+/gpt-6+ only support default 1.
+                        'max_completion_tokens' => 4000, // More tokens for detailed analysis
                     ]);
 
                 if (! $response->successful()) {

@@ -16,7 +16,7 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
 
     public int $timeout = 600; // 10 minutes timeout
 
-    public int $tries = 3;
+    public int $tries = 1;
 
     /**
      * Delete the job if the BrandPrompt model no longer exists (e.g. user was deleted).

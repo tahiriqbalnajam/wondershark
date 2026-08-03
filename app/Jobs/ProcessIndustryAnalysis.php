@@ -136,7 +136,7 @@ class ProcessIndustryAnalysis implements ShouldQueue
                 $payload = [
                     'model' => $this->aiModel->name,
                     'messages' => [['role' => 'user', 'content' => $prompt]],
-                    'max_tokens' => 4000,
+                    'max_completion_tokens' => 4000,
                 ];
                 break;
 

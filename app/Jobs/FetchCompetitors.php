@@ -59,7 +59,7 @@ class FetchCompetitors implements ShouldQueue
                 ->post('https://api.openai.com/v1/chat/completions', [
                     'model' => $aiModel->name,
                     'messages' => [['role' => 'user', 'content' => $prompt]],
-                    'max_tokens' => 4000,
+                    'max_completion_tokens' => 4000,
                     'response_format' => ['type' => 'json_object'],
                 ]);
 

@@ -109,8 +109,7 @@ class CompetitorController extends Controller
                             ['role' => 'system', 'content' => 'You are a helpful assistant that responds only with valid JSON arrays. Do not include any explanatory text or markdown formatting.'],
                             ['role' => 'user', 'content' => $prompt],
                         ],
-                        'max_tokens' => 4000,
-                        'temperature' => 0.3,
+                        'max_completion_tokens' => 4000,
                     ]);
             }
 
@@ -390,8 +389,7 @@ class CompetitorController extends Controller
                             ['role' => 'system', 'content' => 'You are a helpful assistant that responds only with valid JSON arrays. Do not include any explanatory text or markdown formatting.'],
                             ['role' => 'user', 'content' => $prompt],
                         ],
-                        'max_tokens' => 4000,
-                        'temperature' => 0.3,
+                        'max_completion_tokens' => 4000,
                     ]);
             }
 
@@ -875,8 +873,7 @@ class CompetitorController extends Controller
                             ['role' => 'system', 'content' => 'You are a helpful assistant that responds only with valid JSON arrays. Do not include any explanatory text or markdown formatting.'],
                             ['role' => 'user', 'content' => $prompt],
                         ],
-                        'max_tokens' => 4000,
-                        'temperature' => 0.3,
+                        'max_completion_tokens' => 4000,
                     ]);
             }
 

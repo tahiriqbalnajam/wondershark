@@ -228,7 +228,7 @@ class IndustryAnalysisController extends Controller
             'messages' => [
                 ['role' => 'user', 'content' => $prompt],
             ],
-            'max_tokens' => $config['max_tokens'] ?? 2000,
+            'max_completion_tokens' => $config['max_tokens'] ?? 2000,
         ]);
 
         if ($response->successful()) {

@@ -584,11 +584,13 @@ class CitationCheckService
         // the admin "test AI model" button) can stay a plain chat model.
         $model = $aiModel->api_config['search_model'] ?? $aiModel->api_config['model'] ?? 'gpt-5.5';
 
-        // Force the exact JSON schema via Structured Outputs so reasoning
-        // models (gpt-5.5) can't drift into their own field names, and give
-        // enough output budget that the model actually invokes web_search —
-        // with only ~2000 tokens, gpt-5.5 skips search (reasoning alone eats
-        // ~1700) and answers from memory, returning empty resources.
+        // Force the exact JSON schema via Structured Outputs so the model
+        // can't drift into its own field names. 2000 output tokens is plenty
+        // for the structured citation result on a non-reasoning chat model
+        // (e.g. gpt-5.6-luna) — the old 8000 budget only existed because the
+        // gpt-5.5 reasoning model wasted ~1700 tokens on reasoning before it
+        // would even invoke web_search. Keep an eye on results; bump back up
+        // if you see truncated JSON.
         $response = Http::withHeaders([
             'Authorization' => "Bearer {$aiModel->api_config['api_key']}",
             'Content-Type'  => 'application/json',
@@ -597,7 +599,7 @@ class CitationCheckService
             'tools'             => [['type' => 'web_search', 'search_context_size' => 'medium']],
             'instructions'      => 'You are a citation verification assistant. Answer the user\'s question as you normally would using web search, and list only the sources you actually cite in your answer in the resources field. Do not hunt for any particular page. Respond with the JSON schema only.',
             'input'             => $prompt,
-            'max_output_tokens' => 8000,
+            'max_output_tokens' => 2000,
             'text'              => [
                 'format' => [
                     'type'   => 'json_schema',

@@ -19,7 +19,7 @@ class AnalyzeBrandCompetitiveStats implements ShouldQueue
 
     public int $timeout = 600;
 
-    public int $tries = 3;
+    public int $tries = 1;
 
     public bool $deleteWhenMissingModels = true;
 

@@ -368,8 +368,9 @@ class BrandPromptAnalysisService
                 'messages' => [
                     ['role' => 'user', 'content' => $prompt],
                 ],
-                'temperature' => $temperature,
-                'max_tokens' => $maxTokens,
+                // temperature omitted: gpt-5+/gpt-6+ models (e.g. gpt-6.5-luna)
+                // only support the default (1) — sending 0.7 returns a 400.
+                'max_completion_tokens' => $maxTokens,
             ]);
 
         if (! $response->successful()) {

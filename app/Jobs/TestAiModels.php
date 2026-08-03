@@ -119,7 +119,7 @@ class TestAiModels implements ShouldQueue
                 'messages' => [
                     ['role' => 'user', 'content' => $prompt],
                 ],
-                'max_tokens' => 50,
+                'max_completion_tokens' => 50,
             ]);
 
         if ($response->successful()) {

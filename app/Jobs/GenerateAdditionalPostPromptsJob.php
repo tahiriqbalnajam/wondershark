@@ -14,7 +14,7 @@ class GenerateAdditionalPostPromptsJob implements ShouldQueue
 
     public int $timeout = 300;
 
-    public int $tries = 3;
+    public int $tries = 1;
 
     public function __construct(
         public Post $post,
