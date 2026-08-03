@@ -21,12 +21,19 @@ class RunCitationChecks extends Command
         if ($postId) {
             $this->info("Running citation check for specific Post ID: {$postId}");
             $post = \App\Models\Post::find($postId);
-            
-            if (!$post) {
+
+            if (! $post) {
                 $this->error("Post not found with ID: {$postId}");
+
                 return 1;
             }
-            
+
+            if ($post->status !== 'published') {
+                $this->warn("Post {$postId} is not published (status={$post->status}); nothing to check.");
+
+                return 0;
+            }
+
             $posts = collect([$post]);
         } else {
             $this->info("Fetching posts that need citation checking...");
