@@ -24,14 +24,15 @@ class BrandPromptAnalysisService
     }
 
     /**
-     * Analyze a brand prompt and generate AI response with competitor analysis
+     * Analyze a brand prompt and generate AI response with competitor analysis.
+     * Uses a single AI call to generate both the HTML response and structured analysis.
      */
     public function analyzePrompt(BrandPrompt $brandPrompt, Brand $brand, ?string $preferredModelName = null, ?string $sessionId = null): array
     {
         $competitors = $brand->competitors()->pluck('name')->toArray();
         $subreddits = $brand->subreddits()->pluck('subreddit_name')->toArray();
 
-        Log::info('Analyzing brand prompt', [
+        Log::info('Analyzing brand prompt (single-call)', [
             'brand_prompt_id' => $brandPrompt->id,
             'brand_name' => $brand->name,
             'competitors_count' => count($competitors),
@@ -43,50 +44,28 @@ class BrandPromptAnalysisService
         // Delete existing resources early so that we always start with a clean slate
         BrandPromptResource::where('brand_prompt_id', $brandPrompt->id)->delete();
 
-        // Generate the natural language response
-        $generationPrompt = $this->buildAnalysisPrompt(
+        // Build a single prompt that generates HTML + analysis in one response
+        $mergedPrompt = $this->buildMergedPrompt(
             $brand->name,
             $competitors,
             $brandPrompt->prompt,
             $subreddits
         );
 
-        // Get AI response for HTML generation
-        $generationResponseData = $this->generateAIResponse($generationPrompt, $preferredModelName, $sessionId);
-        
-        // Extract HTML response (handle cases where markers are missing)
-        $htmlText = $generationResponseData['text'];
-        preg_match('/HTML_RESPONSE_START(.*?)HTML_RESPONSE_END/s', $htmlText, $htmlMatches);
-        $htmlResponse = isset($htmlMatches[1]) ? trim($htmlMatches[1]) : $htmlText;
+        // Single AI call
+        $responseData = $this->generateAIResponse($mergedPrompt, $preferredModelName, $sessionId);
 
-        // Generate the extraction analysis prompt based on the HTML result
-        $extractionPrompt = $this->buildExtractionPrompt(
-            $brand->name,
-            $competitors,
-            $htmlResponse,
-            $brandPrompt->prompt,
-            $subreddits
-        );
-
-        Log::info('Extraction Prompt', ['prompt' => $extractionPrompt]);
-
-        // Get AI response for extraction
-        $extractionResponseData = $this->generateAIResponse($extractionPrompt, $preferredModelName, $sessionId);
-
-        // Combine the results into a single pseudo-response for existing parsing logic to handle seamlessly
-        $combinedResponseText = "HTML_RESPONSE_START\n" . $htmlResponse . "\nHTML_RESPONSE_END\n\n" . $extractionResponseData['text'];
-
-        // Parse the combined response to extract resources and analysis
-        $parsedResponse = $this->parseAIResponse($combinedResponseText, $brand, $competitors, $brandPrompt);
+        // Parse the single response (already contains both HTML and ANALYSIS blocks)
+        $parsedResponse = $this->parseAIResponse($responseData['text'], $brand, $competitors, $brandPrompt);
 
         $result = [
             'ai_response' => $parsedResponse['html_response'],
             'resources' => $parsedResponse['resources'],
             'analysis' => $parsedResponse['analysis'],
-            'ai_model_id' => $generationResponseData['ai_model_id'] ?? null,
+            'ai_model_id' => $responseData['ai_model_id'] ?? null,
         ];
 
-        Log::info('Analysis result prepared', [
+        Log::info('Analysis result prepared (single-call)', [
             'brand_prompt_id' => $brandPrompt->id,
             'ai_model_id' => $result['ai_model_id'],
             'has_ai_model_id' => isset($result['ai_model_id']),
@@ -399,7 +378,7 @@ class BrandPromptAnalysisService
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
-                'max_tokens' => $maxTokens,
+                $this->maxTokensParam($model) => $maxTokens,
             ]);
 
         if (! $response->successful()) {
@@ -478,7 +457,7 @@ class BrandPromptAnalysisService
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
-                'max_tokens' => $maxTokens,
+                $this->maxTokensParam($model) => $maxTokens,
             ]);
 
         if (! $response->successful()) {
@@ -503,7 +482,7 @@ class BrandPromptAnalysisService
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
-                'max_tokens' => $maxTokens,
+                $this->maxTokensParam($model) => $maxTokens,
             ]);
 
         if (! $response->successful()) {
@@ -528,7 +507,7 @@ class BrandPromptAnalysisService
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
-                'max_tokens' => $maxTokens,
+                $this->maxTokensParam($model) => $maxTokens,
             ]);
 
         if (! $response->successful()) {
@@ -553,7 +532,7 @@ class BrandPromptAnalysisService
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
-                'max_tokens' => $maxTokens,
+                $this->maxTokensParam($model) => $maxTokens,
             ]);
 
         if (! $response->successful()) {
@@ -578,7 +557,7 @@ class BrandPromptAnalysisService
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
-                'max_tokens' => $maxTokens,
+                $this->maxTokensParam($model) => $maxTokens,
             ]);
 
         if (! $response->successful()) {
@@ -724,6 +703,20 @@ class BrandPromptAnalysisService
         }
 
         return (object) ['text' => $aiOverviewText];
+    }
+
+    /**
+     * Pick the correct max-tokens param for OpenAI-compat providers.
+     * Reasoning models (o1/o3/o4, gpt-5+/gpt-6+) reject 'max_tokens' and require 'max_completion_tokens'.
+     */
+    protected function maxTokensParam(string $model): string
+    {
+        foreach (['o1', 'o3', 'o4', 'gpt-5', 'gpt-6'] as $prefix) {
+            if (str_starts_with($model, $prefix)) {
+                return 'max_completion_tokens';
+            }
+        }
+        return 'max_tokens';
     }
 
     /**

@@ -637,6 +637,20 @@ Generate exactly {$promptCount} statements:";
     }
 
     /**
+     * Pick the correct max-tokens param for OpenAI-compat providers.
+     * Reasoning models (o1/o3/o4, gpt-5+/gpt-6+) reject 'max_tokens' and require 'max_completion_tokens'.
+     */
+    protected function maxTokensParam(string $model): string
+    {
+        foreach (['o1', 'o3', 'o4', 'gpt-5', 'gpt-6'] as $prefix) {
+            if (str_starts_with($model, $prefix)) {
+                return 'max_completion_tokens';
+            }
+        }
+        return 'max_tokens';
+    }
+
+    /**
      * Get default model name for each provider
      */
     protected function getDefaultModel(string $provider): string
@@ -758,7 +772,7 @@ Generate exactly {$promptCount} statements:";
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
-                'max_tokens' => $maxTokens,
+                $this->maxTokensParam($model) => $maxTokens,
             ]);
 
         if (! $response->successful()) {
@@ -783,7 +797,7 @@ Generate exactly {$promptCount} statements:";
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
-                'max_tokens' => $maxTokens,
+                $this->maxTokensParam($model) => $maxTokens,
             ]);
 
         if (! $response->successful()) {
@@ -808,7 +822,7 @@ Generate exactly {$promptCount} statements:";
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
-                'max_tokens' => $maxTokens,
+                $this->maxTokensParam($model) => $maxTokens,
             ]);
 
         if (! $response->successful()) {
@@ -833,7 +847,7 @@ Generate exactly {$promptCount} statements:";
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
-                'max_tokens' => $maxTokens,
+                $this->maxTokensParam($model) => $maxTokens,
             ]);
 
         if (! $response->successful()) {
@@ -858,7 +872,7 @@ Generate exactly {$promptCount} statements:";
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
-                'max_tokens' => $maxTokens,
+                $this->maxTokensParam($model) => $maxTokens,
             ]);
 
         if (! $response->successful()) {
@@ -883,7 +897,7 @@ Generate exactly {$promptCount} statements:";
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => $temperature,
-                'max_tokens' => $maxTokens,
+                $this->maxTokensParam($model) => $maxTokens,
             ]);
 
         if (! $response->successful()) {

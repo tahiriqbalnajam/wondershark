@@ -31,15 +31,28 @@ class RunCitationChecks extends Command
         } else {
             $this->info("Fetching posts that need citation checking...");
             // Grab posts that have generated prompts and are either brand new or haven't been checked recently
-            $posts = \App\Models\Post::whereHas('prompts', function($q) {
-                $q->where('is_selected', true);
-            })->get();
+            $posts = \App\Models\Post::where('status', 'published')
+                ->whereHas('brand', function($q) {
+                    $q->where('status', 'active');
+                })
+                ->whereHas('prompts', function($q) {
+                    $q->where('is_selected', true);
+                })
+                ->get();
             $this->info("Found {$posts->count()} posts to check.");
         }
 
         foreach ($posts as $post) {
             $this->line("Checking Post ID: {$post->id} - {$post->url}");
-            
+
+            // Skip posts whose brand user lacks an active subscription
+            $brand = $post->brand;
+            $brandUser = $brand ? \App\Models\User::find($brand->user_id ?? $brand->agency_id) : null;
+            if ($brandUser && ! $brandUser->canProcessAnalysis()) {
+                $this->warn("Skipping Post {$post->id} — brand user has no active subscription");
+                continue;
+            }
+
             try {
                 $result = $citationService->runCitationCheck($post);
                 

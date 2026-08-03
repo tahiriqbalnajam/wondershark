@@ -48,6 +48,30 @@ class CitationCheckService
             ];
         }
 
+        // Skip posts whose brand is not active or user lacks subscription
+        $brand = $post->brand;
+        if (! $brand || $brand->status !== 'active') {
+            return [
+                'success' => false,
+                'message' => 'Brand is not active ('.($brand->status ?? 'missing').'); skipping citation check.',
+                'results' => [],
+            ];
+        }
+
+        $brandUser = $brand ? \App\Models\User::find($brand->user_id ?? $brand->agency_id) : null;
+        if ($brandUser && ! $brandUser->canProcessAnalysis()) {
+            Log::info('Skipping citation check — trial expired or no active subscription', [
+                'post_id' => $post->id,
+                'user_id' => $brandUser->id,
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Brand user has no active subscription; skipping citation check.',
+                'results' => [],
+            ];
+        }
+
         // Pre-load all enabled provider configs in a single query
         $this->warmProviderCache();
 
@@ -177,7 +201,7 @@ class CitationCheckService
             return [];
         }
 
-        $maxPrompts  = 25;
+        $maxPrompts  = 5;
         $totalPrompts = $promptsByProvider->sum(fn ($p) => $p->count());
 
         if ($totalPrompts <= $maxPrompts) {
