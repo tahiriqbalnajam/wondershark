@@ -32,10 +32,30 @@ class CheckDailyCitationsCommand extends Command
         $postId = $this->option('post');
         $brandId = $this->option('brand');
 
+        // Step 1: Determine which brands have an active subscription/trial
+        // before fetching any posts.
+        $eligibleBrandIds = \App\Models\Brand::where('status', 'active')
+            ->pluck('id')
+            ->toArray();
+
+        $eligibleBrandIds = array_filter($eligibleBrandIds, function ($id) {
+            $brand = \App\Models\Brand::find($id);
+            if (! $brand) {
+                return false;
+            }
+            $brandUser = \App\Models\User::find($brand->user_id ?? $brand->agency_id);
+
+            return ! $brandUser || $brandUser->canProcessAnalysis();
+        });
+
+        if (empty($eligibleBrandIds)) {
+            $this->info('No eligible brands found (all inactive or expired subscriptions).');
+
+            return;
+        }
+
         $query = Post::where('status', 'published')
-            ->whereHas('brand', function ($q) {
-                $q->where('status', 'active');
-            });
+            ->whereIn('brand_id', $eligibleBrandIds);
 
         if ($postId) {
             $this->info("Checking citations for specific post ID: {$postId}");
@@ -48,36 +68,26 @@ class CheckDailyCitationsCommand extends Command
         }
 
         $posts = $query->get();
-        
+
         if ($posts->isEmpty()) {
             if ($postId || $brandId) {
-                $this->error("No valid published posts found matching your criteria.");
+                $this->error('No valid published posts found matching your criteria.');
             } else {
-                $this->info("No published posts found to process.");
+                $this->info('No published posts found to process for eligible brands.');
             }
+
             return;
         }
 
-        if (!$postId && !$brandId) {
-            $this->info("Starting the citations check dispatch for all active posts.");
+        if (! $postId && ! $brandId) {
+            $this->info('Starting the citations check dispatch for all active posts.');
         }
 
-        $count       = 0;
-        $skippedOld  = 0;
+        $count = 0;
+        $skippedOld = 0;
         $sevenDaysAgo = now()->subDays(7);
 
         foreach ($posts as $post) {
-            // Skip if the brand owner's trial has expired and they have no active subscription
-            $brandUser = \App\Models\User::find($post->brand->user_id ?? $post->brand->agency_id);
-            if ($brandUser && ! $brandUser->canProcessAnalysis()) {
-                Log::info('Skipping citation check dispatch — trial expired, no active subscription', [
-                    'post_id'  => $post->id,
-                    'brand_id' => $post->brand_id,
-                    'user_id'  => $brandUser->id,
-                ]);
-
-                continue;
-            }
 
             // Skip posts where every prompt was checked within the last 7 days
             $selectedPrompts = $post->prompts()

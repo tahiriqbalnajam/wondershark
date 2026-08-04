@@ -32,7 +32,7 @@ class ConsoleController extends Controller
             ],
             [
                 'signature' => 'posts:fetch-prompts-stats',
-                'description' => 'Post Prompt Stats Fetching - Runs daily at 3 AM UTC',
+                'description' => 'Post Prompt Stats Fetching - Runs weekly on Monday at 3 AM UTC',
                 'options' => [
                     ['name' => 'post', 'type' => 'text', 'label' => 'Post ID (Optional)', 'prefix' => '--post='],
                     ['name' => 'brand', 'type' => 'text', 'label' => 'Brand ID (Optional)', 'prefix' => '--brand='],
@@ -60,7 +60,7 @@ class ConsoleController extends Controller
             ],
             [
                 'signature' => 'posts:check-urls',
-                'description' => 'Check Post URLs - Runs daily at 7 AM UTC',
+                'description' => 'Check Post URLs - Runs twice weekly on Monday and Thursday at 7 AM UTC',
                 'options' => [
                     // ['name' => 'post', 'type' => 'text', 'label' => 'Specific Post ID (Optional)', 'prefix' => '--post='],
                     ['name' => 'all-brands', 'type' => 'boolean', 'label' => 'All Brands', 'prefix' => '--all-brands', 'default' => false],

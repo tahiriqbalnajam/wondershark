@@ -52,6 +52,11 @@ class FetchPostPromptsStatsJob implements ShouldQueue
 
             foreach ($prompts as $prompt) {
                 try {
+                    // Skip prompts already analyzed within the last 7 days
+                    if ($prompt->analysis_completed_at && $prompt->analysis_completed_at->gt(now()->subDays(7))) {
+                        continue;
+                    }
+
                     // Analyze and update stats for this prompt
                     $stats = $postPromptService->analyzePromptStatsWithAI($prompt, $post);
 
