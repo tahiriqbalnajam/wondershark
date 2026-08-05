@@ -32,7 +32,7 @@ class BrandPromptAnalysisService
         $competitors = $brand->competitors()->pluck('name')->toArray();
         $subreddits = $brand->subreddits()->pluck('subreddit_name')->toArray();
 
-        Log::info('Analyzing brand prompt (single-call)', [
+        Log::info('Analyzing brand prompt', [
             'brand_prompt_id' => $brandPrompt->id,
             'brand_name' => $brand->name,
             'competitors_count' => count($competitors),
@@ -44,28 +44,50 @@ class BrandPromptAnalysisService
         // Delete existing resources early so that we always start with a clean slate
         BrandPromptResource::where('brand_prompt_id', $brandPrompt->id)->delete();
 
-        // Build a single prompt that generates HTML + analysis in one response
-        $mergedPrompt = $this->buildMergedPrompt(
+         // Generate the natural language response
+        $generationPrompt = $this->buildAnalysisPrompt(
             $brand->name,
             $competitors,
             $brandPrompt->prompt,
             $subreddits
         );
 
-        // Single AI call
-        $responseData = $this->generateAIResponse($mergedPrompt, $preferredModelName, $sessionId);
+          // Get AI response for HTML generation
+        $generationResponseData = $this->generateAIResponse($generationPrompt, $preferredModelName, $sessionId);
+        
+        // Extract HTML response (handle cases where markers are missing)
+        $htmlText = $generationResponseData['text'];
+        preg_match('/HTML_RESPONSE_START(.*?)HTML_RESPONSE_END/s', $htmlText, $htmlMatches);
+        $htmlResponse = isset($htmlMatches[1]) ? trim($htmlMatches[1]) : $htmlText;
 
-        // Parse the single response (already contains both HTML and ANALYSIS blocks)
-        $parsedResponse = $this->parseAIResponse($responseData['text'], $brand, $competitors, $brandPrompt);
+        // Generate the extraction analysis prompt based on the HTML result
+        $extractionPrompt = $this->buildExtractionPrompt(
+            $brand->name,
+            $competitors,
+            $htmlResponse,
+            $brandPrompt->prompt,
+            $subreddits
+        );
+
+        Log::info('Extraction Prompt', ['prompt' => $extractionPrompt]);
+
+        // Get AI response for extraction
+        $extractionResponseData = $this->generateAIResponse($extractionPrompt, $preferredModelName, $sessionId);
+
+         // Combine the results into a single pseudo-response for existing parsing logic to handle seamlessly
+        $combinedResponseText = "HTML_RESPONSE_START\n" . $htmlResponse . "\nHTML_RESPONSE_END\n\n" . $extractionResponseData['text'];
+
+        // Parse the combined response to extract resources and analysis
+        $parsedResponse = $this->parseAIResponse($combinedResponseText, $brand, $competitors, $brandPrompt);
 
         $result = [
             'ai_response' => $parsedResponse['html_response'],
             'resources' => $parsedResponse['resources'],
             'analysis' => $parsedResponse['analysis'],
-            'ai_model_id' => $responseData['ai_model_id'] ?? null,
+           'ai_model_id' => $generationResponseData['ai_model_id'] ?? null,
         ];
 
-        Log::info('Analysis result prepared (single-call)', [
+        Log::info('Analysis result prepared', [
             'brand_prompt_id' => $brandPrompt->id,
             'ai_model_id' => $result['ai_model_id'],
             'has_ai_model_id' => isset($result['ai_model_id']),
