@@ -2,6 +2,7 @@ import { Head, useForm } from '@inertiajs/react';
 import { LoaderCircle, Mail, Eye, EyeOff } from 'lucide-react';
 import { FormEventHandler, useState } from 'react';
 
+import BookCallDialog from '@/components/book-call-dialog';
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ interface LoginProps {
 export default function Login({ status, canResetPassword }: LoginProps) {
     const [useMagicLink, setUseMagicLink] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [bookCallOpen, setBookCallOpen] = useState(false);
 
     const { data, setData, post, processing, errors, reset } = useForm<Required<LoginForm>>({
         email: '',
@@ -161,9 +163,14 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
                     <div className="text-center text-sm text-muted-foreground">
                         Don't have an account?{' '}
-                        <TextLink href={route('register')} tabIndex={5}>
+                       { /** <TextLink href={route('register')} tabIndex={5}>
                             Sign up
                         </TextLink>
+                        */  }
+
+                         <button type="button" onClick={() => setBookCallOpen(true)} className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500">
+                            Book a Call
+                        </button>
                     </div>
                 </form>
             ) : (
@@ -210,12 +217,18 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
                     <div className="text-center text-sm text-muted-foreground">
                         Don't have an account?{' '}
-                        <TextLink href={route('register')} tabIndex={3}>
+                        { /**  <TextLink href={route('register')} tabIndex={3}>
                             Sign up
-                        </TextLink>
+                        </TextLink> */  }
+
+                          <button type="button" onClick={() => setBookCallOpen(true)} className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500">
+                            Book a Call
+                        </button>
                     </div>
                 </form>
             )}
+
+            <BookCallDialog open={bookCallOpen} onOpenChange={setBookCallOpen} />
         </AuthLayout>
     );
 }
