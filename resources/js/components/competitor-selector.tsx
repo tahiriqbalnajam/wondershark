@@ -193,10 +193,10 @@ export default function CompetitorSelector({
                                                 </CardTitle>
                                             </CardHeader>
                                             <CardContent className='p-0'>
-                                                <p className="text-sm text-gray-600 mx-6 my-3">{competitor.domain}</p>
-                                                <div className="buttons-wrapp flex items-center justify-between">
+                                                <p className="text-sm text-gray-600 mx-6 my-3 break-words">{competitor.domain}</p>
+                                                <div className="buttons-wrapp flex items-center justify-between mx-6 mb-3 flex-wrap gap-2">
                                                     <p className="text-sm text-gray-600">{competitor.mentions || 0} Mentions</p>
-                                                    <div className="flex items-center justify-end gap-3">
+                                                    <div className="flex items-center justify-end gap-3 ml-auto sm:ml-0">
                                                         <Button 
                                                         className='df-btn'
                                                             size="sm" 
@@ -284,10 +284,10 @@ export default function CompetitorSelector({
                                                 </CardTitle>
                                             </CardHeader>
                                             <CardContent className='p-0'>
-                                                <p className="text-sm text-gray-600 mx-6 my-3">{competitor.domain}</p>
-                                                <div className="buttons-wrapp flex items-center justify-between">
+                                                <p className="text-sm text-gray-600 mx-6 my-3 break-words">{competitor.domain}</p>
+                                                <div className="buttons-wrapp flex items-center justify-between mx-6 mb-3 flex-wrap gap-2">
                                                     <p className="text-sm text-gray-600">{competitor.mentions || 0} Mentions</p>
-                                                    <div className="flex items-center justify-end gap-3">
+                                                    <div className="flex items-center justify-end gap-3 ml-auto sm:ml-0">
                                                         <Button 
                                                             className="cancel-btn"
                                                             size="sm" 

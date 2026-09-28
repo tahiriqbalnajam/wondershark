@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
 import HeadingSmall from '@/components/heading-small';
-import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Calendar, Trophy, TrendingUp, TrendingDown, Bot, User, Download, RefreshCw, Clock, Zap } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Calendar, Trophy, TrendingUp, TrendingDown, Bot, User, Download, RefreshCw, Clock, Zap, Info } from 'lucide-react';
 import { VisibilityChart } from '@/components/chart/visibility';
 import { BrandVisibilityIndex } from '@/components/dashboard-table/brand-visibility';
 import { AiCitations } from '@/components/chat/ai-citations';
@@ -22,6 +22,11 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { DayPicker } from 'react-day-picker';
 import { format, addDays, subDays } from 'date-fns';
@@ -178,6 +183,18 @@ interface Props {
     showTrialPopup?: boolean;
     showSubscribePopup?: boolean;
     billingUrl?: string;
+    patientForecasts?: Record<string, PatientForecastSummary>;
+}
+
+interface PatientForecastSummary {
+    visibility: number | null;
+    market_share: number | null;
+    booked_consultations_estimated: number | null;
+    new_patients_lower: number | null;
+    new_patients_upper: number | null;
+    status: 'pending' | 'processing' | 'completed' | 'failed';
+    region: string | null;
+    procedure: string | null;
 }
 
 const breadcrumbs = (brand: Brand) => [
@@ -208,7 +225,7 @@ const cleanAiResponse = (response: string | undefined): string => {
     return cleaned.trim();
 };
 
-export default function BrandShow({ brand, competitiveStats, historicalStats, aiModels, allBrands, analysisStatus, postPrompts = [], showTrialPopup = false, showSubscribePopup = false, billingUrl = '/agency/billing' }: Props) {
+export default function BrandShow({ brand, competitiveStats, historicalStats, aiModels, allBrands, analysisStatus, postPrompts = [], showTrialPopup = false, showSubscribePopup = false, billingUrl = '/agency/billing', patientForecasts = {} }: Props) {
     const [selectedCompetitorDomain, setSelectedCompetitorDomain] = useState<string | null>(null);
     const [triggeringAnalysis, setTriggeringAnalysis] = useState(false);
     const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -264,6 +281,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
     const [brandFilter, setBrandFilter] = useState<'all' | 'with-agency' | 'without-agency'>('all');
     const [currentPage, setCurrentPage] = useState(1);
     const [tableLimit, setTableLimit] = useState<number | undefined>(5);
+    const [citationFilter, setCitationFilter] = useState<'all' | 'brand' | 'post'>('all');
 
     const fetchDashboardData = (days: string, model: string) => {
         const offset = -new Date().getTimezoneOffset();
@@ -695,16 +713,23 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
 
     // Merge brand and post prompts, sorted by analysis date (newest first)
     const filteredPrompts = useMemo(() => {
-        const combined = [
-            ...filteredBrandPrompts,
-            ...filteredPostPrompts,
-        ];
+        let combined: AnyPrompt[] = [];
+        if (citationFilter === 'brand') {
+            combined = [...filteredBrandPrompts];
+        } else if (citationFilter === 'post') {
+            combined = [...filteredPostPrompts];
+        } else {
+            combined = [
+                ...filteredBrandPrompts,
+                ...filteredPostPrompts,
+            ];
+        }
         return combined.sort((a, b) => {
             const aDate = a.analysis_completed_at ? new Date(a.analysis_completed_at).getTime() : 0;
             const bDate = b.analysis_completed_at ? new Date(b.analysis_completed_at).getTime() : 0;
             return bDate - aDate;
         });
-    }, [filteredBrandPrompts, filteredPostPrompts]);
+    }, [filteredBrandPrompts, filteredPostPrompts, citationFilter]);
 
     // const visiblePrompts = filteredPrompts.slice((currentPage - 1) * 9, currentPage * 9);
     const visiblePrompts = filteredPrompts.slice(0, currentPage * 9);
@@ -1052,6 +1077,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                         </CardHeader>
                         <BrandVisibilityIndex
                             competitiveStats={filteredCompetitiveStats}
+                            patientForecasts={patientForecasts}
                             onRowClick={handleBrandRowClick}
                             brandId={brand.id}
                             limit={5}
@@ -1064,24 +1090,73 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                             brandLogo={brand.logo ? `/storage/${brand.logo}` : null}
                             brandName={brand.name}
                             rankingQueryString={rankingQueryString}
+                            sortByDisplayedVisibility
                         />
                     </Card>
                 </div>
 
                 {/* Recent chats */}
                 <Card id="recent-citations" data-section="ai-citations">
-                    <CardHeader>
-                        <div className='md:flex block items-center justify-between'>
-                            <div className='flex items-center mb-5 md:mb-0'>
+                    <CardHeader className="px-10">
+                        <div className="flex flex-col gap-3">
+                            <div className="flex items-center justify-between">
                                 <CardTitle className="flex items-center gap-2">
                                     <span className='w-[45px] h-[45px] bg-gray-200 flex items-center justify-center rounded'><MessageSquare /></span>
                                     Recent AI Citations ({visiblePrompts.length} of {filteredPrompts?.length || 0})
                                 </CardTitle>
-                                {selectedCompetitorDomain && (
-                                    <Button variant="outline" size="sm" className="ml-2" onClick={() => setSelectedCompetitorDomain(null)}>
-                                        Clear filter
-                                    </Button>
-                                )}
+                                <div className="flex items-center gap-2">
+                                    {selectedCompetitorDomain && (
+                                        <Button variant="outline" size="sm" onClick={() => setSelectedCompetitorDomain(null)}>
+                                            Clear filter
+                                        </Button>
+                                    )}
+                                    {(['all', 'brand', 'post'] as const).map((type) => (
+                                        <button
+                                            key={type}
+                                            onClick={() => { setCitationFilter(type); setCurrentPage(1); }}
+                                            className={`px-4 py-1.5 rounded-full text-sm font-semibold border-2 transition-colors inline-flex items-center gap-1.5 ${
+                                                citationFilter === type
+                                                    ? 'bg-gray-900 text-white border-gray-900'
+                                                    : 'bg-white text-gray-700 border-gray-400 hover:bg-gray-50 hover:border-gray-500'
+                                            }`}
+                                        >
+                                            {type === 'all' ? 'All' : type === 'brand' ? (
+                                                <>
+                                                    Public
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Info className={`h-3.5 w-3.5 cursor-help ${citationFilter === 'brand' ? 'text-white' : 'text-gray-500'}`} />
+                                                        </TooltipTrigger>
+                                                        <TooltipContent className="w-64">
+                                                            <p className="text-xs text-center">
+                                                                Public AI Citations are instances where an AI platform cites or references your brand, website, physician profile, or owned digital properties as a source in its answer.
+                                                            </p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <img
+                                                        src="/storage/Favicon.png"
+                                                        alt=""
+                                                        className="w-4 h-4 object-contain"
+                                                    />
+                                                    Post
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Info className={`h-3.5 w-3.5 cursor-help ${citationFilter === 'post' ? 'text-white' : 'text-gray-500'}`} />
+                                                        </TooltipTrigger>
+                                                        <TooltipContent className="w-64">
+                                                            <p className="text-xs text-center">
+                                                                Post AI Citations are instances where an AI platform cites or uses a specific piece of content created or published about you by Wondershark.ai, such as a Reddit post, article, PR placement, blog post, or other third-party content.
+                                                            </p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </CardHeader>

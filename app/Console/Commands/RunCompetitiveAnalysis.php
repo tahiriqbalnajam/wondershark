@@ -5,8 +5,10 @@ namespace App\Console\Commands;
 use App\Models\Brand;
 use App\Services\AIPromptService;
 use App\Services\CompetitiveAnalysisService;
+use App\Services\PatientForecastService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class RunCompetitiveAnalysis extends Command
 {
@@ -98,7 +100,13 @@ class RunCompetitiveAnalysis extends Command
             }
 
             try {
-                $analysisResults = $this->competitiveAnalysisService->analyzeBrandCompetitiveStats($brand);
+                $competitiveSessionId = Str::uuid()->toString();
+                $analysisResults = $this->competitiveAnalysisService->analyzeBrandCompetitiveStats($brand, $competitiveSessionId);
+
+                // Run the Phase 5 patient-acquisition forecast synchronously against
+                // the same session. Skips silently if the brand has no procedure/region
+                // (mirrors App\Jobs\ProcessPatientForecastBatch skip logic).
+                $this->runPatientForecastSynchronously($brand, $competitiveSessionId);
 
                 if (! empty($analysisResults)) {
                     $successCount++;
@@ -175,5 +183,73 @@ class RunCompetitiveAnalysis extends Command
         }
 
         return $failureCount === 0 ? Command::SUCCESS : Command::FAILURE;
+    }
+
+    /**
+     * Run the Phase 5 patient-acquisition forecast synchronously against the
+     * given BVI session. Skips silently if the brand is missing procedure/region
+     * or the brand owner cannot process analysis.
+     */
+    protected function runPatientForecastSynchronously(Brand $brand, string $competitiveSessionId): void
+    {
+        if (empty($brand->procedure) || empty($brand->region)) {
+            Log::info('Skipping patient forecast — brand missing procedure or region', [
+                'brand_id' => $brand->id,
+                'analysis_session_id' => $competitiveSessionId,
+            ]);
+
+            return;
+        }
+
+        $brandUser = \App\Models\User::find($brand->user_id ?? $brand->agency_id);
+        if ($brandUser && ! $brandUser->canProcessAnalysis()) {
+            Log::info('Skipping patient forecast — trial expired, no active subscription', [
+                'brand_id' => $brand->id,
+                'user_id' => $brandUser->id,
+            ]);
+
+            return;
+        }
+
+        try {
+            $service = app(PatientForecastService::class);
+
+            $entities = $service->computeSessionMarketShares($brand, $competitiveSessionId);
+            if (empty($entities)) {
+                Log::info('Skipping patient forecast — no BVI stats for session', [
+                    'brand_id' => $brand->id,
+                    'analysis_session_id' => $competitiveSessionId,
+                ]);
+
+                return;
+            }
+
+            $prompt = $service->buildBatchedPrompt($brand, $entities);
+            $aiResponse = $service->callAIForBatchedForecast($prompt);
+            $results = $service->parseAndComputeAll($aiResponse['analysis'], $brand, $competitiveSessionId, $entities);
+            $service->storeResults(
+                $competitiveSessionId,
+                $results,
+                $aiResponse['ai_model_id'],
+                $aiResponse['raw_response'] ?? null,
+                $prompt,
+            );
+
+            $completed = count(array_filter($results, fn ($r) => ($r['status'] ?? '') === 'completed'));
+            $failed = count($results) - $completed;
+
+            Log::info('Patient forecast completed inline', [
+                'brand_id' => $brand->id,
+                'analysis_session_id' => $competitiveSessionId,
+                'completed' => $completed,
+                'failed' => $failed,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Patient forecast failed inline', [
+                'brand_id' => $brand->id,
+                'analysis_session_id' => $competitiveSessionId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

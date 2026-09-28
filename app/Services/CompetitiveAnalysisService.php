@@ -754,6 +754,11 @@ CRITICAL INSTRUCTIONS:
             $sessionStats = BrandCompetitiveStat::where('brand_id', $brand->id)
                 ->where('analysis_session_id', $completeSession->analysis_session_id)
                 ->with(['competitor'])
+                // Skip stale rows for competitors that no longer exist or aren't accepted.
+                ->where(function ($q) {
+                    $q->whereNull('competitor_id')
+                      ->orWhereHas('competitor', fn ($cq) => $cq->where('status', 'accepted'));
+                })
                 ->get();
 
             $result = [];
@@ -845,6 +850,14 @@ CRITICAL INSTRUCTIONS:
         $aiVisibilityStats = BrandCompetitiveStat::where('brand_id', $brand->id)
             ->whereBetween('analyzed_at', [$startDate, $endDate])
             ->when($aiModelId, fn ($q) => $q->where('ai_model_id', $aiModelId))
+            // Only include competitor rows whose competitor still exists and is accepted.
+            // The brand's own row (competitor_id IS NULL) is always included.
+            // Stale BVI rows for deleted/unaccepted competitors are ignored so the
+            // dashboard doesn't show entities the user has already removed.
+            ->where(function ($q) {
+                $q->whereNull('competitor_id')
+                  ->orWhereHas('competitor', fn ($cq) => $cq->where('status', 'accepted'));
+            })
             ->orderBy('analyzed_at')
             ->get()
             ->groupBy(function ($s) use ($timezone) {
@@ -860,6 +873,29 @@ CRITICAL INSTRUCTIONS:
 
             return (float) ($overridden ? $overridden->getEffectiveVisibility() : $g->last()->getEffectiveVisibility());
         });
+
+        // Entity keys ('brand' or 'c_<id>') with at least one manual override in the window.
+        // A manual override must take precedence over the forecast on the BVI table, so each
+        // returned row exposes has_manual_override and the frontend prefers this row's
+        // (override-aware) visibility over the forecast value when it is set.
+        $overrideEntityKeys = [];
+        foreach ($aiVisibilityStats as $dayKey => $group) {
+            if ($group->contains(fn ($s) => $s->visibility_override !== null)) {
+                [, $entityKey] = explode('|', $dayKey, 2);
+                $overrideEntityKeys[$entityKey] = true;
+            }
+        }
+
+        $flagOverrides = function (array $stats) use ($overrideEntityKeys): array {
+            foreach ($stats as &$stat) {
+                $key = ($stat['competitor_id'] ?? null) ? 'c_'.$stat['competitor_id'] : 'brand';
+                $stat['has_manual_override'] = isset($overrideEntityKeys[$key])
+                    || (($stat['visibility_override'] ?? null) !== null);
+            }
+            unset($stat);
+
+            return $stats;
+        };
 
         // Denominator = all distinct dates that have ANY data (brand_mentions OR AI stats).
         // Use already-loaded in-memory collections so dates match the chart exactly:
@@ -937,7 +973,7 @@ CRITICAL INSTRUCTIONS:
             $fallback = $this->appendMissingAcceptedCompetitors($brand, $fallback, $days, $aiModelId, $timezone);
             $applyDailyAverageWithOverrides($fallback);
 
-            return $fallback;
+            return $flagOverrides($fallback);
         }
 
         $distinctMentionDates = $dailyEntityStats->pluck('date')->unique()->count();
@@ -1237,7 +1273,7 @@ CRITICAL INSTRUCTIONS:
         // Sort by visibility descending
         usort($visibilityStats, fn ($a, $b) => $b['visibility'] <=> $a['visibility']);
 
-        return $visibilityStats;
+        return $flagOverrides($visibilityStats);
     }
 
     /**

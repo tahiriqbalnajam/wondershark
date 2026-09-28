@@ -171,7 +171,7 @@ export function AiCitations({ prompts, onPromptClick }: AiCitationsProps) {
                                                 : 'border-blue-300 bg-blue-50 text-blue-700'
                                                 }`}
                                         >
-                                            {isPostPrompt ? 'Post' : 'Brand'}
+                                            {isPostPrompt ? 'Post' : 'Public'}
                                         </Badge>
                                         {isPostPrompt && prompt.post?.title && (
                                             <span className="text-[10px] text-muted-foreground truncate max-w-[120px]" title={prompt.post.title}>

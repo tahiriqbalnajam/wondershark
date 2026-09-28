@@ -100,7 +100,11 @@ class BrandController extends Controller
             'website' => 'nullable|url|max:255',
             'description' => 'nullable|string|max:1000',
             'country' => 'nullable|string|max:100',
-            'region' => 'nullable|string|max:100',
+            'region' => 'nullable|array|max:5',
+            'region.*.state' => 'required_with:region|string|max:100',
+            'region.*.cities' => 'nullable|array|max:20',
+            'region.*.cities.*' => 'nullable|string|max:100',
+            'procedure' => 'nullable|string|max:255',
             'prompts' => 'array|max:25',
             'prompts.*' => 'required|string|max:500',
             'subreddits' => 'array|max:20',
@@ -147,7 +151,8 @@ class BrandController extends Controller
                 'website' => $request->website,
                 'description' => $request->description,
                 'country' => $request->country,
-                'region' => $request->region,
+                'region' => array_values(array_filter($request->region ?? [], fn ($r) => !empty($r['state']))),
+                'procedure' => $request->procedure,
                 'monthly_posts' => $request->monthly_posts,
                 'status' => 'active',
             ]);
@@ -220,7 +225,11 @@ class BrandController extends Controller
             'website' => 'nullable|url|max:255',
             'description' => 'nullable|string|max:1000',
             'country' => 'nullable|string|max:100',
-            'region' => 'nullable|string|max:100',
+            'region' => 'nullable|array|max:5',
+            'region.*.state' => 'required_with:region|string|max:100',
+            'region.*.cities' => 'nullable|array|max:20',
+            'region.*.cities.*' => 'nullable|string|max:100',
+            'procedure' => 'nullable|string|max:255',
             'campaign_indicator' => 'nullable|string|max:255',
             'trackedName' => 'nullable|string|max:255',
             'allies' => 'nullable|array',
@@ -236,7 +245,8 @@ class BrandController extends Controller
             'website' => $request->website,
             'description' => $request->description,
             'country' => $request->country,
-            'region' => $request->region,
+            'region' => array_values(array_filter($request->region ?? [], fn ($r) => !empty($r['state']))),
+            'procedure' => $request->procedure,
             'campaign_indicator' => $request->campaign_indicator,
             'trackedName' => $request->trackedName,
             'allies' => $request->allies ?? [],
@@ -283,6 +293,7 @@ class BrandController extends Controller
                 'description' => $brand->description,
                 'country' => $brand->country,
                 'region' => $brand->region,
+                'procedure' => $brand->procedure,
                 'campaign_indicator' => $brand->campaign_indicator ?? '',
                 'monthly_posts' => $brand->monthly_posts,
                 'trackedName' => $brand->trackedName ?? '',
@@ -907,6 +918,15 @@ class BrandController extends Controller
             $metadata  = is_array($citation->metadata) ? $citation->metadata : json_decode($citation->metadata ?? '{}', true) ?? [];
             $resources = $metadata['resources'] ?? [];
 
+            // For post citations, only show the URL that was actually cited (matched_url
+            // or source_url), not all the unrelated pages the AI touched during search.
+            $matchedUrl = $metadata['matched_url'] ?? null;
+            $sourceUrl  = $metadata['source_url']  ?? null;
+            $resources  = array_values(array_filter(
+                array_unique([$matchedUrl, $sourceUrl]),
+                fn ($u) => ! empty($u)
+            ));
+
             // Use search_context as the readable AI response.
             // raw_response is the literal JSON string returned by the AI API (not human-readable).
             // search_context is the readable "what was searched" summary extracted from the JSON.
@@ -1018,6 +1038,12 @@ class BrandController extends Controller
             }
         }
 
+        // Load the latest patient-acquisition forecast batch for this brand.
+        // Forecasts are stored per-entity (brand + each competitor) per analysis
+        // session. We pick the most recent session and pass all its rows to the
+        // frontend, keyed by competitor_id (null = the brand's own row).
+        $patientForecasts = $this->loadLatestPatientForecasts($brand);
+
         return Inertia::render('brands/show', [
             'brand' => $brand,
             'competitiveStats' => $competitiveStats,
@@ -1029,7 +1055,44 @@ class BrandController extends Controller
             'showTrialPopup' => $showTrialPopup,
             'showSubscribePopup' => $showSubscribePopup,
             'billingUrl' => $user->hasRole('agency') ? '/agency/billing' : '/brand/billing',
+            'patientForecasts' => $patientForecasts,
         ]);
+    }
+
+    /**
+     * Load the latest patient-acquisition forecast batch for a brand, keyed by
+     * entity ('brand' for the brand's own row, 'competitor:<id>' for each competitor).
+     * Returns an empty array if no forecasts exist yet.
+     */
+    protected function loadLatestPatientForecasts(Brand $brand): array
+    {
+        if (trim((string) $brand->procedure) === '') {
+            return [];
+        }
+
+        $latestSession = \App\Models\PatientForecast::where('brand_id', $brand->id)
+            ->latest('created_at')
+            ->value('analysis_session_id');
+
+        if (! $latestSession) {
+            return [];
+        }
+
+        return \App\Models\PatientForecast::where('brand_id', $brand->id)
+            ->where('analysis_session_id', $latestSession)
+            ->get()
+            ->keyBy(fn ($f) => $f->competitor_id === null ? 'brand' : 'competitor:'.$f->competitor_id)
+            ->map(fn ($f) => [
+                'visibility' => $f->visibility !== null ? (float) $f->visibility : null,
+                'market_share' => $f->market_share !== null ? (float) $f->market_share : null,
+                'booked_consultations_estimated' => $f->booked_consultations_estimated,
+                'new_patients_lower' => $f->new_patients_lower,
+                'new_patients_upper' => $f->new_patients_upper,
+                'status' => $f->status,
+                'region' => $f->region,
+                'procedure' => $f->procedure,
+            ])
+            ->toArray();
     }
 
     /**
@@ -1089,6 +1152,7 @@ class BrandController extends Controller
         return Inertia::render('brands/ranking', [
             'brand' => $brand,
             'competitiveStats' => $competitiveStats,
+            'patientForecasts' => $this->loadLatestPatientForecasts($brand),
         ]);
     }
 
@@ -1322,6 +1386,11 @@ class BrandController extends Controller
             'website' => 'nullable|url|max:255',
             'description' => 'nullable|string|max:1000',
             'country' => 'nullable|string|max:100',
+            'region' => 'nullable|array|max:5',
+            'region.*.state' => 'required_with:region|string|max:100',
+            'region.*.cities' => 'nullable|array|max:20',
+            'region.*.cities.*' => 'nullable|string|max:100',
+            'procedure' => 'nullable|string|max:255',
             'monthly_posts' => 'required|integer|min:1|max:1000',
             'status' => 'nullable|in:active,inactive',
             'prompts' => 'array|max:25',
@@ -1383,6 +1452,8 @@ class BrandController extends Controller
 
 
         // $brand->update($request->except('logo'));
+        $oldRegionString = $brand->region_string;
+
         DB::transaction(function () use ($request, $brand) {
             // Update brand basic info and status
             $brand->update([
@@ -1390,7 +1461,8 @@ class BrandController extends Controller
                 'website' => $request->website,
                 'description' => $request->description,
                 'country' => $request->country,
-                'region' => $request->region,
+                'region' => array_values(array_filter($request->region ?? [], fn ($r) => !empty($r['state']))),
+                'procedure' => $request->procedure,
                 'campaign_indicator' => $request->campaign_indicator,
                 'monthly_posts' => $request->monthly_posts,
                 'status' => $request->status ?? $brand->status,
@@ -1424,7 +1496,17 @@ class BrandController extends Controller
             }
         });
 
-        return redirect()->route('brands.edit', $brand)->with('success', 'Brand updated successfully!');
+        $brand->refresh();
+        $regionChanged = $oldRegionString !== $brand->region_string;
+        if ($regionChanged && $brand->status === 'active') {
+            AnalyzeBrandCompetitiveStats::dispatch($brand);
+        }
+
+        $successMessage = ($regionChanged && $brand->status === 'active')
+            ? 'Brand updated. Region changed — BVI, forecasts, and prompt analysis are being recalculated.'
+            : 'Brand updated successfully!';
+
+        return redirect()->route('brands.edit', $brand)->with('success', $successMessage);
     }
 
     /**
@@ -2105,6 +2187,14 @@ class BrandController extends Controller
      */
     private function createThumbnail(string $filePath, string $filename, string $extension): ?string
     {
+        if (! function_exists('imagecreatefromstring')) {
+            \Illuminate\Support\Facades\Log::warning('GD extension not available — skipping thumbnail creation', [
+                'file' => $filename,
+            ]);
+
+            return null;
+        }
+
         try {
             $image = imagecreatefromstring(file_get_contents($filePath));
 

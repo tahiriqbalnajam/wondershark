@@ -151,6 +151,10 @@ class UserController extends Controller
 
             // Assign roles
             if ($request->roles && ! empty($request->roles)) {
+                // Block admin role assignment unless the current user is already admin
+                if (is_array($request->roles) && in_array('admin', $request->roles, true) && ! Auth::user()->hasRole('admin')) {
+                    throw new \Exception('You cannot assign the admin role.');
+                }
                 $user->assignRole($request->roles);
             }
 
@@ -327,7 +331,12 @@ class UserController extends Controller
             $user->update($updateData);
 
             if ($request->has('roles')) {
-                $user->syncRoles($request->roles ?? []);
+                // Block admin role assignment unless the current user is already admin
+                $roles = $request->roles ?? [];
+                if (is_array($roles) && in_array('admin', $roles, true) && ! Auth::user()->hasRole('admin')) {
+                    throw new \Exception('You cannot assign the admin role.');
+                }
+                $user->syncRoles($roles);
             }
 
             if ($request->has('permissions')) {

@@ -22,7 +22,7 @@ import Step6AccountSetup from './step6-account-setup';
 import StepNavigation from './step-navigation';
 
 // Import types
-import { BrandForm, BrandPrompt, AiModel, Competitor } from './types';
+import { BrandForm, BrandPrompt, AiModel, Competitor, RegionRow } from './types';
 // GeneratedPrompt is the same shape as BrandPrompt
 type GeneratedPrompt = BrandPrompt;
 
@@ -59,6 +59,8 @@ type Props = {
             allies: string[];
             campaign_indicator: string;
             country: string;
+            region: RegionRow[];
+            procedure: string;
             monthly_posts: number;
         } | null;
         competitors: Array<{
@@ -132,7 +134,8 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
         trackedName: existingData.brand?.trackedName || '',
         allies: existingData.brand?.allies || [],
         country: existingData.brand?.country || '',
-        region: existingData.brand?.region || '',
+        region: existingData.brand?.region ?? [],
+        procedure: existingData.brand?.procedure || '',
         campaign_indicator: existingData.brand?.campaign_indicator || '',
         prompts: [], // Don't load prompts here - they're passed separately to Step2Prompts
         subreddits: [],
@@ -212,6 +215,7 @@ export default function CreateBrand({ currentStep: initialStep, existingData, ai
                         allies: data.allies,
                         country: data.country,
                         region: data.region,
+                        procedure: data.procedure,
                         campaign_indicator: data.campaign_indicator,
                     }),
                 });

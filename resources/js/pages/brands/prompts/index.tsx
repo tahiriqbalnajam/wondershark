@@ -44,7 +44,8 @@ type Brand = {
     website?: string;
     description: string;
     country?: string;
-    region?: string;
+    region?: { state: string; cities: string[] }[] | null;
+    region_string?: string;
     logo?: string;
 };
 
@@ -357,7 +358,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                 ? prompt.mentioned_ai_models.map(m => m.display_name || m.name).join(', ')
                 : 'N/A',
             Country: getCountryData(prompt.country_code).name,
-            Region: brand.region || '-',
+            Region: brand.region_string || '-',
             //Created: Math.floor(prompt.days_ago) === 0 ? 'Today' : Math.floor(prompt.days_ago) === 1 ? '1 day' : `${Math.floor(prompt.days_ago)} days`,
             //Created_at: "'" + formatDate(prompt.created_at),
             Created: formatDate(prompt.created_at),
@@ -548,7 +549,7 @@ export default function BrandPromptsIndex({ brand, prompts }: Props) {
                                                     </TableCell>
                                                     <TableCell>
                                                         <div className="text-sm">
-                                                            {brand.region || '-'}
+                                                            {brand.region_string || '-'}
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>

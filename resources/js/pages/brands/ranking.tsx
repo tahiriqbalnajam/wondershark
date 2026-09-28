@@ -3,7 +3,7 @@ import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import HeadingSmall from '@/components/heading-small';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { BrandVisibilityIndex } from '@/components/dashboard-table/brand-visibility';
+import { BrandVisibilityIndex, PatientForecastSummary } from '@/components/dashboard-table/brand-visibility';
 import { Trophy } from 'lucide-react';
 
 interface Brand {
@@ -18,19 +18,24 @@ interface CompetitiveStat {
     entity_type: 'brand' | 'competitor';
     entity_name: string;
     entity_url: string;
+    competitor_id?: number | null;
     visibility: number;
+    sov: number;
     sentiment: number;
     position: number;
     analyzed_at: string;
     trends: {
         visibility_trend: 'up' | 'down' | 'stable' | 'new';
+        sov_trend: 'up' | 'down' | 'stable' | 'new';
         sentiment_trend: 'up' | 'down' | 'stable' | 'new';
         position_trend: 'up' | 'down' | 'stable' | 'new';
         visibility_change: number;
+        sov_change: number;
         sentiment_change: number;
         position_change: number;
     };
     visibility_percentage: string;
+    sov_percentage: string;
     position_formatted: string;
     sentiment_level: string;
 }
@@ -38,17 +43,16 @@ interface CompetitiveStat {
 interface RankingProps {
     brand: Brand;
     competitiveStats: CompetitiveStat[];
+    patientForecasts?: Record<string, PatientForecastSummary>;
 }
 
-export default function Ranking({ brand, competitiveStats }: RankingProps) {
+export default function Ranking({ brand, competitiveStats, patientForecasts = {} }: RankingProps) {
     return (
         <AppLayout title={'Ranking'}>
             <Head title={`${brand.name} - Ranking`} />
-            
+
             <div className="container mx-auto">
-                <HeadingSmall>
-                    {brand.name} - Brand Ranking
-                </HeadingSmall>
+                <HeadingSmall title={`${brand.name} - Brand Ranking`} />
 
                 <Card className="mt-6">
                     <CardHeader className="pb-3">
@@ -59,8 +63,10 @@ export default function Ranking({ brand, competitiveStats }: RankingProps) {
                             Brand Visibility Index - All Competitors {competitiveStats.length > 0 && `(${competitiveStats.length} / 25)`}
                         </CardTitle>
                     </CardHeader>
-                    <BrandVisibilityIndex 
+                    <BrandVisibilityIndex
                         competitiveStats={competitiveStats}
+                        patientForecasts={patientForecasts}
+                        sortByDisplayedVisibility
                     />
                 </Card>
             </div>

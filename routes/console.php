@@ -8,60 +8,81 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+// Scheduler gating — per-environment kill switch.
+// Set SCHEDULE_ENABLED=false in .env to disable all scheduled tasks on that env
+// (e.g. stage). Manual `php artisan <command>` invocation still works regardless.
+$scheduleEnabled = config('services.schedule_enabled', false);
+
 // Competitive Analysis Scheduling - Runs at 2 AM and 2 PM UTC
-Schedule::command('brands:analyze-competitive-stats')
-    ->twiceDaily(2, 14)
-    ->withoutOverlapping()
-    ->onOneServer()
-    ->runInBackground();
+if ($scheduleEnabled) {
+    Schedule::command('brands:analyze-competitive-stats')
+        ->twiceDaily(2, 14)
+        ->withoutOverlapping()
+        ->onOneServer()
+        ->runInBackground();
+}
 
 // Brand Prompt Analysis Scheduling - Runs daily at 2 AM UTC
-Schedule::command('brand:analyze-prompts --all --force')
-    ->dailyAt('02:00')
-    ->withoutOverlapping()
-    ->onOneServer()
-    ->runInBackground();
+if ($scheduleEnabled) {
+    Schedule::command('brand:analyze-prompts --all --force')
+        ->dailyAt('02:00')
+        ->withoutOverlapping()
+        ->onOneServer()
+        ->runInBackground();
+}
 
 // Post Prompt Stats Fetching - Runs weekly on Monday at 3 AM UTC
-Schedule::command('posts:fetch-prompts-stats --all')
-    ->weeklyOn(1, '03:00')
-    ->withoutOverlapping()
-    ->onOneServer()
-    ->runInBackground();
+if ($scheduleEnabled) {
+    Schedule::command('posts:fetch-prompts-stats --all')
+        ->weeklyOn(1, '03:00')
+        ->withoutOverlapping()
+        ->onOneServer()
+        ->runInBackground();
+}
 
 // AI Model Health Check - Runs daily at 4 AM UTC
-Schedule::job(new \App\Jobs\TestAiModels)
-    ->dailyAt('04:00')
-    ->withoutOverlapping()
-    ->onOneServer();
+if ($scheduleEnabled) {
+    Schedule::job(new \App\Jobs\TestAiModels)
+        ->dailyAt('04:00')
+        ->withoutOverlapping()
+        ->onOneServer();
+}
 
 // Recalculate Brand Visibility - Runs daily at 5 AM UTC
-Schedule::command('brand:recalculate-visibility --regenerate')
-    ->dailyAt('05:00')
-    ->withoutOverlapping()
-    ->onOneServer()
-    ->runInBackground();
+if ($scheduleEnabled) {
+    Schedule::command('brand:recalculate-visibility --regenerate')
+        ->dailyAt('05:00')
+        ->withoutOverlapping()
+        ->onOneServer()
+        ->runInBackground();
+}
 
 // Check Post Citations - Runs daily at 6 AM UTC.
 // Each prompt is only re-checked if its last check was more than 7 days ago.
-Schedule::command('citations:check-daily')
-    ->dailyAt('06:00')
-    ->withoutOverlapping()
-    ->onOneServer()
-    ->runInBackground();
+if ($scheduleEnabled) {
+    Schedule::command('citations:check-daily')
+        ->dailyAt('06:00')
+        ->withoutOverlapping()
+        ->onOneServer()
+        ->runInBackground();
+}
 
-// Check Post URLs - Runs twice weekly on Monday and Thursday at 7 AM UTC
-Schedule::command('posts:check-urls')
-    ->cron('0 7 * * 1,4')
-    ->withoutOverlapping()
-    ->onOneServer()
-    ->runInBackground();
+// Check Post URLs - Runs weekly on Saturday at 7 AM UTC
+if ($scheduleEnabled) {
+    Schedule::command('posts:check-urls')
+        ->cron('0 7 * * 6')
+        ->withoutOverlapping()
+        ->onOneServer()
+        ->runInBackground();
+}
 
 // Clear Laravel log every 2 days at 1 AM UTC
-Schedule::call(function () {
-    $logFile = storage_path('logs/laravel.log');
-    // Truncate — keeps inode/ownership intact
-    file_put_contents($logFile, '');
-    @chown($logFile, 'www-data');
-    @chgrp($logFile, 'www-data');
-})->cron('0 1 */2 * *');
+if ($scheduleEnabled) {
+    Schedule::call(function () {
+        $logFile = storage_path('logs/laravel.log');
+        // Truncate — keeps inode/ownership intact
+        file_put_contents($logFile, '');
+        @chown($logFile, 'www-data');
+        @chgrp($logFile, 'www-data');
+    })->cron('0 1 */2 * *');
+}

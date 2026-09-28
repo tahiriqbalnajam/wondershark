@@ -9,6 +9,23 @@ import { Button } from '@/components/ui/button';
 import { usStatesCities } from '@/data/us-states-cities';
 import { canadaProvincesCities } from '@/data/canada-provinces-cities';
 import { useState, useEffect } from 'react';
+import RegionRowList from '@/components/region-row-list';
+
+/*
+ * PHASE-6 — Multi-state on brand creation is intentionally DISABLED here.
+ * This single-select UI matches the pre-Phase-6 UX.
+ *
+ * The handlers below write to `data.region` as a single-element array
+ * `[{ state, city }]` so the backend (which now expects `region: array`)
+ * accepts it. The user still sees one state dropdown + one city dropdown
+ * exactly as before.
+ *
+ * To re-enable multi-state on creation later, see `PHASE-6-PLAN.md` at the
+ * project root — the swap is a frontend-only change to this file. The shared
+ * `<RegionRowList>` component already exists at
+ * `resources/js/components/region-row-list.tsx` and is already in use on the
+ * brand edit page.
+ */
 
 const countries = [
     'United States',
@@ -60,49 +77,50 @@ export default function Step1BasicInfo({ data, setData, errors }: StepProps) {
         setSelectedProvince('');
         setSelectedCity('');
         setSelectedCACity('');
-        setData('region', '');
+        setData('region', []);
     };
 
     const handleStateChange = (value: string) => {
         setSelectedState(value);
         setSelectedCity('');
-        setData('region', value);
+        setData('region', [{ state: value, cities: [] }]);
     };
 
     const handleProvinceChange = (value: string) => {
         setSelectedProvince(value);
         setSelectedCACity('');
-        setData('region', value);
+        setData('region', [{ state: value, cities: [] }]);
     };
 
     const handleUSCityChange = (value: string) => {
         setSelectedCity(value);
-        setData('region', selectedState + ', ' + value);
+        setData('region', [{ state: selectedState, cities: [value] }]);
     };
 
     const handleCACityChange = (value: string) => {
         setSelectedCACity(value);
-        setData('region', selectedProvince + ', ' + value);
+        setData('region', [{ state: selectedProvince, cities: [value] }]);
     };
 
     // Parse saved region into dropdown selections on mount
     useEffect(() => {
-        const region = data.region || '';
-        if (!region) return;
+        const row = Array.isArray(data.region) ? data.region[0] : null;
+        if (!row) return;
 
-        const parts = region.split(', ');
-        if (data.country === 'United States' && parts.length >= 1 && usStatesCities[parts[0]]) {
-            setSelectedState(parts[0]);
-            if (parts.length >= 2) setSelectedCity(parts[1]);
-        } else if (data.country === 'Canada' && parts.length >= 1 && canadaProvincesCities[parts[0]]) {
-            setSelectedProvince(parts[0]);
-            if (parts.length >= 2) setSelectedCACity(parts[1]);
+        const firstCity = Array.isArray(row.cities) ? row.cities[0] ?? '' : (row.city ?? '');
+
+        if (isUS && row.state && usStatesCities[row.state]) {
+            setSelectedState(row.state);
+            if (firstCity) setSelectedCity(firstCity);
+        } else if (isCanada && row.state && canadaProvincesCities[row.state]) {
+            setSelectedProvince(row.state);
+            if (firstCity) setSelectedCACity(firstCity);
         }
     }, []);
 
     const handleWebsiteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         let url = e.target.value.trim();
-        
+
         // Auto-add https:// if no protocol is provided and it's not empty
         if (url && !url.match(/^https?:\/\//)) {
             // Remove www. if present to avoid duplication
@@ -114,7 +132,7 @@ export default function Step1BasicInfo({ data, setData, errors }: StepProps) {
                 url = 'https://' + url;
             }
         }
-        
+
         setData('website', url);
     };
     const addAllyField = () => {
@@ -187,7 +205,10 @@ export default function Step1BasicInfo({ data, setData, errors }: StepProps) {
                         <InputError message={errors.country} />
                     </div>
 
-                    {isUS ? (
+                    {
+                    /*
+                    
+                    isUS ? (
                         <>
                             <div className="grid gap-2">
                                 <Label htmlFor="state">State</Label>
@@ -262,14 +283,37 @@ export default function Step1BasicInfo({ data, setData, errors }: StepProps) {
                             <Label htmlFor="region">Region</Label>
                             <Input
                                 id="region"
-                                value={data.region}
-                                onChange={(e) => setData('region', e.target.value)}
+                                value={Array.isArray(data.region) ? (data.region[0]?.state ?? '') : ''}
+                                onChange={(e) => setData('region', [{ state: e.target.value, cities: [] }])}
                                 placeholder="Specify States, Provinces, cities, custom areas within the country )"
                                 className="form-control"
                             />
                             <InputError message={errors.region} />
                         </div>
-                    )}
+                    )
+                     */
+                    }
+
+                    
+                    <RegionRowList
+                        value={data.region}
+                        onChange={(rows) => setData('region', rows)}
+                        country={data.country}
+                        error={errors.region as string | undefined}
+                    />
+                    
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="procedure">Procedure <small className='text-xs font-normal text-muted-foreground'>( Optional )</small></Label>
+                        <Input
+                            id="procedure"
+                            value={data.procedure}
+                            onChange={(e) => setData('procedure', e.target.value)}
+                            placeholder="e.g. Rhinoplasty, Knee Replacement, Dental Implants"
+                            className="form-control"
+                        />
+                        <InputError message={errors.procedure} />
+                    </div>
 
                     <div className="grid gap-2">
                         <Label htmlFor="description">Keywords <small className='text-xs font-normal text-muted-foreground'>( Optional )</small></Label>

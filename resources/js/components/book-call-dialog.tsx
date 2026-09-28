@@ -41,7 +41,7 @@ export default function BookCallDialog({ open, onOpenChange }: BookCallDialogPro
     return (
         <div
             className={cn(
-                'fixed inset-0 z-50 flex items-center justify-center',
+                'fixed inset-0 z-50 flex items-center justify-center max-sm:items-start max-sm:overflow-y-auto max-sm:p-4',
                 !open && 'hidden',
             )}
             role="dialog"
@@ -53,7 +53,7 @@ export default function BookCallDialog({ open, onOpenChange }: BookCallDialogPro
                 onClick={() => onOpenChange(false)}
             />
 
-            <div className="relative z-10 w-full max-w-2xl rounded-lg border bg-background p-6 shadow-lg sm:m-4">
+            <div className="relative z-10 w-full max-w-2xl rounded-lg border bg-background p-6 shadow-lg sm:m-4 max-sm:p-4">
                 <button
                     type="button"
                     onClick={() => onOpenChange(false)}
@@ -72,7 +72,7 @@ export default function BookCallDialog({ open, onOpenChange }: BookCallDialogPro
                     scrolling="no"
                     id="3diaqWZNmxUneIDxSWpn_1787319963389"
                     title="Book a call"
-                    className="h-[600px] w-full"
+                    className="h-[600px] w-full max-sm:h-[70vh] max-sm:max-h-[600px]"
                 />
             </div>
         </div>

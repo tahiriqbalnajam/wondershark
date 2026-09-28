@@ -12,10 +12,17 @@ class AiApiResponse extends Model
 
     protected $fillable = [
         'industry_analysis_id',
+        'patient_forecast_id',
         'ai_provider',
         'prompt_used',
         'raw_response',
+        'response_text',
         'parsed_data',
+        'brand_mentions',
+        'source_mentions',
+        'sentiment_analysis',
+        'confidence_score',
+        'response_time_ms',
         'status',
         'error_message',
         'processing_time',

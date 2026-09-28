@@ -65,4 +65,6 @@ return [
         'redirect_uri' => env('GOOGLE_SHEET_REDIRECT_URI', '/admin/website-urls/auth/callback'),
     ],
 
+    'schedule_enabled' => env('SCHEDULE_ENABLED', false),
+
 ];

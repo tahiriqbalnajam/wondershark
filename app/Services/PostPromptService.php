@@ -430,7 +430,7 @@ class PostPromptService extends AIPromptService
         $titleContext = !empty($post->title) ? " and the post title '{$post->title}'" : '';
         $descriptionContext = !empty($description) ? "\n\nAdditional context about this post: {$description}" : '';
         $brandContext = !empty($post->brand->name) ? "\n\nBrand: {$post->brand->name}" : '';
-        $brandregion = !empty($post->brand->region) ? "{$post->brand->region}" : '';
+        $brandregion = $post->brand?->region_string ?? '';
         $localityContext = !empty($post->brand->country) ? "\n\nTarget Locality: {$post->brand->country} {$brandregion}. The questions should be relevant to users in this location." : '';
 
         return "Analyze the post URL {$post->url}{$titleContext} and generate {$promptCount} questions that people would search for where this specific post/article would be a valuable and relevant source or reference.{$descriptionContext}{$localityContext}

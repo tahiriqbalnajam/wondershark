@@ -3,9 +3,7 @@
 import { type BreadcrumbItem } from '@/types';
 import { Transition } from '@headlessui/react';
 import { Head, useForm } from '@inertiajs/react';
-import { useState, useEffect, FormEventHandler } from 'react';
-import { usStatesCities } from '@/data/us-states-cities';
-import { canadaProvincesCities } from '@/data/canada-provinces-cities';
+import { useState, FormEventHandler } from 'react';
 
 import HeadingSmall from '@/components/heading-small';
 import InputError from '@/components/input-error';
@@ -22,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import RegionRowList, { type RegionRow } from '@/components/region-row-list';
 const countries = [
   'United States',
   'Canada',
@@ -83,7 +82,8 @@ type Brand = {
   allies?: string[];
   campaign_indicator?: string;
   country?: string;
-  region?: string;
+  region?: RegionRow[];
+  procedure?: string;
 };
 
 type Props = { brand: Brand; userEmail?: string };
@@ -96,7 +96,8 @@ type BrandForm = {
   status: 'active' | 'inactive';
   logo: File | null;
   country: string;
-  region: string;
+  region: RegionRow[];
+  procedure: string;
   trackedName: string;
   allies: string[];
   campaign_indicator: string;
@@ -122,34 +123,6 @@ export default function BrandEdit({ brand, userEmail }: Props) {
   const permissions = usePermissions();
   const [newPrompt, setNewPrompt] = useState('');
   const [newSubreddit, setNewSubreddit] = useState('');
-  const [selectedState, setSelectedState] = useState<string>(() => {
-    if ((brand.country === 'United States' || brand.country === 'US') && brand.region) {
-      const parts = brand.region.split(', ');
-      return parts[0] || '';
-    }
-    return '';
-  });
-  const [selectedProvince, setSelectedProvince] = useState<string>(() => {
-    if ((brand.country === 'Canada' || brand.country === 'CA') && brand.region) {
-      const parts = brand.region.split(', ');
-      return parts[0] || '';
-    }
-    return '';
-  });
-  const [selectedCity, setSelectedCity] = useState<string>(() => {
-    if ((brand.country === 'United States' || brand.country === 'US') && brand.region) {
-      const parts = brand.region.split(', ');
-      return parts[1] || '';
-    }
-    return '';
-  });
-  const [selectedCACity, setSelectedCACity] = useState<string>(() => {
-    if ((brand.country === 'Canada' || brand.country === 'CA') && brand.region) {
-      const parts = brand.region.split(', ');
-      return parts[1] || '';
-    }
-    return '';
-  });
 
   const { data, setData, post, processing, errors } = useForm<BrandForm & { _method: string }>({
     _method: 'PUT',
@@ -160,7 +133,8 @@ export default function BrandEdit({ brand, userEmail }: Props) {
     status: brand.status,
     logo: null,
     country: brand.country === 'US' ? 'United States' : brand.country === 'CA' ? 'Canada' : brand.country || '',
-    region: brand.region || '',
+    region: brand.region ?? [],
+    procedure: brand.procedure || '',
     trackedName: brand.trackedName || '',
     allies: brand.allies || [],
     campaign_indicator: brand.campaign_indicator || '',
@@ -172,56 +146,10 @@ export default function BrandEdit({ brand, userEmail }: Props) {
     Perplexity: false,
   });
 
-  const isUS = data.country === 'United States' || data.country === 'US';
-  const isCanada = data.country === 'Canada' || data.country === 'CA';
-  const usCities = isUS && selectedState ? usStatesCities[selectedState] || [] : [];
-  const caCities = isCanada && selectedProvince ? canadaProvincesCities[selectedProvince] || [] : [];
-
   const handleCountryChange = (value: string) => {
     setData('country', value);
-    setSelectedState('');
-    setSelectedProvince('');
-    setSelectedCity('');
-    setSelectedCACity('');
-    setData('region', '');
+    setData('region', []);
   };
-
-  const handleStateChange = (value: string) => {
-    setSelectedState(value);
-    setSelectedCity('');
-    setData('region', value);
-  };
-
-  const handleProvinceChange = (value: string) => {
-    setSelectedProvince(value);
-    setSelectedCACity('');
-    setData('region', value);
-  };
-
-  const handleUSCityChange = (value: string) => {
-    setSelectedCity(value);
-    setData('region', selectedState + ', ' + value);
-  };
-
-  const handleCACityChange = (value: string) => {
-    setSelectedCACity(value);
-    setData('region', selectedProvince + ', ' + value);
-  };
-
-  // Sync dropdown state if data.region/country change after mount
-  useEffect(() => {
-    const region = data.region || '';
-    if (!region) return;
-
-    const parts = region.split(', ');
-    if ((data.country === 'United States' || data.country === 'US') && parts.length >= 1 && usStatesCities[parts[0]]) {
-      setSelectedState(parts[0]);
-      if (parts.length >= 2) setSelectedCity(parts[1]);
-    } else if ((data.country === 'Canada' || data.country === 'CA') && parts.length >= 1 && canadaProvincesCities[parts[0]]) {
-      setSelectedProvince(parts[0]);
-      if (parts.length >= 2) setSelectedCACity(parts[1]);
-    }
-  }, [data.country, data.region]);
 
   // const addPrompt = () => {
   //   if (newPrompt.trim() && data.prompts.length < 25) {
@@ -322,8 +250,8 @@ export default function BrandEdit({ brand, userEmail }: Props) {
 
             <CardContent className="space-y-4">
               <div className="grid gap-2">
-                <Label htmlFor="name">Brand Name *</Label>
-                <Input id="name" value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder="Enter your brand name" className="form-control" required />
+                <Label htmlFor="name">Physician Name or Brand *</Label>
+                <Input id="name" value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder="Enter your physician name" className="form-control" required />
                 <InputError message={errors.name} />
               </div>
 
@@ -348,6 +276,19 @@ export default function BrandEdit({ brand, userEmail }: Props) {
               </div>
               )}
 
+
+              <div className="grid gap-2">
+                <Label htmlFor="procedure">Procedure <small className="text-xs font-normal text-muted-foreground">( Optional )</small></Label>
+                <Input
+                  id="procedure"
+                  value={data.procedure}
+                  onChange={(e) => setData('procedure', e.target.value)}
+                  placeholder="e.g. Rhinoplasty, Knee Replacement, Dental Implants"
+                  className="form-control"
+                />
+                <InputError message={errors.procedure} />
+              </div>
+
               {/* Country and Region fields */}
               <div className="grid gap-2">
                 <Label htmlFor="country">Country</Label>
@@ -365,97 +306,22 @@ export default function BrandEdit({ brand, userEmail }: Props) {
                 </Select>
                 <InputError message={errors.country} />
               </div>
-              {isUS ? (
-                <>
-                  <div className="grid gap-2">
-                    <Label htmlFor="state">State</Label>
-                    <Select value={selectedState} onValueChange={handleStateChange}>
-                      <SelectTrigger className="form-control cursor-pointer">
-                        <SelectValue placeholder="Select a state" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.keys(usStatesCities).map((state) => (
-                          <SelectItem key={state} value={state}>
-                            {state}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {selectedState && (
-                    <div className="grid gap-2">
-                      <Label htmlFor="city">City</Label>
-                      <Select value={selectedCity} onValueChange={handleUSCityChange}>
-                        <SelectTrigger className="form-control cursor-pointer">
-                          <SelectValue placeholder="Select a city" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {usCities.map((city) => (
-                            <SelectItem key={city} value={city}>
-                              {city}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </>
-              ) : isCanada ? (
-                <>
-                  <div className="grid gap-2">
-                    <Label htmlFor="province">Province / Territory</Label>
-                    <Select value={selectedProvince} onValueChange={handleProvinceChange}>
-                      <SelectTrigger className="form-control cursor-pointer">
-                        <SelectValue placeholder="Select a province or territory" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.keys(canadaProvincesCities).map((prov) => (
-                          <SelectItem key={prov} value={prov}>
-                            {prov}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {selectedProvince && (
-                    <div className="grid gap-2">
-                      <Label htmlFor="city">City</Label>
-                      <Select value={selectedCACity} onValueChange={handleCACityChange}>
-                        <SelectTrigger className="form-control cursor-pointer">
-                          <SelectValue placeholder="Select a city" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {caCities.map((city) => (
-                            <SelectItem key={city} value={city}>
-                              {city}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="grid gap-2">
-                  <Label htmlFor="region">Region</Label>
-                  <Input
-                    id="region"
-                    value={data.region}
-                    onChange={(e) => setData('region', e.target.value)}
-                    placeholder="Specify States, Provinces, cities, custom areas within the country"
-                    className="form-control"
-                  />
-                  <InputError message={errors.region} />
-                </div>
-              )}
+              <RegionRowList
+                value={data.region}
+                onChange={(rows) => setData('region', rows)}
+                country={data.country}
+                error={errors.region as string | undefined}
+              />
 
 
 
               
 
+              
+
               <div className="grid gap-2">
-                <Label htmlFor="description">Description *</Label>
-                <Textarea id="description" value={data.description} onChange={(e) => setData('description', e.target.value)} placeholder="Put description..." rows={4} className="resize-none form-control" required />
+                <Label htmlFor="description">Description <small className="text-xs font-normal text-muted-foreground">( Optional )</small></Label>
+                <Textarea id="description" value={data.description} onChange={(e) => setData('description', e.target.value)} placeholder="Put description..." rows={4} className="resize-none form-control" />
                 <InputError message={errors.description} />
               </div>
 

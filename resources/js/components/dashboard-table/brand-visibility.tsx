@@ -21,11 +21,23 @@ import {
 } from "lucide-react";
 import { CHART_COLORS } from "@/components/chart/visibility";
 
+export interface PatientForecastSummary {
+    visibility: number | null;
+    market_share: number | null;
+    booked_consultations_estimated: number | null;
+    new_patients_lower: number | null;
+    new_patients_upper: number | null;
+    status: 'pending' | 'processing' | 'completed' | 'failed';
+    region: string | null;
+    procedure: string | null;
+}
+
 interface CompetitiveStat {
     id: number;
     entity_type: 'brand' | 'competitor';
     entity_name: string;
     entity_url: string;
+    competitor_id?: number | null;
     visibility: number;
     sov: number;
     sentiment: number;
@@ -45,10 +57,14 @@ interface CompetitiveStat {
     sov_percentage: string;
     position_formatted: string;
     sentiment_level: string;
+    // True when this entity has an admin visibility override in the period.
+    // The override-aware `visibility` must win over the forecast value.
+    has_manual_override?: boolean;
 }
 
 interface BrandVisibilityIndexProps {
     competitiveStats: CompetitiveStat[];
+    patientForecasts?: Record<string, PatientForecastSummary>;
     onRowClick?: (domain: string) => void;
     brandId?: number;
     limit?: number;
@@ -61,9 +77,49 @@ interface BrandVisibilityIndexProps {
     brandLogo?: string | null;
     brandName?: string;
     rankingQueryString?: string;
+    // When true, rows are ordered by the value shown in the "Visibility" column
+    // (forecast visibility, falling back to BVI) instead of the raw BVI field.
+    sortByDisplayedVisibility?: boolean;
 }
 
-export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, limit, hoveredDomain, onDomainHover, entities, onShowAllBrands, showAllBrandsButton, totalBrandsCount, brandLogo, brandName, rankingQueryString }: BrandVisibilityIndexProps) {
+export function BrandVisibilityIndex({
+    competitiveStats,
+    patientForecasts = {},
+    onRowClick,
+    brandId,
+    limit,
+    hoveredDomain,
+    onDomainHover,
+    entities,
+    onShowAllBrands,
+    showAllBrandsButton,
+    totalBrandsCount,
+    brandLogo,
+    brandName,
+    rankingQueryString,
+    sortByDisplayedVisibility = false,
+}: BrandVisibilityIndexProps) {
+    // Look up the per-entity forecast. Brand rows key on 'brand'; competitor rows
+    // key on 'competitor:<competitor_id>'. Returns null when no forecast exists.
+    const forecastFor = (stat: CompetitiveStat): PatientForecastSummary | null => {
+        if (stat.entity_type === 'brand') {
+            return patientForecasts['brand'] ?? null;
+        }
+        if (stat.competitor_id != null) {
+            return patientForecasts[`competitor:${stat.competitor_id}`] ?? null;
+        }
+        return null;
+    };
+
+    // The value rendered in the "Visibility" column. An admin manual override always
+    // wins (it is already baked into stat.visibility, matching the graph); otherwise
+    // the forecast visibility is used when it exists, else the mention-based BVI.
+    // Sorting on this keeps the rows in descending order by the number the user sees.
+    const displayedVisibility = (stat: CompetitiveStat): number => {
+        if (stat.has_manual_override) return stat.visibility ?? 0;
+        return forecastFor(stat)?.visibility ?? stat.visibility ?? 0;
+    };
+
     // Deduplicate within the same entity_type by name — competitors with identical names are
     // collapsed, but a competitor sharing a name with the brand is kept as a separate row.
     const dedupedStats = competitiveStats.filter((stat, index, arr) =>
@@ -72,8 +128,12 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
             s.entity_name.toLowerCase().trim() === stat.entity_name.toLowerCase().trim()
         ) === index
     );
-    // Sort by visibility (higher is better)
-    const sortedStats = [...dedupedStats].sort((a, b) => (b.visibility ?? 0) - (a.visibility ?? 0));
+    // Sort by visibility (higher is better). The ranking page opts into ordering by the
+    // displayed visibility so the visible column is monotonic; other callers keep the
+    // original BVI-based order.
+    const sortedStats = [...dedupedStats].sort(sortByDisplayedVisibility
+        ? (a, b) => displayedVisibility(b) - displayedVisibility(a)
+        : (a, b) => (b.visibility ?? 0) - (a.visibility ?? 0));
 
     // When a limit is set, always keep the main brand visible:
     // Pin the brand row first, then fill remaining slots with top competitors.
@@ -95,85 +155,103 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
         return index !== -1 ? CHART_COLORS[index % CHART_COLORS.length] : '#666';
     };
 
+    const formatBooked = (v: number | null | undefined): string => {
+        if (v == null) return '—';
+        // No commas per the docx calculation rules.
+        return String(v);
+    };
+
+    // Est. Annual Patients column hidden on the frontend.
+    // Kept commented (not deleted) so it can be re-enabled later.
+    // const formatPatientsRange = (lower: number | null | undefined, upper: number | null | undefined): string => {
+    //     if (lower == null || upper == null) return '—';
+    //     return `${lower} to ${upper}`;
+    // };
+
+    const formatMarketShare = (v: number | null | undefined): string => {
+        if (v == null) return '—';
+        return `${Math.round(v)}%`;
+    };
+
     return (
         <CardContent>
             <div className="min-h-80 overflow-x-auto">
                 <Table className="text-xs w-full border border-gray-200 default-table table-fixed">
                     <TableHeader>
                         <TableRow className="bg-gray-50 border-b border-gray-200">
-                            <TableHead className="w-12 border-r border-gray-200 text-center">#</TableHead>
-                            <TableHead className="w-48 border-r border-gray-200">Brand</TableHead>
-                            <TableHead className="border-r border-gray-200">
+                            <TableHead className="w-12 border-r border-gray-200 text-center!">#</TableHead>
+                            <TableHead className="w-48 border-r border-gray-200 text-center!">Physician</TableHead>
+                            <TableHead className="border-r border-gray-200 text-center!">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
                                             variant="outline"
-                                            className="p-0 border-0 text-xs shadow-none bg-transparent hover:border-0"
+                                            className="p-0 border-0 text-xs shadow-none bg-transparent hover:border-0 justify-center! text-center w-full"
                                         >
                                             Visibility <Info className="h-3 w-3 inline-block" />
                                         </Button>
                                     </TooltipTrigger>
                                     <TooltipContent className="w-50">
                                         <p className="text-xs text-center">
-                                            Average daily share of voice over the selected date range — mirrors the graph values
+                                            Brand Visibility Index — the practice&apos;s share of AI-visible market presence, with trend vs. the previous period
                                         </p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TableHead>
-                            {/* SOV column — hidden until SOV logic is reworked
-                            <TableHead className="w-28 border-r border-gray-200">
+                            <TableHead className="w-28 border-r border-gray-200 text-center!">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
                                             variant="outline"
-                                            className="p-0 border-0 text-xs shadow-none bg-transparent hover:border-0"
+                                            className="p-0 border-0 text-xs shadow-none bg-transparent hover:border-0 justify-center! text-center w-full"
                                         >
-                                            SOV <Info className="h-3 w-3 inline-block" />
+                                            Market Share <Info className="h-3 w-3 inline-block" />
                                         </Button>
                                     </TooltipTrigger>
                                     <TooltipContent className="w-50">
                                         <p className="text-xs text-center">
-                                            Share of Voice: entity mentions ÷ total market mentions × 100 over the selected period
+                                            Normalized BVI market share shows each competitor’s percentage share of total AI visibility within the market.
+                                        </p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TableHead>
+                            <TableHead className="w-40 border-r border-gray-200 text-center!">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className="p-0 h-auto border-0 text-xs shadow-none bg-transparent hover:border-0 whitespace-normal leading-tight justify-center! text-center w-full"
+                                        >
+                                            Est. Qualified Attended Consultations <Info className="h-3 w-3 inline-block flex-shrink-0" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="w-60">
+                                        <p className="text-xs text-center">
+                                            Estimated annual consultations from qualified prospects who match the procedure, market, candidacy, and attend their consultation — through organic AI discovery, not paid advertising.
+                                        </p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TableHead>
+                            {/* Est. Annual Patients column hidden on the frontend.
+                                Kept commented (not deleted) so it can be re-enabled later.
+                            <TableHead className="w-40 text-center!">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className="p-0 h-auto border-0 text-xs shadow-none bg-transparent hover:border-0 whitespace-normal leading-tight justify-center! text-center w-full"
+                                        >
+                                            Est. Annual Patients <Info className="h-3 w-3 inline-block flex-shrink-0" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="w-60">
+                                        <p className="text-xs text-center">
+                                            WonderShark.ai forecasts the potential annual number of consultations and new patients based on your AI visibility, patient search demand in your location, competitive position, and patient conversion rates.
                                         </p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TableHead>
                             */}
-                            <TableHead className="w-28 border-r border-gray-200">
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className="p-0 border-0 text-xs shadow-none bg-transparent hover:border-0"
-                                        >
-                                            Sentiment <Info className="h-3 w-3 inline-block" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="w-50">
-                                        <p className="text-xs text-center">
-                                            Sentiment score 0–100 (0 = very negative, 50 = neutral, 100 = very positive) based on how the brand is discussed in AI responses
-                                        </p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TableHead>
-                            <TableHead className="w-28">
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className="p-0 border-0 text-xs shadow-none bg-transparent hover:border-0"
-                                        >
-                                            Position <Info className="h-3 w-3 inline-block" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="w-50">
-                                        <p className="text-xs text-center">
-                                            The average position of the brand when mentioned in the
-                                            last 30 days
-                                        </p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TableHead>
                         </TableRow>
                     </TableHeader>
 
@@ -189,6 +267,11 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                             const trueRank = sortedStats.indexOf(stat) + 1;
                             // Brand pinned outside its natural rank when it's first but trueRank > 1
                             const isPinnedBrand = stat.entity_type === 'brand' && index === 0 && trueRank > 1;
+                            const forecast = forecastFor(stat);
+                            const showTrend =
+                            stat.trends.visibility_trend !== 'stable' &&
+                            stat.trends.visibility_trend !== 'new' &&
+                            stat.trends.visibility_change !== 0;
                             return (
                                 <TableRow
                                     key={stat.id}
@@ -212,7 +295,7 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                         </div>
                                     </TableCell>
                                     <TableCell className="font-medium border-r border-gray-200">
-                                        <div className="flex items-center gap-2 min-w-0">
+                                        <div className="flex items-center justify-center gap-2 min-w-0">
                                             <img
                                                 src={stat.entity_type === 'brand' && brandLogo && stat.entity_name === brandName ? brandLogo : logoUrl}
                                                 alt={stat.entity_name}
@@ -224,76 +307,49 @@ export function BrandVisibilityIndex({ competitiveStats, onRowClick, brandId, li
                                             <span className="truncate text-xs">{stat.entity_name}</span>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="border-r border-gray-200 w-32">
+                                    <TableCell className="border-r border-gray-200 w-32 text-right">
                                         <div className="flex items-center justify-between gap-1">
                                             <span className="text-xs text-muted-foreground flex items-center gap-1 flex-shrink-0">
-                                                {stat.trends.visibility_trend === "up" && (
+                                                {Math.abs(stat.trends.visibility_change) >= 1 && stat.trends.visibility_change > 0 && (
                                                     <ArrowUpRight className="h-4 w-4 text-green-600" />
                                                 )}
-                                                {stat.trends.visibility_trend === "down" && (
+                                                {Math.abs(stat.trends.visibility_change) >= 1 && stat.trends.visibility_change < 0 && (
                                                     <ArrowDownRight className="h-4 w-4 text-red-600" />
                                                 )}
-                                                {stat.trends.visibility_change !== 0 && stat.trends.visibility_trend !== 'stable' && stat.trends.visibility_trend !== 'new' && (
-                                                    <span className="whitespace-nowrap">{Math.abs(stat.trends.visibility_change)}%</span>
-                                                )}
-                                            </span>
-                                            <span className="text-xs font-bold flex-shrink-0">{stat.visibility != null ? `${Math.round(stat.visibility)}%` : 'N/A'}</span>
-                                        </div>
-                                    </TableCell>
-                                    {/* SOV cell — hidden until SOV logic is reworked
-                                    <TableCell className="border-r border-gray-200 w-28">
-                                        <div className="flex items-center justify-between gap-1">
-                                            <span className="text-xs text-muted-foreground flex items-center gap-1 flex-shrink-0">
-                                                {stat.trends.sov_trend === "up" && (
-                                                    <ArrowUpRight className="h-4 w-4 text-green-600" />
-                                                )}
-                                                {stat.trends.sov_trend === "down" && (
-                                                    <ArrowDownRight className="h-4 w-4 text-red-600" />
-                                                )}
-                                                {stat.trends.sov_change !== 0 && stat.trends.sov_trend !== 'stable' && stat.trends.sov_trend !== 'new' && (
-                                                    <span className="whitespace-nowrap">{Math.abs(stat.trends.sov_change)}%</span>
-                                                )}
-                                            </span>
-                                            <span className="text-xs font-bold flex-shrink-0">{stat.sov != null ? `${Math.round(stat.sov)}%` : 'N/A'}</span>
-                                        </div>
-                                    </TableCell>
-                                    */}
-                                    <TableCell className="border-r border-gray-200 w-28">
-                                        <div className="flex items-center justify-between gap-1">
-                                            <span className="text-xs text-muted-foreground flex items-center gap-1 flex-shrink-0">
-                                                {stat.trends.sentiment_trend === "up" && (
-                                                    <ArrowUpRight className="h-4 w-4 text-green-600" />
-                                                )}
-                                                {stat.trends.sentiment_trend === "down" && (
-                                                    <ArrowDownRight className="h-4 w-4 text-red-600" />
-                                                )}
-                                                {stat.trends.sentiment_change !== 0 && stat.trends.sentiment_trend !== 'stable' && stat.trends.sentiment_trend !== 'new' && (
-                                                    <span className="whitespace-nowrap">{Math.abs(stat.trends.sentiment_change)}</span>
+                                                 {showTrend && (
+                                                     <span className="whitespace-nowrap">{Math.abs(stat.trends.visibility_change)}%</span>
                                                 )}
                                             </span>
                                             <span className="text-xs font-bold flex-shrink-0">
-                                                {stat.sentiment != null ? stat.sentiment : 'N/A'}
+                                                {stat.has_manual_override
+                                                    ? `${Math.round(stat.visibility)}%`
+                                                    : forecast?.visibility != null
+                                                        ? `${Math.round(forecast.visibility)}%`
+                                                        : (stat.visibility != null ? `${Math.round(stat.visibility)}%` : 'N/A')}
                                             </span>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="border-r border-gray-200 w-28">
-                                        <div className="flex items-center justify-between gap-1">
-                                            {/* Position trend — hidden until position trend logic is reworked
-                                            <span className="text-xs text-muted-foreground flex items-center gap-1 flex-shrink-0">
-                                                {stat.trends.position_trend === "up" && (
-                                                    <ArrowUpRight className="h-4 w-4 text-green-600" />
-                                                )}
-                                                {stat.trends.position_trend === "down" && (
-                                                    <ArrowDownRight className="h-4 w-4 text-red-600" />
-                                                )}
-                                                {stat.trends.position_change !== 0 && stat.trends.position_trend !== 'stable' && stat.trends.position_trend !== 'new' && (
-                                                    <span className="whitespace-nowrap">{Math.abs(stat.trends.position_change)}%</span>
-                                                )}
-                                            </span>
-                                            */}
-                                            <span className="text-xs font-bold flex-shrink-0">{stat.position_formatted || 'N/A'}</span>
-                                        </div>
+                                    <TableCell className="border-r border-gray-200 w-28 text-center">
+                                        <span className="text-xs font-bold">
+                                            {formatMarketShare(forecast?.market_share)}
+                                        </span>
                                     </TableCell>
+                                    <TableCell className="w-40 text-center">
+                                        <span className="text-xs font-bold">
+                                            {formatBooked(forecast?.booked_consultations_estimated ?? null)}
+                                        </span>
+                                    </TableCell>
+                                    {/* Est. Annual Patients cell hidden on the frontend.
+                                        Kept commented (not deleted) so it can be re-enabled later.
+                                    <TableCell className="w-40 text-center">
+                                        <span className="text-xs font-bold">
+                                            {formatPatientsRange(
+                                                forecast?.new_patients_lower ?? null,
+                                                forecast?.new_patients_upper ?? null
+                                            )}
+                                        </span>
+                                    </TableCell>
+                                    */}
                                 </TableRow>
                             );
                         })}

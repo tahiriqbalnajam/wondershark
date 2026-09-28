@@ -37,7 +37,7 @@ class RegisteredUserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role' => 'required|string|in:admin,agency,brand',
+            'role' => 'required|string|in:agency,brand',
             'website' => 'required_if:role,brand|nullable|url|max:255',
             'country' => 'required_if:role,brand|nullable|string|max:2',
             'region' => 'nullable|string|max:255',
@@ -61,6 +61,12 @@ class RegisteredUserController extends Controller
             ]);
 
             // Assign the selected role to the user
+            // Defense-in-depth: never allow self-registration of admin role,
+            // even if validation is later loosened. Admin accounts must be
+            // created by an existing admin via the admin panel.
+            if ($validated['role'] === 'admin') {
+                throw new \Exception('Admin role cannot be self-assigned.');
+            }
             $user->assignRole($validated['role']);
 
             // If the user is registering as a brand, create a brand record

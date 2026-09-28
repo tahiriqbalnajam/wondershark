@@ -22,6 +22,14 @@ class ConsoleController extends Controller
                 ]
             ],
             [
+                'signature' => 'brands:run-patient-forecast',
+                'description' => 'Forecast',
+                'options' => [
+                    ['name' => 'brand', 'type' => 'text', 'label' => 'Brand ID (Required)', 'prefix' => '--brand='],
+                    ['name' => 'session', 'type' => 'text', 'label' => 'Analysis Session ID (Optional — defaults to latest)', 'prefix' => '--session='],
+                ]
+            ],
+            [
                 'signature' => 'brand:analyze-prompts',
                 'description' => 'Brand Prompt Analysis Scheduling - Runs daily at 2 AM UTC',
                 'options' => [
@@ -60,7 +68,7 @@ class ConsoleController extends Controller
             ],
             [
                 'signature' => 'posts:check-urls',
-                'description' => 'Check Post URLs - Runs twice weekly on Monday and Thursday at 7 AM UTC',
+                'description' => 'Check Post URLs - Runs weekly on Saturday at 7 AM UTC',
                 'options' => [
                     // ['name' => 'post', 'type' => 'text', 'label' => 'Specific Post ID (Optional)', 'prefix' => '--post='],
                     ['name' => 'all-brands', 'type' => 'boolean', 'label' => 'All Brands', 'prefix' => '--all-brands', 'default' => false],
@@ -90,6 +98,8 @@ class ConsoleController extends Controller
 
         return Inertia::render('admin/console/index', [
             'commands' => $commands,
+            'serverUtcTime' => now()->toDateTimeString(),
+            'appTimezone' => config('app.timezone'),
         ]);
     }
 
@@ -106,6 +116,7 @@ class ConsoleController extends Controller
         // Whitelist commands for security
         $allowedCommands = [
             'brands:analyze-competitive-stats',
+            'brands:run-patient-forecast',
             'brand:analyze-prompts',
             'posts:fetch-prompts-stats',
             'brand:recalculate-visibility',

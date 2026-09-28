@@ -1,3 +1,8 @@
+export type RegionRow = {
+    state: string;
+    cities: string[];
+};
+
 export type BrandForm = {
     name: string;
     website: string;
@@ -6,7 +11,8 @@ export type BrandForm = {
     allies: string[];
     campaign_indicator: string;
     country: string;
-    region: string;
+    region: RegionRow[];
+    procedure: string;
     prompts: string[];
     subreddits: string[];
     competitors: Competitor[];

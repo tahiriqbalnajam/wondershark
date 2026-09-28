@@ -124,6 +124,10 @@ class UserController extends Controller
             $user = User::create($userData);
 
             if ($request->roles) {
+                // Block admin role assignment unless the current user is already admin
+                if (is_array($request->roles) && in_array('admin', $request->roles, true) && ! Auth::user()->hasRole('admin')) {
+                    throw new \Exception('You cannot assign the admin role.');
+                }
                 $user->assignRole($request->roles);
 
                 if (in_array('brand', $request->roles)) {
@@ -317,6 +321,10 @@ class UserController extends Controller
             ]);
 
             if ($request->has('roles')) {
+                // Block admin role assignment unless the current user is already admin
+                if (is_array($request->roles) && in_array('admin', $request->roles, true) && ! Auth::user()->hasRole('admin')) {
+                    throw new \Exception('You cannot assign the admin role.');
+                }
                 $user->syncRoles($request->roles);
             }
 

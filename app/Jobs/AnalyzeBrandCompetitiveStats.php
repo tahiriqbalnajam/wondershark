@@ -57,7 +57,15 @@ class AnalyzeBrandCompetitiveStats implements ShouldQueue
             }
 
             $competitiveAnalysis = new CompetitiveAnalysisService(new AIPromptService);
-            $competitiveAnalysis->analyzeBrandCompetitiveStats($this->brand);
+             // Generate the competitive-stats session ID upfront so we can dispatch
+            // the patient-forecast batch against the exact session that was written.
+            $competitiveSessionId = Str::uuid()->toString();
+            $competitiveAnalysis->analyzeBrandCompetitiveStats($this->brand, $competitiveSessionId);
+
+            // Dispatch the batched patient-acquisition forecast job for this session.
+            // The job skips silently if the brand has no procedure/region or no BVI stats.
+            ProcessPatientForecastBatch::dispatch($this->brand, $competitiveSessionId)
+                ->onQueue('default');
 
             // Dispatch prompt analysis for all active brand prompts
             $prompts = BrandPrompt::where('brand_id', $this->brand->id)
@@ -83,6 +91,7 @@ class AnalyzeBrandCompetitiveStats implements ShouldQueue
 
             Log::info('Queued competitive analysis completed', [
                 'brand_id' => $this->brand->id,
+                'competitive_session_id' => $competitiveSessionId,
             ]);
         } catch (\Exception $e) {
             Log::error('Queued competitive analysis failed', [

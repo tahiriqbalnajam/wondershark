@@ -27,9 +27,11 @@ interface Command {
 
 interface Props {
     commands: Command[];
+    serverUtcTime: string;
+    appTimezone: string;
 }
 
-export default function ConsoleIndex({ commands }: Props) {
+export default function ConsoleIndex({ commands, serverUtcTime, appTimezone }: Props) {
     const [runningCommand, setRunningCommand] = useState<string | null>(null);
     const [selectedCommand, setSelectedCommand] = useState<Command | null>(null);
     const [params, setParams] = useState<Record<string, any>>({});
@@ -95,6 +97,30 @@ export default function ConsoleIndex({ commands }: Props) {
                         Execute artisan commands directly from the dashboard
                     </p>
                 </div>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Settings className="h-5 w-5" />
+                            Server Time
+                        </CardTitle>
+                        <CardDescription>
+                            Snapshot captured at page load — refresh to update. Compare against time.is/UTC to verify the server clock.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+                            <div>
+                                <div className="text-xs uppercase text-muted-foreground">Server UTC time</div>
+                                <div className="font-mono text-lg">{serverUtcTime}</div>
+                            </div>
+                            <div>
+                                <div className="text-xs uppercase text-muted-foreground">App timezone</div>
+                                <div className="font-mono text-lg">{appTimezone}</div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 <Card>
                     <CardHeader>
