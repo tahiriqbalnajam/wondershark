@@ -486,7 +486,8 @@ export default function Dashboard() {
                 </div>
             </div>
             {props.showTrialPopup && <FreeTrialPopup show={props.showTrialPopup} />}
-            {props.showSubscribePopup && <SubscribePopup show={props.showSubscribePopup} billingUrl={props.billingUrl ?? '/agency/billing'} />}
+            {/* Hidden for now — re-enable to show the subscribe popup again */}
+            {/* {props.showSubscribePopup && <SubscribePopup show={props.showSubscribePopup} billingUrl={props.billingUrl ?? '/agency/billing'} />} */}
         </AppLayout>
     );
 }

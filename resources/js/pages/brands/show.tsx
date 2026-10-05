@@ -1436,7 +1436,8 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                 </DialogContent>
             </Dialog>
             {showTrialPopup && <FreeTrialPopup show={showTrialPopup} />}
-            {showSubscribePopup && <SubscribePopup show={showSubscribePopup} billingUrl={billingUrl} />}
+            {/* Hidden for now — re-enable to show the subscribe popup again */}
+            {/* {showSubscribePopup && <SubscribePopup show={showSubscribePopup} billingUrl={billingUrl} />} */}
         </AppLayout>
     );
 }

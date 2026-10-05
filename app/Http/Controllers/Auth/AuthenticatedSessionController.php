@@ -39,34 +39,37 @@ class AuthenticatedSessionController extends Controller
         // Redirect trial users to billing page if they don't have an active subscription
         if ($user && !$user->activeSubscription) {
             // Option B: Immediate paywall - redirect to billing
-            if ($user->trial_type === 'B') {
-                if ($user->hasRole('agency')) {
-                    return redirect()->route('agency.billing');
-                } elseif ($user->hasRole('brand')) {
-                    return redirect()->route('brand.billing');
-                }
-                return redirect()->route('agency.billing');
-            }
+            // Commented out — no longer redirect to billing after login
+            // if ($user->trial_type === 'B') {
+            //     if ($user->hasRole('agency')) {
+            //         return redirect()->route('agency.billing');
+            //     } elseif ($user->hasRole('brand')) {
+            //         return redirect()->route('brand.billing');
+            //     }
+            //     return redirect()->route('agency.billing');
+            // }
             
             // Option A: Free trial - redirect to billing to show discount
-            if ($user->trial_type === 'A' && $user->isOnTrial() && $user->trialDaysLeft() <= 4) {
-                if ($user->hasRole('agency')) {
-                    return redirect()->route('agency.billing');
-                } elseif ($user->hasRole('brand')) {
-                    return redirect()->route('brand.billing');
-                }
-                return redirect()->route('agency.billing');
-            }
+            // Commented out — no longer redirect to billing after login
+            // if ($user->trial_type === 'A' && $user->isOnTrial() && $user->trialDaysLeft() <= 4) {
+            //     if ($user->hasRole('agency')) {
+            //         return redirect()->route('agency.billing');
+            //     } elseif ($user->hasRole('brand')) {
+            //         return redirect()->route('brand.billing');
+            //     }
+            //     return redirect()->route('agency.billing');
+            // }
 
 
-            if ($user->trial_type === 'A' && $user->isTrialExpired() && ! $user->activeSubscription) {
-                if ($user->hasRole('agency')) {
-                    return redirect()->route('agency.billing');
-                } elseif ($user->hasRole('brand')) {
-                    return redirect()->route('brand.billing');
-                }
-                return redirect()->route('agency.billing');
-            }
+            // Commented out — no longer redirect to billing after login
+            // if ($user->trial_type === 'A' && $user->isTrialExpired() && ! $user->activeSubscription) {
+            //     if ($user->hasRole('agency')) {
+            //         return redirect()->route('agency.billing');
+            //     } elseif ($user->hasRole('brand')) {
+            //         return redirect()->route('brand.billing');
+            //     }
+            //     return redirect()->route('agency.billing');
+            // }
             
 
             // Option C: Pitch period expired — redirect to posts page instead of billing

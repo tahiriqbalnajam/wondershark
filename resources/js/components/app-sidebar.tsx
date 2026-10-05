@@ -193,24 +193,26 @@ const getSettingsNavItems = (permissions: ReturnType<typeof usePermissions>, sel
         });
 
       
-        if (userEmail === 'agency@example.com' || trialType === 'A' || trialType === 'B' || activeSubscription) {
-            items.push({
-                title: 'Billing',
-                href: '/agency/billing',
-                icon: CreditCard,
-            });
-        }
+        // Commented out — hide Billing nav link
+        // if (userEmail === 'agency@example.com' || trialType === 'A' || trialType === 'B' || activeSubscription) {
+        //     items.push({
+        //         title: 'Billing',
+        //         href: '/agency/billing',
+        //         icon: CreditCard,
+        //     });
+        // }
 
     }
 
     // Billing for brand users - only for A, B, or subscription
-    if (permissions.hasRole('brand') && (trialType === 'A' || trialType === 'B' || activeSubscription)) {
-        items.push({
-            title: 'Billing',
-            href: '/brand/billing',
-            icon: CreditCard,
-        });
-    }
+    // Commented out — hide Billing nav link
+    // if (permissions.hasRole('brand') && (trialType === 'A' || trialType === 'B' || activeSubscription)) {
+    //     items.push({
+    //         title: 'Billing',
+    //         href: '/brand/billing',
+    //         icon: CreditCard,
+    //     });
+    // }
 
     // Billing - only for agency@example.com account
   //  if (userEmail === 'agency@example.com') {

@@ -103,14 +103,17 @@ class RequireActiveAccess
         }
 
         // No access — redirect to the appropriate billing page
-        if ($request->expectsJson()) {
-            return response()->json(['message' => 'Subscription required.'], 402);
-        }
+        // Commented out — no longer redirect to billing page
+        // if ($request->expectsJson()) {
+        //     return response()->json(['message' => 'Subscription required.'], 402);
+        // }
+        //
+        // $billingRoute = $this->billingRoute($accountUser);
+        //
+        // return redirect()->route($billingRoute)
+        //     ->with('warning', 'Please subscribe to access this feature.');
 
-        $billingRoute = $this->billingRoute($accountUser);
-
-        return redirect()->route($billingRoute)
-            ->with('warning', 'Please subscribe to access this feature.');
+        return $next($request);
     }
 
     private function billingRoute(\App\Models\User $user): string
