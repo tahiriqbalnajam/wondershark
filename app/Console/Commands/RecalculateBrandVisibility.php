@@ -6,6 +6,7 @@ use App\Models\Brand;
 use App\Models\BrandPrompt;
 use App\Services\VisibilityCalculationService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class RecalculateBrandVisibility extends Command
