@@ -168,9 +168,47 @@ export function BrandVisibilityIndex({
     //     return `${lower} to ${upper}`;
     // };
 
-    const formatMarketShare = (v: number | null | undefined): string => {
+    // Market Share is the stored, already-normalized (BVI_i / Σ BVI) × 100 value.
+    // Rounding each row on its own can push the column total off 100% (e.g. 101%,
+    // which contradicts the methodology's "Total: 100.00%"), so round the whole
+    // batch with largest-remainder: every row keeps its floor and the leftover
+    // points go to the rows with the largest fractional parts.
+    const marketShareDisplay = (() => {
+        const shares: { key: string; value: number }[] = [];
+        for (const [key, forecast] of Object.entries(patientForecasts)) {
+            if (forecast?.market_share != null) shares.push({ key, value: forecast.market_share });
+        }
+
+        const display: Record<string, number> = {};
+        if (shares.length === 0) return display;
+
+        const total = shares.reduce((sum, s) => sum + s.value, 0);
+        const floors = shares.map(s => ({ key: s.key, floor: Math.floor(s.value), rest: s.value - Math.floor(s.value) }));
+        let leftover = 100 - floors.reduce((sum, f) => sum + f.floor, 0);
+
+        // Only adjust when this batch really is a normalized set that just lost
+        // precision to rounding; otherwise show plain rounded values.
+        if (Math.abs(total - 100) > 1 || leftover < 0 || leftover > floors.length) {
+            shares.forEach(s => { display[s.key] = Math.round(s.value); });
+            return display;
+        }
+
+        floors.forEach(f => { display[f.key] = f.floor; });
+        [...floors]
+            .sort((a, b) => b.rest - a.rest)
+            .slice(0, leftover)
+            .forEach(f => { display[f.key] += 1; });
+
+        return display;
+    })();
+
+    const formatMarketShare = (stat: CompetitiveStat, v: number | null | undefined): string => {
         if (v == null) return '—';
-        return `${Math.round(v)}%`;
+        const key = stat.entity_type === 'brand'
+            ? 'brand'
+            : stat.competitor_id != null ? `competitor:${stat.competitor_id}` : null;
+        const normalized = key ? marketShareDisplay[key] : undefined;
+        return `${normalized ?? Math.round(v)}%`;
     };
 
     return (
@@ -331,7 +369,7 @@ export function BrandVisibilityIndex({
                                     </TableCell>
                                     <TableCell className="border-r border-gray-200 w-28 text-center">
                                         <span className="text-xs font-bold">
-                                            {formatMarketShare(forecast?.market_share)}
+                                            {formatMarketShare(stat, forecast?.market_share)}
                                         </span>
                                     </TableCell>
                                     <TableCell className="w-40 text-center">
