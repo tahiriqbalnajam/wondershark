@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\ProcessPatientForecastBatch;
 use App\Models\Brand;
 use App\Models\BrandCompetitiveStat;
 use App\Models\PatientForecast;
 use App\Models\User;
 use App\Services\CompetitiveAnalysisService;
+use App\Services\PatientForecastService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -213,7 +213,7 @@ class BrandVisibilityStatsController extends Controller
         ]);
 
         // If we have the record id, use it directly to avoid timezone mismatches
-        if (!empty($validated['id'])) {
+        if (! empty($validated['id'])) {
             $stat = BrandCompetitiveStat::find($validated['id']);
         } else {
             // Fallback: find by date/entity (existing behaviour)
@@ -255,7 +255,7 @@ class BrandVisibilityStatsController extends Controller
             ]);
         }
 
-        $this->dispatchForecastRerun($stat->brand_id, $stat->analysis_session_id);
+        $this->refreshForecastMarketShares($stat->brand_id, $stat->analysis_session_id);
 
         return response()->json(['success' => true]);
     }
@@ -279,7 +279,8 @@ class BrandVisibilityStatsController extends Controller
         }
 
         // Snapshot the affected sessions before clearing — `update()` doesn't return
-        // rows, so we collect analysis_session_ids up front to re-run forecasts after.
+        // rows, so we collect analysis_session_ids up front so their market shares can
+        // follow the cleared override.
         $affectedSessionIds = (clone $query)
             ->whereNotNull('visibility_override')
             ->whereNotNull('analysis_session_id')
@@ -296,19 +297,19 @@ class BrandVisibilityStatsController extends Controller
         ]);
 
         foreach ($affectedSessionIds as $sessionId) {
-            $this->dispatchForecastRerun($validated['brand_id'], $sessionId);
+            $this->refreshForecastMarketShares($validated['brand_id'], $sessionId);
         }
 
         return response()->json(['success' => true]);
     }
 
     /**
-     * Re-run the patient forecast for one BVI session so market_share (and the
-     * downstream Consultations / Patients columns) reflect the override that was
-     * just set or cleared. Skips silently when no PatientForecast exists for the
-     * session — we don't auto-create forecasts for sessions that never had one.
+     * Re-apply market share to the session's forecast batch so the Market Share and
+     * downstream Consultations / Patients numbers follow the override that was just
+     * set or cleared. Skipped when no PatientForecast exists for the session — we
+     * don't auto-create forecasts for sessions that never had one.
      */
-    protected function dispatchForecastRerun(int $brandId, ?string $analysisSessionId): void
+    protected function refreshForecastMarketShares(int $brandId, ?string $analysisSessionId): void
     {
         if (empty($analysisSessionId)) {
             return;
@@ -327,11 +328,16 @@ class BrandVisibilityStatsController extends Controller
             return;
         }
 
-        ProcessPatientForecastBatch::dispatch($brand, $analysisSessionId);
+        // Market share is derived from the BVI we just changed, and the AI-researched
+        // inputs are stored on each row, so this is recomputed in place — no AI call
+        // and no queue worker needed for the columns to follow the override.
+        $updated = app(PatientForecastService::class)
+            ->refreshSessionMarketShares($brand, $analysisSessionId);
 
-        Log::info('Dispatched patient forecast re-run after visibility override', [
+        Log::info('Re-applied market share after visibility override', [
             'brand_id' => $brandId,
             'analysis_session_id' => $analysisSessionId,
+            'rows_updated' => $updated,
             'overridden_by' => Auth::id(),
         ]);
     }

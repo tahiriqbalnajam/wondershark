@@ -7,6 +7,7 @@ use App\Models\AiModel;
 use App\Models\Brand;
 use App\Models\BrandCompetitiveStat;
 use App\Models\PatientForecast;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -18,6 +19,24 @@ class PatientForecastService
      * during their research or provider-selection process.
      */
     public const AI_USAGE_RATE = 47;
+
+    /**
+     * The AI-researched inputs Steps 1-5 are computed from. They are stored on every
+     * forecast row, which is what lets a changed market share be re-applied later
+     * without asking the AI again.
+     *
+     * @var list<string>
+     */
+    protected const METHODOLOGY_INPUT_KEYS = [
+        'annual_procedure_volume',
+        'consultation_to_procedure_rate',
+        'contact_rate',
+        'contact_to_booking_rate',
+        'lower_attendance_rate',
+        'upper_attendance_rate',
+        'lower_consultation_to_patient_rate',
+        'upper_consultation_to_patient_rate',
+    ];
 
     /**
      * Compute per-entity market shares for one analysis session using the
@@ -38,7 +57,7 @@ class PatientForecastService
             ->where('analysis_session_id', $analysisSessionId)
             ->where(function ($q) {
                 $q->whereNull('competitor_id')
-                  ->orWhereHas('competitor', fn ($cq) => $cq->where('status', 'accepted'));
+                    ->orWhereHas('competitor', fn ($cq) => $cq->where('status', 'accepted'));
             })
             ->get();
 
@@ -241,7 +260,7 @@ PROMPT;
      * new_patients_lower, new_patients_upper. Invariant: new_patients_upper is clamped
      * to ≤ booked_consultations_estimated.
      *
-     * @return array<string, array>  keyed by entity_ref, each value is a PatientForecast row payload
+     * @return array<string, array> keyed by entity_ref, each value is a PatientForecast row payload
      */
     public function parseAndComputeAll(array $aiData, Brand $brand, string $analysisSessionId, array $entitiesWithMarketShare): array
     {
@@ -270,6 +289,7 @@ PROMPT;
                     $brand, $analysisSessionId, $meta,
                     'AI response missing figures for entity '.$entityRef
                 );
+
                 continue;
             }
 
@@ -291,14 +311,52 @@ PROMPT;
      */
     protected function computeEntityRow(array $aiEntity, Brand $brand, string $analysisSessionId, array $meta): array
     {
-        $annualProcedureVolume = $this->floatOrThrow($aiEntity, 'annual_procedure_volume');
-        $consultationToProcedureRate = $this->floatOrThrow($aiEntity, 'consultation_to_procedure_rate');
-        $contactRate = $this->floatOrThrow($aiEntity, 'contact_rate');
-        $contactToBookingRate = $this->floatOrThrow($aiEntity, 'contact_to_booking_rate');
-        $lowerAttendance = $this->floatOrThrow($aiEntity, 'lower_attendance_rate');
-        $upperAttendance = $this->floatOrThrow($aiEntity, 'upper_attendance_rate');
-        $lowerConv = $this->floatOrThrow($aiEntity, 'lower_consultation_to_patient_rate');
-        $upperConv = $this->floatOrThrow($aiEntity, 'upper_consultation_to_patient_rate');
+        $inputs = [];
+        foreach (self::METHODOLOGY_INPUT_KEYS as $key) {
+            $inputs[$key] = $this->floatOrThrow($aiEntity, $key);
+        }
+
+        $figures = $this->applyMethodology($inputs, (float) $meta['market_share']);
+
+        return [
+            'brand_id' => $brand->id,
+            'competitor_id' => $meta['competitor_id'],
+            'analysis_session_id' => $analysisSessionId,
+            'region' => substr($brand->region_string, 0, 100),
+            'procedure' => $brand->procedure,
+            'visibility' => $meta['visibility'],
+            'market_share' => (float) $meta['market_share'],
+            'ai_usage_rate' => self::AI_USAGE_RATE,
+            'status' => 'completed',
+            'booked_consultations_estimated' => $figures['booked'],
+            'new_patients_lower' => $figures['lower'],
+            'new_patients_upper' => $figures['upper'],
+            'assumptions' => $inputs + [
+                'ai_assumptions_blob' => $aiEntity['assumptions'] ?? null,
+            ],
+            'error_message' => null,
+        ];
+    }
+
+    /**
+     * Steps 1-5 from the docx for one entity, given the AI-researched inputs and the
+     * entity's market share. Shared by the AI path (computeEntityRow) and by
+     * refreshSessionMarketShares(), so a market share that moves after the batch was
+     * stored moves the same numbers the same way.
+     *
+     * @param  array<string, float>  $inputs
+     * @return array{booked: int, lower: int, upper: int}
+     */
+    protected function applyMethodology(array $inputs, float $marketShare): array
+    {
+        $annualProcedureVolume = (float) $inputs['annual_procedure_volume'];
+        $consultationToProcedureRate = (float) $inputs['consultation_to_procedure_rate'];
+        $contactRate = (float) $inputs['contact_rate'];
+        $contactToBookingRate = (float) $inputs['contact_to_booking_rate'];
+        $lowerAttendance = (float) $inputs['lower_attendance_rate'];
+        $upperAttendance = (float) $inputs['upper_attendance_rate'];
+        $lowerConv = (float) $inputs['lower_consultation_to_patient_rate'];
+        $upperConv = (float) $inputs['upper_consultation_to_patient_rate'];
 
         // Step 1: total annual consultation opportunities
         $totalConsultationOpportunities = $consultationToProcedureRate > 0
@@ -309,7 +367,6 @@ PROMPT;
         $opportunitiesUsingAi = $totalConsultationOpportunities * (self::AI_USAGE_RATE / 100);
 
         // Step 3: annual AI-visible opportunities = opportunities_using_ai × market_share
-        $marketShare = (float) $meta['market_share'];
         $aiVisibleOpportunities = $opportunitiesUsingAi * ($marketShare / 100);
 
         // Step 4: booked consultations = ai_visible × contact_rate × contact_to_booking_rate
@@ -337,32 +394,7 @@ PROMPT;
             $lowerInt = $upperInt;
         }
 
-        return [
-            'brand_id' => $brand->id,
-            'competitor_id' => $meta['competitor_id'],
-            'analysis_session_id' => $analysisSessionId,
-            'region' => substr($brand->region_string, 0, 100),
-            'procedure' => $brand->procedure,
-            'visibility' => $meta['visibility'],
-            'market_share' => $marketShare,
-            'ai_usage_rate' => self::AI_USAGE_RATE,
-            'status' => 'completed',
-            'booked_consultations_estimated' => $bookedInt,
-            'new_patients_lower' => $lowerInt,
-            'new_patients_upper' => $upperInt,
-            'assumptions' => [
-                'annual_procedure_volume' => $annualProcedureVolume,
-                'consultation_to_procedure_rate' => $consultationToProcedureRate,
-                'contact_rate' => $contactRate,
-                'contact_to_booking_rate' => $contactToBookingRate,
-                'lower_attendance_rate' => $lowerAttendance,
-                'upper_attendance_rate' => $upperAttendance,
-                'lower_consultation_to_patient_rate' => $lowerConv,
-                'upper_consultation_to_patient_rate' => $upperConv,
-                'ai_assumptions_blob' => $aiEntity['assumptions'] ?? null,
-            ],
-            'error_message' => null,
-        ];
+        return ['booked' => $bookedInt, 'lower' => $lowerInt, 'upper' => $upperInt];
     }
 
     /**
@@ -393,6 +425,115 @@ PROMPT;
                 ]);
             }
         }
+    }
+
+    /**
+     * Re-apply market share to an already-stored forecast batch after the BVI behind it
+     * changed — e.g. an admin set or cleared a manual visibility override.
+     *
+     * The AI-researched inputs are stored on every row, so the batch is re-derived
+     * locally: no AI call, no queue worker, and the researched rates stay exactly as
+     * they were — only the market share (and the Steps 3-5 numbers derived from it) move.
+     *
+     * @return int number of rows actually updated
+     */
+    public function refreshSessionMarketShares(Brand $brand, string $analysisSessionId): int
+    {
+        $entities = $this->computeSessionMarketShares($brand, $analysisSessionId);
+
+        if (empty($entities)) {
+            return 0;
+        }
+
+        $forecasts = PatientForecast::where('brand_id', $brand->id)
+            ->where('analysis_session_id', $analysisSessionId)
+            ->get();
+
+        return DB::transaction(function () use ($forecasts, $entities) {
+            $updated = 0;
+
+            foreach ($forecasts as $forecast) {
+                $entityRef = $forecast->competitor_id
+                    ? "competitor:{$forecast->competitor_id}"
+                    : 'brand';
+
+                // Entity is no longer part of the session (e.g. competitor unaccepted):
+                // leave its stored row alone rather than inventing a share for it.
+                $meta = $entities[$entityRef] ?? null;
+                if ($meta === null) {
+                    continue;
+                }
+
+                $marketShare = (float) $meta['market_share'];
+                $payload = [
+                    'visibility' => $meta['visibility'],
+                    'market_share' => $marketShare,
+                ];
+
+                // Rows without usable inputs (failed rows) keep their null figures; the
+                // share itself still follows the visibility it was derived from.
+                $inputs = $this->methodologyInputsFromAssumptions($forecast->assumptions);
+                if ($inputs !== null) {
+                    $figures = $this->applyMethodology($inputs, $marketShare);
+                    $payload += [
+                        'booked_consultations_estimated' => $figures['booked'],
+                        'new_patients_lower' => $figures['lower'],
+                        'new_patients_upper' => $figures['upper'],
+                    ];
+                }
+
+                if (! $this->needsUpdate($forecast, $payload)) {
+                    continue;
+                }
+
+                $forecast->update($payload);
+                $updated++;
+            }
+
+            return $updated;
+        });
+    }
+
+    /**
+     * Pull the methodology inputs back out of a stored row's assumptions. Returns null
+     * when the row has none (failed rows, or rows stored before the inputs were kept).
+     *
+     * @return array<string, float>|null
+     */
+    protected function methodologyInputsFromAssumptions(mixed $assumptions): ?array
+    {
+        if (! is_array($assumptions)) {
+            return null;
+        }
+
+        $inputs = [];
+        foreach (self::METHODOLOGY_INPUT_KEYS as $key) {
+            if (! isset($assumptions[$key]) || ! is_numeric($assumptions[$key])) {
+                return null;
+            }
+            $inputs[$key] = (float) $assumptions[$key];
+        }
+
+        return $inputs;
+    }
+
+    /**
+     * True when at least one of the given values differs from what is stored, so a
+     * refresh that changes nothing leaves updated_at alone.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    protected function needsUpdate(PatientForecast $forecast, array $payload): bool
+    {
+        foreach ($payload as $key => $value) {
+            $current = $forecast->getAttribute($key);
+
+            if ($value === null ? $current !== null : (float) $current !== (float) $value) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
