@@ -252,12 +252,15 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
         return () => clearInterval(id);
     }, [trial?.trial_ends_at, isOnTrial]);
 
-    // Auto-refresh every 30s while analysis is still running
+    // Auto-refresh every 30s while analysis is still running.
+    // `patientForecasts` must be re-fetched as well: the Market Share and
+    // Est. Qualified Attended Consultations cells are the only ones fed by it,
+    // so leaving it out freezes those two columns while the rest of the table updates.
     useEffect(() => {
         if (!analysisStatus?.has_pending) return;
 
         refreshTimerRef.current = setInterval(() => {
-            router.reload({ only: ['competitiveStats', 'historicalStats', 'analysisStatus', 'brand'] });
+            router.reload({ only: ['competitiveStats', 'historicalStats', 'analysisStatus', 'brand', 'patientForecasts'] });
         }, 30_000);
 
         return () => {
@@ -303,7 +306,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                 preserveState: false,
                 preserveScroll: true,
                 replace: true,
-                only: ['competitiveStats', 'historicalStats'],
+                only: ['competitiveStats', 'historicalStats', 'patientForecasts'],
                 //onFinish: () => setIsLoadingStats(false),
             }
         );
@@ -869,7 +872,7 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
 
                         {/* Manual refresh button */}
                         <button
-                            onClick={() => router.reload({ only: ['competitiveStats', 'historicalStats', 'analysisStatus', 'brand'] })}
+                            onClick={() => router.reload({ only: ['competitiveStats', 'historicalStats', 'analysisStatus', 'brand', 'patientForecasts'] })}
                             className="flex-shrink-0 flex items-center gap-1.5 rounded-lg border border-blue-300 dark:border-blue-700 bg-white dark:bg-blue-900 px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors"
                         >
                             <RefreshCw className="h-3.5 w-3.5" />
