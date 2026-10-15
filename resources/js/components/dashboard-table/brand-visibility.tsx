@@ -168,37 +168,37 @@ export function BrandVisibilityIndex({
     //     return `${lower} to ${upper}`;
     // };
 
-    // Market Share is the stored, already-normalized (BVI_i / Σ BVI) × 100 value.
-    // Rounding each row on its own can push the column total off 100% (e.g. 101%,
-    // which contradicts the methodology's "Total: 100.00%"), so round the whole
-    // batch with largest-remainder: every row keeps its floor and the leftover
-    // points go to the rows with the largest fractional parts.
+    // Market Share is the stored, already-normalized (BVI_i / Σ BVI) × 100 value,
+    // shown with the two decimals the methodology uses. Each row was rounded to
+    // 2 dp on its own when it was stored, so the batch can total 100.01%; let the
+    // largest row absorb the stray hundredth so the column reads exactly the
+    // docx's "Total: 100.00%".
     const marketShareDisplay = (() => {
         const shares: { key: string; value: number }[] = [];
         for (const [key, forecast] of Object.entries(patientForecasts)) {
             if (forecast?.market_share != null) shares.push({ key, value: forecast.market_share });
         }
 
-        const display: Record<string, number> = {};
+        const display: Record<string, string> = {};
         if (shares.length === 0) return display;
 
         const total = shares.reduce((sum, s) => sum + s.value, 0);
-        const floors = shares.map(s => ({ key: s.key, floor: Math.floor(s.value), rest: s.value - Math.floor(s.value) }));
-        let leftover = 100 - floors.reduce((sum, f) => sum + f.floor, 0);
+        const rows = shares.map(s => ({ key: s.key, cents: Math.round(s.value * 100) }));
+        const drift = 10000 - rows.reduce((sum, r) => sum + r.cents, 0);
 
-        // Only adjust when this batch really is a normalized set that just lost
-        // precision to rounding; otherwise show plain rounded values.
-        if (Math.abs(total - 100) > 1 || leftover < 0 || leftover > floors.length) {
-            shares.forEach(s => { display[s.key] = Math.round(s.value); });
+        // Only correct rounding-scale drift on a batch that really is a normalized
+        // set; otherwise show the stored values untouched.
+        if (Math.abs(total - 100) > 1 || Math.abs(drift) > 5 || rows.length < 2) {
+            shares.forEach(s => { display[s.key] = s.value.toFixed(2); });
             return display;
         }
 
-        floors.forEach(f => { display[f.key] = f.floor; });
-        [...floors]
-            .sort((a, b) => b.rest - a.rest)
-            .slice(0, leftover)
-            .forEach(f => { display[f.key] += 1; });
+        const order = [...rows].sort((a, b) => b.cents - a.cents);
+        for (let i = 0; i < Math.abs(drift); i++) {
+            order[i % order.length].cents += drift > 0 ? 1 : -1;
+        }
 
+        rows.forEach(r => { display[r.key] = (r.cents / 100).toFixed(2); });
         return display;
     })();
 
@@ -208,7 +208,7 @@ export function BrandVisibilityIndex({
             ? 'brand'
             : stat.competitor_id != null ? `competitor:${stat.competitor_id}` : null;
         const normalized = key ? marketShareDisplay[key] : undefined;
-        return `${normalized ?? Math.round(v)}%`;
+        return `${normalized ?? v.toFixed(2)}%`;
     };
 
     return (
