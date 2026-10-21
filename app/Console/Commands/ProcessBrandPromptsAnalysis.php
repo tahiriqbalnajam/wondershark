@@ -88,6 +88,7 @@ class ProcessBrandPromptsAnalysis extends Command
         $this->newLine();
 
         $totalJobs = 0;
+        $skippedExpired = 0;
         $progressBar = $this->output->createProgressBar($brands->count());
         $progressBar->start();
 
@@ -99,6 +100,12 @@ class ProcessBrandPromptsAnalysis extends Command
                     'brand_id' => $brand->id,
                     'user_id' => $brandUser->id,
                 ]);
+
+                $skippedExpired++;
+                $this->newLine();
+                $this->warn("Brand: {$brand->name}");
+                $this->warn("  → Skipped: trial expired or no active subscription (user #{$brandUser->id})");
+
                 $progressBar->advance();
 
                 continue;
@@ -139,6 +146,13 @@ class ProcessBrandPromptsAnalysis extends Command
 
                 continue;
             }
+
+            // Re-analysis supersedes earlier failures; clear the markers so the
+            // dashboard shows progress while the new jobs run.
+            BrandPrompt::whereIn('id', $promptsToProcess->pluck('id'))->update([
+                'analysis_failed_at' => null,
+                'analysis_error' => null,
+            ]);
 
             $totalPrompts = $promptsToProcess->count();
 
@@ -210,9 +224,10 @@ class ProcessBrandPromptsAnalysis extends Command
                     $this->line("  Queueing prompt #{$prompt->id} → {$assignedModel->name}: ".substr($prompt->prompt, 0, 50).'...');
                 }
 
-                // Delete previous resources to ensure old data isn't displayed while processing
-                \App\Models\BrandPromptResource::where('brand_prompt_id', $prompt->id)->delete();
-                $prompt->update(['resources' => []]);
+                // Resources are cleared by ProcessBrandPromptAnalysis when the
+                // job actually starts. Clearing them here wiped the dashboard
+                // for every prompt as soon as the command ran, even while the
+                // jobs sat in a backlog.
 
                 // Dispatch with assigned model
                 ProcessBrandPromptAnalysis::dispatch($prompt, $sessionId, $forceRegenerate, $assignedModel->name)
@@ -236,6 +251,9 @@ class ProcessBrandPromptsAnalysis extends Command
         if ($totalJobs > 0) {
             $this->info("Queued {$totalJobs} analysis jobs with session ID: {$sessionId}");
             $this->info('Monitor progress with: php artisan queue:work');
+        } elseif ($skippedExpired > 0) {
+            $this->warn("No jobs queued: {$skippedExpired} brand(s) skipped because the owner's trial expired or has no active subscription.");
+            $this->line("  Extend the owner's trial or activate a subscription, then retry.");
         } else {
             $this->info('No prompts needed analysis. Use --force to re-analyze existing ones.');
         }

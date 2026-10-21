@@ -82,7 +82,7 @@ class CompetitorController extends Controller
         // Trigger competitive analysis since competitor list changed
         try {
             $brand = Brand::find($validated['brand_id']);
-            AnalyzeBrandCompetitiveStats::dispatch($brand);
+            AnalyzeBrandCompetitiveStats::schedule($brand);
         } catch (\Exception $e) {
             Log::error('Failed to dispatch analysis after admin competitor create', [
                 'brand_id' => $validated['brand_id'],
@@ -105,7 +105,7 @@ class CompetitorController extends Controller
         $competitor->update($validated);
 
         // Trigger competitive analysis since competitor changed
-        AnalyzeBrandCompetitiveStats::dispatch($competitor->brand);
+        AnalyzeBrandCompetitiveStats::schedule($competitor->brand);
 
         return redirect()->back()->with('analysis_triggered', true);
     }
@@ -117,7 +117,7 @@ class CompetitorController extends Controller
         $competitor->delete();
 
         // Trigger competitive analysis since competitor list changed
-        AnalyzeBrandCompetitiveStats::dispatch($brand);
+        AnalyzeBrandCompetitiveStats::schedule($brand);
 
         return redirect()->back()->with('analysis_triggered', true);
     }

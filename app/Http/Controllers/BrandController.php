@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\AnalyzeBrandCompetitiveStats;
+use App\Jobs\ProcessBrandPromptAnalysis;
 use App\Mail\AgencyEmailChanged;
 use App\Models\AiModel;
 use App\Models\Brand;
@@ -513,6 +514,9 @@ class BrandController extends Controller
             'jobs_dispatched' => $activePrompts->count(),
         ]);
 
+        // Also refresh BVI stats and patient forecasts for the new brand.
+        AnalyzeBrandCompetitiveStats::schedule($brand);
+
         // Store the brand in session
         session(['selected_brand_id' => $brand->id]);
 
@@ -579,7 +583,7 @@ class BrandController extends Controller
         if (! empty($savedCompetitors) && $brand->status === 'active') {
             $brandUser = \App\Models\User::find($brand->user_id ?? $brand->agency_id);
             if ($brandUser && $brandUser->canProcessAnalysis()) {
-                AnalyzeBrandCompetitiveStats::dispatch($brand);
+                AnalyzeBrandCompetitiveStats::schedule($brand);
             }
         }
 
@@ -624,7 +628,7 @@ class BrandController extends Controller
         $competitor->update(['status' => $request->status]);
 
         // Trigger competitive analysis since competitor status changed
-        AnalyzeBrandCompetitiveStats::dispatch($brand);
+        AnalyzeBrandCompetitiveStats::schedule($brand);
 
         return response()->json([
             'success' => true,
@@ -653,6 +657,7 @@ class BrandController extends Controller
         ]);
 
         $savedPrompts = [];
+        $newActivePrompts = [];
 
         foreach ($request->prompts as $index => $promptData) {
             $promptText = is_array($promptData) ? $promptData['prompt'] : $promptData;
@@ -691,6 +696,20 @@ class BrandController extends Controller
                     'is_active' => $prompt->is_active,
                     'order' => $prompt->order,
                 ];
+
+                if ($prompt->is_active) {
+                    $newActivePrompts[] = $prompt;
+                }
+            }
+        }
+
+        // Bulk-created active prompts need analysis too. Draft brands are
+        // handled by the activation step, so only analyze for active brands.
+        if ($brand->status === 'active' && ! empty($newActivePrompts)) {
+            $sessionId = (string) \Illuminate\Support\Str::uuid();
+            foreach ($newActivePrompts as $prompt) {
+                ProcessBrandPromptAnalysis::dispatch($prompt, $sessionId, true)
+                    ->onQueue('default');
             }
         }
 
@@ -876,14 +895,28 @@ class BrandController extends Controller
             ->whereNull('analysis_completed_at')
             ->count();
 
+        // Failed prompts are still "pending" in the database because
+        // analysis_completed_at stays null, but no job is running for them.
+        // Only count prompts that can still finish as in progress, otherwise
+        // the spinner stays on forever after a permanent failure.
+        $runnablePending = max(0, $pendingPrompts - $failedPrompts);
+
+        // Every analysis job no-ops when the brand owner's trial has expired
+        // and there is no active subscription. Surface that instead of showing
+        // an "in progress" banner that can never finish.
+        $brandOwner = User::find($brand->user_id ?? $brand->agency_id);
+        $analysisBlocked = $brandOwner ? ! $brandOwner->canProcessAnalysis() : false;
+
         $analysisStatus = [
             'total'   => $totalActivePrompts,
             'pending' => $pendingPrompts,
             'failed'  => $failedPrompts,
             'done'    => $totalActivePrompts - $pendingPrompts,
-            'has_pending' => $pendingPrompts > 0,
+            'has_pending' => ! $analysisBlocked && $runnablePending > 0,
+            'has_failures' => ! $analysisBlocked && $failedPrompts > 0,
+            'analysis_blocked' => $analysisBlocked,
             'progress_pct' => $totalActivePrompts > 0
-                ? (int) round((($totalActivePrompts - $pendingPrompts) / $totalActivePrompts) * 100)
+                ? (int) round((($totalActivePrompts - $runnablePending) / $totalActivePrompts) * 100)
                 : 100,
         ];
 
@@ -1453,8 +1486,11 @@ class BrandController extends Controller
 
         // $brand->update($request->except('logo'));
         $oldRegionString = $brand->region_string;
+        $wasActive = $brand->status === 'active';
+        $newPrompts = [];
+        $promptsChanged = false;
 
-        DB::transaction(function () use ($request, $brand) {
+        DB::transaction(function () use ($request, $brand, &$newPrompts, &$promptsChanged) {
             // Update brand basic info and status
             $brand->update([
                 'name' => $request->name,
@@ -1470,17 +1506,44 @@ class BrandController extends Controller
                 'allies' => $request->allies ?? [],
             ]);
 
-            // Delete existing prompts and create new ones
+            // Sync prompts instead of deleting/recreating them. The old code
+            // wiped ai_response/analysis_completed_at for every prompt on every
+            // brand save, so the dashboard dropped to "0 of 25" and stayed there
+            // because no analysis was dispatched unless the region also changed.
             if ($request->prompts !== null) {
-                $brand->prompts()->delete();
+                $existingPrompts = $brand->prompts()
+                    ->get()
+                    ->keyBy(fn ($prompt) => mb_strtolower(trim($prompt->prompt)));
+
+                $keptIds = [];
                 foreach ($request->prompts as $index => $promptText) {
-                    BrandPrompt::create([
+                    $key = mb_strtolower(trim($promptText));
+                    $existingPrompt = $existingPrompts->get($key);
+
+                    if ($existingPrompt) {
+                        $existingPrompt->update([
+                            'order' => $index + 1,
+                            'is_active' => true,
+                            'status' => 'active',
+                        ]);
+                        $keptIds[] = $existingPrompt->id;
+
+                        continue;
+                    }
+
+                    $newPrompt = BrandPrompt::create([
                         'brand_id' => $brand->id,
                         'prompt' => $promptText,
                         'order' => $index + 1,
                         'is_active' => true,
+                        'status' => 'active',
                     ]);
+                    $newPrompts[] = $newPrompt;
+                    $keptIds[] = $newPrompt->id;
                 }
+
+                $deletedCount = $brand->prompts()->whereNotIn('id', $keptIds)->delete();
+                $promptsChanged = $deletedCount > 0 || ! empty($newPrompts);
             }
 
             // Delete existing subreddits and create new ones
@@ -1498,13 +1561,23 @@ class BrandController extends Controller
 
         $brand->refresh();
         $regionChanged = $oldRegionString !== $brand->region_string;
-        if ($regionChanged && $brand->status === 'active') {
-            AnalyzeBrandCompetitiveStats::dispatch($brand);
+        $statusChangedToActive = ! $wasActive && $brand->status === 'active';
+        $analysisScheduled = $brand->status === 'active'
+            && ($regionChanged || $promptsChanged || $statusChangedToActive);
+
+        if ($analysisScheduled) {
+            AnalyzeBrandCompetitiveStats::schedule($brand);
         }
 
-        $successMessage = ($regionChanged && $brand->status === 'active')
-            ? 'Brand updated. Region changed — BVI, forecasts, and prompt analysis are being recalculated.'
-            : 'Brand updated successfully!';
+        if ($analysisScheduled) {
+            $successMessage = match (true) {
+                $regionChanged => 'Brand updated. Region changed — BVI, forecasts, and prompt analysis are being recalculated.',
+                $promptsChanged => 'Brand updated. Prompt changes are being analyzed in the background.',
+                default => 'Brand updated. Analysis is being started in the background.',
+            };
+        } else {
+            $successMessage = 'Brand updated successfully!';
+        }
 
         return redirect()->route('brands.edit', $brand)->with('success', $successMessage);
     }
@@ -1526,9 +1599,17 @@ class BrandController extends Controller
             'status' => 'required|in:active,inactive',
         ]);
 
+        $wasActive = $brand->status === 'active';
+
         $brand->update([
             'status' => $request->status,
         ]);
+
+        // A previously inactive brand may have prompts that were never
+        // analyzed. Kick off a run when it becomes active again.
+        if (! $wasActive && $request->status === 'active') {
+            AnalyzeBrandCompetitiveStats::schedule($brand);
+        }
 
         return back()->with('success', 'Brand status updated successfully!');
     }
@@ -2057,6 +2138,13 @@ class BrandController extends Controller
                 $prompt->ai_response) {
                 continue;
             }
+
+            // This dispatch supersedes a previous failure; clear the markers so
+            // the dashboard shows progress instead of a stale failure banner.
+            $prompt->update([
+                'analysis_failed_at' => null,
+                'analysis_error' => null,
+            ]);
 
             \App\Jobs\ProcessBrandPromptAnalysis::dispatch($prompt, $sessionId, $forceRegenerate)
                 ->onQueue('default');

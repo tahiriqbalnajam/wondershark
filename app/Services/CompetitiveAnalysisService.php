@@ -1155,10 +1155,19 @@ CRITICAL INSTRUCTIONS:
 
             $trends = $this->calculateTrendsForEntity($brand, $data['entity_type'], $competitorId, $days, $aiModelId, $competitiveStat, $timezone);
 
-            // Use the current competitor name from the competitors table so that renames
-            // are reflected immediately without requiring a new analysis run.
+            // Use the current name from the brands/competitors tables so that
+            // renames are reflected immediately without requiring a new analysis
+            // run. brand_mentions stores the name that was current when the
+            // analysis ran, so the brand's own row used to keep showing the old
+            // doctor/practice name (e.g. "Breast augmentation") after a rename.
             $resolvedName = $data['entity_name'];
-            if ($competitorId && isset($competitorsById[$competitorId])) {
+            if ($data['entity_type'] === 'brand') {
+                $resolvedName = $brand->name;
+
+                if (! empty($brand->website)) {
+                    $entityUrl = $brand->website;
+                }
+            } elseif ($competitorId && isset($competitorsById[$competitorId])) {
                 $resolvedName = $competitorsById[$competitorId]->name;
             }
 

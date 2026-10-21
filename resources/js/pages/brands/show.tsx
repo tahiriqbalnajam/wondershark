@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
 import HeadingSmall from '@/components/heading-small';
-import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Calendar, Trophy, TrendingUp, TrendingDown, Bot, User, Download, RefreshCw, Clock, Zap, Info } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Users, MessageSquare, Loader2, Shield, Edit, Building2, Globe, Calendar, Trophy, TrendingUp, TrendingDown, Bot, User, Download, RefreshCw, Clock, Zap, Info, AlertTriangle } from 'lucide-react';
 import { VisibilityChart } from '@/components/chart/visibility';
 import { BrandVisibilityIndex } from '@/components/dashboard-table/brand-visibility';
 import { AiCitations } from '@/components/chat/ai-citations';
@@ -134,6 +134,8 @@ interface AnalysisStatus {
     failed: number;
     done: number;
     has_pending: boolean;
+    has_failures: boolean;
+    analysis_blocked: boolean;
     progress_pct: number;
 }
 
@@ -838,6 +840,33 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                 </div>
             )}
 
+            {/* ── Analysis-blocked banner (trial/subscription) ─────────────── */}
+            {analysisStatus?.analysis_blocked && (
+                <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-800 px-5 py-4">
+                    <div className="flex items-start gap-3">
+                        <div className="mt-0.5 flex-shrink-0">
+                            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                                AI analysis is paused
+                            </p>
+                            <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-300">
+                                This account's trial has expired or has no active subscription. Renew to resume prompt analysis and dashboard updates.
+                            </p>
+                        </div>
+
+                        <Link
+                            href={billingUrl}
+                            className="flex-shrink-0 flex items-center gap-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-900 px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-800 transition-colors"
+                        >
+                            Manage subscription
+                        </Link>
+                    </div>
+                </div>
+            )}
+
             {/* ── Analysis-in-progress banner ─────────────────────────────── */}
             {analysisStatus?.has_pending && (
                 <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-950/40 dark:border-blue-800 px-5 py-4">
@@ -877,6 +906,35 @@ export default function BrandShow({ brand, competitiveStats, historicalStats, ai
                         >
                             <RefreshCw className="h-3.5 w-3.5" />
                             Refresh
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Analysis-failed banner ──────────────────────────────────── */}
+            {!analysisStatus?.has_pending && analysisStatus?.has_failures && (
+                <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-800 px-5 py-4">
+                    <div className="flex items-start gap-3">
+                        <div className="mt-0.5 flex-shrink-0">
+                            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                                Analysis incomplete
+                            </p>
+                            <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-300">
+                                {analysisStatus.failed} of {analysisStatus.total} prompt{analysisStatus.total !== 1 ? 's' : ''} failed to analyze. Retry to refresh the dashboard data.
+                            </p>
+                        </div>
+
+                        <button
+                            onClick={() => handleTriggerAnalysis(false)}
+                            disabled={triggeringAnalysis}
+                            className="flex-shrink-0 flex items-center gap-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-900 px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-800 transition-colors disabled:opacity-50"
+                        >
+                            <RefreshCw className={`h-3.5 w-3.5 ${triggeringAnalysis ? 'animate-spin' : ''}`} />
+                            Retry
                         </button>
                     </div>
                 </div>

@@ -6,17 +6,24 @@ use App\Models\Brand;
 use App\Models\BrandPrompt;
 use App\Services\BrandPromptAnalysisService;
 use App\Services\VisibilityCalculationService;
+use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
-class ProcessBrandPromptAnalysis implements ShouldQueue
+class ProcessBrandPromptAnalysis implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Queueable;
 
     public int $timeout = 600; // 10 minutes timeout
 
-    public int $tries = 1;
+    public int $tries = 2;
+
+    /**
+     * Collapse duplicate dispatches for the same prompt. The lock is released
+     * when the job starts, so a change made during a run can queue one follow-up.
+     */
+    public int $uniqueFor = 900;
 
     /**
      * Delete the job if the BrandPrompt model no longer exists (e.g. user was deleted).
@@ -34,6 +41,22 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
     ) {}
 
     /**
+     * One analysis per prompt at a time, regardless of which trigger queued it.
+     */
+    public function uniqueId(): string
+    {
+        return 'brand-prompt-analysis:'.$this->brandPrompt->id;
+    }
+
+    /**
+     * Retry transient AI failures (rate limits, timeouts) with a short backoff.
+     */
+    public function backoff(): array
+    {
+        return [120];
+    }
+
+    /**
      * Execute the job.
      */
     public function handle(BrandPromptAnalysisService $analysisService, VisibilityCalculationService $visibilityService): void
@@ -48,10 +71,11 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
                 'session_id' => substr($this->sessionId, 0, 8),
             ]);
 
-            // Skip if already analyzed and not forcing regeneration
+            // Skip if already analyzed and not forcing regeneration.
+            // Do not require resources here: an empty array is a valid result
+            // (the AI often returns no links even on a successful analysis).
             if (! $this->forceRegenerate &&
                 $this->brandPrompt->ai_response &&
-                $this->brandPrompt->resources &&
                 $this->brandPrompt->analysis_completed_at) {
 
                 // Touch updated_at to show when this prompt was last checked
@@ -63,6 +87,15 @@ class ProcessBrandPromptAnalysis implements ShouldQueue
                 ]);
 
                 return;
+            }
+
+            // A retry supersedes the previous failure marker; clear it so the
+            // dashboard counts this prompt as in progress instead of failed.
+            if ($this->brandPrompt->analysis_failed_at) {
+                $this->brandPrompt->update([
+                    'analysis_failed_at' => null,
+                    'analysis_error' => null,
+                ]);
             }
 
             // Load brand with competitors and subreddits

@@ -531,7 +531,7 @@ class CompetitorController extends Controller
         ]);
 
         // Trigger competitive analysis since competitor list changed
-        AnalyzeBrandCompetitiveStats::dispatch($brand);
+        AnalyzeBrandCompetitiveStats::schedule($brand);
 
         return back()->with('analysis_triggered', true);
     }
@@ -591,7 +591,7 @@ class CompetitorController extends Controller
         ]);
 
         // Trigger competitive analysis since competitor status changed
-        AnalyzeBrandCompetitiveStats::dispatch($brand);
+        AnalyzeBrandCompetitiveStats::schedule($brand);
 
         // Handle non-Inertia AJAX requests (like API calls)
         if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && ! request()->header('X-Inertia')) {
@@ -618,7 +618,7 @@ class CompetitorController extends Controller
         $competitor->delete();
 
         // Trigger competitive analysis since competitor list changed
-        AnalyzeBrandCompetitiveStats::dispatch($brand);
+        AnalyzeBrandCompetitiveStats::schedule($brand);
 
         // Handle non-Inertia AJAX requests (like API calls)
         if ((request()->expectsJson() || request()->ajax() || request()->wantsJson()) && ! request()->header('X-Inertia')) {
