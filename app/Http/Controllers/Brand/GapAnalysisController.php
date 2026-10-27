@@ -73,10 +73,17 @@ class GapAnalysisController extends Controller
             $competitorMentions = $prompt->mentions
                 ->where('entity_type', 'competitor')
                 ->map(function ($mention) {
+                    // Prefer the current name/domain so a rename shows up here
+                    // without a new analysis run.
+                    $domain = $mention->entity_domain;
+                    if ($mention->competitor?->domain) {
+                        $domain = explode('/', preg_replace('#^https?://(www\.)?#', '', strtolower($mention->competitor->domain)))[0];
+                    }
+
                     return [
                         'competitor_id' => $mention->competitor_id,
-                        'entity_name' => $mention->entity_name,
-                        'entity_domain' => $mention->entity_domain,
+                        'entity_name' => $mention->competitor?->name ?? $mention->entity_name,
+                        'entity_domain' => $domain,
                         'sentiment' => $mention->sentiment,
                     ];
                 })

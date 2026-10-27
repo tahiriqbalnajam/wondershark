@@ -1075,7 +1075,7 @@ class BrandController extends Controller
         // Forecasts are stored per-entity (brand + each competitor) per analysis
         // session. We pick the most recent session and pass all its rows to the
         // frontend, keyed by competitor_id (null = the brand's own row).
-        $patientForecasts = $this->loadLatestPatientForecasts($brand);
+        $patientForecasts = $this->loadLatestPatientForecasts($brand, $competitiveStats);
 
         return Inertia::render('brands/show', [
             'brand' => $brand,
@@ -1096,8 +1096,12 @@ class BrandController extends Controller
      * Load the latest patient-acquisition forecast batch for a brand, keyed by
      * entity ('brand' for the brand's own row, 'competitor:<id>' for each competitor).
      * Returns an empty array if no forecasts exist yet.
+     *
+     * Market Share / Consultations are re-derived from $competitiveStats — the
+     * same override-aware visibility values the BVI table renders — so a row
+     * with higher visibility can never show a lower market share.
      */
-    protected function loadLatestPatientForecasts(Brand $brand): array
+    protected function loadLatestPatientForecasts(Brand $brand, array $competitiveStats = []): array
     {
         if (trim((string) $brand->procedure) === '') {
             return [];
@@ -1109,6 +1113,23 @@ class BrandController extends Controller
 
         if (! $latestSession) {
             return [];
+        }
+
+        $visibilityByEntity = [];
+        foreach ($competitiveStats as $stat) {
+            $entityRef = ! empty($stat['competitor_id'])
+                ? 'competitor:'.$stat['competitor_id']
+                : 'brand';
+            $visibilityByEntity[$entityRef] = (float) ($stat['visibility'] ?? 0);
+        }
+
+        if (! empty($visibilityByEntity)) {
+            $forecasts = app(\App\Services\PatientForecastService::class)
+                ->displayForecastsFromVisibility($brand, $latestSession, $visibilityByEntity);
+
+            if (! empty($forecasts)) {
+                return $forecasts;
+            }
         }
 
         return \App\Models\PatientForecast::where('brand_id', $brand->id)
@@ -1185,7 +1206,7 @@ class BrandController extends Controller
         return Inertia::render('brands/ranking', [
             'brand' => $brand,
             'competitiveStats' => $competitiveStats,
-            'patientForecasts' => $this->loadLatestPatientForecasts($brand),
+            'patientForecasts' => $this->loadLatestPatientForecasts($brand, $competitiveStats),
         ]);
     }
 

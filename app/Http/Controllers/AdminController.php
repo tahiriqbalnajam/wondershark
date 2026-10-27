@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Brand;
+use App\Models\BrandCompetitiveStat;
+use App\Models\BrandMention;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,6 +30,7 @@ class AdminController extends Controller
                 return [
                     'id' => $brand->id,
                     'name' => $brand->name,
+                    'trackedName' => $brand->trackedName ?? '',
                     'website' => $brand->website ?? $brand->domain,
                     'agency_name' => $brand->agency?->name,
                     'agency_email' => $brand->agency?->email,
@@ -98,6 +101,35 @@ class AdminController extends Controller
 
             return redirect()->back()->withErrors(['error' => 'Failed to create brand: '.$e->getMessage()]);
         }
+    }
+
+    /**
+     * Update a brand's display name from the Admin > Individual Brands list.
+     */
+    public function updateBrand(Request $request, Brand $brand): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'trackedName' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $oldName = $brand->name;
+        $brand->update($validated);
+
+        // Analysis tables store the entity name as it was when the run happened.
+        // Keep the brand's own rows in sync so the new doctor/practice name shows
+        // up immediately in the Brand Visibility Index, charts and history.
+        if ($brand->name !== $oldName) {
+            BrandMention::where('brand_id', $brand->id)
+                ->where('entity_type', 'brand')
+                ->update(['entity_name' => $brand->name]);
+
+            BrandCompetitiveStat::where('brand_id', $brand->id)
+                ->where('entity_type', 'brand')
+                ->update(['entity_name' => $brand->name]);
+        }
+
+        return redirect()->back()->with('success', 'Brand updated successfully.');
     }
 
     /**

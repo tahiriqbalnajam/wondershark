@@ -1,5 +1,6 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEventHandler, useState } from 'react';
+import { toast } from 'sonner';
 import FormattedDate from '@/components/FormattedDate';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,11 +17,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import InputError from '@/components/input-error';
 import AppLayout from '@/layouts/app-layout';
-import { Building2, ExternalLink, Plus } from 'lucide-react';
+import { Building2, ExternalLink, Pencil, Plus } from 'lucide-react';
 
 interface Brand {
     id: number;
     name: string;
+    trackedName?: string;
     website?: string;
     agency_name?: string;
     agency_email?: string;
@@ -44,6 +46,7 @@ type BrandForm = {
 export default function AdminBrands({ brands }: Props) {
     const [brandFilter, setBrandFilter] = useState<'all' | 'with-agency' | 'without-agency'>('all');
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
 
     const { data, setData, post, errors, processing, reset } = useForm<BrandForm>({
         name: '',
@@ -51,6 +54,11 @@ export default function AdminBrands({ brands }: Props) {
         website: '',
         country: '',
         password: '',
+    });
+
+    const { data: editData, setData: setEditData, patch, errors: editErrors, processing: editProcessing, reset: resetEdit } = useForm({
+        name: '',
+        trackedName: '',
     });
 
     const submit: FormEventHandler = (e) => {
@@ -61,6 +69,28 @@ export default function AdminBrands({ brands }: Props) {
             onSuccess: () => {
                 reset();
                 setIsAddDialogOpen(false);
+            },
+        });
+    };
+
+    const openEdit = (brand: Brand) => {
+        setEditingBrand(brand);
+        setEditData({
+            name: brand.name,
+            trackedName: brand.trackedName || '',
+        });
+    };
+
+    const submitEdit: FormEventHandler = (e) => {
+        e.preventDefault();
+        if (!editingBrand) return;
+
+        patch(route('admin.brands.update', editingBrand.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Brand updated successfully.');
+                resetEdit();
+                setEditingBrand(null);
             },
         });
     };
@@ -221,6 +251,62 @@ export default function AdminBrands({ brands }: Props) {
                     </Sheet>
                 </div>
 
+                {/* Edit Brand Sheet — rename the doctor/practice. The new name is
+                    reflected in the Brand Visibility Index and dashboard charts. */}
+                <Sheet open={editingBrand !== null} onOpenChange={(open) => { if (!open) { setEditingBrand(null); resetEdit(); } }}>
+                    <SheetContent side="right" className="overflow-y-auto sm:max-w-lg p-6">
+                        <SheetHeader>
+                            <SheetTitle>Edit Brand</SheetTitle>
+                            <SheetDescription>
+                                Change the doctor/practice name and the name used for tracking.
+                            </SheetDescription>
+                        </SheetHeader>
+                        <form onSubmit={submitEdit} className="mt-6 px-1">
+                            <div className="space-y-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="edit_brand_name">Brand / Doctor Name *</Label>
+                                    <Input
+                                        id="edit_brand_name"
+                                        value={editData.name}
+                                        onChange={(e) => setEditData('name', e.target.value)}
+                                        placeholder="Enter brand or doctor name"
+                                        required
+                                    />
+                                    <InputError message={editErrors.name} />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="edit_brand_tracked_name">Tracked Name</Label>
+                                    <Input
+                                        id="edit_brand_tracked_name"
+                                        value={editData.trackedName}
+                                        onChange={(e) => setEditData('trackedName', e.target.value)}
+                                        placeholder="How this doctor/practice appears in AI answers"
+                                    />
+                                    <InputError message={editErrors.trackedName} />
+                                    <p className="text-xs text-muted-foreground">
+                                        Optional alternate name used when matching mentions.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <SheetFooter className="mt-6">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => { setEditingBrand(null); resetEdit(); }}
+                                    className="w-full sm:w-auto"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button type="submit" disabled={editProcessing} className="w-full sm:w-auto">
+                                    {editProcessing ? 'Saving...' : 'Save Changes'}
+                                </Button>
+                            </SheetFooter>
+                        </form>
+                    </SheetContent>
+                </Sheet>
+
                 <Card>
                     <CardHeader>
                         <div className="flex items-center justify-between">
@@ -318,17 +404,29 @@ export default function AdminBrands({ brands }: Props) {
                                                     <FormattedDate date={brand.created_at} />
                                                 </td>
                                                 <td className="py-3 px-4 text-right">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        asChild
-                                                        style={{ borderColor: 'var(--orange-1)', color: 'var(--orange-1)' }}
-                                                        className="hover:bg-[var(--orange-1)] hover:text-white"
-                                                    >
-                                                        <Link href={`/brands/${brand.id}`}>
-                                                            View
-                                                        </Link>
-                                                    </Button>
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => openEdit(brand)}
+                                                            style={{ borderColor: 'var(--orange-1)', color: 'var(--orange-1)' }}
+                                                            className="hover:bg-[var(--orange-1)] hover:text-white"
+                                                        >
+                                                            <Pencil className="h-3.5 w-3.5 mr-1" />
+                                                            Edit
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            asChild
+                                                            style={{ borderColor: 'var(--orange-1)', color: 'var(--orange-1)' }}
+                                                            className="hover:bg-[var(--orange-1)] hover:text-white"
+                                                        >
+                                                            <Link href={`/brands/${brand.id}`}>
+                                                                View
+                                                            </Link>
+                                                        </Button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}

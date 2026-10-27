@@ -168,11 +168,12 @@ export function BrandVisibilityIndex({
     //     return `${lower} to ${upper}`;
     // };
 
-    // Market Share is the stored, already-normalized (BVI_i / Σ BVI) × 100 value,
-    // shown with the two decimals the methodology uses. Each row was rounded to
-    // 2 dp on its own when it was stored, so the batch can total 100.01%; let the
-    // largest row absorb the stray hundredth so the column reads exactly the
-    // docx's "Total: 100.00%".
+    // Market Share is the normalized (BVI_i / Σ BVI) × 100 value derived by the
+    // backend from the same visibility values this table is displaying (manual
+    // overrides and the selected date range included), shown with the two
+    // decimals the methodology uses. Each row is rounded to 2 dp on its own, so
+    // the batch can total 100.01%; let the largest row absorb the stray
+    // hundredth so the column reads exactly the docx's "Total: 100.00%".
     const marketShareDisplay = (() => {
         const shares: { key: string; value: number }[] = [];
         for (const [key, forecast] of Object.entries(patientForecasts)) {

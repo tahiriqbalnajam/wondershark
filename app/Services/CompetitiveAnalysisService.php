@@ -1494,6 +1494,10 @@ CRITICAL INSTRUCTIONS:
         $startDate = now()->subDays($days)->startOfDay();
         $endDate = now()->endOfDay();
 
+        // Pre-load competitors so chart labels show the current name after a rename
+        // instead of the name stored in brand_mentions at analysis time.
+        $competitorsById = $brand->competitors()->get()->keyBy('id');
+
         // Get daily aggregated mention data (competitor_id included for override matching)
         $dailyStatsQuery = BrandMention::where('brand_id', $brand->id)
             ->whereBetween('analyzed_at', [$startDate, $endDate])
@@ -1552,12 +1556,30 @@ CRITICAL INSTRUCTIONS:
             $domain = $stat->entity_domain ?? $stat->entity_name;
             $entityKey = $stat->competitor_id ? 'c_'.$stat->competitor_id : 'brand';
 
+            // Resolve the current name (and domain) so renames are reflected on the
+            // dashboard chart without waiting for the next analysis run.
+            $entityName = $stat->entity_name;
+            if ($stat->entity_type === 'competitor' && $stat->competitor_id && isset($competitorsById[$stat->competitor_id])) {
+                $competitor = $competitorsById[$stat->competitor_id];
+                $entityName = $competitor->name;
+
+                if (! empty($competitor->domain)) {
+                    $domain = explode('/', preg_replace('#^https?://(www\.)?#', '', strtolower($competitor->domain)))[0];
+                }
+            } elseif ($stat->entity_type === 'brand') {
+                $entityName = $brand->name;
+
+                if (! empty($brand->website)) {
+                    $domain = explode('/', preg_replace('#^https?://(www\.)?#', '', strtolower($brand->website)))[0];
+                }
+            }
+
             if (! isset($historicalData[$date])) {
                 $historicalData[$date] = [];
             }
 
             $historicalData[$date][$domain] = [
-                'entity_name' => $stat->entity_name,
+                'entity_name' => $entityName,
                 'visibility' => round($visibility, 2),
                 'sentiment' => 50,
                 'position' => 5,

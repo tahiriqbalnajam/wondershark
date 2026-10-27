@@ -62,17 +62,28 @@ class BrandVisibilityStatsController extends Controller
                     ->unique()
                     ->flip();
 
-                $stats = $rows->map(function ($stat) use ($liveByEntityKey, $entitiesWithOverrides, $timezone) {
+                $stats = $rows->map(function ($stat) use ($liveByEntityKey, $entitiesWithOverrides, $selectedBrand, $timezone) {
                     $entityKey = $stat->competitor_id ? 'c_'.$stat->competitor_id : 'brand';
                     $liveVisibility = $liveByEntityKey->has($entityKey)
                         ? (float) $liveByEntityKey->get($entityKey)['visibility']
                         : (float) $stat->getEffectiveVisibility();
 
+                    // Show the current brand/competitor name instead of the one stored
+                    // on the stat row at analysis time, so renames from Admin appear here
+                    // immediately (matching the brand dashboard BVI table).
+                    if ($stat->entity_type === 'brand') {
+                        $entityName = $selectedBrand->name;
+                        $entityUrl = $selectedBrand->website ?? $stat->entity_url;
+                    } else {
+                        $entityName = $stat->competitor?->name ?? $stat->entity_name;
+                        $entityUrl = $stat->competitor?->domain ?? $stat->entity_url;
+                    }
+
                     return [
                         'id' => $stat->id,
                         'entity_type' => $stat->entity_type,
-                        'entity_name' => $stat->entity_name,
-                        'entity_url' => $stat->entity_url,
+                        'entity_name' => $entityName,
+                        'entity_url' => $entityUrl,
                         'visibility' => $liveVisibility,
                         'sentiment' => $stat->sentiment,
                         'position' => (float) $stat->position,

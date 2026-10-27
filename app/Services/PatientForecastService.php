@@ -495,6 +495,80 @@ PROMPT;
     }
 
     /**
+     * Build display-ready numbers for a stored forecast batch from the visibility
+     * values the BVI table is currently showing.
+     *
+     * Market share is a ratio of the displayed BVI, so it must be re-derived from
+     * the same values as the Visibility column — including manual overrides and
+     * the selected date range. Using the share frozen at batch-generation time
+     * made a row with more visibility show a lower market share (and fewer
+     * consultations) whenever the BVI had moved since the batch ran.
+     *
+     * @param  array<string, float>  $visibilityByEntity  keyed 'brand' or 'competitor:<id>'
+     * @return array<string, array<string, mixed>> keyed the same way
+     */
+    public function displayForecastsFromVisibility(Brand $brand, string $analysisSessionId, array $visibilityByEntity): array
+    {
+        $forecasts = PatientForecast::where('brand_id', $brand->id)
+            ->where('analysis_session_id', $analysisSessionId)
+            ->get();
+
+        if ($forecasts->isEmpty() || empty($visibilityByEntity)) {
+            return [];
+        }
+
+        $totalVisibility = array_sum(array_map(
+            fn ($value) => max(0, (float) $value),
+            $visibilityByEntity
+        ));
+
+        $result = [];
+
+        foreach ($forecasts as $forecast) {
+            $entityRef = $forecast->competitor_id
+                ? "competitor:{$forecast->competitor_id}"
+                : 'brand';
+
+            // Only show metrics for entities the BVI table is currently showing;
+            // stale rows for removed/unaccepted competitors are omitted.
+            if (! array_key_exists($entityRef, $visibilityByEntity)) {
+                continue;
+            }
+
+            $visibility = round((float) $visibilityByEntity[$entityRef], 2);
+            $marketShare = $totalVisibility > 0
+                ? round(($visibility / $totalVisibility) * 100, 2)
+                : null;
+
+            $payload = [
+                'visibility' => $visibility,
+                'market_share' => $marketShare,
+                'booked_consultations_estimated' => $forecast->booked_consultations_estimated,
+                'new_patients_lower' => $forecast->new_patients_lower,
+                'new_patients_upper' => $forecast->new_patients_upper,
+                'status' => $forecast->status,
+                'region' => $forecast->region,
+                'procedure' => $forecast->procedure,
+            ];
+
+            // Replay Steps 1-5 locally from the stored AI-researched inputs so
+            // consultations and patients follow the new market share without an
+            // AI call. Rows without inputs (failed rows) keep their stored figures.
+            $inputs = $this->methodologyInputsFromAssumptions($forecast->assumptions);
+            if ($inputs !== null && $marketShare !== null) {
+                $figures = $this->applyMethodology($inputs, $marketShare);
+                $payload['booked_consultations_estimated'] = $figures['booked'];
+                $payload['new_patients_lower'] = $figures['lower'];
+                $payload['new_patients_upper'] = $figures['upper'];
+            }
+
+            $result[$entityRef] = $payload;
+        }
+
+        return $result;
+    }
+
+    /**
      * Pull the methodology inputs back out of a stored row's assumptions. Returns null
      * when the row has none (failed rows, or rows stored before the inputs were kept).
      *

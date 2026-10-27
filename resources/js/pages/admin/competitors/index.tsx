@@ -58,6 +58,7 @@ import { MoreVertical } from 'lucide-react';
 type Competitor = {
     id: number;
     name: string;
+    trackedName?: string;
     domain?: string;
     description?: string;
     status: string;
@@ -165,7 +166,7 @@ export default function AdminCompetitorsIndex({ competitors, filters, agencies, 
         setEditCompetitorData({
             brand_id: competitor.brand.id.toString(),
             name: competitor.name,
-            trackedName: competitor.name,
+            trackedName: competitor.trackedName || competitor.name,
             domain: competitor.domain || '',
             description: competitor.description || '',
         });
@@ -768,6 +769,11 @@ const filteredBrands = data.agency_id && data.agency_id !== 'all'
                                                         {competitor.description && (
                                                             <div className="text-sm text-muted-foreground">
                                                                 {competitor.description}
+                                                            </div>
+                                                        )}
+                                                        {competitor.trackedName && competitor.trackedName !== competitor.name && (
+                                                            <div className="text-xs text-muted-foreground">
+                                                                Tracked as: {competitor.trackedName}
                                                             </div>
                                                         )}
                                                     </div>

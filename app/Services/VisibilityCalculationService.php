@@ -470,6 +470,13 @@ class VisibilityCalculationService
     {
         $terms = [$brand->name];
 
+        // Add tracked name if different (mirrors competitor matching), so a
+        // doctor/practice renamed in Admin is still recognised by its previous
+        // or alternate name in AI responses.
+        if ($brand->trackedName && $brand->trackedName !== $brand->name) {
+            $terms[] = $brand->trackedName;
+        }
+
         // Add domain without extension
         if ($brand->website) {
             $domain = $this->extractDomain($brand->website);

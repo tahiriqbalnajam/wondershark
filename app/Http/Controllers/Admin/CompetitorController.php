@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Jobs\AnalyzeBrandCompetitiveStats;
 use App\Models\AiModel;
 use App\Models\Brand;
+use App\Models\BrandCompetitiveStat;
+use App\Models\BrandMention;
 use App\Models\Competitor;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -41,6 +43,7 @@ class CompetitorController extends Controller
                 return [
                     'id' => $competitor->id,
                     'name' => $competitor->name,
+                    'trackedName' => $competitor->trackedName,
                     'domain' => $competitor->domain,
                     'description' => $competitor->description,
                     'status' => $competitor->status ?? 'active',
@@ -102,7 +105,20 @@ class CompetitorController extends Controller
             'domain' => 'required|url|max:255',
         ]);
 
+        $oldName = $competitor->name;
         $competitor->update($validated);
+
+        // Analysis tables store the entity name as it was when the run happened.
+        // Rewrite those rows so a rename shows up immediately in the Brand
+        // Visibility Index, charts, history and exports instead of only after
+        // the next analysis run.
+        if ($competitor->name !== $oldName) {
+            BrandMention::where('competitor_id', $competitor->id)
+                ->update(['entity_name' => $competitor->name]);
+
+            BrandCompetitiveStat::where('competitor_id', $competitor->id)
+                ->update(['entity_name' => $competitor->name]);
+        }
 
         // Trigger competitive analysis since competitor changed
         AnalyzeBrandCompetitiveStats::schedule($competitor->brand);
