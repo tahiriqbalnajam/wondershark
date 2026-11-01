@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class JobMonitorController extends Controller
@@ -17,7 +18,11 @@ class JobMonitorController extends Controller
         $stats = [
             'total_jobs' => DB::table('jobs')->count(),
             'failed_jobs' => DB::table('failed_jobs')->count(),
-            'processed_today' => DB::table('jobs')->where('created_at', '>=', Carbon::today())->count(),
+            // Completed jobs are deleted from the `jobs` table as they are
+            // processed, so "processed today" counts today's completion log
+            // entries instead of pending rows, which would only mirror the
+            // pending count during a backlog and show 0 at rest.
+            'processed_today' => $this->countTodaysCompletedJobs(),
         ];
 
         // Get recent jobs
@@ -113,6 +118,52 @@ class JobMonitorController extends Controller
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Count today's completed jobs from the application log. Processed database
+     * queue jobs are deleted, so the log is the only record a completion
+     * happened. Counts the job-classes' own completion markers, each of which
+     * is logged once per successful run: ProcessBrandPromptAnalysis logs
+     * "Successfully completed brand prompt analysis" and GeneratePostPrompts
+     * logs "Successfully generated prompts for post".
+     */
+    private function countTodaysCompletedJobs(?string $logFile = null): int
+    {
+        $logFile ??= storage_path('logs/laravel.log');
+        $today = Carbon::today()->toDateString();
+        $count = 0;
+
+        try {
+            if (! is_file($logFile)) {
+                return 0;
+            }
+
+            // Read only the tail — the daily volume lands at the bottom of the file.
+            $handle = fopen($logFile, 'r');
+            $maxBytes = 2_000_000;
+            clearstatcache();
+            if (filesize($logFile) > $maxBytes) {
+                fseek($handle, -$maxBytes, SEEK_END);
+                fgets($handle); // discard the partial line the seek lands mid-way through
+            }
+
+            while (($line = fgets($handle)) !== false) {
+                // Log lines start with "[Y-m-d H:i:s] env.LEVEL: message"
+                if (str_contains($line, 'Successfully completed brand prompt analysis')
+                    || str_contains($line, 'Successfully generated prompts for post')) {
+                    if (substr($line, 1, 10) === $today) {
+                        $count++;
+                    }
+                }
+            }
+            fclose($handle);
+        } catch (\Throwable $e) {
+            // A missing or unreadable log must never break the monitor page.
+            Log::warning('Could not count completed jobs from log', ['error' => $e->getMessage()]);
+        }
+
+        return $count;
     }
 
     private function getRecentCompletedJobs()
