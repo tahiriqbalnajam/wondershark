@@ -1101,7 +1101,8 @@ class BrandController extends Controller
      * visibility values the BVI table renders — for every entity in the table, so
      * a row with higher visibility can never show a lower market share and a
      * partial forecast batch does not leave the column empty. Consultations come
-     * from the forecast rows themselves.
+     * from the latest forecast row available for each entity, including an earlier
+     * batch when the newest one did not cover that entity.
      */
     protected function loadLatestPatientForecasts(Brand $brand, array $competitiveStats = []): array
     {

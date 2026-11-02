@@ -507,8 +507,12 @@ PROMPT;
      * Market share does not need a forecast row: it is pure visibility math. Every
      * entity the BVI table shows therefore gets one, even when the latest forecast
      * batch only covered a subset of entities (e.g. a batch run against a mention-
-     * based recalculation session). Forecast-only figures (consultations/patients)
-     * stay null for those rows.
+     * based recalculation session).
+     *
+     * An entity missing from the latest batch borrows its most recent completed
+     * forecast row from an earlier batch. The AI-researched inputs are stored on
+     * that row, so consultations/patients are still replayed against the current
+     * market share instead of leaving the column blank.
      *
      * @param  array<string, float>  $visibilityByEntity  keyed 'brand' or 'competitor:<id>'
      * @return array<string, array<string, mixed>> keyed the same way
@@ -526,6 +530,17 @@ PROMPT;
             return [];
         }
 
+        // Entities this batch cannot compute for — no row, or a failed row without
+        // reusable inputs — may still have a usable forecast in an earlier batch.
+        $refsNeedingFallback = [];
+        foreach (array_keys($visibilityByEntity) as $entityRef) {
+            $row = $forecasts->get($entityRef);
+            if ($row === null || $this->methodologyInputsFromAssumptions($row->assumptions) === null) {
+                $refsNeedingFallback[] = $entityRef;
+            }
+        }
+        $fallback = $this->latestForecastsByEntity($brand, $refsNeedingFallback);
+
         $totalVisibility = array_sum(array_map(
             fn ($value) => max(0, (float) $value),
             $visibilityByEntity
@@ -538,6 +553,14 @@ PROMPT;
         // and shown entities without a forecast still receive their market share.
         foreach ($visibilityByEntity as $entityRef => $entityVisibility) {
             $forecast = $forecasts->get($entityRef);
+            $inputs = $forecast !== null
+                ? $this->methodologyInputsFromAssumptions($forecast->assumptions)
+                : null;
+
+            if ($inputs === null && isset($fallback[$entityRef])) {
+                $forecast = $fallback[$entityRef];
+                $inputs = $this->methodologyInputsFromAssumptions($forecast->assumptions);
+            }
 
             $visibility = round(max(0, (float) $entityVisibility), 2);
             $marketShare = $totalVisibility > 0
@@ -557,12 +580,8 @@ PROMPT;
 
             // Replay Steps 1-5 locally from the stored AI-researched inputs so
             // consultations and patients follow the new market share without an
-            // AI call. Rows without a forecast, or without inputs (failed rows),
-            // keep their figures null/stored.
-            $inputs = $forecast !== null
-                ? $this->methodologyInputsFromAssumptions($forecast->assumptions)
-                : null;
-            if ($forecast !== null && $inputs !== null && $marketShare !== null) {
+            // AI call. Rows without usable inputs keep their stored figures.
+            if ($inputs !== null && $marketShare !== null) {
                 $figures = $this->applyMethodology($inputs, $marketShare);
                 $payload['booked_consultations_estimated'] = $figures['booked'];
                 $payload['new_patients_lower'] = $figures['lower'];
@@ -573,6 +592,49 @@ PROMPT;
         }
 
         return $result;
+    }
+
+    /**
+     * Most recent completed forecast per entity across all sessions, restricted to
+     * the requested entity refs and only rows whose stored assumptions can be
+     * replayed. Used when the latest batch does not cover an entity the BVI table
+     * is showing.
+     *
+     * @param  list<string>  $entityRefs
+     * @return array<string, PatientForecast>
+     */
+    protected function latestForecastsByEntity(Brand $brand, array $entityRefs): array
+    {
+        if (empty($entityRefs)) {
+            return [];
+        }
+
+        $wanted = array_flip($entityRefs);
+        $fallback = [];
+
+        PatientForecast::where('brand_id', $brand->id)
+            ->where('status', 'completed')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get()
+            ->each(function (PatientForecast $forecast) use (&$fallback, $wanted) {
+                $entityRef = $forecast->competitor_id
+                    ? "competitor:{$forecast->competitor_id}"
+                    : 'brand';
+
+                if (! isset($wanted[$entityRef]) || isset($fallback[$entityRef])) {
+                    return;
+                }
+
+                // Keep looking for an older row when this one cannot be replayed.
+                if ($this->methodologyInputsFromAssumptions($forecast->assumptions) === null) {
+                    return;
+                }
+
+                $fallback[$entityRef] = $forecast;
+            });
+
+        return $fallback;
     }
 
     /**
