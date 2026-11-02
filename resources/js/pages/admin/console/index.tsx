@@ -23,6 +23,8 @@ interface Command {
     signature: string;
     description: string;
     options?: CommandOption[];
+    /** True when the server queues this command instead of running it inline. */
+    background?: boolean;
 }
 
 interface Props {
@@ -60,11 +62,15 @@ export default function ConsoleIndex({ commands, serverUtcTime, appTimezone }: P
         setRunningCommand(command);
         setIsDialogOpen(false); // Close dialog if open
 
+        const queued = commands.find(cmd => cmd.signature === command)?.background;
+
         try {
             // @ts-ignore
             router.post(route('admin.console.run'), { command, params: parameters }, {
                 onSuccess: () => {
-                    toast.success('Command executed successfully');
+                    toast.success(queued
+                        ? 'Command queued — it runs in the background. Monitor it in Admin → Job Monitor.'
+                        : 'Command executed successfully');
                 },
                 onError: () => {
                     toast.error('Failed to execute command');

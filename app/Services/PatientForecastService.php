@@ -504,6 +504,12 @@ PROMPT;
      * made a row with more visibility show a lower market share (and fewer
      * consultations) whenever the BVI had moved since the batch ran.
      *
+     * Market share does not need a forecast row: it is pure visibility math. Every
+     * entity the BVI table shows therefore gets one, even when the latest forecast
+     * batch only covered a subset of entities (e.g. a batch run against a mention-
+     * based recalculation session). Forecast-only figures (consultations/patients)
+     * stay null for those rows.
+     *
      * @param  array<string, float>  $visibilityByEntity  keyed 'brand' or 'competitor:<id>'
      * @return array<string, array<string, mixed>> keyed the same way
      */
@@ -511,9 +517,12 @@ PROMPT;
     {
         $forecasts = PatientForecast::where('brand_id', $brand->id)
             ->where('analysis_session_id', $analysisSessionId)
-            ->get();
+            ->get()
+            ->keyBy(fn ($forecast) => $forecast->competitor_id
+                ? "competitor:{$forecast->competitor_id}"
+                : 'brand');
 
-        if ($forecasts->isEmpty() || empty($visibilityByEntity)) {
+        if (empty($visibilityByEntity)) {
             return [];
         }
 
@@ -524,18 +533,13 @@ PROMPT;
 
         $result = [];
 
-        foreach ($forecasts as $forecast) {
-            $entityRef = $forecast->competitor_id
-                ? "competitor:{$forecast->competitor_id}"
-                : 'brand';
+        // Iterate the entities the BVI table is currently showing (not the forecast
+        // rows): stale forecasts for removed/unaccepted competitors are omitted,
+        // and shown entities without a forecast still receive their market share.
+        foreach ($visibilityByEntity as $entityRef => $entityVisibility) {
+            $forecast = $forecasts->get($entityRef);
 
-            // Only show metrics for entities the BVI table is currently showing;
-            // stale rows for removed/unaccepted competitors are omitted.
-            if (! array_key_exists($entityRef, $visibilityByEntity)) {
-                continue;
-            }
-
-            $visibility = round((float) $visibilityByEntity[$entityRef], 2);
+            $visibility = round(max(0, (float) $entityVisibility), 2);
             $marketShare = $totalVisibility > 0
                 ? round(($visibility / $totalVisibility) * 100, 2)
                 : null;
@@ -543,19 +547,22 @@ PROMPT;
             $payload = [
                 'visibility' => $visibility,
                 'market_share' => $marketShare,
-                'booked_consultations_estimated' => $forecast->booked_consultations_estimated,
-                'new_patients_lower' => $forecast->new_patients_lower,
-                'new_patients_upper' => $forecast->new_patients_upper,
-                'status' => $forecast->status,
-                'region' => $forecast->region,
-                'procedure' => $forecast->procedure,
+                'booked_consultations_estimated' => $forecast?->booked_consultations_estimated,
+                'new_patients_lower' => $forecast?->new_patients_lower,
+                'new_patients_upper' => $forecast?->new_patients_upper,
+                'status' => $forecast?->status,
+                'region' => $forecast?->region,
+                'procedure' => $forecast?->procedure,
             ];
 
             // Replay Steps 1-5 locally from the stored AI-researched inputs so
             // consultations and patients follow the new market share without an
-            // AI call. Rows without inputs (failed rows) keep their stored figures.
-            $inputs = $this->methodologyInputsFromAssumptions($forecast->assumptions);
-            if ($inputs !== null && $marketShare !== null) {
+            // AI call. Rows without a forecast, or without inputs (failed rows),
+            // keep their figures null/stored.
+            $inputs = $forecast !== null
+                ? $this->methodologyInputsFromAssumptions($forecast->assumptions)
+                : null;
+            if ($forecast !== null && $inputs !== null && $marketShare !== null) {
                 $figures = $this->applyMethodology($inputs, $marketShare);
                 $payload['booked_consultations_estimated'] = $figures['booked'];
                 $payload['new_patients_lower'] = $figures['lower'];

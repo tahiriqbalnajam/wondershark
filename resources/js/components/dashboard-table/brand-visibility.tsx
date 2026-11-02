@@ -27,7 +27,9 @@ export interface PatientForecastSummary {
     booked_consultations_estimated: number | null;
     new_patients_lower: number | null;
     new_patients_upper: number | null;
-    status: 'pending' | 'processing' | 'completed' | 'failed';
+    // Null when the entity has visibility but no forecast row in the latest batch —
+    // market share is still shown (it is derived from visibility alone).
+    status: 'pending' | 'processing' | 'completed' | 'failed' | null;
     region: string | null;
     procedure: string | null;
 }

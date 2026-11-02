@@ -1097,9 +1097,11 @@ class BrandController extends Controller
      * entity ('brand' for the brand's own row, 'competitor:<id>' for each competitor).
      * Returns an empty array if no forecasts exist yet.
      *
-     * Market Share / Consultations are re-derived from $competitiveStats — the
-     * same override-aware visibility values the BVI table renders — so a row
-     * with higher visibility can never show a lower market share.
+     * Market Share is re-derived from $competitiveStats — the same override-aware
+     * visibility values the BVI table renders — for every entity in the table, so
+     * a row with higher visibility can never show a lower market share and a
+     * partial forecast batch does not leave the column empty. Consultations come
+     * from the forecast rows themselves.
      */
     protected function loadLatestPatientForecasts(Brand $brand, array $competitiveStats = []): array
     {

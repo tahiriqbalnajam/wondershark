@@ -51,10 +51,14 @@ class BrandVisibilityStatsController extends Controller
                     fn ($s) => ($s['competitor_id'] ?? null) ? 'c_'.$s['competitor_id'] : 'brand'
                 );
 
-                // Check if each entity has ANY override in the last 30 days (not just the latest row)
-                $startDate = now()->subDays(30);
+                // Check if each entity has ANY override in the same 30-day window the
+                // average is computed over. Using the same bounds (including the upper
+                // one) matters: an override outside the window is invisible to the
+                // average, so it must not make the row read "Has manual days" either.
+                $startDate = now()->subDays(30)->startOfDay();
+                $endDate = now()->endOfDay();
                 $entitiesWithOverrides = BrandCompetitiveStat::where('brand_id', $selectedBrand->id)
-                    ->where('analyzed_at', '>=', $startDate)
+                    ->whereBetween('analyzed_at', [$startDate, $endDate])
                     ->whereNotNull('visibility_override')
                     ->select('entity_type', 'competitor_id')
                     ->get()
@@ -186,7 +190,10 @@ class BrandVisibilityStatsController extends Controller
                 return [
                     'id' => $stat->id,
                     'ai_visibility' => round((float) $stat->visibility, 2),
-                    'manual_visibility' => $stat->visibility_override ? round((float) $stat->visibility_override, 2) : null,
+                    // A manual value of 0 is a real override — only null means "not set".
+                    'manual_visibility' => $stat->visibility_override !== null
+                        ? round((float) $stat->visibility_override, 2)
+                        : null,
                     'override_reason' => $stat->override_reason,
                 ];
             });
@@ -235,16 +242,30 @@ class BrandVisibilityStatsController extends Controller
                 ->first();
         }
 
+        // Normalise the timestamp to noon so the date stays correct after timezone
+        // conversion — late-day timestamps can shift to the next day in +05:00.
+        //
+        // The date comes from the daily drawer, which lists days in the requested
+        // timezone (the admin page uses +00:00). Near midnight UTC that drawer's
+        // "today" can be tomorrow in the app timezone (America/Montreal), and noon
+        // of that day is after `now()->endOfDay()` — the upper bound of the period
+        // the average is computed over. The override would then be saved but never
+        // counted, so the average never moved. Persist the current instant instead:
+        // it is inside the window and still converts to the day the drawer showed.
+        $analyzedAt = Carbon::parse($validated['date'])->setTime(12, 0, 0);
+
+        if ($analyzedAt->isFuture()) {
+            $analyzedAt = now();
+        }
+
         if ($stat) {
             // Update existing row with override values.
-            // Also fix analyzed_at to noon so the date stays correct after timezone
-            // conversion — late-day timestamps can shift to the next day in +05:00.
             $stat->update([
                 'visibility_override' => $validated['visibility'],
                 'override_reason' => $validated['override_reason'] ?? null,
                 'overridden_by' => Auth::id(),
                 'overridden_at' => now(),
-                'analyzed_at' => Carbon::parse($validated['date'])->setTime(12, 0, 0),
+                'analyzed_at' => $analyzedAt,
             ]);
         } else {
             // No AI stat exists for this date — create a new row with override
@@ -262,7 +283,7 @@ class BrandVisibilityStatsController extends Controller
                 'override_reason' => $validated['override_reason'] ?? null,
                 'overridden_by' => Auth::id(),
                 'overridden_at' => now(),
-                'analyzed_at' => Carbon::parse($validated['date'])->setTime(12, 0, 0),
+                'analyzed_at' => $analyzedAt,
             ]);
         }
 
@@ -285,8 +306,25 @@ class BrandVisibilityStatsController extends Controller
             ->where('entity_type', $validated['entity_type'])
             ->where('competitor_id', $validated['competitor_id'] ?? null);
 
+        $timezone = $request->input('timezone', '+00:00');
+
         if (! empty($validated['date'])) {
-            $query->whereDate('analyzed_at', $validated['date']);
+            // Match the day the same way the drawer and the average do (Carbon in the
+            // request timezone), not with SQL DATE(). For days that were ahead of the
+            // app's calendar, `store()` keeps `analyzed_at` at the current instant, so
+            // DATE(analyzed_at) can be the previous day while the drawer shows the
+            // selected one.
+            $candidateIds = (clone $query)
+                ->whereBetween('analyzed_at', [
+                    Carbon::parse($validated['date'])->subDay()->startOfDay(),
+                    Carbon::parse($validated['date'])->addDay()->endOfDay(),
+                ])
+                ->get()
+                ->filter(fn ($stat) => $stat->analyzed_at->copy()->setTimezone($timezone)->toDateString()
+                    === $validated['date'])
+                ->pluck('id');
+
+            $query->whereIn('id', $candidateIds);
         }
 
         // Snapshot the affected sessions before clearing — `update()` doesn't return
