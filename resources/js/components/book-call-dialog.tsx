@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { X } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface BookCallDialogProps {
     open: boolean;
@@ -10,23 +9,27 @@ interface BookCallDialogProps {
 const FORM_EMBED_SRC = 'https://link.msgsndr.com/js/form_embed.js';
 
 export default function BookCallDialog({ open, onOpenChange }: BookCallDialogProps) {
-    const [scriptReady, setScriptReady] = useState(false);
-
-    // Load the LeadConnector form_embed.js script once on mount.
+    // Load the LeadConnector embed only while the dialog is open, and remove it on
+    // close. Appending it to <body> on mount left the third-party script in the
+    // document for the rest of the Inertia SPA session, i.e. on every page after
+    // leaving login. Keeping it scoped to the open dialog means it only ever runs
+    // here. (The booking iframe is also rendered only while open.)
     useEffect(() => {
-        if (scriptReady) return;
+        if (!open) return;
 
         if (document.querySelector(`script[src="${FORM_EMBED_SRC}"]`)) {
-            setScriptReady(true);
             return;
         }
 
         const script = document.createElement('script');
         script.src = FORM_EMBED_SRC;
         script.async = true;
-        script.onload = () => setScriptReady(true);
         document.body.appendChild(script);
-    }, [scriptReady]);
+
+        return () => {
+            script.remove();
+        };
+    }, [open]);
 
     // Close on Escape when open.
     useEffect(() => {
@@ -38,15 +41,15 @@ export default function BookCallDialog({ open, onOpenChange }: BookCallDialogPro
         return () => window.removeEventListener('keydown', onKey);
     }, [open, onOpenChange]);
 
+    if (!open) {
+        return null;
+    }
+
     return (
         <div
-            className={cn(
-                'fixed inset-0 z-50 flex items-center justify-center max-sm:items-start max-sm:overflow-y-auto max-sm:p-4',
-                !open && 'hidden',
-            )}
+            className="fixed inset-0 z-50 flex items-center justify-center max-sm:items-start max-sm:overflow-y-auto max-sm:p-4"
             role="dialog"
             aria-modal="true"
-            aria-hidden={!open}
         >
             <div
                 className="absolute inset-0 bg-black/80"

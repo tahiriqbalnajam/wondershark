@@ -1,8 +1,7 @@
 import { Head, useForm } from '@inertiajs/react';
 import { LoaderCircle, Mail, Eye, EyeOff } from 'lucide-react';
-import { FormEventHandler, useState } from 'react';
+import { FormEventHandler, lazy, Suspense, useState } from 'react';
 
-import BookCallDialog from '@/components/book-call-dialog';
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
+
+// Loaded only when the visitor opens the booking dialog. This keeps the
+// GoHighLevel iframe URL (api.leadconnectorhq.com) and its embed script out of
+// the login bundle, so they are not fetched on the site unless this widget is
+// actually used.
+const BookCallDialog = lazy(() => import('@/components/book-call-dialog'));
 
 type LoginForm = {
     email: string;
@@ -228,7 +233,11 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                 </form>
             )}
 
-            <BookCallDialog open={bookCallOpen} onOpenChange={setBookCallOpen} />
+            {bookCallOpen && (
+                <Suspense fallback={null}>
+                    <BookCallDialog open={bookCallOpen} onOpenChange={setBookCallOpen} />
+                </Suspense>
+            )}
         </AuthLayout>
     );
 }
